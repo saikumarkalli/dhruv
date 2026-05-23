@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Obsidian Foundation Base Plate -->
+    <path
+        android:fillColor="#0D1117"
+        android:strokeColor="#30363D"
+        android:strokeWidth="1.5"
+        android:pathData="M30,22 h48 a8,8 0 0 1 8,8 v48 a8,8 0 0 1 -8,8 h-48 a8,8 0 0 1 -8,-8 v-48 a8,8 0 0 1 8,-8 z" />
+
+    <!-- Isometric Tech Core Layer -->
+    <path
+        android:fillColor="#161B22"
+        android:pathData="M34,26 h40 a6,6 0 0 1 6,6 v40 a6,6 0 0 1 -6,6 h-40 a6,6 0 0 1 -6,-6 v-40 a6,6 0 0 1 6,-6 z" />
+
+    <!-- Unified Tool Coordinates (Compass Grid Lines) -->
+    <path
+        android:strokeColor="#21262D"
+        android:strokeWidth="1"
+        android:pathData="M54,26 v52 M26,54 h52" />
+
+    <!-- Glowing Vector 1: Infinite Loops (Currency & Physical Conversion, Finance Flow) -->
+    <path
+        android:strokeColor="#A78BFA"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M40,54 C40,43 49,43 49,54 C49,65 59,65 59,54 C59,43 68,43 68,54 C68,65 59,65 59,54 Z" />
+
+    <!-- Glowing Vector 2: Mathematical / FinTech Ascent (Trending bar up-right) -->
+    <path
+        android:strokeColor="#34D399"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M34,70 L48,56 L58,62 L74,38" />
+    
+    <!-- Arrow tip for the ascent -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M68,38 h6 v6 Z" />
+
+    <!-- Glowing Vector 3: High-precision chronometer pin (Date & Time Tracking) -->
+    <path
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L44,40" />
+
+    <path
+        android:strokeColor="#FF7A00"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L64,68" />
+
+    <!-- Central High-Tech Rivet -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M54,54 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
+</vector>
