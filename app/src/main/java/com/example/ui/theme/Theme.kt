@@ -1,14 +1,47 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
+
+@Composable
+fun Modifier.appGradientBackground(): Modifier {
+    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.background
+    
+    return if (isDark) {
+        this.background(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    primary.copy(alpha = 0.12f),
+                    background.copy(alpha = 0.98f),
+                    background
+                )
+            )
+        )
+    } else {
+        this.background(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    primary.copy(alpha = 0.05f),
+                    background,
+                    background
+                )
+            )
+        )
+    }
+}
+
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,

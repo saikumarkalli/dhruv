@@ -1,13 +1,20 @@
 package com.example.ui.converter
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,294 +32,1150 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConverterScreen(
     viewModel: ConverterViewModel,
     modifier: Modifier = Modifier
 ) {
-    var selectedCategoryIndex by remember { mutableIntStateOf(0) } // 0 is Currency, 1..16 are physical categories
+    var activeTool by remember { mutableStateOf<String?>(null) }
 
-    val categories = listOf(
-        ConverterCat("Currency Exchange", Icons.Default.AttachMoney, "Live currency exchange with offline backup memory."),
-        ConverterCat("Length", Icons.Default.Straighten, "Meters, Kilometers, Millis, Miles, Yards, Feet, Inches."),
-        ConverterCat("Weight & Mass", Icons.Default.Scale, "Kilograms, Grams, Pounds, Ounces, Tons."),
-        ConverterCat("Temperature", Icons.Default.Thermostat, "Celsius, Fahrenheit, Kelvin offsets."),
-        ConverterCat("Speed", Icons.Default.Speed, "Meters/sec, Kilometers/hr, Miles/hr, Mariners Knots."),
-        ConverterCat("Time Epochs", Icons.Default.Schedule, "Seconds, Minutes, Hours, Days, Weeks, Months, Years."),
-        ConverterCat("Area Horizons", Icons.Default.SquareFoot, "Square Meters/Kilometers/Miles, Acres, Hectares."),
-        ConverterCat("Liquid Volume", Icons.Default.InvertColors, "Liters, Milliliters, Gallons, Quarts, Cups, Cubic Feet."),
-        ConverterCat("Energy Joules", Icons.Default.Bolt, "Joules, Calories, Kilocalories, Kilowatt-Hours, BTUs."),
-        ConverterCat("Power Watts", Icons.Default.OfflineBolt, "Watts, Kilowatts, Megawatts, Mechanical Horsepower."),
-        ConverterCat("Pressure Bars", Icons.Default.Compress, "Pascals, Kilopascals, Bars, PSIs, Atmospheres."),
-        ConverterCat("Data Storage", Icons.Default.SdCard, "Bytes, Kilobytes, Megabytes, Gigabytes, Terabytes, Bits."),
-        ConverterCat("Fuel Efficiency", Icons.Default.LocalGasStation, "Kilometers/Liter, Miles/Gallon, Liters per 100km."),
-        ConverterCat("Angle Radians", Icons.Default.CompassCalibration, "Compass Arc Degrees, Radians, Gradians."),
-        ConverterCat("Force Newtons", Icons.Default.FitnessCenter, "Newtons, Kilonewtons, Dynes, Pound-force values."),
-        ConverterCat("Torque Nm", Icons.Default.Build, "Newton-Meters, Pound-Feet, Kilogram-Meters torque loads."),
-        ConverterCat("Cooking Units", Icons.Default.Restaurant, "Serving Cups, Tablespoons, Teaspoons, Fluid Ounces.")
+    val tools = listOf(
+        GridTool("Age", Icons.Default.Cake, "Age Calculator"),
+        GridTool("Area", Icons.Default.SquareFoot, "Area unit converter"),
+        GridTool("BMI", Icons.Default.Scale, "Body Mass Index"),
+        GridTool("Currency", Icons.Default.AttachMoney, "Live exchange rates"),
+        GridTool("Data", Icons.Default.SdCard, "Data storage units"),
+        GridTool("Date", Icons.Default.DateRange, "Date difference & math"),
+        GridTool("Discount", Icons.Default.LocalOffer, "Price savings & markup"),
+        GridTool("Length", Icons.Default.Straighten, "Distance measurements"),
+        GridTool("Mass", Icons.Default.MonitorWeight, "Weight conversion"),
+        GridTool("Numeral system", Icons.Default.Memory, "Number base conversion"),
+        GridTool("Speed", Icons.Default.Speed, "Velocity measurements"),
+        GridTool("Temperature", Icons.Default.Thermostat, "Celsius, Fahrenheit"),
+        GridTool("Time", Icons.Default.Schedule, "Time intervals & durations"),
+        GridTool("Volume", Icons.Default.InvertColors, "Cubit & liquid volume")
     )
-
-    val configuration = LocalConfiguration.current
-    val isWideScreen = configuration.screenWidthDp >= 720
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Conversions Header
-        Surface(
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        if (activeTool == null) {
+            // Main Library Grid View (Matches Screenshot Redesign perfectly!)
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Unit Converts",
-                            style = MaterialTheme.typography.titleLarge.copy(fontSize = ResponsiveApp.typography.titleLarge),
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "Sovereign physical measurements & currency",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = ResponsiveApp.typography.labelSmall),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    if (selectedCategoryIndex == 0) {
-                        IconButton(onClick = { viewModel.syncCurrencyRates() }, modifier = Modifier.testTag("currency_sync_btn")) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync rates", tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (isWideScreen) {
-            // Tablet Left Category List Panel / Right Work area
-            Row(
-                modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Card(
-                    modifier = Modifier
-                        .width(300.dp)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                Text(
+                    text = "Calculators & Converters",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                Text(
+                    text = "Select a tool to begin calculations",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                // 3-Column beautiful responsive grid
+                val rows = tools.chunked(3)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "Convert Classes",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-                        )
-                        categories.forEachIndexed { index, cat ->
-                            val isSel = selectedCategoryIndex == index
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSel) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { selectedCategoryIndex = index }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = cat.icon,
-                                    contentDescription = null,
-                                    tint = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = cat.name,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    rows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            row.forEach { tool ->
+                                GridItemCard(
+                                    tool = tool,
+                                    onClick = { activeTool = tool.name },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
+                            // Fill remaining space if row is not full
+                            if (row.size < 3) {
+                                repeat(3 - row.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
-                    }
-                }
-
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-                        ActiveConverterRender(selectedCategoryIndex, viewModel)
                     }
                 }
             }
         } else {
-            // Mobile scrolling view
-            var showCategorySelector by remember { mutableStateOf(false) }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showCategorySelector = true }
-                        .padding(bottom = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            // Active Tool Container View (with Elegant Top App Bar)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { activeTool = null }) {
                             Icon(
-                                imageVector = categories[selectedCategoryIndex].icon,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back to list",
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = categories[selectedCategoryIndex].name,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    "Tap to select convert criteria",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column {
+                            Text(
+                                text = activeTool ?: "",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            val selectedDesc = tools.find { it.name == activeTool }?.desc ?: ""
+                            Text(
+                                text = selectedDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (activeTool == "Currency") {
+                            IconButton(onClick = { viewModel.syncCurrencyRates() }, modifier = Modifier.testTag("currency_sync_btn")) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Sync rates", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Open")
                     }
                 }
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    ActiveConverterRender(selectedCategoryIndex, viewModel)
+                    when (activeTool) {
+                        "Age" -> AgeCalculatorView()
+                        "Area" -> PhysicalUnitConverterRender("Area", getAreaUnits())
+                        "BMI" -> BMICalculatorView()
+                        "Currency" -> CurrencyConverterTab(viewModel)
+                        "Data" -> PhysicalUnitConverterRender("Data Storage", getDataStorageUnits())
+                        "Date" -> DateMathCalculatorView()
+                        "Discount" -> DiscountCalculatorView()
+                        "Length" -> PhysicalUnitConverterRender("Length", getLengthUnits())
+                        "Mass" -> PhysicalUnitConverterRender("Weight & Mass", getWeightUnits())
+                        "Numeral system" -> NumeralSystemConverterView()
+                        "Speed" -> PhysicalUnitConverterRender("Speed", getSpeedUnits())
+                        "Temperature" -> TemperatureConverterRender()
+                        "Time" -> PhysicalUnitConverterRender("Time Duration", getTimeUnits())
+                        "Volume" -> PhysicalUnitConverterRender("Liquid Volume", getVolumeUnits())
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class GridTool(val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val desc: String)
+
+@Composable
+fun GridItemCard(
+    tool: GridTool,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 8.dp)
+            .testTag("grid_item_${tool.name.lowercase().replace(" ", "_")}"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = tool.icon,
+                contentDescription = tool.name,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = tool.name,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+// -------------------------------------------------------------
+// AGE CALCULATOR IMPLEMENTATION
+// -------------------------------------------------------------
+@Composable
+fun AgeCalculatorView() {
+    val context = LocalContext.current
+    val sdfDisplay = SimpleDateFormat("MMM dd, yyyy", Locale.US)
+    
+    var birthDate by remember { mutableStateOf(Calendar.getInstance().apply { set(2000, 0, 1) }) }
+    var referenceDate by remember { mutableStateOf(Calendar.getInstance()) }
+
+    var ageYears by remember { mutableIntStateOf(0) }
+    var ageMonths by remember { mutableIntStateOf(0) }
+    var ageDays by remember { mutableIntStateOf(0) }
+    var nextMonths by remember { mutableIntStateOf(0) }
+    var nextDays by remember { mutableIntStateOf(0) }
+    var dayOfWeekOfNextBirthday by remember { mutableStateOf("Monday") }
+
+    var totalDays by remember { mutableLongStateOf(0L) }
+    var totalMonths by remember { mutableIntStateOf(0) }
+    var totalWeeks by remember { mutableLongStateOf(0L) }
+    var totalHours by remember { mutableLongStateOf(0L) }
+    var totalMinutes by remember { mutableLongStateOf(0L) }
+
+    fun calculateAge() {
+        if (birthDate.after(referenceDate)) {
+            ageYears = 0
+            ageMonths = 0
+            ageDays = 0
+            nextMonths = 0
+            nextDays = 0
+            dayOfWeekOfNextBirthday = "Monday"
+            totalDays = 0L
+            totalMonths = 0
+            totalWeeks = 0L
+            totalHours = 0L
+            totalMinutes = 0L
+            return
+        }
+
+        var yrs = referenceDate.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
+        var mths = referenceDate.get(Calendar.MONTH) - birthDate.get(Calendar.MONTH)
+        var dys = referenceDate.get(Calendar.DAY_OF_MONTH) - birthDate.get(Calendar.DAY_OF_MONTH)
+
+        if (dys < 0) {
+            mths -= 1
+            val tempCal = birthDate.clone() as Calendar
+            tempCal.add(Calendar.MONTH, yrs * 12 + mths)
+            val daysInBirthMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            dys += daysInBirthMonth
+        }
+        if (mths < 0) {
+            yrs -= 1
+            mths += 12
+        }
+
+        ageYears = yrs
+        ageMonths = mths
+        ageDays = dys
+
+        // Next birthday calculation
+        val nextBd = birthDate.clone() as Calendar
+        nextBd.set(Calendar.YEAR, referenceDate.get(Calendar.YEAR))
+        if (nextBd.before(referenceDate) || nextBd.equals(referenceDate)) {
+            nextBd.add(Calendar.YEAR, 1)
+        }
+
+        dayOfWeekOfNextBirthday = SimpleDateFormat("EEEE", Locale.US).format(nextBd.time)
+
+        // Calculate difference in months and days from referenceDate to nextBd
+        var nMonths = nextBd.get(Calendar.MONTH) - referenceDate.get(Calendar.MONTH)
+        var nDays = nextBd.get(Calendar.DAY_OF_MONTH) - referenceDate.get(Calendar.DAY_OF_MONTH)
+
+        if (nDays < 0) {
+            nMonths -= 1
+            val tempCal = referenceDate.clone() as Calendar
+            val daysInMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            nDays += daysInMonth
+        }
+        if (nMonths < 0) {
+            nMonths += 12
+        }
+
+        nextMonths = nMonths
+        nextDays = nDays
+
+        // Total metrics
+        val totalMs = referenceDate.timeInMillis - birthDate.timeInMillis
+        val tDays = if (totalMs >= 0) TimeUnit.MILLISECONDS.toDays(totalMs) else 0L
+        totalDays = tDays
+        totalWeeks = tDays / 7
+        totalMonths = yrs * 12 + mths
+        totalHours = tDays * 24
+        totalMinutes = tDays * 24 * 60
+    }
+
+    LaunchedEffect(birthDate, referenceDate) {
+        calculateAge()
+    }
+
+    val miuiOrange = Color(0xFFFF5C00) // Deep Premium MIUI-style Orange
+    val textDark = Color(0xFF212121)   // Dark Grey/Black for values
+    val textGrey = Color(0xFF757575)   // Muted Grey for labels
+    val dividerGrey = Color(0xFFE5E5E5) // Light line separation grey
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Date Selectors exactly like the screenshot
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        DatePickerDialog(
+                            context,
+                            { _, y, m, d -> birthDate = Calendar.getInstance().apply { set(y, m, d) } },
+                            birthDate.get(Calendar.YEAR), birthDate.get(Calendar.MONTH), birthDate.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    }
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Date of birth",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = textDark
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = sdfDisplay.format(birthDate.time),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = miuiOrange
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Select birth date",
+                        tint = textGrey,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            if (showCategorySelector) {
-                AlertDialog(
-                    onDismissRequest = { showCategorySelector = false },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(onClick = { showCategorySelector = false }) {
-                            Text("Dismiss")
-                        }
-                    },
-                    title = {
-                        Text("Select Conversion Subject", fontWeight = FontWeight.Black)
-                    },
-                    text = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            categories.forEachIndexed { index, cat ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (selectedCategoryIndex == index) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                        .clickable {
-                                            selectedCategoryIndex = index
-                                            showCategorySelector = false
-                                        }
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = cat.icon,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(cat.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(cat.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                                    }
-                                }
-                            }
-                        }
+            HorizontalDivider(color = dividerGrey.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        DatePickerDialog(
+                            context,
+                            { _, y, m, d -> referenceDate = Calendar.getInstance().apply { set(y, m, d) } },
+                            referenceDate.get(Calendar.YEAR), referenceDate.get(Calendar.MONTH), referenceDate.get(Calendar.DAY_OF_MONTH)
+                        ).show()
                     }
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Today",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = textDark
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = sdfDisplay.format(referenceDate.time),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = textGrey
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Select reference date",
+                        tint = textGrey,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Output Result card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, dividerGrey),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left block - Age
+                    Column(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = "Age",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Normal, 
+                                fontSize = 32.sp
+                            ),
+                            color = textGrey
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "$ageYears",
+                                style = MaterialTheme.typography.displayLarge.copy(
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 72.sp
+                                ),
+                                color = miuiOrange
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "years",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = textGrey,
+                                modifier = Modifier.padding(bottom = 14.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "$ageMonths months | $ageDays days",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textGrey
+                        )
+                    }
+                    
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(130.dp)
+                            .background(dividerGrey)
+                    )
+                    
+                    // Right block - Next Birthday
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Next birthday",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = miuiOrange
+                        )
+                        
+                        Spacer(modifier = Modifier.height(14.dp))
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(miuiOrange),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Cake,
+                                contentDescription = "Cake icon",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Text(
+                            text = dayOfWeekOfNextBirthday,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = textGrey
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "$nextMonths months | $nextDays days",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textGrey
+                        )
+                    }
+                }
+                
+                HorizontalDivider(color = dividerGrey)
+                
+                // Summary heading and Grid
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp, horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Summary",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = miuiOrange
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Row 1: Years, Months, Weeks
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SummaryGridItem(
+                            label = "Years", 
+                            value = "$ageYears", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                        SummaryGridItem(
+                            label = "Months", 
+                            value = "$totalMonths", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                        SummaryGridItem(
+                            label = "Weeks", 
+                            value = "$totalWeeks", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    // Row 2: Days, Hours, Minutes
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SummaryGridItem(
+                            label = "Days", 
+                            value = "$totalDays", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                        SummaryGridItem(
+                            label = "Hours", 
+                            value = "$totalHours", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                        SummaryGridItem(
+                            label = "Minutes", 
+                            value = "$totalMinutes", 
+                            modifier = Modifier.weight(1f),
+                            textGrey = textGrey,
+                            textDark = textDark
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = "powered by Calculator",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = textGrey.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
+
+        // Bottom Actions Button Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5F5F5)),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = "Add to Calendar",
+                    color = textGrey,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                )
+            }
+            
+            Button(
+                onClick = { },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = miuiOrange),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = "Share",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
                 )
             }
         }
     }
 }
 
-data class ConverterCat(val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val description: String)
-
 @Composable
-fun ActiveConverterRender(index: Int, viewModel: ConverterViewModel) {
-    Card(
-        modifier = Modifier.fillMaxSize(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+fun SummaryGridItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    textGrey: Color,
+    textDark: Color
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            when (index) {
-                0 -> CurrencyConverterTab(viewModel)
-                1 -> PhysicalUnitConverterRender("Length", getLengthUnits())
-                2 -> PhysicalUnitConverterRender("Weight & Mass", getWeightUnits())
-                3 -> TemperatureConverterRender()
-                4 -> PhysicalUnitConverterRender("Speed", getSpeedUnits())
-                5 -> PhysicalUnitConverterRender("Time Duration", getTimeUnits())
-                6 -> PhysicalUnitConverterRender("Area Fields", getAreaUnits())
-                7 -> PhysicalUnitConverterRender("Liquid Volume", getVolumeUnits())
-                8 -> PhysicalUnitConverterRender("Energy Joules", getEnergyUnits())
-                9 -> PhysicalUnitConverterRender("Power Output", getPowerUnits())
-                10 -> PhysicalUnitConverterRender("Pressure Level", getPressureUnits())
-                11 -> PhysicalUnitConverterRender("Data Storage", getDataStorageUnits())
-                12 -> FuelEfficiencyConverterRender()
-                13 -> PhysicalUnitConverterRender("Angles", getAngleUnits())
-                14 -> PhysicalUnitConverterRender("Force Newtons", getForceUnits())
-                15 -> PhysicalUnitConverterRender("Torque Nm", getTorqueUnits())
-                16 -> PhysicalUnitConverterRender("Cooking Units", getCookingUnits())
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = textGrey
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            ),
+            color = textDark
+        )
+    }
+}
+
+// -------------------------------------------------------------
+// BMI CALCULATOR IMPLEMENTATION
+// -------------------------------------------------------------
+@Composable
+fun BMICalculatorView() {
+    var weightInput by remember { mutableStateOf("70") }
+    var heightInput by remember { mutableStateOf("175") }
+
+    val weight = weightInput.toDoubleOrNull() ?: 0.0
+    val height = heightInput.toDoubleOrNull() ?: 0.0
+
+    val bmiResult = remember(weight, height) {
+        if (weight <= 0.0 || height <= 0.0) 0.0
+        else {
+            val htM = height / 100.0
+            weight / (htM * htM)
+        }
+    }
+
+    val classification = remember(bmiResult) {
+        when {
+            bmiResult <= 0.0 -> "Unknown"
+            bmiResult < 18.5 -> "Underweight"
+            bmiResult < 25.0 -> "Normal Weight"
+            bmiResult < 30.0 -> "Overweight"
+            else -> "Obesity"
+        }
+    }
+
+    val classificationColor = remember(classification) {
+        when (classification) {
+            "Normal Weight" -> Color(0xFF4CAF50)
+            "Underweight" -> Color(0xFFFFB300)
+            "Overweight" -> Color(0xFFFB8C00)
+            "Obesity" -> Color(0xFFE53935)
+            else -> Color.Gray
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Calculate Body Mass Index (BMI)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        OutlinedTextField(
+            value = weightInput,
+            onValueChange = { weightInput = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = { Text("Weight (kg)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        OutlinedTextField(
+            value = heightInput,
+            onValueChange = { heightInput = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = { Text("Height (cm)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        if (bmiResult > 0.0) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Your BMI Score",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "%.1f".format(bmiResult),
+                        style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Black),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(classificationColor)
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = classification,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // M3 styled BMI spectrum meter
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("18.5", style = MaterialTheme.typography.labelSmall)
+                            Text("25.0", style = MaterialTheme.typography.labelSmall)
+                            Text("30.0", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
+                        ) {
+                            val activeVal = (bmiResult - 10).coerceIn(0.0, 30.0)
+                            val progress = activeVal / 30.0
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress.toFloat())
+                                    .fillMaxHeight()
+                                    .background(classificationColor)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 // -------------------------------------------------------------
-// UNIFIED ENGINE FOR STATIC RATIO CONVERSIONS
+// DISCOUNT CALCULATOR IMPLEMENTATION
+// -------------------------------------------------------------
+@Composable
+fun DiscountCalculatorView() {
+    var originalPriceStr by remember { mutableStateOf("100") }
+    var discountStr by remember { mutableStateOf("20") }
+    var taxStr by remember { mutableStateOf("10") }
+
+    val originalPrice = originalPriceStr.toDoubleOrNull() ?: 0.0
+    val discountPercent = discountStr.toDoubleOrNull() ?: 0.0
+    val taxPercent = taxStr.toDoubleOrNull() ?: 0.0
+
+    val discountAmount = originalPrice * (discountPercent / 100.0)
+    val discountedPrice = originalPrice - discountAmount
+    val taxAmount = discountedPrice * (taxPercent / 100.0)
+    val finalPrice = discountedPrice + taxAmount
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Calculate price savings and absolute prices.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        OutlinedTextField(
+            value = originalPriceStr,
+            onValueChange = { originalPriceStr = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = { Text("Original Price ($)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        OutlinedTextField(
+            value = discountStr,
+            onValueChange = { discountStr = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = { Text("Discount (%)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        OutlinedTextField(
+            value = taxStr,
+            onValueChange = { taxStr = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = { Text("Tax (%) (Optional)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Discount savings", style = MaterialTheme.typography.bodyMedium)
+                    Text("-$%.2f".format(discountAmount), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF4CAF50))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Tax amount", style = MaterialTheme.typography.bodyMedium)
+                    Text("+$%.2f".format(taxAmount), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                }
+
+                Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Final retail Price", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text("$%.2f".format(finalPrice), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black), color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// DATE MATH/DIFFERENCE CALCULATOR IMPLEMENTATION
+// -------------------------------------------------------------
+@Composable
+fun DateMathCalculatorView() {
+    val context = LocalContext.current
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+    var dateFrom by remember { mutableStateOf(Calendar.getInstance()) }
+    var dateTo by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 10) }) }
+
+    val differenceDays = remember(dateFrom, dateTo) {
+        val diffMs = dateTo.timeInMillis - dateFrom.timeInMillis
+        TimeUnit.MILLISECONDS.toDays(diffMs)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Select two dates to measure details in days difference",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "From Date",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            DatePickerDialog(
+                                context,
+                                { _, y, m, d -> dateFrom = Calendar.getInstance().apply { set(y, m, d) } },
+                                dateFrom.get(Calendar.YEAR), dateFrom.get(Calendar.MONTH), dateFrom.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = sdf.format(dateFrom.time),
+                        modifier = Modifier.padding(14.dp),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "To Date",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            DatePickerDialog(
+                                context,
+                                { _, y, m, d -> dateTo = Calendar.getInstance().apply { set(y, m, d) } },
+                                dateTo.get(Calendar.YEAR), dateTo.get(Calendar.MONTH), dateTo.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = sdf.format(dateTo.time),
+                        modifier = Modifier.padding(14.dp),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Duration Difference",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "$differenceDays Days",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "or ${differenceDays / 7} Weeks, ${differenceDays % 7} Days",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// NUMERAL SYSTEM CONVERTER VIEW
+// -------------------------------------------------------------
+@Composable
+fun NumeralSystemConverterView() {
+    var decInput by remember { mutableStateOf("10") }
+    var baseSelected by remember { mutableStateOf("DEC") } // DEC, BIN, HEX, OCT
+
+    val parsedLong = remember(decInput, baseSelected) {
+        try {
+            when (baseSelected) {
+                "BIN" -> decInput.toLong(2)
+                "HEX" -> decInput.toLong(16)
+                "OCT" -> decInput.toLong(8)
+                else -> decInput.toLong(10)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val displayDec = parsedLong?.toString(10) ?: ""
+    val displayBin = parsedLong?.toString(2) ?: ""
+    val displayHex = parsedLong?.toString(16)?.uppercase() ?: ""
+    val displayOct = parsedLong?.toString(8) ?: ""
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Convert values between numeral foundations",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("DEC", "BIN", "HEX", "OCT").forEach { base ->
+                val isSel = baseSelected == base
+                Button(
+                    onClick = {
+                        baseSelected = base
+                        decInput = when (base) {
+                            "BIN" -> displayBin
+                            "HEX" -> displayHex
+                            "OCT" -> displayOct
+                            else -> displayDec
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(text = base, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = decInput,
+            onValueChange = { decInput = it },
+            label = { Text("Enter Number ($baseSelected)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                NumeralResultRow(label = "Decimal (Dec)", value = displayDec)
+                NumeralResultRow(label = "Binary (Bin)", value = displayBin)
+                NumeralResultRow(label = "Hexadecimal (Hex)", value = displayHex)
+                NumeralResultRow(label = "Octal (Oct)", value = displayOct)
+            }
+        }
+    }
+}
+
+@Composable
+fun NumeralResultRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        Text(
+            text = value.ifEmpty { "0" },
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+// -------------------------------------------------------------
+// UNIFIED ENGINE FOR PHYSICAL RATIO CONVERSIONS
 // -------------------------------------------------------------
 data class UnifiedUnit(val label: String, val relationToBase: Double, val symbol: String)
 
@@ -340,16 +1204,13 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("$title conversions", style = MaterialTheme.typography.titleMedium.copy(fontSize = ResponsiveApp.typography.titleMedium), fontWeight = FontWeight.Bold)
-
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Pre-conversion Source", style = MaterialTheme.typography.labelSmall)
+                Text("Pre-conversion Source", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 
-                // Dropdown trigger From
                 Box {
                     Button(
                         onClick = { expandedFromMenu = true },
@@ -359,7 +1220,7 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("${selectedFromUnit.label} (${selectedFromUnit.symbol})", fontWeight = FontWeight.Bold)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Open")
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                     }
                     DropdownMenu(expanded = expandedFromMenu, onDismissRequest = { expandedFromMenu = false }) {
@@ -403,12 +1264,11 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Target conversion Destination", style = MaterialTheme.typography.labelSmall)
+                Text("Target conversion Destination", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 
-                // Dropdown trigger To
                 Box {
                     Button(
                         onClick = { expandedToMenu = true },
@@ -418,7 +1278,7 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("${selectedToUnit.label} (${selectedToUnit.symbol})", fontWeight = FontWeight.Bold)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Open")
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                     }
                     DropdownMenu(expanded = expandedToMenu, onDismissRequest = { expandedToMenu = false }) {
@@ -439,12 +1299,12 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Conversion output results", style = MaterialTheme.typography.labelSmall.copy(fontSize = ResponsiveApp.typography.labelSmall), color = MaterialTheme.colorScheme.secondary)
+                        Text("Conversion output results", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
                         Text(
                             text = outputResult,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = ResponsiveApp.typography.headlineMedium),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
                             fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(top = 4.dp).testTag("${title.lowercase().replace(" ","_")}_output_val")
                         )
                     }
@@ -488,13 +1348,12 @@ fun TemperatureConverterRender() {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Temperature conversions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Pre-conversion Source", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Box {
                     Button(onClick = { expandedFrom = true }, modifier = Modifier.fillMaxWidth()) {
                         Text("From: $fromType")
@@ -527,9 +1386,10 @@ fun TemperatureConverterRender() {
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Target conversion Destination", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Box {
                     Button(onClick = { expandedTo = true }, modifier = Modifier.fillMaxWidth()) {
                         Text("To: $toType")
@@ -545,113 +1405,8 @@ fun TemperatureConverterRender() {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("ResultDegrees", style = MaterialTheme.typography.labelSmall)
-                        Text(convertedVal, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// -------------------------------------------------------------
-// FUEL EFFICIENCY FORMULA CONVERTER WITH INVERSE FUNCTIONS
-// -------------------------------------------------------------
-@Composable
-fun FuelEfficiencyConverterRender() {
-    var rawInput by remember { mutableStateOf("15") }
-    val fuelTypes = listOf("Kilometers per Liter (km/l)", "Miles per Gallon US (mpg)", "Liters per 100km (L/100km)")
-    var fromType by remember { mutableStateOf(fuelTypes[0]) }
-    var toType by remember { mutableStateOf(fuelTypes[1]) }
-
-    var expandedFrom by remember { mutableStateOf(false) }
-    var expandedTo by remember { mutableStateOf(false) }
-
-    val doubleVal = rawInput.toDoubleOrNull() ?: 0.0
-    val convertedVal = remember(doubleVal, fromType, toType) {
-        if (doubleVal <= 0.0) "0"
-        else {
-            // first convert to base: km/l
-            val baseKml = when (fromType) {
-                "Miles per Gallon US (mpg)" -> doubleVal / 2.3521458
-                "Liters per 100km (L/100km)" -> 100.0 / doubleVal
-                else -> doubleVal
-            }
-            // convert to target
-            val outVal = when (toType) {
-                "Miles per Gallon US (mpg)" -> baseKml * 2.3521458
-                "Liters per 100km (L/100km)" -> 100.0 / baseKml
-                else -> baseKml
-            }
-            "%.4f".format(outVal).trimEnd('0').trimEnd('.')
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text("Fuel Efficiency conversions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box {
-                    Button(onClick = { expandedFrom = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(fromType)
-                    }
-                    DropdownMenu(expanded = expandedFrom, onDismissRequest = { expandedFrom = false }) {
-                        fuelTypes.forEach { type ->
-                            DropdownMenuItem(text = { Text(type) }, onClick = { fromType = type; expandedFrom = false })
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = rawInput,
-                    onValueChange = { rawInput = it },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    label = { Text("Enter Efficiency Value") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            SmallFloatingActionButton(onClick = {
-                val orig = fromType
-                fromType = toType
-                toType = orig
-            }) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Swap")
-            }
-        }
-
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box {
-                    Button(onClick = { expandedTo = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(toType)
-                    }
-                    DropdownMenu(expanded = expandedTo, onDismissRequest = { expandedTo = false }) {
-                        fuelTypes.forEach { type ->
-                            DropdownMenuItem(text = { Text(type) }, onClick = { toType = type; expandedTo = false })
-                        }
-                    }
-                }
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("Conversion output results", style = MaterialTheme.typography.labelSmall)
-                        Text(convertedVal, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+                        Text("ResultDegrees", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                        Text(convertedVal, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
             }
@@ -683,9 +1438,9 @@ private fun getWeightUnits() = listOf(
 )
 
 private fun getSpeedUnits() = listOf(
-    UnifiedUnit("Meters per second", 1.0, "m/s"),
-    UnifiedUnit("Kilometers per hour", 0.27777778, "km/h"),
-    UnifiedUnit("Miles per hour", 0.44704, "mph"),
+    UnifiedUnit("m/s", 1.0, "m/s"),
+    UnifiedUnit("km/h", 0.27777778, "km/h"),
+    UnifiedUnit("mph", 0.44704, "mph"),
     UnifiedUnit("Knots", 0.514444, "kt")
 )
 
@@ -721,70 +1476,18 @@ private fun getVolumeUnits() = listOf(
     UnifiedUnit("Cubic Feet", 28.3168465, "ft³")
 )
 
-private fun getEnergyUnits() = listOf(
-    UnifiedUnit("Joules", 1.0, "J"),
-    UnifiedUnit("Kilojoules", 1000.0, "kJ"),
-    UnifiedUnit("Calories", 4.184, "cal"),
-    UnifiedUnit("Kilocalories", 4184.0, "kcal"),
-    UnifiedUnit("Watt-hours", 3600.0, "Wh"),
-    UnifiedUnit("Kilowatt-hours", 3600000.0, "kWh"),
-    UnifiedUnit("BTU", 1055.06, "BTU")
-)
-
-private fun getPowerUnits() = listOf(
-    UnifiedUnit("Watts", 1.0, "W"),
-    UnifiedUnit("Kilowatts", 1000.0, "kW"),
-    UnifiedUnit("Megawatts", 1000000.0, "MW"),
-    UnifiedUnit("Horsepower mec", 745.699872, "hp")
-)
-
-private fun getPressureUnits() = listOf(
-    UnifiedUnit("Pascals", 1.0, "Pa"),
-    UnifiedUnit("Kilopascals", 1000.0, "kPa"),
-    UnifiedUnit("Bar", 100000.0, "bar"),
-    UnifiedUnit("PSI", 6894.757, "psi"),
-    UnifiedUnit("Atmosphere standard", 101325.0, "atm")
-)
-
 private fun getDataStorageUnits() = listOf(
     UnifiedUnit("Bytes", 1.0, "B"),
     UnifiedUnit("Kilobytes (KB)", 1024.0, "KB"),
     UnifiedUnit("Megabytes (MB)", 1048576.0, "MB"),
     UnifiedUnit("Gigabytes (GB)", 1073741824.0, "GB"),
     UnifiedUnit("Terabytes (TB)", 1099511627776.0, "TB"),
-    UnifiedUnit("Bits", 0.125, "bit"),
-    UnifiedUnit("Kilobits (kb)", 128.0, "kb"),
-    UnifiedUnit("Megabits (mb)", 131072.0, "mb"),
-    UnifiedUnit("Gigabits (gb)", 134217728.0, "gb")
+    UnifiedUnit("Bits", 0.125, "bit")
 )
 
-private fun getAngleUnits() = listOf(
-    UnifiedUnit("Degrees", 1.0, "deg"),
-    UnifiedUnit("Radians", 57.2957795, "rad"),
-    UnifiedUnit("Gradians", 0.9, "grad")
-)
-
-private fun getForceUnits() = listOf(
-    UnifiedUnit("Newtons", 1.0, "N"),
-    UnifiedUnit("Kilonewtons", 1000.0, "kN"),
-    UnifiedUnit("Dynes", 0.00001, "dyn"),
-    UnifiedUnit("Pound-force", 4.4482216, "lbf")
-)
-
-private fun getTorqueUnits() = listOf(
-    UnifiedUnit("Newton-Meters", 1.0, "Nm"),
-    UnifiedUnit("Pound-Feet", 1.3558179, "lb-ft"),
-    UnifiedUnit("Kilogram-Meters", 9.80665, "kg-m")
-)
-
-private fun getCookingUnits() = listOf(
-    UnifiedUnit("Milliliters", 1.0, "mL"),
-    UnifiedUnit("Cups", 240.0, "cup"),
-    UnifiedUnit("Tablespoons", 15.0, "tbsp"),
-    UnifiedUnit("Teaspoons", 5.0, "tsp"),
-    UnifiedUnit("Fluid Ounces US", 29.57353, "fl oz")
-)
-
+// -------------------------------------------------------------
+// CURRENCY CONVERTER RENDERING
+// -------------------------------------------------------------
 @Composable
 fun CurrencyConverterTab(viewModel: ConverterViewModel) {
     val currencyInput by viewModel.currencyInput.collectAsState()
@@ -838,169 +1541,168 @@ fun CurrencyConverterTab(viewModel: ConverterViewModel) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            val timeStr = remember(lastUpdatedTime) {
-                                lastUpdatedTime?.let {
-                                    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy h:mm a", java.util.Locale.getDefault())
-                                    sdf.format(java.util.Date(it))
-                                } ?: "Never synced"
-                            }
-                            Text(
-                                text = if (status.isOffline) "Using cached local exchange rates. Loaded: $timeStr" else "Local storage cache synced: $timeStr",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-            }
-            is ConverterViewModel.CurrencyStatus.Error -> {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Error: ${status.message}",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("From", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-
-                Box {
-                    Button(
-                        onClick = { showFromMenu = true },
-                        modifier = Modifier.fillMaxWidth().testTag("currency_from_btn"),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(currencyFrom)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = showFromMenu,
-                        onDismissRequest = { showFromMenu = false }
-                    ) {
-                        viewModel.availableCurrencies.forEach { code ->
-                            DropdownMenuItem(
-                                text = { Text(code) },
-                                onClick = {
-                                    viewModel.setCurrencyFrom(code)
-                                    showFromMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = currencyInput,
-                    onValueChange = { viewModel.setCurrencyInput(it) },
-                    label = { Text("Enter Amount") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth().testTag("currency_input_field"),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            SmallFloatingActionButton(
-                onClick = {
-                    val from = currencyFrom
-                    val to = currencyTo
-                    viewModel.setCurrencyFrom(to)
-                    viewModel.setCurrencyTo(from)
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.testTag("currency_swap_btn")
-            ) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Swap Currencies")
-            }
-        }
-
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("To", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-
-                Box {
-                    Button(
-                        onClick = { showToMenu = true },
-                        modifier = Modifier.fillMaxWidth().testTag("currency_to_btn"),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(currencyTo)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = showToMenu,
-                        onDismissRequest = { showToMenu = false }
-                    ) {
-                        viewModel.availableCurrencies.forEach { code ->
-                            DropdownMenuItem(
-                                text = { Text(code) },
-                                onClick = {
-                                    viewModel.setCurrencyTo(code)
-                                    showToMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                        .padding(16.dp)
-                ) {
-                    Text("Converted Amount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        text = currencyResult.ifEmpty { "0" },
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("currency_output_field")
-                    )
-                }
-            }
-        }
-    }
-}
+                              )
+                              val timeStr = remember(lastUpdatedTime) {
+                                  lastUpdatedTime?.let {
+                                      val sdf = java.text.SimpleDateFormat("MMM dd, yyyy h:mm a", java.util.Locale.getDefault())
+                                      sdf.format(java.util.Date(it))
+                                  } ?: "Never synced"
+                              }
+                              Text(
+                                  text = if (status.isOffline) "Using cached local exchange rates. Loaded: $timeStr" else "Local storage cache synced: $timeStr",
+                                  style = MaterialTheme.typography.bodySmall,
+                                  color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                              )
+                          }
+                      }
+                  }
+              }
+              is ConverterViewModel.CurrencyStatus.Error -> {
+                  Card(
+                      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                      shape = RoundedCornerShape(12.dp)
+                  ) {
+                      Text(
+                          text = "Error: ${status.message}",
+                          color = MaterialTheme.colorScheme.onErrorContainer,
+                          modifier = Modifier.padding(12.dp),
+                          style = MaterialTheme.typography.bodyMedium
+                      )
+                  }
+              }
+          }
+  
+          Card(
+              shape = RoundedCornerShape(20.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+          ) {
+              Column(
+                  modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(12.dp)
+              ) {
+                  Text("From", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+  
+                  Box {
+                      Button(
+                          onClick = { showFromMenu = true },
+                          modifier = Modifier.fillMaxWidth().testTag("currency_from_btn"),
+                          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                          shape = RoundedCornerShape(12.dp)
+                      ) {
+                          Row(
+                              horizontalArrangement = Arrangement.SpaceBetween,
+                              verticalAlignment = Alignment.CenterVertically,
+                              modifier = Modifier.fillMaxWidth()
+                          ) {
+                              Text(currencyFrom)
+                              Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                          }
+                      }
+                      DropdownMenu(
+                          expanded = showFromMenu,
+                          onDismissRequest = { showFromMenu = false }
+                      ) {
+                          viewModel.availableCurrencies.forEach { code ->
+                              DropdownMenuItem(
+                                  text = { Text(code) },
+                                  onClick = {
+                                      viewModel.setCurrencyFrom(code)
+                                      showFromMenu = false
+                                  }
+                              )
+                          }
+                      }
+                  }
+  
+                  OutlinedTextField(
+                      value = currencyInput,
+                      onValueChange = { viewModel.setCurrencyInput(it) },
+                      label = { Text("Enter Amount") },
+                      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                      modifier = Modifier.fillMaxWidth().testTag("currency_input_field"),
+                      singleLine = true,
+                      shape = RoundedCornerShape(12.dp)
+                  )
+              }
+          }
+  
+          Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+              SmallFloatingActionButton(
+                  onClick = {
+                      val from = currencyFrom
+                      val to = currencyTo
+                      viewModel.setCurrencyFrom(to)
+                      viewModel.setCurrencyTo(from)
+                  },
+                  containerColor = MaterialTheme.colorScheme.primaryContainer,
+                  contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                  modifier = Modifier.testTag("currency_swap_btn")
+              ) {
+                  Icon(Icons.Default.SwapVert, contentDescription = "Swap Currencies")
+              }
+          }
+  
+          Card(
+              shape = RoundedCornerShape(20.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+          ) {
+              Column(
+                  modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(12.dp)
+              ) {
+                  Text("To", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+  
+                  Box {
+                      Button(
+                          onClick = { showToMenu = true },
+                          modifier = Modifier.fillMaxWidth().testTag("currency_to_btn"),
+                          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                          shape = RoundedCornerShape(12.dp)
+                      ) {
+                          Row(
+                              horizontalArrangement = Arrangement.SpaceBetween,
+                              verticalAlignment = Alignment.CenterVertically,
+                              modifier = Modifier.fillMaxWidth()
+                          ) {
+                              Text(currencyTo)
+                              Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                          }
+                      }
+                      DropdownMenu(
+                          expanded = showToMenu,
+                          onDismissRequest = { showToMenu = false }
+                      ) {
+                          viewModel.availableCurrencies.forEach { code ->
+                              DropdownMenuItem(
+                                  text = { Text(code) },
+                                  onClick = {
+                                      viewModel.setCurrencyTo(code)
+                                      showToMenu = false
+                                  }
+                              )
+                          }
+                      }
+                  }
+  
+                  Card(
+                      modifier = Modifier.fillMaxWidth(),
+                      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                  ) {
+                      Column(modifier = Modifier.padding(16.dp)) {
+                          Text("Calculated Exchange", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                          Text(
+                              text = currencyResult,
+                              style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                              color = MaterialTheme.colorScheme.onPrimaryContainer,
+                              modifier = Modifier.padding(top = 4.dp).testTag("currency_output_val")
+                          )
+                      }
+                  }
+              }
+          }
+      }
+  }

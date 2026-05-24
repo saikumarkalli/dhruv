@@ -3,36 +3,42 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Light Theme Palettes (with some elegant refinements)
-val PrimaryLight = Color(0xFF0061A4)
-val SecondaryLight = Color(0xFF535F70)
-val TertiaryLight = Color(0xFF6B5778)
-val BackgroundLight = Color(0xFFFFFFFF)
-val SurfaceLight = Color(0xFFF3F4F6)
+val PrimaryLight = Color(0xFFF05A28) // MIUI Orange
+val SecondaryLight = Color(0xFF455A64) // Slate Blue
+val TertiaryLight = Color(0xFF00B0FF) // Vivid Cyan
+val BackgroundLight = Color(0xFFF9F9F9) // Clean white/grey MIUI background
+val SurfaceLight = Color(0xFFFFFFFF) // Clean white key surface
 
 // Sophisticated Dark Theme Palettes
-val PrimaryDark = Color(0xFFD3E3FD) // Elegant Pale Blue for Primary highlights and '=' key
-val SecondaryDark = Color(0xFFA8C7FA) // Muted Slate Blue for links/accents and Scientific text
-val TertiaryDark = Color(0xFFEADDFF) // Muted Lavender
-val BackgroundDark = Color(0xFF1A1C1E) // Sophisticated Dark Base Gray
-val SurfaceDark = Color(0xFF212429) // Slightly lighter Dark key body/cards
-val SurfaceVariantDark = Color(0xFF2D3035) // Elegant element / number key background
-val OnSurfaceDark = Color(0xFFE2E2E6) // Crisp white-ish neutral text
-val OnSurfaceVariantDark = Color(0xFFC4C7C5) // Subtitle/Label neutral text
+val PrimaryDark = Color(0xFFFF6D3B) // Bright MIUI Orange for Dark Theme
+val SecondaryDark = Color(0xFFCFD8DC) // Muted Soft Gray
+val TertiaryDark = Color(0xFF80D8FF) // Sky Blue
+val BackgroundDark = Color(0xFF0A0A0A) // Pitch Black background matching MIUI
+val SurfaceDark = Color(0xFF1E1E1E) // Slate neutral dark key/card surface
+val SurfaceVariantDark = Color(0xFF2C2C2C) // Numeric key dark surface
+val OnSurfaceDark = Color(0xFFF5F5F5) // Warm white text
+val OnSurfaceVariantDark = Color(0xFF9E9E9E) // Subtitle text
 
-// Key Special Colors for "Sophisticated Dark"
-val SophModKeyBg = Color(0xFF384458) // Blue-gray for C, (), % keys
-val SophModKeyText = Color(0xFFD3E3FD)
+// Key Special Colors for "Sophisticated Dark" & MIUI Spec
+val SophModKeyBg = Color(0xFFEFEFEF) // Modifier bg light
+val MiuiDarkModKeyBg = Color(0xFF2C2C2C) // Modifier bg dark
+val SophModKeyText = Color(0xFF455A64)
 
-val SophOpKeyBg = Color(0xFF4F378B) // Purple for operators
-val SophOpKeyText = Color(0xFFEADDFF)
+val SophOpKeyBg = Color(0xFFF05A28) // MIUI Orange
+val SophOpKeyText = Color(0xFFFFFFFF)
 
-val SophNumKeyBg = Color(0xFF2D3035) // Dark slate for numeric inputs
-val SophNumKeyText = Color(0xFFE2E2E6)
+val SophOpKeyBgLight = Color(0xFFFFF1ED) // Extremely soft peach/orange
+val SophOpKeyTextLight = Color(0xFFF05A28) // Orange text
 
-val SophEqualsBg = Color(0xFFD3E3FD) // Elegant light blue
-val SophEqualsText = Color(0xFF003258) // Navy text for equals
+val SophNumKeyBg = Color(0xFFFFFFFF) // White keys for Light
+val MiuiDarkNumKeyBg = Color(0xFF1E1E1E) // Dark gray keys for dark theme
+val SophNumKeyText = Color(0xFF212121)
 
-val SophScienceKeyBg = Color(0xFF1A1C1E) // App background matching for scientific keys
-val SophScienceKeyText = Color(0xFFA8C7FA)
-val SophScienceKeyBorder = Color(0xFF444746)
-val SophScienceKeyActiveBg = Color(0xFF334963)
+val SophEqualsBg = Color(0xFFF05A28) // Orange equal button
+val SophEqualsText = Color(0xFFFFFFFF)
+
+val SophScienceKeyBg = Color(0xFFF5F5F5)
+val SophScienceKeyText = Color(0xFF455A64)
+val SophScienceKeyBorder = Color(0xFFE0E0E0)
+val SophScienceKeyActiveBg = Color(0xFFCFD8DC)
+

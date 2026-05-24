@@ -1,5 +1,5 @@
 {
-  "name": "dhruv",
+  "name": "dhruv calc",
   "description": "An elegant scientific calculator with built-in history, unit converters for length and mass, live offline-capable currency conversion, and gesture-based navigation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

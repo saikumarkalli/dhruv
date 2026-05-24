@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -29,12 +30,13 @@ import java.text.DecimalFormatSymbols
 import java.util.Locale
 import kotlin.math.pow
 import com.example.ui.theme.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @Composable
 fun FinanceScreen(
     modifier: Modifier = Modifier
 ) {
-    var activeFinanceCalc by remember { mutableIntStateOf(0) }
+    var activeFinanceCalc by remember { mutableStateOf<Int?>(null) }
     
     val calculators = listOf(
         FinanceCalcItem("Loan EMI", Icons.Default.Assessment, "Evaluate monthly home/car EMI and interest ratios."),
@@ -49,222 +51,159 @@ fun FinanceScreen(
         FinanceCalcItem("FD / RD Maturity", Icons.Default.Savings, "Track Fixed/Recurring Deposits maturity pay outs and accruals.")
     )
 
-    val configuration = LocalConfiguration.current
-    val isWideScreen = configuration.screenWidthDp >= 720
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Applet Header - STACKED COLUMN TO PREVENT ANY TEXT OVERLAPPING
-        Surface(
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        if (activeFinanceCalc == null) {
+            // Main Library Grid View (Matches Screenshot Redesign perfectly!)
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = "Finance Planning",
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = ResponsiveApp.typography.titleLarge),
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Real-Time Calculations • May 2026",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = ResponsiveApp.typography.labelSmall),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        if (isWideScreen) {
-            // Adaptive Grid/Detail for large devices (Tablet/Desktop/Landscape)
-            Row(
-                modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Left Panel: Menu Cards
-                Card(
-                    modifier = Modifier
-                        .width(300.dp)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                Text(
+                    text = "Financial Planning",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                Text(
+                    text = "Select a tool to begin calculations",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                // 3-Column beautiful responsive grid
+                val rows = calculators.chunked(3)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "Financial Library",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-                        )
-                        calculators.forEachIndexed { index, item ->
-                            val isSelected = activeFinanceCalc == index
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { activeFinanceCalc = index }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = item.name,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    rows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            row.forEach { item ->
+                                val index = calculators.indexOf(item)
+                                GridFinanceItemCard(
+                                    item = item,
+                                    onClick = { activeFinanceCalc = index },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
+                            // Fill remaining space if row is not full
+                            if (row.size < 3) {
+                                repeat(3 - row.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
-                    }
-                }
-
-                // Right Panel: Calculations Display Space
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp)
-                    ) {
-                        ActiveFinanceCalcRender(activeFinanceCalc)
                     }
                 }
             }
         } else {
-            // Mobile scrolling view
-            var showSelectionDialog by remember { mutableStateOf(false) }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Floating Action Selection Trigger Bar
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showSelectionDialog = true }
-                        .padding(bottom = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            // Active Tool Container View (with Elegant Top App Bar)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { activeFinanceCalc = null }) {
                             Icon(
-                                imageVector = calculators[activeFinanceCalc].icon,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back to list",
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = calculators[activeFinanceCalc].name,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    "Tap to switch calculator",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
                         }
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Switch")
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column {
+                            val activeItem = calculators[activeFinanceCalc ?: 0]
+                            Text(
+                                text = activeItem.name,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = activeItem.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    ActiveFinanceCalcRender(activeFinanceCalc)
+                    ActiveFinanceCalcRender(activeFinanceCalc ?: 0)
                 }
             }
-
-            // Bottom drawer simulator
-            if (showSelectionDialog) {
-                AlertDialog(
-                    onDismissRequest = { showSelectionDialog = false },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(onClick = { showSelectionDialog = false }) {
-                            Text("Cancel")
-                        }
-                    },
-                    title = {
-                        Text("Select Financial Tool", fontWeight = FontWeight.Black)
-                    },
-                    text = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            calculators.forEachIndexed { index, item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (activeFinanceCalc == index) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                        .clickable {
-                                            activeFinanceCalc = index
-                                            showSelectionDialog = false
-                                        }
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(item.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(item.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                )
-            }
         }
+    }
+}
+
+@Composable
+fun GridFinanceItemCard(
+    item: FinanceCalcItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 8.dp)
+            .testTag("grid_item_${item.name.lowercase().replace(" ", "_").replace("&", "and").replace("/", "and")}"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.name,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

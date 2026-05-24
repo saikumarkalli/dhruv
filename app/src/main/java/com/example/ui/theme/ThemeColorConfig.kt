@@ -10,6 +10,7 @@ data class SectionColorTheme(
 )
 
 val ColorOptions = listOf(
+    SectionColorTheme("orange", "Dhruv Orange", Color(0xFFC2410C), Color(0xFFFF6D00)),
     SectionColorTheme("cyan", "Neon Cyan", Color(0xFF00838F), Color(0xFF00E5FF)),
     SectionColorTheme("blue", "Polar Blue", Color(0xFF0061A4), Color(0xFFD3E3FD)),
     SectionColorTheme("purple", "Nebula Purple", Color(0xFF4A148C), Color(0xFFB388FF)),

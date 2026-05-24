@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.SettingsRepository
 import com.example.ui.calculator.CalculatorViewModel
 import com.example.ui.theme.ColorOptions
+import com.example.ui.theme.appGradientBackground
 
 @Composable
 fun SettingsScreen(
@@ -56,7 +57,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .appGradientBackground()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -92,6 +93,8 @@ fun SettingsScreen(
                 tag = "settings_precision_item"
             )
         }
+
+
 
         // Section Theme Colors
         SettingsCategory(title = "Specific Section Themes") {
@@ -482,6 +485,8 @@ fun SettingsScreen(
             shape = RoundedCornerShape(24.dp)
         )
     }
+
+
 }
 
 @Composable

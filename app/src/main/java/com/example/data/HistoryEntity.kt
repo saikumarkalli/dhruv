@@ -9,5 +9,13 @@ data class HistoryEntity(
     val expression: String,
     val result: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val isScientific: Boolean = false
+    val isScientific: Boolean = false,
+    val calculationType: String = if (isScientific) "scientific" else "standard",
+    val favorite: Boolean = false,
+    val edited: Boolean = false,
+    val tags: String = "",
+    val deviceSource: String = "Android Device",
+    val note: String = "",
+    val isInRecycleBin: Boolean = false,
+    val deletedTimestamp: Long = 0L
 )

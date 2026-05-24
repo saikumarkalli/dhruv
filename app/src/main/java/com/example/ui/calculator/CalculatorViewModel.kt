@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.round
@@ -30,7 +32,16 @@ class CalculatorViewModel(
     private val _result = MutableStateFlow("")
     val result: StateFlow<String> = _result.asStateFlow()
 
-    val history: StateFlow<List<HistoryEntity>> = historyRepository.allHistory
+    // Active calculations (not in recycle bin)
+    val activeHistory: StateFlow<List<HistoryEntity>> = historyRepository.activeHistory
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Recycle bin calculations
+    val recycleBinHistory: StateFlow<List<HistoryEntity>> = historyRepository.recycleBinHistory
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -43,6 +54,13 @@ class CalculatorViewModel(
     val historyPinCode: StateFlow<String> = settingsRepository.historyPinCode
 
     private var isResultFresh = false
+
+    init {
+        // Auto remove items in recycle bin older than 30 days
+        viewModelScope.launch {
+            historyRepository.pruneOldRecycleBin()
+        }
+    }
 
     fun onKeyPress(key: String) {
         val currentInput = _input.value
@@ -74,7 +92,6 @@ class CalculatorViewModel(
                     return
                 }
                 "=" -> {
-                    // Do nothing or re-evaluate
                     return
                 }
                 "±" -> {
@@ -147,9 +164,77 @@ class CalculatorViewModel(
         isResultFresh = true
     }
 
-    fun deleteHistoryId(id: Long) {
+    // Toggle Favorite column
+    fun toggleFavorite(historyItem: HistoryEntity) {
+        viewModelScope.launch {
+            historyRepository.update(historyItem.copy(favorite = !historyItem.favorite))
+        }
+    }
+
+    // Update Note column
+    fun updateNote(historyItem: HistoryEntity, newNote: String) {
+        viewModelScope.launch {
+            historyRepository.update(historyItem.copy(note = newNote, edited = true))
+        }
+    }
+
+    // Update Tags column
+    fun updateTags(historyItem: HistoryEntity, newTags: String) {
+        viewModelScope.launch {
+            historyRepository.update(historyItem.copy(tags = newTags, edited = true))
+        }
+    }
+
+    // Move single item to recycle bin
+    fun moveToRecycleBin(id: Long) {
+        viewModelScope.launch {
+            historyRepository.moveToRecycleBin(id)
+        }
+    }
+
+    // Move multiple items to recycle bin (Bulk Delete to Recycle Bin)
+    fun moveMultipleToRecycleBin(ids: List<Long>) {
+        viewModelScope.launch {
+            historyRepository.moveMultipleToRecycleBin(ids)
+        }
+    }
+
+    // Restore single item from recycle bin
+    fun restoreFromRecycleBin(id: Long) {
+        viewModelScope.launch {
+            historyRepository.restoreFromRecycleBin(id)
+        }
+    }
+
+    // Delete single item permanently
+    fun deletePermanently(id: Long) {
         viewModelScope.launch {
             historyRepository.delete(id)
+        }
+    }
+
+    // Delete multiple items permanently
+    fun deletePermanentlyMultiple(ids: List<Long>) {
+        viewModelScope.launch {
+            historyRepository.deleteMultiple(ids)
+        }
+    }
+
+    // Empty recycle bin
+    fun emptyRecycleBin() {
+        viewModelScope.launch {
+            historyRepository.emptyRecycleBin()
+        }
+    }
+
+    // Clear active calculations (move all to recycle bin)
+    fun clearActiveHistory() {
+        viewModelScope.launch {
+            val list = activeHistory.value
+            if (list.isNotEmpty()) {
+                val ids = list.map { it.id }
+                historyRepository.moveMultipleToRecycleBin(ids)
+            }
         }
     }
 
@@ -178,13 +263,14 @@ class CalculatorViewModel(
                     _result.value = formatted
                     isResultFresh = true
                     
-                    // Save to history
-                    val isScientific = checkIsScientific(currentExpression)
+                    val isSci = checkIsScientific(currentExpression)
                     historyRepository.insert(
                         HistoryEntity(
                             expression = currentExpression,
                             result = formatted,
-                            isScientific = isScientific
+                            isScientific = isSci,
+                            calculationType = if (isSci) "scientific" else "standard",
+                            deviceSource = "Android Device"
                         )
                     )
                 }

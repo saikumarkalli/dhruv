@@ -5,63 +5,149 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Obsidian Foundation Base Plate -->
+    <!-- Obsidian Dark Background Foundation Layer -->
     <path
-        android:fillColor="#0D1117"
-        android:strokeColor="#30363D"
-        android:strokeWidth="1.5"
-        android:pathData="M30,22 h48 a8,8 0 0 1 8,8 v48 a8,8 0 0 1 -8,8 h-48 a8,8 0 0 1 -8,-8 v-48 a8,8 0 0 1 8,-8 z" />
+        android:fillColor="#0D0F14"
+        android:pathData="M0,0h108v108h-108z" />
 
-    <!-- Isometric Tech Core Layer -->
+    <!-- Ambient Space Dust (Tiny scattered stars) -->
     <path
-        android:fillColor="#161B22"
-        android:pathData="M34,26 h40 a6,6 0 0 1 6,6 v40 a6,6 0 0 1 -6,6 h-40 a6,6 0 0 1 -6,-6 v-40 a6,6 0 0 1 6,-6 z" />
+        android:fillColor="#E2E8F0"
+        android:pathData="M25,25m-0.6,0a0.6,0.6 0 1,1 1.2,0a0.6,0.6 0 1,1 -1.2,0" />
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M80,20m-0.5,0a0.5,0.5 0 1,1 1,0a0.5,0.5 0 1,1 -1,0" />
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M20,75m-0.5,0a0.5,0.5 0 1,1 1,0a0.5,0.5 0 1,1 -1,0" />
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M88,72m-0.6,0a0.6,0.6 0 1,1 1.2,0a0.6,0.6 0 1,1 -1.2,0" />
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M54,12m-0.4,0a0.4,0.4 0 1,1 0.8,0a0.4,0.4 0 1,1 -0.8,0" />
 
-    <!-- Unified Tool Coordinates (Compass Grid Lines) -->
+    <!-- Golden-Orange Dashed Triangle Connecting the Nodes -->
     <path
-        android:strokeColor="#21262D"
-        android:strokeWidth="1"
-        android:pathData="M54,26 v52 M26,54 h52" />
-
-    <!-- Glowing Vector 1: Infinite Loops (Currency & Physical Conversion, Finance Flow) -->
-    <path
-        android:strokeColor="#A78BFA"
-        android:strokeWidth="3.5"
+        android:strokeColor="#E2B13C"
+        android:strokeWidth="1.0"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M40,54 C40,43 49,43 49,54 C49,65 59,65 59,54 C59,43 68,43 68,54 C68,65 59,65 59,54 Z" />
+        android:pathData="M54,22 L76,64 L32,64 Z" />
 
-    <!-- Glowing Vector 2: Mathematical / FinTech Ascent (Trending bar up-right) -->
+    <!-- Three Glowing Vertices Nodes -->
+    <!-- Top Node: Violet-Blue -->
     <path
-        android:strokeColor="#34D399"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round"
-        android:pathData="M34,70 L48,56 L58,62 L74,38" />
-    
-    <!-- Arrow tip for the ascent -->
+        android:strokeColor="#8B5CF6"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M54,22m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
     <path
-        android:fillColor="#34D399"
-        android:pathData="M68,38 h6 v6 Z" />
+        android:fillColor="#A78BFA"
+        android:pathData="M54,22m-2,0a2,2 0 1,1 4,0a2,2 0 1,1 -4,0" />
 
-    <!-- Glowing Vector 3: High-precision chronometer pin (Date & Time Tracking) -->
+    <!-- Bottom-Left Node: Golden-Orange -->
     <path
-        android:strokeColor="#FBBF24"
-        android:strokeWidth="3"
-        android:strokeLineCap="round"
-        android:pathData="M54,54 L44,40" />
-
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M32,64m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
     <path
-        android:strokeColor="#FF7A00"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round"
-        android:pathData="M54,54 L64,68" />
+        android:fillColor="#FBBF24"
+        android:pathData="M32,64m-2,0a2,2 0 1,1 4,0a2,2 0 1,1 -4,0" />
 
-    <!-- Central High-Tech Rivet -->
+    <!-- Bottom-Right Node: Teal-Cyan -->
+    <path
+        android:strokeColor="#0D9488"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:pathData="M76,64m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
+    <path
+        android:fillColor="#2DD4BF"
+        android:pathData="M76,64m-2,0a2,2 0 1,1 4,0a2,2 0 1,1 -4,0" />
+
+    <!-- Shaded Four-Point Compass Star in Center -->
+    <!-- North Arm -->
+    <path
+        android:fillColor="#CCCCCC"
+        android:pathData="M54,20 L54,47 L51,47 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,54 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        android:pathData="M54,20 L57,47 L54,47 Z" />
 
+    <!-- South Arm -->
     <path
-        android:fillColor="#0D1117"
-        android:pathData="M54,54 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
+        android:fillColor="#E5E7EB"
+        android:pathData="M54,74 L54,47 L57,47 Z" />
+    <path
+        android:fillColor="#9CA3AF"
+        android:pathData="M54,74 L51,47 L54,47 Z" />
+
+    <!-- East Arm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M81,47 L54,47 L54,44 Z" />
+    <path
+        android:fillColor="#E5E7EB"
+        android:pathData="M81,47 L54,50 L54,47 Z" />
+
+    <!-- West Arm -->
+    <path
+        android:fillColor="#9CA3AF"
+        android:pathData="M27,47 L54,47 L54,50 Z" />
+    <path
+        android:fillColor="#D1D5DB"
+        android:pathData="M27,47 L54,44 L54,47 Z" />
+
+    <!-- Large Glowing Golden-Orange Center Circle with white core -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M54,47m-6,0a6,6 0 1,1 12,0a6,6 0 1,1 -12,0" />
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M54,47m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,47m-2,0a2,2 0 1,1 4,0a2,2 0 1,1 -4,0" />
+
+    <!-- Sleek Minimalistic Spaced "D H R U V" Vector Lettering at the Bottom -->
+    <!-- D -->
+    <path
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M31,76 v5 h1.5 c1.5,0 2.5,-1 2.5,-2.5 c0,-1.5 -1,-2.5 -2.5,-2.5 Z" />
+
+    <!-- H -->
+    <path
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M41,76 v5 M45,76 v5 M41,78.5 h4" />
+
+    <!-- R -->
+    <path
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M51,76 v5 M51,76 h1.5 c1.0,0 1.8,0.6 1.8,1.5 c0,0.9 -0.8,1.5 -1.8,1.5 h-1.5 M52.5,79 l1.5,2" />
+
+    <!-- U -->
+    <path
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M61,76 v3.2 c0,1.0 0.8,1.8 1.8,1.8 c1.0,0 1.8,-0.8 1.8,-1.8 v-3.2" />
+
+    <!-- V -->
+    <path
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M71,76 l1.5,5 l1.5,-5" />
+
 </vector>
+
