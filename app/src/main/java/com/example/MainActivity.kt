@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -118,7 +117,11 @@ class MainActivity : ComponentActivity() {
                     val callback = object : OnBackPressedCallback(pagerState.currentPage != 0) {
                         override fun handleOnBackPressed() {
                             coroutineScope.launch {
-                                pagerState.animateScrollToPage(0)
+                                if (pagerState.currentPage > 1) {
+                                    pagerState.scrollToPage(0)
+                                } else {
+                                    pagerState.animateScrollToPage(0)
+                                }
                             }
                         }
                     }
@@ -173,7 +176,11 @@ class MainActivity : ComponentActivity() {
                                         selected = selected,
                                         onClick = {
                                             coroutineScope.launch {
-                                                pagerState.animateScrollToPage(index)
+                                                if (kotlin.math.abs(pagerState.currentPage - index) > 1) {
+                                                    pagerState.scrollToPage(index)
+                                                } else {
+                                                    pagerState.animateScrollToPage(index)
+                                                }
                                             }
                                         },
                                         icon = {

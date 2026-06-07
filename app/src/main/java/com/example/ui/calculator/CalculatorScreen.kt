@@ -301,7 +301,7 @@ fun CalculatorScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             recentHistory.forEachIndexed { index, histEntry ->
                                 val itemAlpha = when {
@@ -318,9 +318,9 @@ fun CalculatorScreen(
                                     Text(
                                         text = histEntry.expression,
                                         style = TextStyle(
-                                            fontSize = 15.sp,
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Normal,
-                                            color = themeSecText,
+                                            color = themeTextColor,
                                             textAlign = TextAlign.End
                                         ),
                                         maxLines = 1,
@@ -330,9 +330,9 @@ fun CalculatorScreen(
                                     Text(
                                         text = "= ${histEntry.result}",
                                         style = TextStyle(
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = PremiumPrimaryAccent,
+                                            fontSize = 32.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = themeTextColor,
                                             textAlign = TextAlign.End
                                         ),
                                         maxLines = 1,
@@ -343,7 +343,7 @@ fun CalculatorScreen(
                             // Keep layout stable: pad to exactly 3 items
                             val itemsNeeded = 3 - recentHistory.size
                             repeat(itemsNeeded) {
-                                Spacer(modifier = Modifier.height(34.dp))
+                                Spacer(modifier = Modifier.height(72.dp))
                             }
                         }
 
