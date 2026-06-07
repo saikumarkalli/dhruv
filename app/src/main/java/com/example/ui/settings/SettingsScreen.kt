@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,8 +24,6 @@ import java.util.Locale
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
     calculatorViewModel: CalculatorViewModel,
-    appVersion: String = "1.0",
-    appVersionCode: Int = 1,
     modifier: Modifier = Modifier
 ) {
     // Collect State
@@ -45,6 +44,17 @@ fun SettingsScreen(
         isTimeEnabled = settingsRepository.isTimeEnabled.collectAsState(initial = true).value,
         timeColor = settingsRepository.timeColor.collectAsState(initial = "teal").value
     )
+
+    // Dynamic Version Info
+    val context = LocalContext.current
+    val packageInfo = remember { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val dynamicVersionName = packageInfo.versionName ?: "1.0"
+    val dynamicVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode.toInt()
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo.versionCode
+    }
 
     // Dialog & Sheet States
     var showPrecisionSheet by remember { mutableStateOf(false) }
@@ -216,8 +226,8 @@ fun SettingsScreen(
 
         // About
         Text("About Dhruv Calc", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
-        Text("Version $appVersion (build $appVersionCode)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
-        Spacer(modifier = Modifier.height(24.dp))
+        Text("Version $dynamicVersionName (build $dynamicVersionCode)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 
     // --- Overlays ---

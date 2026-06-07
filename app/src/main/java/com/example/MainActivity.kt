@@ -253,9 +253,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     5 -> SettingsScreen(
                                         settingsRepository = settingsRepository,
-                                        calculatorViewModel = calculatorViewModel,
-                                        appVersion = BuildConfig.VERSION_NAME,
-                                        appVersionCode = BuildConfig.VERSION_CODE
+                                        calculatorViewModel = calculatorViewModel
                                     )
                                 }
                             }
