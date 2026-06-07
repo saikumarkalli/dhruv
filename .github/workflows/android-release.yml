@@ -46,13 +46,22 @@ jobs:
           fi
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
 
+      - name: Setup headless display (Xvfb)
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -ac -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
       - name: Run Unit Tests
+        env:
+          JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
         run: ./gradlew testDebugUnitTest
 
       - name: Build Release APK
         # TODO(Future Implementation): When AAB is ready for Play Store, append 'bundleRelease' to the command below.
 
         env:
+          JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
           KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
