@@ -10,8 +10,10 @@ data class SettingsUiState(
     val isConverterEnabled: Boolean = true,
     val isDateEnabled: Boolean = true,
     val isFinanceEnabled: Boolean = true,
+    val isTimeEnabled: Boolean = true,
     val calculatorColor: String = "cyan",
     val converterColor: String = "purple",
     val dateColor: String = "coral",
-    val financeColor: String = "amber"
+    val financeColor: String = "amber",
+    val timeColor: String = "teal"
 )

@@ -41,7 +41,9 @@ fun SettingsScreen(
         calculatorColor = settingsRepository.calculatorColor.collectAsState(initial = "cyan").value,
         converterColor = settingsRepository.converterColor.collectAsState(initial = "purple").value,
         dateColor = settingsRepository.dateColor.collectAsState(initial = "coral").value,
-        financeColor = settingsRepository.financeColor.collectAsState(initial = "amber").value
+        financeColor = settingsRepository.financeColor.collectAsState(initial = "amber").value,
+        isTimeEnabled = settingsRepository.isTimeEnabled.collectAsState(initial = true).value,
+        timeColor = settingsRepository.timeColor.collectAsState(initial = "teal").value
     )
 
     // Dialog & Sheet States
@@ -157,6 +159,17 @@ fun SettingsScreen(
                 },
                 tag = "settings_section_fin"
             )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SettingsClickableItem(
+                title = "Time Tools",
+                valueDisplay = if (uiState.isTimeEnabled) "On" else "Off",
+                onClick = {
+                    activeSectionConfig = SettingsSectionConfig(
+                        "time", "Time Tools", uiState.isTimeEnabled, true, SettingsConstants.TIME_TOOLS
+                    )
+                },
+                tag = "settings_section_time"
+            )
         }
 
         // Appearance
@@ -235,6 +248,7 @@ fun SettingsScreen(
                     "converter" -> settingsRepository.setConverterColor(colorId)
                     "date" -> settingsRepository.setDateColor(colorId)
                     "finance" -> settingsRepository.setFinanceColor(colorId)
+                    "time" -> settingsRepository.setTimeColor(colorId)
                 }
             },
             onDismiss = { showAppearanceSheet = false }
@@ -250,6 +264,7 @@ fun SettingsScreen(
                     "converter" -> settingsRepository.setConverterEnabled(enabled)
                     "date" -> settingsRepository.setDateEnabled(enabled)
                     "finance" -> settingsRepository.setFinanceEnabled(enabled)
+                    "time" -> settingsRepository.setTimeEnabled(enabled)
                 }
                 activeSectionConfig = activeSectionConfig?.copy(enabled = enabled)
             },

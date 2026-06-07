@@ -36,6 +36,8 @@ class SettingsRepository(private val context: Context) {
         val IS_CONVERTER_ENABLED = booleanPreferencesKey("is_converter_enabled")
         val IS_DATE_ENABLED = booleanPreferencesKey("is_date_enabled")
         val IS_FINANCE_ENABLED = booleanPreferencesKey("is_finance_enabled")
+        val COLOR_TIME = stringPreferencesKey("color_time")
+        val IS_TIME_ENABLED = booleanPreferencesKey("is_time_enabled")
     }
 
     private val initialPrefs = runBlocking {
@@ -97,6 +99,14 @@ class SettingsRepository(private val context: Context) {
     val isFinanceEnabled: StateFlow<Boolean> = context.dataStore.data
         .map { it[PreferencesKeys.IS_FINANCE_ENABLED] ?: true }
         .stateIn(scope, SharingStarted.Eagerly, initialPrefs[PreferencesKeys.IS_FINANCE_ENABLED] ?: true)
+
+    val timeColor: StateFlow<String> = context.dataStore.data
+        .map { it[PreferencesKeys.COLOR_TIME] ?: "teal" }
+        .stateIn(scope, SharingStarted.Eagerly, initialPrefs[PreferencesKeys.COLOR_TIME] ?: "teal")
+
+    val isTimeEnabled: StateFlow<Boolean> = context.dataStore.data
+        .map { it[PreferencesKeys.IS_TIME_ENABLED] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, initialPrefs[PreferencesKeys.IS_TIME_ENABLED] ?: true)
 
     fun setDegree(degree: Boolean) {
         scope.launch {
@@ -198,6 +208,22 @@ class SettingsRepository(private val context: Context) {
         scope.launch {
             context.dataStore.edit { preferences ->
                 preferences[PreferencesKeys.IS_FINANCE_ENABLED] = enabled
+            }
+        }
+    }
+
+    fun setTimeColor(color: String) {
+        scope.launch {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.COLOR_TIME] = color
+            }
+        }
+    }
+
+    fun setTimeEnabled(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.IS_TIME_ENABLED] = enabled
             }
         }
     }

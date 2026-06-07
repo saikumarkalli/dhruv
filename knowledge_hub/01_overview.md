@@ -39,7 +39,13 @@ A collection of 10 professional-grade financial calculators:
 - **Inflation Adjusted**: Calculates future purchasing power based on inflation rates.
 - **FD / RD Maturity**: Projects payouts for Fixed and Recurring Deposits.
 
-### 5. Settings, Personalization & Security
+### 5. Time Tools Suite
+A collection of 3 productivity tracking tools:
+- **Stopwatch**: Precision millisecond stopwatch with lap delta tracking.
+- **Timer**: Multiple concurrent countdown timers with beautiful progress animations.
+- **Alarm**: Device-level background alarms with optional math-equation dismissal puzzles.
+
+### 6. Settings, Personalization & Security
 - **Theming**: Selectable interface styles (System, Always Dark, Always Light) and section-specific accent color palettes.
 - **Precision Control**: Adjustable decimal rounding parameters.
 - **Calculation History**: Automatic logging of calculations with options to star favorites, add custom tags, and write notes. Features a soft-delete "Recycle Bin" that auto-prunes entries older than 30 days.
