@@ -19,6 +19,7 @@ val appModule = module {
     single { get<AppDatabase>().historyDao() }
     single { get<AppDatabase>().currencyRateDao() }
     single { get<AppDatabase>().alarmDao() }
+    single<com.example.service.alarm.AlarmScheduler> { com.example.service.alarm.AlarmSchedulerImpl(androidContext()) }
 
     // Repositories
     single { HistoryRepository(get()) }
@@ -34,5 +35,5 @@ val appModule = module {
     viewModel { TimeViewModel() }
     viewModel { StopwatchViewModel() }
     viewModel { TimerViewModel() }
-    viewModel { AlarmViewModel(get()) }
+    viewModel { AlarmViewModel(get(), get()) }
 }

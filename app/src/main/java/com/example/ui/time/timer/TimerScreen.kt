@@ -15,11 +15,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import java.util.Locale
 
 @Composable
 fun TimerScreen(viewModel: TimerViewModel) {
     val state by viewModel.state.collectAsState()
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+    val responsiveFontSize = (screenWidth * 0.16).sp
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -69,7 +72,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
 
                 Text(
                     text = formatCountdown(state.remainingTimeMs),
-                    fontSize = 64.sp,
+                    fontSize = responsiveFontSize,
                     fontWeight = FontWeight.Light,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -84,7 +87,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                         containerColor = MaterialTheme.colorScheme.surfaceVariant, 
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
                 ) {
                     Text("Reset")
                 }
@@ -95,7 +98,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                             containerColor = MaterialTheme.colorScheme.errorContainer, 
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         ),
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
                     ) { Text("Pause") }
                 } else {
                     Button(
@@ -104,7 +107,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                             containerColor = MaterialTheme.colorScheme.primary, 
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
                     ) { Text("Resume") }
                 }
             }

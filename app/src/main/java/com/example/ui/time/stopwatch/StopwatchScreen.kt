@@ -12,11 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import java.util.Locale
 
 @Composable
 fun StopwatchScreen(viewModel: StopwatchViewModel) {
     val state by viewModel.state.collectAsState()
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+    val responsiveFontSize = (screenWidth * 0.18).sp
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -26,7 +29,7 @@ fun StopwatchScreen(viewModel: StopwatchViewModel) {
         
         Text(
             text = formatTime(state.timeMs),
-            fontSize = 72.sp,
+            fontSize = responsiveFontSize,
             fontWeight = FontWeight.Light,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -43,7 +46,7 @@ fun StopwatchScreen(viewModel: StopwatchViewModel) {
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
-                modifier = Modifier.size(80.dp)
+                modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
             ) {
                 Text(if (state.isRunning) "Lap" else "Reset")
             }
@@ -54,7 +57,7 @@ fun StopwatchScreen(viewModel: StopwatchViewModel) {
                     containerColor = if (state.isRunning) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary,
                     contentColor = if (state.isRunning) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary
                 ),
-                modifier = Modifier.size(80.dp)
+                modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
             ) {
                 Text(if (state.isRunning) "Stop" else "Start")
             }

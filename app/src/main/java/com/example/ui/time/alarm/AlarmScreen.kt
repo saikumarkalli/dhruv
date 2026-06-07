@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,14 +20,21 @@ import java.util.Locale
 @Composable
 fun AlarmScreen(viewModel: AlarmViewModel) {
     val alarms by viewModel.alarms.collectAsState()
+    var showAddSheet by remember { mutableStateOf(false) }
+
+    if (showAddSheet) {
+        AddAlarmSheet(
+            onDismiss = { showAddSheet = false },
+            onSave = { timeInMillis, label, difficulty ->
+                viewModel.addAlarm(timeInMillis, label, difficulty)
+            }
+        )
+    }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { 
-                    // For demo, add an alarm 5 minutes from now
-                    viewModel.addAlarm(System.currentTimeMillis() + 300000, "Wake Up", 1)
-                },
+                onClick = { showAddSheet = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
@@ -67,10 +75,16 @@ fun AlarmScreen(viewModel: AlarmViewModel) {
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                Switch(
-                                    checked = alarm.isEnabled,
-                                    onCheckedChange = { viewModel.toggleAlarm(alarm, it) }
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Switch(
+                                        checked = alarm.isEnabled,
+                                        onCheckedChange = { viewModel.toggleAlarm(alarm, it) }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    IconButton(onClick = { viewModel.deleteAlarm(alarm) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete Alarm", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             }
                         }
                     }
