@@ -1,14 +1,19 @@
 package com.example
 
 import android.app.Application
-import com.example.data.AppDatabase
-import com.example.data.CurrencyRepository
-import com.example.data.HistoryRepository
-import com.example.data.SettingsRepository
+import com.example.di.appModule
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
 
 class CalculatorApplication : Application() {
-    val database by lazy { AppDatabase.getDatabase(this) }
-    val historyRepository by lazy { HistoryRepository(database.historyDao()) }
-    val currencyRepository by lazy { CurrencyRepository(database.currencyRateDao()) }
-    val settingsRepository by lazy { SettingsRepository(this) }
+    override fun onCreate() {
+        super.onCreate()
+        startKoin {
+            androidLogger(Level.ERROR)
+            androidContext(this@CalculatorApplication)
+            modules(appModule)
+        }
+    }
 }

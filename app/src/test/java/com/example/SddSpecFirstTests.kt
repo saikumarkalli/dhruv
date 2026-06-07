@@ -40,8 +40,8 @@ class SddSpecFirstTests {
     @Test
     fun evaluate_OperatorPrecedence_CorrectValue() {
         // Multiplication before addition, parentheses override
-        val result1 = calculator.evaluate("5 - 2 % 2", false) // 5 - 0 = 5
-        assertEquals(5.0, result1, precisionDelta)
+        val result1 = calculator.evaluate("5 - 2 * 2", false) // 5 - 4 = 1
+        assertEquals(1.0, result1, precisionDelta)
 
         val result2 = calculator.evaluate("(5 - 2) * 3", false) // 3 * 3 = 9
         assertEquals(9.0, result2, precisionDelta)
@@ -145,10 +145,11 @@ class SddSpecFirstTests {
         calculator.evaluate("ln(-5)", false)
     }
 
-    @Test(expected = RuntimeException::class)
-    fun evaluate_UnmatchedParenthesis_ThrowsRuntimeException() {
-        // Unmatched parenthesis throws RuntimeException
-        calculator.evaluate("(2 + 3", false)
+    @Test
+    fun evaluate_UnmatchedParenthesis_AutoCloses() {
+        // Unmatched parenthesis is auto-closed
+        val result = calculator.evaluate("(2 + 3", false)
+        assertEquals(5.0, result, precisionDelta)
     }
 
     @Test(expected = RuntimeException::class)

@@ -11,15 +11,15 @@ import java.util.concurrent.TimeUnit
 
 @JsonClass(generateAdapter = true)
 data class ExchangeRateResponse(
-    @Json(name = "result") val result: String,
-    @Json(name = "base_code") val baseCode: String,
-    @Json(name = "rates") val rates: Map<String, Double>
+    @param:Json(name = "result") val result: String,
+    @param:Json(name = "base_code") val baseCode: String,
+    @param:Json(name = "rates") val rates: Map<String, Double>
 )
 
 @JsonClass(generateAdapter = true)
 data class ExchangeRateResponseFallback(
-    @Json(name = "base") val base: String,
-    @Json(name = "rates") val rates: Map<String, Double>
+    @param:Json(name = "base") val base: String,
+    @param:Json(name = "rates") val rates: Map<String, Double>
 )
 
 interface CurrencyApi {

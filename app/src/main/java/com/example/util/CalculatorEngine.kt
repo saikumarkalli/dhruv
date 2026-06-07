@@ -7,11 +7,19 @@ object CalculatorEngine : ICalculatorEngine {
         if (expression.isBlank()) return 0.0
         
         // Core sanitization for calculator interface elements
-        val sanitized = expression
+        var sanitized = expression
             .replace("×", "*")
             .replace("÷", "/")
-            .replace("π", Math.PI.toString())
-            .replace("e", Math.E.toString())
+
+        // Auto-close any unclosed parentheses
+        var openCount = 0
+        for (ch in sanitized) {
+            if (ch == '(') openCount++
+            else if (ch == ')') {
+                if (openCount > 0) openCount--
+            }
+        }
+        sanitized += ")".repeat(openCount)
 
         return Parser(sanitized, isDegree).parse()
     }
@@ -55,88 +63,153 @@ object CalculatorEngine : ICalculatorEngine {
         }
 
         fun parseExpression(): Double {
-            var x = parseTerm()
+            var x = parseTerm(null, false)
             while (true) {
-                if (eat('+'.code)) x += parseTerm() // addition
-                else if (eat('-'.code)) x -= parseTerm() // subtraction
-                else return x
+                if (eat('+'.code)) {
+                    x += parseTerm(contextValue = x, isAdder = true)
+                } else if (eat('-'.code)) {
+                    x -= parseTerm(contextValue = x, isAdder = true)
+                } else {
+                    return x
+                }
             }
         }
 
-        fun parseTerm(): Double {
-            var x = parseFactor()
+        private fun isNextImplicitMultiplication(): Boolean {
+            var tempPos = pos
+            var tempCh = ch
+            while (tempCh == ' '.code) {
+                if (++tempPos < str.length) {
+                    tempCh = str[tempPos].code
+                } else {
+                    tempCh = -1
+                }
+            }
+            return (tempCh == '('.code ||
+                    (tempCh >= '0'.code && tempCh <= '9'.code) ||
+                    tempCh == '.'.code ||
+                    tempCh == 'π'.code ||
+                    tempCh == 'e'.code ||
+                    (tempCh >= 'a'.code && tempCh <= 'z'.code))
+        }
+
+        fun parseTerm(contextValue: Double? = null, isAdder: Boolean = false): Double {
+            var x = parseFactor(contextValue, isAdder)
             while (true) {
-                if (eat('*'.code)) x *= parseFactor() // multiplication
-                else if (eat('/'.code)) {
-                    val divisor = parseFactor()
+                if (eat('*'.code)) {
+                    x *= parseFactor(null, false)
+                } else if (eat('/'.code)) {
+                    val divisor = parseFactor(null, false)
                     if (divisor == 0.0) throw ArithmeticException("Division by zero")
-                    x /= divisor // division
+                    x /= divisor
+                } else if (isNextImplicitMultiplication()) {
+                    x *= parseFactor(null, false)
+                } else {
+                    return x
                 }
-                else if (eat('%'.code)) {
-                    val divisor = parseFactor()
-                    x %= divisor // modulus
-                }
-                else return x
             }
         }
 
-        fun parseFactor(): Double {
-            if (eat('+'.code)) return parseFactor() // unary plus
-            if (eat('-'.code)) return -parseFactor() // unary minus
+        fun parseFactor(contextValue: Double? = null, isAdder: Boolean = false): Double {
+            if (eat('+'.code)) return parseFactor(contextValue, isAdder) // unary plus
+            if (eat('-'.code)) return -parseFactor(contextValue, isAdder) // unary minus
 
             var x: Double
             val startPos = this.pos
             if (eat('('.code)) { // parentheses
+                // Check for empty parentheses
+                var tempPos = pos
+                var tempCh = ch
+                while (tempCh == ' '.code) {
+                    if (++tempPos < str.length) {
+                        tempCh = str[tempPos].code
+                    } else {
+                        tempCh = -1
+                    }
+                }
+                if (tempCh == ')'.code) {
+                    throw RuntimeException("Empty parentheses")
+                }
+
                 x = parseExpression()
-                eat(')'.code)
+                if (!eat(')'.code)) throw RuntimeException("Missing closing parenthesis")
+            } else if (eat('π'.code)) {
+                x = Math.PI
             } else if (ch >= '0'.code && ch <= '9'.code || ch == '.'.code) { // numbers
-                while (ch >= '0'.code && ch <= '9'.code || ch == '.'.code) nextChar()
+                while (ch >= '0'.code && ch <= '9'.code || ch == '.'.code || ch == 'e'.code || ch == 'E'.code) {
+                    if (ch == 'e'.code || ch == 'E'.code) {
+                        // Check if followed by digit, or +/- followed by digit
+                        var isExponent = false
+                        if (pos + 1 < str.length) {
+                            val next = str[pos + 1]
+                            if (next.isDigit()) {
+                                isExponent = true
+                            } else if ((next == '+' || next == '-') && pos + 2 < str.length) {
+                                if (str[pos + 2].isDigit()) {
+                                    isExponent = true
+                                }
+                            }
+                        }
+                        if (!isExponent) {
+                            break
+                        }
+                    }
+                    val prevCh = ch
+                    nextChar()
+                    if ((prevCh == 'e'.code || prevCh == 'E'.code) && (ch == '+'.code || ch == '-'.code)) {
+                        nextChar()
+                    }
+                }
                 val token = str.substring(startPos, this.pos)
-                x = token.toDoubleOrNull() ?: 0.0
-            } else if (ch >= 'a'.code && ch <= 'z'.code) { // functions
+                x = token.toDoubleOrNull() ?: throw RuntimeException("Invalid number format: $token")
+            } else if (ch >= 'a'.code && ch <= 'z'.code) { // functions and constant e
                 while (ch >= 'a'.code && ch <= 'z'.code) nextChar()
                 val func = str.substring(startPos, this.pos)
-                x = parseFactor()
-                x = when (func) {
-                    "sqrt" -> {
-                        if (x < 0.0) throw ArithmeticException("Square root of negative number")
-                        sqrt(x)
+                if (func == "e") {
+                    x = Math.E
+                } else {
+                    x = parseFactor(null, false)
+                    x = when (func) {
+                        "sqrt" -> {
+                            if (x < 0.0) throw ArithmeticException("Square root of negative number")
+                            sqrt(x)
+                        }
+                        "sin" -> {
+                            val angle = if (isDegree) Math.toRadians(x) else x
+                            sin(angle)
+                        }
+                        "cos" -> {
+                            val angle = if (isDegree) Math.toRadians(x) else x
+                            cos(angle)
+                        }
+                        "tan" -> {
+                            val angle = if (isDegree) Math.toRadians(x) else x
+                            tan(angle)
+                        }
+                        "asin" -> {
+                            if (x < -1.0 || x > 1.0) throw ArithmeticException("Arcsin domain violation")
+                            val rad = asin(x)
+                            if (isDegree) Math.toDegrees(rad) else rad
+                        }
+                        "acos" -> {
+                            if (x < -1.0 || x > 1.0) throw ArithmeticException("Arccos domain violation")
+                            val rad = acos(x)
+                            if (isDegree) Math.toDegrees(rad) else rad
+                        }
+                        "atan" -> {
+                            val rad = atan(x)
+                            if (isDegree) Math.toDegrees(rad) else rad
+                        }
+                        "log" -> {
+                            if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
+                            log10(x)
+                        }
+                        "ln" -> {
+                            if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
+                            ln(x)
+                        }
+                        else -> throw RuntimeException("Unknown function: $func")
                     }
-                    "sin" -> {
-                        val angle = if (isDegree) Math.toRadians(x) else x
-                        sin(angle)
-                    }
-                    "cos" -> {
-                        val angle = if (isDegree) Math.toRadians(x) else x
-                        cos(angle)
-                    }
-                    "tan" -> {
-                        val angle = if (isDegree) Math.toRadians(x) else x
-                        tan(angle)
-                    }
-                    "asin" -> {
-                        if (x < -1.0 || x > 1.0) throw ArithmeticException("Arcsin domain violation")
-                        val rad = asin(x)
-                        if (isDegree) Math.toDegrees(rad) else rad
-                    }
-                    "acos" -> {
-                        if (x < -1.0 || x > 1.0) throw ArithmeticException("Arccos domain violation")
-                        val rad = acos(x)
-                        if (isDegree) Math.toDegrees(rad) else rad
-                    }
-                    "atan" -> {
-                        val rad = atan(x)
-                        if (isDegree) Math.toDegrees(rad) else rad
-                    }
-                    "log" -> {
-                        if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
-                        log10(x)
-                    }
-                    "ln" -> {
-                        if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
-                        ln(x)
-                    }
-                    else -> throw RuntimeException("Unknown function: $func")
                 }
             } else {
                 throw RuntimeException("Unexpected element: " + ch.toChar())
@@ -144,12 +217,21 @@ object CalculatorEngine : ICalculatorEngine {
 
             // Exponents
             if (eat('^'.code)) {
-                x = x.pow(parseFactor())
+                x = x.pow(parseFactor(null, false))
             }
             
             // Factorials (trailing notation)
             while (eat('!'.code)) {
                 x = CalculatorEngine.factorial(x)
+            }
+
+            // Percentage (trailing notation)
+            while (eat('%'.code)) {
+                x = if (isAdder && contextValue != null) {
+                    contextValue * (x / 100.0)
+                } else {
+                    x / 100.0
+                }
             }
 
             return x

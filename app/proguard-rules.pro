@@ -30,3 +30,11 @@
 # Room SQLite runtime and reflection keep rules
 -keep class * extends androidx.room.RoomDatabase { *; }
 -dontwarn androidx.room.**
+
+# Koin DI Keep Rules
+-keep class io.insertkoin.** { *; }
+-dontwarn io.insertkoin.**
+
+# Google Generative AI (Gemini) Keep Rules
+-keep class com.google.ai.client.generativeai.** { *; }
+-dontwarn com.google.ai.client.generativeai.**
