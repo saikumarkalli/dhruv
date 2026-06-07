@@ -24,13 +24,14 @@ android {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       val keystoreFile = file(keystorePath)
-      if (keystoreFile.exists()) {
+      val storePass = System.getenv("STORE_PASSWORD")
+      if (keystoreFile.exists() && !storePass.isNullOrBlank()) {
         storeFile = keystoreFile
-        storePassword = System.getenv("STORE_PASSWORD")
+        storePassword = storePass
         keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
         keyPassword = System.getenv("KEY_PASSWORD")
       } else {
-        println("Warning: Release keystore not found at $keystorePath. Building unsigned APK.")
+        println("Warning: Release keystore or password not found. Building unsigned APK.")
       }
     }
     create("debugConfig") {
