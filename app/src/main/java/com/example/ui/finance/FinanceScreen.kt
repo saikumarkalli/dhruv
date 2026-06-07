@@ -1,5 +1,12 @@
 package com.example.ui.finance
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
+import com.example.data.SettingsRepository
+import org.koin.compose.koinInject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import java.math.BigDecimal
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -34,22 +43,34 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @Composable
 fun FinanceScreen(
+    viewModel: FinanceViewModel,
+    settingsRepository: SettingsRepository = koinInject(),
     modifier: Modifier = Modifier
 ) {
-    var activeFinanceCalc by remember { mutableStateOf<Int?>(null) }
+    val activeFinanceCalc by viewModel.activeFinanceCalc.collectAsStateWithLifecycle()
     
     val calculators = listOf(
         FinanceCalcItem("Loan EMI", Icons.Default.Assessment, "Evaluate monthly home/car EMI and interest ratios."),
         FinanceCalcItem("Simple & Compound", Icons.Default.Percent, "Compare generic interest yields across compounding periods."),
-        FinanceCalcItem("SIP Growth", Icons.Default.TrendingUp, "Track future wealth growth of monthly mutual fund plans."),
+        FinanceCalcItem("SIP Growth", Icons.AutoMirrored.Filled.TrendingUp, "Track future wealth growth of monthly mutual fund plans."),
         FinanceCalcItem("ROI / CAGR", Icons.Default.MonetizationOn, "Determine exact return ratios and annual growth speeds."),
         FinanceCalcItem("GST / Tax", Icons.Default.Receipt, "Calculate net taxes, gross totals, and net billing items."),
         FinanceCalcItem("Discount & Markup", Icons.Default.ShoppingBag, "Compute discount savings margins or wholesale pricing Markups."),
         FinanceCalcItem("Tip & Bill Split", Icons.Default.RoomService, "Apportion gratuities and divide billing tab cleanly among friends."),
         FinanceCalcItem("Salary Breakup", Icons.Default.Payments, "Review annual CTC packages down to estimated monthly take-home pays."),
-        FinanceCalcItem("Inflation Adjusted", Icons.Default.TrendingDown, "See past or future purchasing power adjustments of savings."),
+        FinanceCalcItem("Inflation Adjusted", Icons.AutoMirrored.Filled.TrendingDown, "See past or future purchasing power adjustments of savings."),
         FinanceCalcItem("FD / RD Maturity", Icons.Default.Savings, "Track Fixed/Recurring Deposits maturity pay outs and accruals.")
     )
+
+    val visibleCalculators by remember(calculators) {
+        combine(
+            calculators.map { item ->
+                settingsRepository.isToolEnabled(item.name).map { item to it }
+            }
+        ) { array ->
+            array.filter { it.second }.map { it.first }
+        }
+    }.collectAsState(initial = calculators)
 
     Column(
         modifier = modifier
@@ -83,7 +104,7 @@ fun FinanceScreen(
                 )
 
                 // 3-Column beautiful responsive grid
-                val rows = calculators.chunked(3)
+                val rows = visibleCalculators.chunked(3)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -97,7 +118,7 @@ fun FinanceScreen(
                                 val index = calculators.indexOf(item)
                                 GridFinanceItemCard(
                                     item = item,
-                                    onClick = { activeFinanceCalc = index },
+                                    onClick = { viewModel.setActiveFinanceCalc(index) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -125,7 +146,7 @@ fun FinanceScreen(
                             .padding(horizontal = 12.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { activeFinanceCalc = null }) {
+                        IconButton(onClick = { viewModel.setActiveFinanceCalc(null) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back to list",
@@ -156,7 +177,7 @@ fun FinanceScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    ActiveFinanceCalcRender(activeFinanceCalc ?: 0)
+                    ActiveFinanceCalcRender(activeFinanceCalc ?: 0, viewModel)
                 }
             }
         }
@@ -210,7 +231,7 @@ fun GridFinanceItemCard(
 data class FinanceCalcItem(val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val description: String)
 
 @Composable
-fun ActiveFinanceCalcRender(index: Int) {
+fun ActiveFinanceCalcRender(index: Int, viewModel: FinanceViewModel) {
     Card(
         modifier = Modifier.fillMaxSize(),
         shape = RoundedCornerShape(20.dp),
@@ -218,16 +239,16 @@ fun ActiveFinanceCalcRender(index: Int) {
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             when (index) {
-                0 -> GorgeousLoanEmiCalculator()
-                1 -> SimpleCompoundInterestCalculator()
-                2 -> SipCalculatorRedesign()
-                3 -> RoiCagrCalculator()
-                4 -> GstTaxCalculator()
-                5 -> DiscountMarkupCalculator()
-                6 -> TipBillSplitCalculator()
-                7 -> SalaryCtcCalculator()
-                8 -> InflationAdjustedCalculator()
-                9 -> FdRdBatCalculator()
+                0 -> GorgeousLoanEmiCalculator(viewModel)
+                1 -> SimpleCompoundInterestCalculator(viewModel)
+                2 -> SipCalculatorRedesign(viewModel)
+                3 -> RoiCagrCalculator(viewModel)
+                4 -> GstTaxCalculator(viewModel)
+                5 -> DiscountMarkupCalculator(viewModel)
+                6 -> TipBillSplitCalculator(viewModel)
+                7 -> SalaryCtcCalculator(viewModel)
+                8 -> InflationAdjustedCalculator(viewModel)
+                9 -> FdRdBatCalculator(viewModel)
             }
         }
     }
@@ -237,7 +258,7 @@ fun ActiveFinanceCalcRender(index: Int) {
 // REDESIGNED GORGEOUS LOAN EMI SCREEN (Issue 2)
 // -------------------------------------------------------------
 @Composable
-fun GorgeousLoanEmiCalculator() {
+fun GorgeousLoanEmiCalculator(viewModel: FinanceViewModel) {
     var principalInput by remember { mutableStateOf("1000000") }
     var interestInput by remember { mutableStateOf("8.5") }
     var tenureInput by remember { mutableStateOf("15") } // years
@@ -246,24 +267,13 @@ fun GorgeousLoanEmiCalculator() {
     val annualRate = interestInput.toDoubleOrNull() ?: 0.0
     val tenureYears = tenureInput.toDoubleOrNull() ?: 0.0
 
-    var emi = 0.0
-    var totalInterest = 0.0
-    var totalPayment = 0.0
-
-    try {
-        if (principal > 0 && annualRate > 0 && tenureYears > 0) {
-            val r = (annualRate / 12.0) / 100.0
-            val n = tenureYears * 12.0
-            emi = (principal * r * (1.0 + r).pow(n)) / ((1.0 + r).pow(n) - 1.0)
-            totalPayment = emi * n
-            totalInterest = totalPayment - principal
-            if (totalInterest < 0) totalInterest = 0.0
-        }
-    } catch (e: Exception) {
-        emi = 0.0
-        totalInterest = 0.0
-        totalPayment = 0.0
+    val emiResult = remember(principal, annualRate, tenureYears) {
+        viewModel.calculateEmi(principal, annualRate, tenureYears)
     }
+
+    val emi = emiResult.emi
+    val totalInterest = emiResult.totalInterest
+    val totalPayment = emiResult.totalPayment
 
     Column(
         modifier = Modifier
@@ -366,7 +376,7 @@ fun GorgeousLoanEmiCalculator() {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
                 // Beautiful hollow ring Canvas representation
-                EmiRatioPieRing(principal = principal, interest = totalInterest)
+                EmiRatioPieRing(principal = principal, interest = totalInterest.toDouble())
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
@@ -466,7 +476,7 @@ fun EmiRatioPieRing(principal: Double, interest: Double) {
 // SIMPLE & COMPOUND INTEREST CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun SimpleCompoundInterestCalculator() {
+fun SimpleCompoundInterestCalculator(viewModel: FinanceViewModel) {
     var principalInput by remember { mutableStateOf("100000") }
     var rateInput by remember { mutableStateOf("7.5") }
     var yearsInput by remember { mutableStateOf("5") }
@@ -476,12 +486,14 @@ fun SimpleCompoundInterestCalculator() {
     val rate = rateInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    // Calculations
-    val simpleInterest = principal * (rate / 100.0) * years
-    val simpleTotal = principal + simpleInterest
+    val scResult = remember(principal, rate, years, compoundFrequency) {
+        viewModel.calculateSimpleCompound(principal, rate, years, compoundFrequency)
+    }
 
-    val compoundTotal = principal * (1.0 + (rate / 100.0) / compoundFrequency).pow(compoundFrequency * years)
-    val compoundInterest = compoundTotal - principal
+    val simpleInterest = scResult.simpleInterest
+    val simpleTotal = scResult.simpleTotal
+    val compoundInterest = scResult.compoundInterest
+    val compoundTotal = scResult.compoundTotal
 
     Column(
         modifier = Modifier
@@ -574,7 +586,7 @@ fun SimpleCompoundInterestCalculator() {
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
-                val excessGains = compoundInterest - simpleInterest
+                val excessGains = compoundInterest.subtract(simpleInterest).coerceAtLeast(BigDecimal.ZERO)
                 Text(
                     text = "Compounding advantage payout difference yields: " + formatCurrency(excessGains),
                     fontSize = 12.sp,
@@ -592,7 +604,7 @@ fun SimpleCompoundInterestCalculator() {
 // SIP CALCULATOR REDESIGN
 // -------------------------------------------------------------
 @Composable
-fun SipCalculatorRedesign() {
+fun SipCalculatorRedesign(viewModel: FinanceViewModel) {
     var amountInput by remember { mutableStateOf("5000") }
     var returnInput by remember { mutableStateOf("12") }
     var yearsInput by remember { mutableStateOf("10") }
@@ -601,29 +613,13 @@ fun SipCalculatorRedesign() {
     val expectedReturn = returnInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    var totalInvested = 0.0
-    var futureValue = 0.0
-    var estimatedReturns = 0.0
-
-    try {
-        if (amount > 0 && expectedReturn >= 0 && years > 0) {
-            val r = expectedReturn / 100.0
-            val i = r / 12.0
-            val n = years * 12.0
-            if (i > 0) {
-                futureValue = amount * (((1.0 + i).pow(n) - 1.0) / i) * (1.0 + i)
-            } else {
-                futureValue = amount * n
-            }
-            totalInvested = amount * n
-            estimatedReturns = futureValue - totalInvested
-            if (estimatedReturns < 0) estimatedReturns = 0.0
-        }
-    } catch (e: Exception) {
-        totalInvested = 0.0
-        futureValue = 0.0
-        estimatedReturns = 0.0
+    val sipResult = remember(amount, expectedReturn, years) {
+        viewModel.calculateSip(amount, expectedReturn, years)
     }
+
+    val totalInvested = sipResult.totalInvested
+    val futureValue = sipResult.futureValue
+    val estimatedReturns = sipResult.estimatedReturns
 
     Column(
         modifier = Modifier
@@ -699,7 +695,7 @@ fun SipCalculatorRedesign() {
 // ROI / CAGR CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun RoiCagrCalculator() {
+fun RoiCagrCalculator(viewModel: FinanceViewModel) {
     var initialInput by remember { mutableStateOf("50000") }
     var finalInput by remember { mutableStateOf("95000") }
     var durationInput by remember { mutableStateOf("4") }
@@ -708,10 +704,11 @@ fun RoiCagrCalculator() {
     val finalVal = finalInput.toDoubleOrNull() ?: 0.0
     val duration = durationInput.toDoubleOrNull() ?: 0.0
 
-    val absoluteReturn = if (initial > 0) ((finalVal - initial) / initial) * 100.0 else 0.0
-    val cagr = if (initial > 0 && finalVal > 0 && duration > 0) {
-        ((finalVal / initial).pow(1.0 / duration) - 1.0) * 100.0
-    } else 0.0
+    val roiCagrResult = remember(initial, finalVal, duration) {
+        viewModel.calculateRoiCagr(initial, finalVal, duration)
+    }
+    val absoluteReturn = roiCagrResult.absoluteReturn
+    val cagr = roiCagrResult.cagr
 
     Column(
         modifier = Modifier
@@ -780,7 +777,7 @@ fun RoiCagrCalculator() {
 // GST / TAX CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun GstTaxCalculator() {
+fun GstTaxCalculator(viewModel: FinanceViewModel) {
     var amountInput by remember { mutableStateOf("1500") }
     var gstInput by remember { mutableStateOf("18") }
     var isAddGst by remember { mutableStateOf(true) }
@@ -788,19 +785,13 @@ fun GstTaxCalculator() {
     val amount = amountInput.toDoubleOrNull() ?: 0.0
     val gstPercent = gstInput.toDoubleOrNull() ?: 0.0
 
-    val taxAmount: Double
-    val totalAmount: Double
-    val originalBase: Double
-
-    if (isAddGst) {
-        taxAmount = (amount * gstPercent) / 100.0
-        totalAmount = amount + taxAmount
-        originalBase = amount
-    } else {
-        originalBase = amount / (1.0 + gstPercent / 100.0)
-        taxAmount = amount - originalBase
-        totalAmount = amount
+    val gstResult = remember(amount, gstPercent, isAddGst) {
+        viewModel.calculateGst(amount, gstPercent, isAddGst)
     }
+
+    val taxAmount = gstResult.taxAmount
+    val totalAmount = gstResult.totalAmount
+    val originalBase = gstResult.preTaxBase
 
     Column(
         modifier = Modifier
@@ -894,7 +885,7 @@ fun GstTaxCalculator() {
 // DISCOUNT & MARKUP CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun DiscountMarkupCalculator() {
+fun DiscountMarkupCalculator(viewModel: FinanceViewModel) {
     var amountInput by remember { mutableStateOf("1000") }
     var percentInput by remember { mutableStateOf("20") }
     var isDiscountMode by remember { mutableStateOf(true) }
@@ -902,8 +893,12 @@ fun DiscountMarkupCalculator() {
     val base = amountInput.toDoubleOrNull() ?: 0.0
     val pct = percentInput.toDoubleOrNull() ?: 0.0
 
-    val offset = (base * pct) / 100.0
-    val finalVal = if (isDiscountMode) base - offset else base + offset
+    val dmResult = remember(base, pct, isDiscountMode) {
+        viewModel.calculateDiscountMarkup(base, pct, isDiscountMode)
+    }
+
+    val offset = dmResult.offset
+    val finalVal = dmResult.finalVal
 
     Column(
         modifier = Modifier
@@ -993,7 +988,7 @@ fun DiscountMarkupCalculator() {
 // TIP & BILL SPLIT CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun TipBillSplitCalculator() {
+fun TipBillSplitCalculator(viewModel: FinanceViewModel) {
     var billInput by remember { mutableStateOf("1500") }
     var tipInput by remember { mutableStateOf("12") }
     var peopleInput by remember { mutableStateOf("4") }
@@ -1002,10 +997,14 @@ fun TipBillSplitCalculator() {
     val tipPercent = tipInput.toDoubleOrNull() ?: 10.0
     val totalPeople = peopleInput.toIntOrNull() ?: 1
 
-    val totalTip = (bill * tipPercent) / 100.0
-    val overallTotal = bill + totalTip
-    val splitTip = if (totalPeople > 0) totalTip / totalPeople else totalTip
-    val splitBill = if (totalPeople > 0) overallTotal / totalPeople else overallTotal
+    val tipResult = remember(bill, tipPercent, totalPeople) {
+        viewModel.calculateTipSplit(bill, tipPercent, totalPeople)
+    }
+
+    val totalTip = tipResult.totalTip
+    val overallTotal = tipResult.overallTotal
+    val splitTip = tipResult.splitTip
+    val splitBill = tipResult.splitBill
 
     Column(
         modifier = Modifier
@@ -1087,15 +1086,19 @@ fun TipBillSplitCalculator() {
 // SALARY / CTC BREAKUP CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun SalaryCtcCalculator() {
+fun SalaryCtcCalculator(viewModel: FinanceViewModel) {
     var ctcInput by remember { mutableStateOf("1200000") } // 12 LPA default
 
     val ctcPrice = ctcInput.toDoubleOrNull() ?: 0.0
 
-    val grossMonthly = ctcPrice / 12.0
-    val statePF = (grossMonthly * 0.12).coerceIn(0.0, 15000.0) // 12% basic approx
-    val estimatedTaxes = if (ctcPrice > 1000000) (grossMonthly * 0.15) else if (ctcPrice > 500000) (grossMonthly * 0.05) else 0.0
-    val standardTakeHome = grossMonthly - statePF - estimatedTaxes
+    val salaryResult = remember(ctcPrice) {
+        viewModel.calculateSalaryBreakup(ctcPrice)
+    }
+
+    val grossMonthly = salaryResult.grossMonthly
+    val statePF = salaryResult.pfContribution
+    val estimatedTaxes = salaryResult.estimatedTax
+    val standardTakeHome = salaryResult.takeHome
 
     Column(
         modifier = Modifier
@@ -1157,7 +1160,7 @@ fun SalaryCtcCalculator() {
 // INFLATION ADJUSTED VALUE CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun InflationAdjustedCalculator() {
+fun InflationAdjustedCalculator(viewModel: FinanceViewModel) {
     var amountInput by remember { mutableStateOf("10000") }
     var inflationRateInput by remember { mutableStateOf("6") }
     var yearsInput by remember { mutableStateOf("15") }
@@ -1166,9 +1169,12 @@ fun InflationAdjustedCalculator() {
     val rate = inflationRateInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    val futureValueMultiplier = (1.0 + (rate / 100.0)).pow(years)
-    val futurePurchasePowerPrice = if (futureValueMultiplier > 0) amount / futureValueMultiplier else amount
-    val pastPowerEquivalent = amount * futureValueMultiplier
+    val inflationResult = remember(amount, rate, years) {
+        viewModel.calculateInflation(amount, rate, years)
+    }
+
+    val futurePurchasePower = inflationResult.futurePurchasePower
+    val amountNeeded = inflationResult.amountNeeded
 
     Column(
         modifier = Modifier
@@ -1220,7 +1226,7 @@ fun InflationAdjustedCalculator() {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column {
                     Text("Future real value (Purchasing Power):", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(futurePurchasePowerPower(amount, rate, years)), fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(formatCurrency(futurePurchasePower), fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
                     Text("Value of " + formatCurrency(amount) + " today in ${years.toInt()} years", fontSize = 11.sp)
                 }
 
@@ -1228,22 +1234,20 @@ fun InflationAdjustedCalculator() {
 
                 Column {
                     Text("Amount needed to match purchase power in ${years.toInt()} years:", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(pastPowerEquivalent), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFFFF5252))
+                    Text(formatCurrency(amountNeeded), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFFFF5252))
                 }
             }
         }
     }
 }
 
-private fun futurePurchasePowerPower(p: Double, r: Double, y: Double): Double {
-    return p / (1.0 + r/100.0).pow(y)
-}
+
 
 // -------------------------------------------------------------
 // FD / RD MATURITY CALCULATOR
 // -------------------------------------------------------------
 @Composable
-fun FdRdBatCalculator() {
+fun FdRdBatCalculator(viewModel: FinanceViewModel) {
     var isFixedDeposit by remember { mutableStateOf(true) }
     var investAmountInput by remember { mutableStateOf("100000") }
     var interestRateInput by remember { mutableStateOf("7.1") }
@@ -1253,31 +1257,13 @@ fun FdRdBatCalculator() {
     val rate = interestRateInput.toDoubleOrNull() ?: 0.0
     val years = tenureInput.toDoubleOrNull() ?: 0.0
 
-    var maturityAccumulated = 0.0
-    var principalInvested = 0.0
-
-    if (isFixedDeposit) {
-        // Compound quarterly standard FD
-        principalInvested = amount
-        maturityAccumulated = amount * (1.0 + (rate / 100.0) / 4.0).pow(4.0 * years)
-    } else {
-        // RD compound monthly
-        principalInvested = amount * (years * 12.0)
-        val n = years * 12.0
-        val tempR = (rate / 100.0) / 12.0
-        // standard monthly recurring deposit compound formulas
-        if (tempR > 0) {
-            var total = 0.0
-            for (month in 1..n.toInt()) {
-                total = (total + amount) * (1.0 + tempR)
-            }
-            maturityAccumulated = total
-        } else {
-            maturityAccumulated = principalInvested
-        }
+    val fdRdResult = remember(amount, rate, years, isFixedDeposit) {
+        viewModel.calculateFdRd(amount, rate, years, isFixedDeposit)
     }
 
-    val totalInterestAccrued = maturityAccumulated - principalInvested
+    val principalInvested = fdRdResult.principalInvested
+    val totalInterestAccrued = fdRdResult.interestGains
+    val maturityAccumulated = fdRdResult.maturityValue
 
     Column(
         modifier = Modifier
@@ -1381,6 +1367,9 @@ fun FdRdBatCalculator() {
 }
 
 private fun formatCurrency(valDouble: Double): String {
-    val df = DecimalFormat("₹ #,##,###.##", DecimalFormatSymbols(Locale.US))
-    return df.format(valDouble)
+    return com.example.util.CurrencyFormatter.format(valDouble)
+}
+
+private fun formatCurrency(valBD: BigDecimal): String {
+    return com.example.util.CurrencyFormatter.format(valBD)
 }

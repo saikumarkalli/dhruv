@@ -3,7 +3,7 @@ package com.example.ui.converter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.data.CurrencyRepository
+import com.example.data.ICurrencyRepository
 import com.example.util.LengthUnit
 import com.example.util.MassUnit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +14,7 @@ import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 class ConverterViewModel(
-    private val currencyRepository: CurrencyRepository
+    private val currencyRepository: ICurrencyRepository
 ) : ViewModel() {
 
     // --- Length Conversion State ---
@@ -199,7 +199,7 @@ class ConverterViewModel(
     }
 
     class Factory(
-        private val currencyRepository: CurrencyRepository
+        private val currencyRepository: ICurrencyRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ConverterViewModel::class.java)) {

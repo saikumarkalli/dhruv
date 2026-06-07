@@ -31,16 +31,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.TextStyle
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.example.data.SettingsRepository
+import org.koin.compose.koinInject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConverterScreen(
     viewModel: ConverterViewModel,
+    settingsRepository: SettingsRepository = koinInject(),
     modifier: Modifier = Modifier
 ) {
     var activeTool by remember { mutableStateOf<String?>(null) }
@@ -61,6 +67,16 @@ fun ConverterScreen(
         GridTool("Time", Icons.Default.Schedule, "Time intervals & durations"),
         GridTool("Volume", Icons.Default.InvertColors, "Cubit & liquid volume")
     )
+
+    val visibleTools by remember(tools) {
+        combine(
+            tools.map { tool ->
+                settingsRepository.isToolEnabled(tool.name).map { tool to it }
+            }
+        ) { array ->
+            array.filter { it.second }.map { it.first }
+        }
+    }.collectAsState(initial = tools)
 
     Column(
         modifier = modifier
@@ -94,7 +110,7 @@ fun ConverterScreen(
                 )
 
                 // 3-Column beautiful responsive grid
-                val rows = tools.chunked(3)
+                val rows = visibleTools.chunked(3)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -928,7 +944,7 @@ fun DiscountCalculatorView() {
                     Text("+$%.2f".format(taxAmount), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                 }
 
-                Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1170,7 +1186,7 @@ fun NumeralResultRow(label: String, value: String) {
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface
         )
-        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(top = 8.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(top = 8.dp))
     }
 }
 
@@ -1212,6 +1228,7 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                 Text("Pre-conversion Source", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 
                 Box {
+                    var searchFromQuery by remember { mutableStateOf("") }
                     Button(
                         onClick = { expandedFromMenu = true },
                         modifier = Modifier.fillMaxWidth(),
@@ -1223,13 +1240,28 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                     }
-                    DropdownMenu(expanded = expandedFromMenu, onDismissRequest = { expandedFromMenu = false }) {
-                        unitsList.forEach { unit ->
+                    DropdownMenu(expanded = expandedFromMenu, onDismissRequest = { expandedFromMenu = false; searchFromQuery = "" }) {
+                        OutlinedTextField(
+                            value = searchFromQuery,
+                            onValueChange = { searchFromQuery = it },
+                            placeholder = { Text("Search units...", fontSize = 11.sp) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        val filteredList = unitsList.filter {
+                            it.label.contains(searchFromQuery, ignoreCase = true) ||
+                            it.symbol.contains(searchFromQuery, ignoreCase = true)
+                        }
+                        filteredList.forEach { unit ->
                             DropdownMenuItem(
                                 text = { Text("${unit.label} (${unit.symbol})") },
                                 onClick = {
                                     selectedFromUnit = unit
                                     expandedFromMenu = false
+                                    searchFromQuery = ""
                                 }
                             )
                         }
@@ -1270,6 +1302,7 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                 Text("Target conversion Destination", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 
                 Box {
+                    var searchToQuery by remember { mutableStateOf("") }
                     Button(
                         onClick = { expandedToMenu = true },
                         modifier = Modifier.fillMaxWidth(),
@@ -1281,13 +1314,28 @@ fun PhysicalUnitConverterRender(title: String, unitsList: List<UnifiedUnit>) {
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                     }
-                    DropdownMenu(expanded = expandedToMenu, onDismissRequest = { expandedToMenu = false }) {
-                        unitsList.forEach { unit ->
+                    DropdownMenu(expanded = expandedToMenu, onDismissRequest = { expandedToMenu = false; searchToQuery = "" }) {
+                        OutlinedTextField(
+                            value = searchToQuery,
+                            onValueChange = { searchToQuery = it },
+                            placeholder = { Text("Search units...", fontSize = 11.sp) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        val filteredList = unitsList.filter {
+                            it.label.contains(searchToQuery, ignoreCase = true) ||
+                            it.symbol.contains(searchToQuery, ignoreCase = true)
+                        }
+                        filteredList.forEach { unit ->
                             DropdownMenuItem(
                                 text = { Text("${unit.label} (${unit.symbol})") },
                                 onClick = {
                                     selectedToUnit = unit
                                     expandedToMenu = false
+                                    searchToQuery = ""
                                 }
                             )
                         }
@@ -1544,12 +1592,18 @@ fun CurrencyConverterTab(viewModel: ConverterViewModel) {
                               )
                               val timeStr = remember(lastUpdatedTime) {
                                   lastUpdatedTime?.let {
-                                      val sdf = java.text.SimpleDateFormat("MMM dd, yyyy h:mm a", java.util.Locale.getDefault())
-                                      sdf.format(java.util.Date(it))
+                                      val diffMs = System.currentTimeMillis() - it
+                                      val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(diffMs)
+                                      val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(diffMs) % 60
+                                      when {
+                                          hours > 0 -> "Rates cached: $hours hours $minutes mins ago"
+                                          minutes > 0 -> "Rates cached: $minutes mins ago"
+                                          else -> "Rates cached: Just now"
+                                      }
                                   } ?: "Never synced"
                               }
                               Text(
-                                  text = if (status.isOffline) "Using cached local exchange rates. Loaded: $timeStr" else "Local storage cache synced: $timeStr",
+                                  text = if (status.isOffline) "Using cached local exchange rates. $timeStr" else "Local storage cache synced. $timeStr",
                                   style = MaterialTheme.typography.bodySmall,
                                   color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                               )

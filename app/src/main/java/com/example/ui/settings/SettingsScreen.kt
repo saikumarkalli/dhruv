@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,8 @@ import com.example.ui.theme.appGradientBackground
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
     calculatorViewModel: CalculatorViewModel,
+    appVersion: String = "1.0",
+    appVersionCode: Int = 1,
     modifier: Modifier = Modifier
 ) {
     val isDegree by settingsRepository.isDegree.collectAsState()
@@ -35,6 +38,11 @@ fun SettingsScreen(
     val decimalPrecision by settingsRepository.decimalPrecision.collectAsState()
     val isHistoryLocked by settingsRepository.isHistoryLocked.collectAsState()
     val historyPinCode by settingsRepository.historyPinCode.collectAsState()
+    val formatLocale by settingsRepository.formatLocale.collectAsState()
+
+    val isConverterEnabled by settingsRepository.isConverterEnabled.collectAsState()
+    val isDateEnabled by settingsRepository.isDateEnabled.collectAsState()
+    val isFinanceEnabled by settingsRepository.isFinanceEnabled.collectAsState()
 
     val calculatorColor by settingsRepository.calculatorColor.collectAsState()
     val converterColor by settingsRepository.converterColor.collectAsState()
@@ -45,6 +53,10 @@ fun SettingsScreen(
     var showPrecisionDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
+    var showLocaleDialog by remember { mutableStateOf(false) }
+    var showConverterToolsDialog by remember { mutableStateOf(false) }
+    var showDateToolsDialog by remember { mutableStateOf(false) }
+    var showFinanceToolsDialog by remember { mutableStateOf(false) }
 
     var activeColorTargetSetting by remember { mutableStateOf<String?>(null) }
     var showColorPickerDialog by remember { mutableStateOf(false) }
@@ -92,9 +104,72 @@ fun SettingsScreen(
                 onClick = { showPrecisionDialog = true },
                 tag = "settings_precision_item"
             )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            SettingsClickableItem(
+                icon = Icons.Default.FormatAlignLeft,
+                title = "Thousands Separators Format",
+                valueDisplay = if (formatLocale == "indian") "Indian (10,00,000)" else "International (1,000,000)",
+                onClick = { showLocaleDialog = true },
+                tag = "settings_locale_item"
+            )
         }
 
+        // Visible Pages & Sections
+        SettingsCategory(title = "Visible Sections") {
+            SettingsToggleItem(
+                icon = Icons.Default.SwapHoriz,
+                title = "Converter Section Page",
+                subtitle = "Toggle visibility of the unit converter tab page in navigation bar.",
+                checked = isConverterEnabled,
+                onCheckedChange = { settingsRepository.setConverterEnabled(it) },
+                tag = "settings_converter_toggle"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            SettingsToggleItem(
+                icon = Icons.Default.DateRange,
+                title = "Date & Time Section Page",
+                subtitle = "Toggle visibility of the Date calculation tab page in navigation bar.",
+                checked = isDateEnabled,
+                onCheckedChange = { settingsRepository.setDateEnabled(it) },
+                tag = "settings_date_toggle"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            SettingsToggleItem(
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
+                title = "Finance Section Page",
+                subtitle = "Toggle visibility of the financial planner tab page in navigation bar.",
+                checked = isFinanceEnabled,
+                onCheckedChange = { settingsRepository.setFinanceEnabled(it) },
+                tag = "settings_finance_toggle"
+            )
+        }
 
+        // Section Tool Customization
+        SettingsCategory(title = "Manage Section Tools") {
+            SettingsClickableItem(
+                icon = Icons.Default.Build,
+                title = "Converter Sub-tools visibility",
+                valueDisplay = if (isConverterEnabled) "Configure visible tools" else "Disabled (converter page is off)",
+                onClick = { if (isConverterEnabled) showConverterToolsDialog = true },
+                tag = "settings_converter_tools_item"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            SettingsClickableItem(
+                icon = Icons.Default.Build,
+                title = "Date & Time Sub-tools visibility",
+                valueDisplay = if (isDateEnabled) "Configure visible tools" else "Disabled (date page is off)",
+                onClick = { if (isDateEnabled) showDateToolsDialog = true },
+                tag = "settings_date_tools_item"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            SettingsClickableItem(
+                icon = Icons.Default.Build,
+                title = "Finance Sub-tools visibility",
+                valueDisplay = if (isFinanceEnabled) "Configure visible tools" else "Disabled (finance page is off)",
+                onClick = { if (isFinanceEnabled) showFinanceToolsDialog = true },
+                tag = "settings_finance_tools_item"
+            )
+        }
 
         // Section Theme Colors
         SettingsCategory(title = "Specific Section Themes") {
@@ -108,7 +183,7 @@ fun SettingsScreen(
                 },
                 tag = "settings_cal_color_item"
             )
-            Divider(modifier = Modifier.padding(vertical = 6.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             SettingsClickableItem(
                 icon = Icons.Default.Palette,
                 title = "Converter Page Accent",
@@ -119,7 +194,7 @@ fun SettingsScreen(
                 },
                 tag = "settings_conv_color_item"
             )
-            Divider(modifier = Modifier.padding(vertical = 6.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             SettingsClickableItem(
                 icon = Icons.Default.Palette,
                 title = "Date & Time Page Accent",
@@ -130,7 +205,7 @@ fun SettingsScreen(
                 },
                 tag = "settings_date_color_item"
             )
-            Divider(modifier = Modifier.padding(vertical = 6.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             SettingsClickableItem(
                 icon = Icons.Default.Palette,
                 title = "Finance Page Accent",
@@ -171,7 +246,7 @@ fun SettingsScreen(
             )
 
             if (isHistoryLocked) {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 SettingsClickableItem(
                     icon = Icons.Default.Lock,
                     title = "Change Security PIN",
@@ -238,7 +313,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text("dhruv Calculator & Conversions", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("Version 1.1.0", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text("Version $appVersion (build $appVersionCode)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "Designed with Material Design 3 for deep accessibility, precise scientific calculation parameters, offline length and mass equations, and cached exchange tickers. Remains highly visible in all conditions.",
@@ -252,6 +327,183 @@ fun SettingsScreen(
     }
 
     // --- POPUP DIALOGS ---
+
+    // Thousands separator format selection
+    if (showLocaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showLocaleDialog = false },
+            title = { Text("Display Separators Format", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val locales = listOf(
+                        "international" to "International (1,000,000)",
+                        "indian" to "Indian (10,00,000)"
+                    )
+                    locales.forEach { (key, name) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setFormatLocale(key)
+                                    showLocaleDialog = false
+                                }
+                                .padding(vertical = 12.dp, horizontal = 8.dp)
+                        ) {
+                            RadioButton(
+                                selected = formatLocale == key,
+                                onClick = {
+                                    settingsRepository.setFormatLocale(key)
+                                    showLocaleDialog = false
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLocaleDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // Manage Converter Tools
+    if (showConverterToolsDialog) {
+        val toolsList = listOf(
+            "Age", "Area", "BMI", "Currency", "Data", "Date", "Discount",
+            "Length", "Mass", "Numeral system", "Speed", "Temperature", "Time", "Volume"
+        )
+        AlertDialog(
+            onDismissRequest = { showConverterToolsDialog = false },
+            title = { Text("Manage Converter Tools", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    toolsList.forEach { tool ->
+                        val isEnabledState = settingsRepository.isToolEnabled(tool).collectAsState(initial = true)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp, horizontal = 8.dp)
+                        ) {
+                            Text(tool, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = isEnabledState.value,
+                                onCheckedChange = { settingsRepository.setToolEnabled(tool, it) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showConverterToolsDialog = false }) {
+                    Text("Close")
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // Manage Date Tools
+    if (showDateToolsDialog) {
+        val toolsList = listOf(
+            "Date Difference", "Add / Subtract Days", "Age Calculator",
+            "Countdown Tracker", "Time Zone Converter", "Business Working Days", "Unix Epoch Converter"
+        )
+        AlertDialog(
+            onDismissRequest = { showDateToolsDialog = false },
+            title = { Text("Manage Date Tools", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    toolsList.forEach { tool ->
+                        val isEnabledState = settingsRepository.isToolEnabled(tool).collectAsState(initial = true)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp, horizontal = 8.dp)
+                        ) {
+                            Text(tool, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = isEnabledState.value,
+                                onCheckedChange = { settingsRepository.setToolEnabled(tool, it) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDateToolsDialog = false }) {
+                    Text("Close")
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // Manage Finance Tools
+    if (showFinanceToolsDialog) {
+        val toolsList = listOf(
+            "Loan EMI", "Simple & Compound", "SIP Growth", "ROI / CAGR",
+            "GST / Tax", "Discount & Markup", "Tip & Bill Split", "Salary Breakup",
+            "Inflation Adjusted", "FD / RD Maturity"
+        )
+        AlertDialog(
+            onDismissRequest = { showFinanceToolsDialog = false },
+            title = { Text("Manage Finance Tools", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    toolsList.forEach { tool ->
+                        val isEnabledState = settingsRepository.isToolEnabled(tool).collectAsState(initial = true)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp, horizontal = 8.dp)
+                        ) {
+                            Text(tool, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = isEnabledState.value,
+                                onCheckedChange = { settingsRepository.setToolEnabled(tool, it) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFinanceToolsDialog = false }) {
+                    Text("Close")
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
 
     // Dark preference
     if (showThemeDialog) {

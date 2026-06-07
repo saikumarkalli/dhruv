@@ -42,12 +42,21 @@ import java.util.concurrent.TimeUnit
 import com.example.ui.theme.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
+import com.example.data.SettingsRepository
+import org.koin.compose.koinInject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+
 @Composable
 fun DateScreen(
+    viewModel: DateViewModel,
+    settingsRepository: SettingsRepository = koinInject(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var activeSubCalculator by remember { mutableStateOf<Int?>(null) }
+    val activeSubCalculator by viewModel.activeSubCalculator.collectAsStateWithLifecycle()
     
     // Sub-calculators titles and icons
     val subCalculators = listOf(
@@ -59,6 +68,16 @@ fun DateScreen(
         DateCalcItem("Business Working Days", Icons.Default.Work, "Count weekdays excluding standard Saturdays & Sundays."),
         DateCalcItem("Unix Epoch Converter", Icons.Default.Terminal, "Parse integer timestamp seconds to UTC format and vice versa.")
     )
+
+    val visibleSubCalculators by remember(subCalculators) {
+        combine(
+            subCalculators.map { item ->
+                settingsRepository.isToolEnabled(item.name).map { item to it }
+            }
+        ) { array ->
+            array.filter { it.second }.map { it.first }
+        }
+    }.collectAsState(initial = subCalculators)
 
     Column(
         modifier = modifier
@@ -92,7 +111,7 @@ fun DateScreen(
                 )
 
                 // 3-Column beautiful responsive grid
-                val rows = subCalculators.chunked(3)
+                val rows = visibleSubCalculators.chunked(3)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -104,11 +123,11 @@ fun DateScreen(
                         ) {
                             row.forEach { item ->
                                 val index = subCalculators.indexOf(item)
-                                GridDateItemCard(
-                                    item = item,
-                                    onClick = { activeSubCalculator = index },
-                                    modifier = Modifier.weight(1f)
-                                )
+                                 GridDateItemCard(
+                                     item = item,
+                                     onClick = { viewModel.setActiveSubCalculator(index) },
+                                     modifier = Modifier.weight(1f)
+                                 )
                             }
                             // Fill remaining space if row is not full
                             if (row.size < 3) {
@@ -134,7 +153,7 @@ fun DateScreen(
                             .padding(horizontal = 12.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { activeSubCalculator = null }) {
+                         IconButton(onClick = { viewModel.setActiveSubCalculator(null) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back to list",
@@ -165,7 +184,7 @@ fun DateScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    ActiveSubCalcRender(activeSubCalculator ?: 0)
+                     ActiveSubCalcRender(activeSubCalculator ?: 0, viewModel)
                 }
             }
         }
@@ -219,7 +238,7 @@ fun GridDateItemCard(
 data class DateCalcItem(val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val description: String)
 
 @Composable
-fun ActiveSubCalcRender(index: Int) {
+fun ActiveSubCalcRender(index: Int, viewModel: DateViewModel) {
     Card(
         modifier = Modifier.fillMaxSize(),
         shape = RoundedCornerShape(20.dp),
@@ -227,64 +246,34 @@ fun ActiveSubCalcRender(index: Int) {
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             when (index) {
-                0 -> DateDifferenceView()
-                1 -> AddSubtractDaysView()
-                2 -> AgeCalculatorView()
+                0 -> DateDifferenceView(viewModel)
+                1 -> AddSubtractDaysView(viewModel)
+                2 -> AgeCalculatorView(viewModel)
                 3 -> DateCountdownView()
-                4 -> TimeZoneConverterView()
-                5 -> BusinessWorkingDaysView()
-                6 -> UnixEpochConverterView()
+                4 -> TimeZoneConverterView(viewModel)
+                5 -> BusinessWorkingDaysView(viewModel)
+                6 -> UnixEpochConverterView(viewModel)
             }
         }
     }
 }
 
 @Composable
-fun DateDifferenceView() {
+fun DateDifferenceView(viewModel: DateViewModel) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     
     var date1 by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -10) }) }
     var date2 by remember { mutableStateOf(Calendar.getInstance()) }
 
-    var totalDays by remember { mutableLongStateOf(0) }
-    var yearsParts by remember { mutableIntStateOf(0) }
-    var monthsParts by remember { mutableIntStateOf(0) }
-    var remainingDaysParts by remember { mutableIntStateOf(0) }
-
-    fun calculateDiff() {
-        val d1 = date1.timeInMillis
-        val d2 = date2.timeInMillis
-        val diffMs = Math.abs(d2 - d1)
-        totalDays = TimeUnit.MILLISECONDS.toDays(diffMs)
-
-        val calStart = if (date1.before(date2)) date1.clone() as Calendar else date2.clone() as Calendar
-        val calEnd = if (date1.before(date2)) date2.clone() as Calendar else date1.clone() as Calendar
-
-        var yrs = calEnd.get(Calendar.YEAR) - calStart.get(Calendar.YEAR)
-        var mths = calEnd.get(Calendar.MONTH) - calStart.get(Calendar.MONTH)
-        var dys = calEnd.get(Calendar.DAY_OF_MONTH) - calStart.get(Calendar.DAY_OF_MONTH)
-
-        if (dys < 0) {
-            mths -= 1
-            val tempCal = calStart.clone() as Calendar
-            tempCal.add(Calendar.MONTH, yrs * 12 + mths)
-            val daysInMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            dys += daysInMonth
-        }
-        if (mths < 0) {
-            yrs -= 1
-            mths += 12
-        }
-
-        yearsParts = yrs
-        monthsParts = mths
-        remainingDaysParts = dys
+    val diffResult = remember(date1, date2) {
+        viewModel.calculateDifference(date1, date2)
     }
 
-    LaunchedEffect(date1, date2) {
-        calculateDiff()
-    }
+    val totalDays = diffResult.totalDays
+    val yearsParts = diffResult.years
+    val monthsParts = diffResult.months
+    val remainingDaysParts = diffResult.days
 
     Column(
         modifier = Modifier
@@ -411,7 +400,7 @@ fun DateStatChip(valStr: String, denomStr: String) {
 }
 
 @Composable
-fun AddSubtractDaysView() {
+fun AddSubtractDaysView(viewModel: DateViewModel) {
     val context = LocalContext.current
     val sdf = SimpleDateFormat("EEEE, MMMM dd, yyyy", Locale.US)
     
@@ -421,13 +410,7 @@ fun AddSubtractDaysView() {
 
     val computedResult = remember(calendarDate, deltaDaysInput, isSubtract) {
         val offset = deltaDaysInput.toIntOrNull() ?: 0
-        val clone = calendarDate.clone() as Calendar
-        if (isSubtract) {
-            clone.add(Calendar.DAY_OF_YEAR, -offset)
-        } else {
-            clone.add(Calendar.DAY_OF_YEAR, offset)
-        }
-        clone.time
+        viewModel.offsetDate(calendarDate, offset, isSubtract)
     }
 
     Column(
@@ -544,101 +527,29 @@ fun AddSubtractDaysView() {
 }
 
 @Composable
-fun AgeCalculatorView() {
+fun AgeCalculatorView(viewModel: DateViewModel) {
     val context = LocalContext.current
     val sdfDisplay = SimpleDateFormat("MMM dd, yyyy", Locale.US)
     
     var birthDate by remember { mutableStateOf(Calendar.getInstance().apply { set(2000, 0, 1) }) }
     var referenceDate by remember { mutableStateOf(Calendar.getInstance()) }
 
-    var ageYears by remember { mutableIntStateOf(0) }
-    var ageMonths by remember { mutableIntStateOf(0) }
-    var ageDays by remember { mutableIntStateOf(0) }
-    var nextMonths by remember { mutableIntStateOf(0) }
-    var nextDays by remember { mutableIntStateOf(0) }
-    var dayOfWeekOfNextBirthday by remember { mutableStateOf("Monday") }
-
-    var totalDays by remember { mutableLongStateOf(0L) }
-    var totalMonths by remember { mutableIntStateOf(0) }
-    var totalWeeks by remember { mutableLongStateOf(0L) }
-    var totalHours by remember { mutableLongStateOf(0L) }
-    var totalMinutes by remember { mutableLongStateOf(0L) }
-
-    fun calculateAge() {
-        if (birthDate.after(referenceDate)) {
-            ageYears = 0
-            ageMonths = 0
-            ageDays = 0
-            nextMonths = 0
-            nextDays = 0
-            dayOfWeekOfNextBirthday = "Monday"
-            totalDays = 0L
-            totalMonths = 0
-            totalWeeks = 0L
-            totalHours = 0L
-            totalMinutes = 0L
-            return
-        }
-
-        var yrs = referenceDate.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
-        var mths = referenceDate.get(Calendar.MONTH) - birthDate.get(Calendar.MONTH)
-        var dys = referenceDate.get(Calendar.DAY_OF_MONTH) - birthDate.get(Calendar.DAY_OF_MONTH)
-
-        if (dys < 0) {
-            mths -= 1
-            val tempCal = birthDate.clone() as Calendar
-            tempCal.add(Calendar.MONTH, yrs * 12 + mths)
-            val daysInBirthMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            dys += daysInBirthMonth
-        }
-        if (mths < 0) {
-            yrs -= 1
-            mths += 12
-        }
-
-        ageYears = yrs
-        ageMonths = mths
-        ageDays = dys
-
-        // Next birthday calculation
-        val nextBd = birthDate.clone() as Calendar
-        nextBd.set(Calendar.YEAR, referenceDate.get(Calendar.YEAR))
-        if (nextBd.before(referenceDate) || nextBd.equals(referenceDate)) {
-            nextBd.add(Calendar.YEAR, 1)
-        }
-
-        dayOfWeekOfNextBirthday = SimpleDateFormat("EEEE", Locale.US).format(nextBd.time)
-
-        // Calculate difference in months and days from referenceDate to nextBd
-        var nMonths = nextBd.get(Calendar.MONTH) - referenceDate.get(Calendar.MONTH)
-        var nDays = nextBd.get(Calendar.DAY_OF_MONTH) - referenceDate.get(Calendar.DAY_OF_MONTH)
-
-        if (nDays < 0) {
-            nMonths -= 1
-            val tempCal = referenceDate.clone() as Calendar
-            val daysInMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            nDays += daysInMonth
-        }
-        if (nMonths < 0) {
-            nMonths += 12
-        }
-
-        nextMonths = nMonths
-        nextDays = nDays
-
-        // Total metrics
-        val totalMs = referenceDate.timeInMillis - birthDate.timeInMillis
-        val tDays = if (totalMs >= 0) TimeUnit.MILLISECONDS.toDays(totalMs) else 0L
-        totalDays = tDays
-        totalWeeks = tDays / 7
-        totalMonths = yrs * 12 + mths
-        totalHours = tDays * 24
-        totalMinutes = tDays * 24 * 60
+    val ageResult = remember(birthDate, referenceDate) {
+        viewModel.calculateAge(birthDate, referenceDate)
     }
 
-    LaunchedEffect(birthDate, referenceDate) {
-        calculateAge()
-    }
+    val ageYears = ageResult.years
+    val ageMonths = ageResult.months
+    val ageDays = ageResult.days
+    val nextMonths = ageResult.nextMonths
+    val nextDays = ageResult.nextDays
+    val dayOfWeekOfNextBirthday = ageResult.dayOfWeekOfNextBirthday
+
+    val totalDays = ageResult.totalDays
+    val totalMonths = ageResult.totalMonths
+    val totalWeeks = ageResult.totalWeeks
+    val totalHours = ageResult.totalHours
+    val totalMinutes = ageResult.totalMinutes
 
     val miuiOrange = Color(0xFFFF5C00) // Deep Premium MIUI-style Orange
     val textDark = Color(0xFF212121)   // Dark Grey/Black for values
@@ -1116,7 +1027,7 @@ fun CountdownBlock(value: String, label: String) {
 }
 
 @Composable
-fun TimeZoneConverterView() {
+fun TimeZoneConverterView(viewModel: DateViewModel) {
     var sourceHour by remember { mutableStateOf("12") }
     var sourceMinute by remember { mutableStateOf("00") }
     
@@ -1203,27 +1114,13 @@ fun TimeZoneConverterView() {
         // Result displays
         Text("Calculated World Clocks", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
 
-        val srcHourInt = sourceHour.toIntOrNull() ?: 12
-        val srcMinInt = sourceMinute.toIntOrNull() ?: 0
-
         timeZones.forEach { zone ->
-            val formatter = DateTimeFormatter.ofPattern("hh:mm a (EEEE)", Locale.US)
             val isMain = zone.id == sourceZone.id
 
-            val displayTime = try {
-                val now = Calendar.getInstance()
-                val zonedDateTime = ZonedDateTime.of(
-                    now.get(Calendar.YEAR),
-                    now.get(Calendar.MONTH) + 1,
-                    now.get(Calendar.DAY_OF_MONTH),
-                    srcHourInt.coerceIn(0, 23),
-                    srcMinInt.coerceIn(0, 59),
-                    0, 0, sourceZone
-                )
-                val convertedTime = zonedDateTime.withZoneSameInstant(zone)
-                convertedTime.format(formatter)
-            } catch (e: Exception) {
-                "---"
+            val displayTime = remember(sourceHour, sourceMinute, sourceZone, zone) {
+                val srcHourInt = sourceHour.toIntOrNull() ?: 12
+                val srcMinInt = sourceMinute.toIntOrNull() ?: 0
+                viewModel.convertTimeZone(srcHourInt, srcMinInt, sourceZone, zone)
             }
 
             Card(
@@ -1255,56 +1152,16 @@ fun TimeZoneConverterView() {
 }
 
 @Composable
-fun BusinessWorkingDaysView() {
+fun BusinessWorkingDaysView(viewModel: DateViewModel) {
     val context = LocalContext.current
     var date1 by remember { mutableStateOf(Calendar.getInstance()) }
     var date2 by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 30) }) }
 
-    var netWorkingDays by remember { mutableIntStateOf(0) }
-    var weekendDays by remember { mutableIntStateOf(0) }
-
-    fun calculateBusinessDays() {
-        val y1 = date1.get(Calendar.YEAR)
-        val m1 = date1.get(Calendar.MONTH) + 1
-        val d1 = date1.get(Calendar.DAY_OF_MONTH)
-
-        val y2 = date2.get(Calendar.YEAR)
-        val m2 = date2.get(Calendar.MONTH) + 1
-        val d2 = date2.get(Calendar.DAY_OF_MONTH)
-
-        try {
-            val localStart = java.time.LocalDate.of(y1, m1, d1)
-            val localEnd = java.time.LocalDate.of(y2, m2, d2)
-
-            val dStart = if (localStart.isBefore(localEnd)) localStart else localEnd
-            val dEnd = if (localStart.isBefore(localEnd)) localEnd else localStart
-
-            val totalDays = java.time.temporal.ChronoUnit.DAYS.between(dStart, dEnd) + 1
-            val weeks = totalDays / 7
-            var weekends = weeks * 2
-            val remainingDays = totalDays % 7
-
-            if (remainingDays > 0) {
-                for (i in 0 until remainingDays) {
-                    val checkDay = dStart.plusDays(weeks * 7 + i)
-                    val dayOfWeek = checkDay.dayOfWeek
-                    if (dayOfWeek == java.time.DayOfWeek.SATURDAY || dayOfWeek == java.time.DayOfWeek.SUNDAY) {
-                        weekends++
-                    }
-                }
-            }
-
-            netWorkingDays = (totalDays - weekends).toInt()
-            weekendDays = weekends.toInt()
-        } catch (e: Exception) {
-            netWorkingDays = 0
-            weekendDays = 0
-        }
+    val businessDaysResult = remember(date1, date2) {
+        viewModel.calculateBusinessDays(date1, date2)
     }
-
-    LaunchedEffect(date1, date2) {
-        calculateBusinessDays()
-    }
+    val netWorkingDays = businessDaysResult.workingDays
+    val weekendDays = businessDaysResult.weekends
 
     val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
@@ -1413,7 +1270,7 @@ fun BusinessWorkingDaysView() {
 }
 
 @Composable
-fun UnixEpochConverterView() {
+fun UnixEpochConverterView(viewModel: DateViewModel) {
     var unixInput by remember { mutableStateOf("1779532800") } // May 23, 2026 default
     var customYear by remember { mutableStateOf("2026") }
     var customMonth by remember { mutableStateOf("05") }
@@ -1424,34 +1281,18 @@ fun UnixEpochConverterView() {
     var isTimestampToDateMode by remember { mutableStateOf(true) }
 
     val formattedDateResult = remember(unixInput, isTimestampToDateMode) {
-        try {
-            val seconds = unixInput.toLongOrNull() ?: 0L
-            val date = Date(seconds * 1000)
-            val sdfLocal = SimpleDateFormat("yyyy-MM-dd HH:mm:ss (z)", Locale.US)
-            val sdfUtc = SimpleDateFormat("yyyy-MM-dd HH:mm:ss UTC", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-            
-            "Local: ${sdfLocal.format(date)}\nUTC: ${sdfUtc.format(date)}"
-        } catch (e: Exception) {
-            "Invalid Timestamp Number"
-        }
+        val seconds = unixInput.toLongOrNull() ?: 0L
+        viewModel.unixTimestampToDateString(seconds)
     }
 
     val computedUnixResult = remember(customYear, customMonth, customDay, customHour, customMin, isTimestampToDateMode) {
-        try {
-            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-                set(Calendar.YEAR, customYear.toIntOrNull() ?: 2026)
-                set(Calendar.MONTH, (customMonth.toIntOrNull() ?: 5) - 1)
-                set(Calendar.DAY_OF_MONTH, customDay.toIntOrNull() ?: 23)
-                set(Calendar.HOUR_OF_DAY, customHour.toIntOrNull() ?: 18)
-                set(Calendar.MINUTE, customMin.toIntOrNull() ?: 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val seconds = cal.timeInMillis / 1000
-            "Generated Unix epoch timestamp:\n$seconds"
-        } catch (e: Exception) {
-            "Error building timestamp"
-        }
+        val yr = customYear.toIntOrNull() ?: 2026
+        val mt = customMonth.toIntOrNull() ?: 5
+        val dy = customDay.toIntOrNull() ?: 23
+        val hr = customHour.toIntOrNull() ?: 18
+        val mn = customMin.toIntOrNull() ?: 0
+        val seconds = viewModel.dateComponentsToUnixTimestamp(yr, mt, dy, hr, mn)
+        "Generated Unix epoch timestamp:\n$seconds"
     }
 
     Column(

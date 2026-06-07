@@ -32,3 +32,13 @@ enum class MassUnit(val label: String, val symbol: String, val ratioToBase: Doub
         }
     }
 }
+
+object UnitConverter : IUnitConverter {
+    override fun convertLength(value: Double, from: LengthUnit, to: LengthUnit): Double {
+        return LengthUnit.convert(value, from, to)
+    }
+
+    override fun convertMass(value: Double, from: MassUnit, to: MassUnit): Double {
+        return MassUnit.convert(value, from, to)
+    }
+}

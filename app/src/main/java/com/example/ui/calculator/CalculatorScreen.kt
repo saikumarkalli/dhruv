@@ -2,6 +2,7 @@ package com.example.ui.calculator
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -14,14 +15,19 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -42,9 +51,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.HistoryEntity
 import com.example.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.geometry.Offset
 
 // Dynamic Premium Color Palette Values matching prompt
 val PremiumPrimaryAccent = Color(0xFFFF7433)
@@ -60,29 +77,48 @@ val PremiumPrimaryTextDark = Color(0xFFFAFAFA)
 val PremiumSecondaryTextDark = Color(0xFFB0B0B0)
 val PremiumDividerDark = Color(0xFF2E2E2E)
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CalculatorScreen(
     viewModel: CalculatorViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val input by viewModel.input.collectAsState()
+    val inputState by viewModel.inputState.collectAsState()
     val result by viewModel.result.collectAsState()
     val activeHistory by viewModel.activeHistory.collectAsState()
     val recycleBinHistory by viewModel.recycleBinHistory.collectAsState()
     val isDegree by viewModel.isDegree.collectAsState()
     val isHistoryLocked by viewModel.isHistoryLocked.collectAsState()
     val historyPinCode by viewModel.historyPinCode.collectAsState()
+    val aiExplanationState by viewModel.aiExplanation.collectAsState()
+    val formatLocale by viewModel.formatLocale.collectAsState()
+    val isResultFinalised by viewModel.isResultFinalised.collectAsState()
 
     var showHistoryScreen by remember { mutableStateOf(false) }
     var isHistoryUnlocked by remember { mutableStateOf(false) }
+    var showContextMenu by remember { mutableStateOf(false) }
+    var isScientificMode by remember { mutableStateOf(false) }
 
     val isDark = isSystemInDarkTheme()
     val themeBgColor = MaterialTheme.colorScheme.background
     val themeTextColor = if (isDark) Color.White else Color(0xFF222222)
     val themeSecText = if (isDark) Color(0xFFB0B0B0) else Color(0xFF666666)
     val themeDivider = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+
+    val clipboardManager = LocalClipboardManager.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    val shakeOffsetX = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        viewModel.shakeEvent.collect {
+            for (i in 0 until 3) {
+                shakeOffsetX.animateTo(8f, animationSpec = tween(durationMillis = 30, easing = LinearEasing))
+                shakeOffsetX.animateTo(-8f, animationSpec = tween(durationMillis = 30, easing = LinearEasing))
+            }
+            shakeOffsetX.animateTo(0f, animationSpec = tween(durationMillis = 30, easing = LinearEasing))
+        }
+    }
 
     LaunchedEffect(showHistoryScreen) {
         if (!showHistoryScreen) {
@@ -109,78 +145,359 @@ fun CalculatorScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
 
+                var dragAccumulatedX by remember { mutableStateOf(0f) }
 
-                // SCREEN INNER DISPLAY AREA
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(vertical = 12.dp),
-                    verticalArrangement = Arrangement.Center,
+                        .padding(vertical = 12.dp)
+                        .offset(x = shakeOffsetX.value.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.05f))
+                        .combinedClickable(
+                            onClick = { /* Do nothing */ },
+                            onLongClick = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showContextMenu = true
+                            }
+                        )
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { dragAccumulatedX = 0f },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    dragAccumulatedX += dragAmount
+                                },
+                                onDragEnd = {
+                                    if (dragAccumulatedX < -150f) {
+                                        viewModel.deleteLastToken()
+                                    } else if (dragAccumulatedX < -30f) {
+                                        viewModel.onKeyPress("⌫")
+                                    }
+                                }
+                            )
+                        }
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.End
                 ) {
-                    // Cursor blinking animation
-                    val infiniteTransition = rememberInfiniteTransition(label = "Blink")
-                    val cursorAlpha by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 500),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "CursorAlpha"
-                    )
-
-                    val displayInput = input.ifEmpty { "0" }
-                    val inputFontSize = when {
-                        displayInput.length > 16 -> 28.sp
-                        displayInput.length > 10 -> 36.sp
-                        else -> 48.sp
-                    }
-
+                    // Top row: AI button on left, History button on right
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("calc_input_field"),
-                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = displayInput,
-                            style = MaterialTheme.typography.displayMedium.copy(
-                                fontSize = inputFontSize,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = themeTextColor,
-                            textAlign = TextAlign.End,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                        // AI explain button (only visible when there is a valid result)
+                        if (result.isNotEmpty() && result != "Error" && !result.startsWith("Error") && inputState.text.isNotEmpty()) {
+                            IconButton(
+                                onClick = { viewModel.explainCurrentResult() },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "Explain with AI",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.size(36.dp))
+                        }
+
+                        // History icon button at top-right of display
+                        IconButton(
+                            onClick = { showHistoryScreen = true },
+                            modifier = Modifier.size(36.dp).testTag("key_btn_history_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "History",
+                                tint = themeSecText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showContextMenu,
+                        onDismissRequest = { showContextMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Copy Expression") },
+                            onClick = {
+                                showContextMenu = false
+                                clipboardManager.setText(AnnotatedString(inputState.text))
+                                Toast.makeText(context, "Expression copied", Toast.LENGTH_SHORT).show()
+                            }
                         )
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(if (displayInput.length > 16) 24.dp else if (displayInput.length > 10) 32.dp else 42.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = cursorAlpha))
+                        DropdownMenuItem(
+                            text = { Text("Copy Result") },
+                            onClick = {
+                                showContextMenu = false
+                                val rawInputText = inputState.text
+                                val cleanRes = if (result.isNotEmpty()) result.removePrefix("=").trim() else rawInputText
+                                if (cleanRes.isNotEmpty() && !cleanRes.startsWith("Error")) {
+                                    clipboardManager.setText(AnnotatedString(cleanRes))
+                                    Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "No result to copy", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Paste") },
+                            onClick = {
+                                showContextMenu = false
+                                val pasted = clipboardManager.getText()?.text ?: ""
+                                if (pasted.isNotEmpty()) {
+                                    fun isValidExpression(text: String): Boolean {
+                                        val cleaned = text.lowercase()
+                                            .replace("sin", "")
+                                            .replace("cos", "")
+                                            .replace("tan", "")
+                                            .replace("asin", "")
+                                            .replace("acos", "")
+                                            .replace("atan", "")
+                                            .replace("log", "")
+                                            .replace("ln", "")
+                                            .replace("sqrt", "")
+                                            .replace("pi", "")
+                                            .replace("e", "")
+                                        val allowedPattern = "^[0-9\\s\\.\\+\\-\\×\\÷\\*\\/\\%\\^\\!\\(\\)]*$"
+                                        return cleaned.matches(Regex(allowedPattern))
+                                    }
+                                    if (isValidExpression(pasted)) {
+                                        val normalized = pasted
+                                            .replace("*", "×")
+                                            .replace("/", "÷")
+                                        val current = inputState.text
+                                        val start = inputState.selection.min
+                                        val end = inputState.selection.max
+                                        val newText = current.substring(0, start) + normalized + current.substring(end)
+                                        val newPos = start + normalized.length
+                                        viewModel.updateInputState(TextFieldValue(newText, TextRange(newPos)))
+                                        Toast.makeText(context, "Pasted successfully", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Invalid characters in clipboard", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (result.isNotEmpty()) {
-                        Text(
-                            text = if (result.startsWith("=")) result else "= $result",
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Normal
-                            ),
-                            color = themeSecText,
-                            textAlign = TextAlign.End,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                    // Content Area (History preview at top, divider, current calculation at bottom)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.Bottom,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        // ── RECENT HISTORY PREVIEW (top of card) ──
+                        val recentHistory = activeHistory.takeLast(3)
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("calc_result_field")
+                                .padding(vertical = 4.dp),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            recentHistory.forEach { histEntry ->
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.End
+                                ) {
+                                    // Line 1: calculated value / expression (small text size)
+                                    Text(
+                                        text = histEntry.expression,
+                                        style = TextStyle(
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = themeSecText,
+                                            textAlign = TextAlign.End
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    // Line 2: result starts with '=' (small text size)
+                                    Text(
+                                        text = "= ${histEntry.result}",
+                                        style = TextStyle(
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PremiumPrimaryAccent,
+                                            textAlign = TextAlign.End
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            // Keep layout stable: pad to exactly 3 items
+                            val itemsNeeded = 3 - recentHistory.size
+                            repeat(itemsNeeded) {
+                                Spacer(modifier = Modifier.height(34.dp))
+                            }
+                        }
+
+                        // Subtle Divider
+                        HorizontalDivider(
+                            color = themeDivider,
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
+
+                        // ── CURRENT CALCULATION (bottom of card) ──
+                        if (isResultFinalised) {
+                            // 1. Current expression with math signs (small size)
+                            val lastExpr by viewModel.lastExpression.collectAsState()
+                            Text(
+                                text = lastExpr,
+                                style = TextStyle(
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = themeSecText,
+                                    textAlign = TextAlign.End
+                                ),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // 2. Final Result starting with '=' (large size)
+                            val resultScrollState = rememberScrollState()
+                            val rawInputText = inputState.text
+                            val cleanRes = if (result.isNotEmpty()) result.removePrefix("=").trim() else rawInputText
+                            val displayResult = if (cleanRes.startsWith("Error")) {
+                                cleanRes
+                            } else {
+                                "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
+                            }
+
+                            val targetResultFontSize = when {
+                                cleanRes.length <= 6  -> 52f
+                                cleanRes.length <= 9  -> 44f
+                                cleanRes.length <= 12 -> 36f
+                                cleanRes.length <= 15 -> 28f
+                                else                  -> 22f
+                            }
+
+                            val animatedResultFontSize by animateFloatAsState(
+                                targetValue = targetResultFontSize,
+                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                                label = "resultFontSize"
+                            )
+
+                            Text(
+                                text = displayResult,
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontSize = animatedResultFontSize.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = themeTextColor,
+                                textAlign = TextAlign.End,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(resultScrollState)
+                                    .combinedClickable(
+                                        onClick = { /* nothing */ },
+                                        onLongClick = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            clipboardManager.setText(AnnotatedString(cleanRes))
+                                            Toast.makeText(context, "Copied: $cleanRes", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                    .testTag("calc_result_field")
+                            )
+                        } else {
+                            // 1. BasicTextField showing inputState (large size)
+                            val inputFontSize = when {
+                                inputState.text.length > 20 -> 22.sp
+                                inputState.text.length > 14 -> 30.sp
+                                inputState.text.length > 10 -> 36.sp
+                                else -> 44.sp
+                            }
+
+                            BasicTextField(
+                                value = inputState,
+                                onValueChange = {
+                                    viewModel.updateInputState(it)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("calc_input_field"),
+                                textStyle = TextStyle(
+                                    fontSize = inputFontSize,
+                                    fontWeight = FontWeight.Medium,
+                                    color = themeTextColor,
+                                    textAlign = TextAlign.End,
+                                    lineHeight = (inputFontSize.value * 1.25f).sp
+                                ),
+                                singleLine = false,
+                                maxLines = 3,
+                                cursorBrush = SolidColor(PremiumPrimaryAccent),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        if (inputState.text.isEmpty()) {
+                                            Text(
+                                                text = "0",
+                                                style = TextStyle(
+                                                    fontSize = inputFontSize,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = themeTextColor.copy(alpha = 0.3f),
+                                                    textAlign = TextAlign.End
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+
+                            // 2. Result Preview starting with '=' (small size)
+                            if (result.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val resultScrollState = rememberScrollState()
+                                val cleanRes = result.removePrefix("=").trim()
+                                val displayResult = if (cleanRes.startsWith("Error")) {
+                                    cleanRes
+                                } else {
+                                    "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
+                                }
+
+                                val targetResultFontSize = when {
+                                    cleanRes.length <= 10 -> 20f
+                                    cleanRes.length <= 16 -> 16f
+                                    else                  -> 14f
+                                }
+
+                                val animatedResultFontSize by animateFloatAsState(
+                                    targetValue = targetResultFontSize,
+                                    label = "resultFontSize"
+                                )
+
+                                Text(
+                                    text = displayResult,
+                                    style = MaterialTheme.typography.headlineLarge.copy(
+                                        fontSize = animatedResultFontSize.sp,
+                                        fontWeight = FontWeight.Normal
+                                    ),
+                                    color = themeSecText.copy(alpha = 0.65f),
+                                    textAlign = TextAlign.End,
+                                    maxLines = 1,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(resultScrollState)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.height(20.dp))
+                            }
+                        }
                     }
                 }
 
@@ -191,85 +508,170 @@ fun CalculatorScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
-                // KEYPAD AREA
+                // ── KEYPAD AREA (Feature 6: background follows system dark/light) ──
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 480.dp)
                         .align(Alignment.CenterHorizontally)
-                        .background(themeDivider)
-                        .padding(bottom = 12.dp),
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    // Row 1: C, Backspace, %, /
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(1.dp)
+                    // ── Scientific expansion rows ──────────────────────────
+                    val sciKeyHeight = if (isScientificMode) 56.dp else 0.dp
+                    AnimatedVisibility(
+                        visible = isScientificMode,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
                     ) {
-                        SimpleKey(text = "C", tag = "key_btn_C", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("C") })
-                        SimpleKey(icon = Icons.Default.Backspace, tag = "key_btn_⌫", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("⌫") })
-                        SimpleKey(text = "%", tag = "key_btn_%", modifier = Modifier.weight(1f), isOperator = true, onClick = { viewModel.onKeyPress("%") })
-                        SimpleKey(text = "/", tag = "key_btn_÷", modifier = Modifier.weight(1f), isOperator = true, onClick = { viewModel.onKeyPress("÷") })
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            // Sci row A: DEG/RAD toggle, sin, cos, tan, ^
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                // DEG / RAD toggle
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(sciKeyHeight)
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .clickable { viewModel.toggleAngleUnit() }
+                                        .testTag("key_btn_deg_rad"),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (isDegree) "DEG" else "RAD",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                SimpleKey(text = "sin", tag = "key_btn_sin", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("sin") })
+                                SimpleKey(text = "cos", tag = "key_btn_cos", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("cos") })
+                                SimpleKey(text = "tan", tag = "key_btn_tan", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("tan") })
+                                SimpleKey(text = "xʸ", tag = "key_btn_power", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("^") })
+                            }
+                            // Sci row B: (, ), log, ln, √
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                SimpleKey(text = "(", tag = "key_btn_open_bracket", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, onClick = { viewModel.onKeyPress("(") })
+                                SimpleKey(text = ")", tag = "key_btn_close_bracket", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, onClick = { viewModel.onKeyPress(")") })
+                                SimpleKey(text = "log", tag = "key_btn_log", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("log") })
+                                SimpleKey(text = "ln", tag = "key_btn_ln", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("ln") })
+                                SimpleKey(text = "√", tag = "key_btn_sqrt", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("sqrt") })
+                            }
+                        }
                     }
-                    // Row 2: 7, 8, 9, *
+
+                    // ── Standard rows ──────────────────────────────────────
+                    val stdH = 72.dp  // slightly compact to give room for sci rows
+
+                    // Row 1: C, ⌫, %, ÷  (Feature 3: C and ⌫ share operator accent colour)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        SimpleKey(text = "7", tag = "key_btn_7", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("7") })
-                        SimpleKey(text = "8", tag = "key_btn_8", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("8") })
-                        SimpleKey(text = "9", tag = "key_btn_9", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("9") })
-                        SimpleKey(text = "*", tag = "key_btn_×", modifier = Modifier.weight(1f), isOperator = true, onClick = { viewModel.onKeyPress("×") })
+                        SimpleKey(text = "C", tag = "key_btn_C", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("C") })
+                        SimpleKey(icon = Icons.AutoMirrored.Filled.Backspace, tag = "key_btn_⌫", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("⌫") })
+                        SimpleKey(text = "%", tag = "key_btn_%", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("%") })
+                        SimpleKey(text = "÷", tag = "key_btn_÷", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("÷") })
                     }
-                    // Row 3: 4, 5, 6, -
+                    // Row 2: 7, 8, 9, ×
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        SimpleKey(text = "4", tag = "key_btn_4", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("4") })
-                        SimpleKey(text = "5", tag = "key_btn_5", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("5") })
-                        SimpleKey(text = "6", tag = "key_btn_6", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("6") })
-                        SimpleKey(text = "-", tag = "key_btn_-", modifier = Modifier.weight(1f), isOperator = true, onClick = { viewModel.onKeyPress("-") })
+                        SimpleKey(text = "7", tag = "key_btn_7", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("7") })
+                        SimpleKey(text = "8", tag = "key_btn_8", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("8") })
+                        SimpleKey(text = "9", tag = "key_btn_9", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("9") })
+                        SimpleKey(text = "×", tag = "key_btn_×", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("×") })
+                    }
+                    // Row 3: 4, 5, 6, −
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        SimpleKey(text = "4", tag = "key_btn_4", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("4") })
+                        SimpleKey(text = "5", tag = "key_btn_5", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("5") })
+                        SimpleKey(text = "6", tag = "key_btn_6", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("6") })
+                        SimpleKey(text = "−", tag = "key_btn_-", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("-") })
                     }
                     // Row 4: 1, 2, 3, +
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        SimpleKey(text = "1", tag = "key_btn_1", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("1") })
-                        SimpleKey(text = "2", tag = "key_btn_2", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("2") })
-                        SimpleKey(text = "3", tag = "key_btn_3", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("3") })
-                        SimpleKey(text = "+", tag = "key_btn_+", modifier = Modifier.weight(1f), isOperator = true, onClick = { viewModel.onKeyPress("+") })
+                        SimpleKey(text = "1", tag = "key_btn_1", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("1") })
+                        SimpleKey(text = "2", tag = "key_btn_2", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("2") })
+                        SimpleKey(text = "3", tag = "key_btn_3", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("3") })
+                        SimpleKey(text = "+", tag = "key_btn_+", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("+") })
                     }
-                    // Row 5: History icon, 0, ., Equals FAB
+                    // Row 5: Scientific toggle, 0, ., =
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(1.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Scientific mode toggle (replaces History icon in keypad)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(80.dp)
-                                .background(MaterialTheme.colorScheme.surface)
-                                .clickable { showHistoryScreen = true }
-                                .testTag("key_btn_history_toggle"),
+                                .height(stdH)
+                                .background(
+                                    if (isScientificMode)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else
+                                        MaterialTheme.colorScheme.surface
+                                )
+                                .clickable { isScientificMode = !isScientificMode }
+                                .testTag("key_btn_scientific_toggle"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = "History",
-                                tint = themeSecText,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.Calculate,
+                                    contentDescription = "Scientific Mode",
+                                    tint = if (isScientificMode) MaterialTheme.colorScheme.primary else themeSecText,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = if (isScientificMode) "SCI ✓" else "SCI",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isScientificMode) MaterialTheme.colorScheme.primary else themeSecText
+                                )
+                            }
                         }
-                        SimpleKey(text = "0", tag = "key_btn_0", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress("0") })
-                        SimpleKey(text = ".", tag = "key_btn_.", modifier = Modifier.weight(1f), onClick = { viewModel.onKeyPress(".") })
-                        // Special FAB Style Equals inside a card
+
+                        SimpleKey(
+                            text = "0",
+                            tag = "key_btn_0",
+                            modifier = Modifier.weight(1f),
+                            keyHeight = stdH,
+                            onClick = { viewModel.onKeyPress("0") },
+                            onLongClick = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.onKeyPress("000")
+                            }
+                        )
+                        SimpleKey(text = ".", tag = "key_btn_.", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress(".") })
+
+                        // Equals button
+                        val equalInteractionSource = remember { MutableInteractionSource() }
+                        val equalIsPressed by equalInteractionSource.collectIsPressedAsState()
+                        val equalGlowAlpha by animateFloatAsState(
+                            targetValue = if (equalIsPressed) 0.25f else 0f,
+                            animationSpec = tween(durationMillis = if (equalIsPressed) 50 else 200),
+                            label = "equalGlowAlpha"
+                        )
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(80.dp)
+                                .height(stdH)
                                 .background(MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
@@ -279,7 +681,32 @@ fun CalculatorScreen(
                                     .padding(4.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primary)
-                                    .clickable { viewModel.onKeyPress("=") }
+                                    .combinedClickable(
+                                        interactionSource = equalInteractionSource,
+                                        indication = null,
+                                        onClick = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            viewModel.onKeyPress("=")
+                                        },
+                                        onLongClick = {
+                                            val res = result.removePrefix("=").trim()
+                                            if (res.isNotEmpty() && !res.startsWith("Error")) {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                clipboardManager.setText(AnnotatedString(res))
+                                                Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    )
+                                    .drawWithContent {
+                                        drawContent()
+                                        if (equalGlowAlpha > 0f) {
+                                            val brush = Brush.radialGradient(
+                                                colors = listOf(Color(0xFFF0B429).copy(alpha = equalGlowAlpha), Color.Transparent),
+                                                radius = size.minDimension * 0.8f
+                                            )
+                                            drawRect(brush = brush)
+                                        }
+                                    }
                                     .testTag("key_btn_="),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -349,33 +776,168 @@ fun CalculatorScreen(
                 }
             }
         }
+
+        if (aiExplanationState !is AiExplanationState.Idle) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.clearAiExplanation() },
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .navigationBarsPadding(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "AI Calculation Explainer",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = themeTextColor
+                            )
+                        }
+                        IconButton(onClick = { viewModel.clearAiExplanation() }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    when (val state = aiExplanationState) {
+                        is AiExplanationState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        is AiExplanationState.Success -> {
+                            Text(
+                                text = state.explanation,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = themeTextColor,
+                                modifier = Modifier.fillMaxWidth(),
+                                lineHeight = 22.sp
+                            )
+                        }
+                        is AiExplanationState.Error -> {
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        else -> {}
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SimpleKey(
     text: String? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    badgeText: String? = null,
     isOperator: Boolean = false,
     modifier: Modifier = Modifier,
     tag: String? = null,
+    keyHeight: androidx.compose.ui.unit.Dp = 72.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 22.sp,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
-    val themeTextColor = if (isSystemInDarkTheme()) Color.White else Color(0xFF222222)
+    // Feature 6: In light mode, text should be black for keyboard keys
+    val isDark = isSystemInDarkTheme()
+    val themeTextColor = if (isDark) Color.White else Color(0xFF111111)
     val operatorColor = MaterialTheme.colorScheme.primary
+    val hapticFeedback = LocalHapticFeedback.current
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Feature 4: Circular centered ripple effect (200 ms fade-in/out)
+    val rippleProgress by animateFloatAsState(
+        targetValue = if (isPressed) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) 80 else 200,
+            easing = FastOutSlowInEasing
+        ),
+        label = "rippleProgress"
+    )
+    // Pick the ripple colour: operator keys use warm gold, numeric keys use white/light glow
+    val rippleBaseColor = if (isOperator) operatorColor else if (isDark) Color.White else Color(0xFF444444)
 
     Box(
         modifier = modifier
-            .height(80.dp)
+            .height(keyHeight)
             .background(MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                },
+                onLongClick = onLongClick?.let {
+                    {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        it()
+                    }
+                }
+            )
+            .drawWithContent {
+                drawContent()
+                // Circular light ripple centered on the key
+                if (rippleProgress > 0f) {
+                    val maxRadius = size.minDimension * 0.9f
+                    val currentRadius = maxRadius * rippleProgress
+                    val alpha = (0.28f * (1f - rippleProgress * 0.5f)).coerceAtLeast(0f)
+                    val brush = Brush.radialGradient(
+                        colors = listOf(
+                            rippleBaseColor.copy(alpha = alpha),
+                            rippleBaseColor.copy(alpha = alpha * 0.4f),
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = currentRadius
+                    )
+                    drawCircle(
+                        brush = brush,
+                        radius = currentRadius,
+                        center = Offset(size.width / 2f, size.height / 2f)
+                    )
+                }
+            }
             .testTag(tag ?: if (text != null) "key_btn_$text" else "key_btn_icon"),
         contentAlignment = Alignment.Center
     ) {
         if (text != null) {
             Text(
                 text = text,
-                fontSize = 24.sp,
+                fontSize = fontSize,
                 fontWeight = FontWeight.Medium,
                 color = if (isOperator) operatorColor else themeTextColor,
                 style = MaterialTheme.typography.bodyLarge
@@ -386,6 +948,18 @@ fun SimpleKey(
                 contentDescription = null,
                 tint = if (isOperator) operatorColor else themeTextColor.copy(alpha = 0.8f),
                 modifier = Modifier.size(26.dp)
+            )
+        }
+
+        if (badgeText != null) {
+            Text(
+                text = badgeText,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = PremiumPrimaryAccent,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 24.dp)
             )
         }
     }
@@ -512,7 +1086,7 @@ fun CalendarHistoryFullView(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onClose) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back back",
                         tint = PremiumPrimaryAccent
                     )

@@ -2,6 +2,7 @@ package com.example
 
 import com.example.util.CalculatorEngine
 import org.junit.Assert.*
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.math.abs
 
@@ -43,9 +44,10 @@ class ExampleUnitTest {
   }
 
   @Test
-  fun testModulus() {
-    assertEquals(1.0, CalculatorEngine.evaluate("10 % 3", false), precisionDelta)
-    assertEquals(2.5, CalculatorEngine.evaluate("11.5 % 3", false), precisionDelta)
+  fun testPercentages() {
+    assertEquals(0.85, CalculatorEngine.evaluate("85%", false), precisionDelta)
+    assertEquals(550.0, CalculatorEngine.evaluate("500 + 10%", false), precisionDelta)
+    assertEquals(30.0, CalculatorEngine.evaluate("200 * 15%", false), precisionDelta)
   }
 
   @Test
@@ -130,6 +132,61 @@ class ExampleUnitTest {
   @Test(expected = ArithmeticException::class)
   fun testSquareRootOfNegativeThrows() {
     CalculatorEngine.evaluate("sqrt(-1)", false)
+  }
+
+  @Test
+  fun testParenthesesAutoClosing() {
+    assertEquals(5.0, CalculatorEngine.evaluate("(2 + 3", false), precisionDelta)
+    assertEquals(1.0, CalculatorEngine.evaluate("sin(90", true), precisionDelta)
+  }
+
+  @Test(expected = RuntimeException::class)
+  fun testUnmatchedClosingParenthesesThrows() {
+    CalculatorEngine.evaluate("2 + 3)", false)
+  }
+
+  @Test
+  fun testImplicitMultiplication() {
+    assertEquals(2 * Math.PI, CalculatorEngine.evaluate("2π", false), precisionDelta)
+    assertEquals(2 * Math.E, CalculatorEngine.evaluate("2e", false), precisionDelta)
+    assertEquals(Math.PI * Math.E, CalculatorEngine.evaluate("πe", false), precisionDelta)
+    assertEquals(6.0, CalculatorEngine.evaluate("(2)(3)", false), precisionDelta)
+    assertEquals(6.0, CalculatorEngine.evaluate("2(3)", false), precisionDelta)
+    assertEquals(3.0, CalculatorEngine.evaluate("3sin(90)", true), precisionDelta)
+    assertEquals(0.5 * Math.E, CalculatorEngine.evaluate("sin(30)e", true), precisionDelta)
+  }
+
+  @Test
+  fun testScientificNotation() {
+    assertEquals(123.0, CalculatorEngine.evaluate("1.23E2", false), precisionDelta)
+    assertEquals(0.001, CalculatorEngine.evaluate("1e-3", false), precisionDelta)
+    assertEquals(150.0, CalculatorEngine.evaluate("1.5E+2", false), precisionDelta)
+  }
+
+  @Test(expected = RuntimeException::class)
+  fun testMultipleDecimalsThrows() {
+    CalculatorEngine.evaluate("2.3.4", false)
+  }
+
+  @Test(expected = RuntimeException::class)
+  fun testEmptyParenthesesThrows() {
+    CalculatorEngine.evaluate("()", false)
+  }
+
+  @Ignore("% is a percentage operator, not modulo. `10 % 0` evaluates to 0.0, not an exception.")
+  @Test(expected = ArithmeticException::class)
+  fun testModuloByZeroThrows() {
+    CalculatorEngine.evaluate("10 % 0", false)
+  }
+
+  @Test
+  fun testPercentageOperator() {
+    // Standalone: 15% = 0.15
+    assertEquals(0.15, CalculatorEngine.evaluate("15%", false), precisionDelta)
+    // Contextual add: 200 + 10% = 200 + 20 = 220
+    assertEquals(220.0, CalculatorEngine.evaluate("200 + 10%", false), precisionDelta)
+    // Multiplication: 200 * 50% = 200 * 0.5 = 100
+    assertEquals(100.0, CalculatorEngine.evaluate("200 * 50%", false), precisionDelta)
   }
 }
 
