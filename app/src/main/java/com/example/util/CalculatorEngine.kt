@@ -2,34 +2,32 @@ package com.example.util
 
 import kotlin.math.*
 
-class CalculatorEngine {
-    companion object {
-        fun evaluate(expression: String, isDegree: Boolean): Double {
-            if (expression.isBlank()) return 0.0
-            
-            // Core sanitization for calculator interface elements
-            val sanitized = expression
-                .replace("×", "*")
-                .replace("÷", "/")
-                .replace("π", Math.PI.toString())
-                .replace("e", Math.E.toString())
+object CalculatorEngine : ICalculatorEngine {
+    override fun evaluate(expression: String, isDegree: Boolean): Double {
+        if (expression.isBlank()) return 0.0
+        
+        // Core sanitization for calculator interface elements
+        val sanitized = expression
+            .replace("×", "*")
+            .replace("÷", "/")
+            .replace("π", Math.PI.toString())
+            .replace("e", Math.E.toString())
 
-            return Parser(sanitized, isDegree).parse()
-        }
+        return Parser(sanitized, isDegree).parse()
+    }
 
-        fun factorial(n: Double): Double {
-            if (n < 0.0) return Double.NaN
-            if (n != floor(n)) {
-                return Double.NaN // Only support integer factorials for simplification
-            }
-            val num = n.toInt()
-            if (num > 170) return Double.POSITIVE_INFINITY // Limit of double limits
-            var result = 1.0
-            for (i in 1..num) {
-                result *= i
-            }
-            return result
+    override fun factorial(n: Double): Double {
+        if (n < 0.0) return Double.NaN
+        if (n != floor(n)) {
+            return Double.NaN // Only support integer factorials for simplification
         }
+        val num = n.toInt()
+        if (num > 170) return Double.POSITIVE_INFINITY // Limit of double limits
+        var result = 1.0
+        for (i in 1..num) {
+            result *= i
+        }
+        return result
     }
 
     private class Parser(val str: String, val isDegree: Boolean) {

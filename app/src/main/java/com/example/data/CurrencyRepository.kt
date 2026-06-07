@@ -5,13 +5,13 @@ import com.example.data.api.CurrencyApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) {
+class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) : ICurrencyRepository {
 
-    suspend fun getAllRates(): List<CurrencyRateEntity> = withContext(Dispatchers.IO) {
+    override suspend fun getAllRates(): List<CurrencyRateEntity> = withContext(Dispatchers.IO) {
         return@withContext currencyRateDao.getAllRates()
     }
 
-    suspend fun getRate(code: String): Double? = withContext(Dispatchers.IO) {
+    override suspend fun getRate(code: String): Double? = withContext(Dispatchers.IO) {
         return@withContext currencyRateDao.getRateByCode(code)?.rate
     }
 
@@ -20,7 +20,7 @@ class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) {
      * Uses double-api self-healing fallback layers.
      * If offline, fallback to locally stored rates.
      */
-    suspend fun fetchAndCacheLatestRates(baseCurrency: String = "USD"): Result<Map<String, Double>> = withContext(Dispatchers.IO) {
+    override suspend fun fetchAndCacheLatestRates(baseCurrency: String): Result<Map<String, Double>> = withContext(Dispatchers.IO) {
         try {
             val response = CurrencyApiClient.api.getLatestRates(baseCurrency)
             if (response.result == "success") {
