@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
@@ -294,7 +295,7 @@ fun CalculatorScreen(
                         horizontalAlignment = Alignment.End
                     ) {
                         // ── RECENT HISTORY PREVIEW (top of card) ──
-                        val recentHistory = activeHistory.takeLast(3)
+                        val recentHistory = activeHistory.take(3).reversed()
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -302,16 +303,22 @@ fun CalculatorScreen(
                             horizontalAlignment = Alignment.End,
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            recentHistory.forEach { histEntry ->
+                            recentHistory.forEachIndexed { index, histEntry ->
+                                val itemAlpha = when {
+                                    recentHistory.size == 3 && index == 0 -> 0.4f
+                                    recentHistory.size == 3 && index == 1 -> 0.7f
+                                    recentHistory.size == 2 && index == 0 -> 0.7f
+                                    else -> 1.0f
+                                }
                                 Column(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().alpha(itemAlpha),
                                     horizontalAlignment = Alignment.End
                                 ) {
-                                    // Line 1: calculated value / expression (small text size)
+                                    // Line 1: calculated value / expression (increased text size)
                                     Text(
                                         text = histEntry.expression,
                                         style = TextStyle(
-                                            fontSize = 11.sp,
+                                            fontSize = 15.sp,
                                             fontWeight = FontWeight.Normal,
                                             color = themeSecText,
                                             textAlign = TextAlign.End
@@ -319,11 +326,11 @@ fun CalculatorScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    // Line 2: result starts with '=' (small text size)
+                                    // Line 2: result starts with '=' (increased text size)
                                     Text(
                                         text = "= ${histEntry.result}",
                                         style = TextStyle(
-                                            fontSize = 11.sp,
+                                            fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = PremiumPrimaryAccent,
                                             textAlign = TextAlign.End
