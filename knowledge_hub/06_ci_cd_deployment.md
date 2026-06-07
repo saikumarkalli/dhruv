@@ -13,13 +13,14 @@ The application utilizes GitHub Actions to automate the build and release pipeli
 ### Automated Versioning
 The application uses dynamic version injection into the Gradle build process to eliminate manual version bumping in code.
 - **`versionCode`**: Always dynamically mapped to the `${{ github.run_number }}`. This guarantees a strictly increasing, unique integer for every build, satisfying Google Play Store's rigid versioning requirements.
-- **`versionName`**: 
   - On a Tag push (e.g. `v2.1.0`), the workflow strips the `v` and sets the `versionName` to `2.1.0`.
-  - On a non-tag push to `main`, it sets a beta version format: `1.0.[run_number]-beta`.
+  - On a non-tag push to `main` (like a PR merge), the workflow queries git for the **last released tag** (`git describe --tags`). It then generates a beta version name in the format: `<previous_version>.[run_number]-beta` (e.g. `1.2.0.45-beta`). If no tags exist, it falls back to `1.0.0.[run_number]-beta`.
 
-### Artifact Generation
-The workflow executes the Gradle commands `./gradlew assembleRelease` to generate a critical deployment artifact:
-1. **Release APK (`app-release.apk`)**: A Universal APK that can be directly downloaded and installed (sideloaded) onto Android devices.
+The workflow executes the Gradle commands `./gradlew assembleRelease` to generate a critical deployment artifact. 
+
+Additionally, the `build.gradle.kts` specifies `base.archivesName.set()` to automatically append the injected version name into the generated files (e.g., `DhruvCalc-v1.2.0.45-beta-release.apk` instead of `app-release.apk`).
+
+1. **Release APK (`DhruvCalc-v[version]-release.apk`)**: A Universal APK that can be directly downloaded and installed (sideloaded) onto Android devices.
 
 > [!NOTE]
 > **AAB Fallback**: The generation of the Android App Bundle (AAB) via `bundleRelease` has been temporarily disabled as it is not yet ready for Play Store deployment. This is documented as a `TODO` in the workflow file for future implementation.
@@ -37,6 +38,9 @@ To make this work, the repository relies on 4 GitHub Secrets configured in the r
 - `STORE_PASSWORD`: The password for the Keystore.
 - `KEY_ALIAS`: The alias name of the key (e.g., `upload`).
 - `KEY_PASSWORD`: The password for the specific key.
+
+> [!TIP]
+> **Unsigned Fallback Strategy**: If the `STORE_PASSWORD` secret is missing or empty, the `build.gradle.kts` signing configuration safely aborts the signing process. Instead of crashing the CI pipeline, it logs a warning and successfully generates an *unsigned* APK (e.g., `DhruvCalc-v...-release-unsigned.apk`). This ensures continuous delivery of testable artifacts even if production secrets are temporarily unavailable.
 
 ### Local Development Safety
 The local project `.gitignore` is configured to ignore `*.jks` and `*-base64.txt` files to guarantee that keystores generated on developer machines are never tracked by git.
