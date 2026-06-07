@@ -126,3 +126,7 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+// Rename the output APK file to include the version name
+val appVersionName = (project.findProperty("VERSION_NAME") as? String) ?: "1.0"
+base.archivesName.set("DhruvCalc-v${appVersionName}")
