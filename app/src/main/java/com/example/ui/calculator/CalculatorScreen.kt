@@ -3,6 +3,7 @@ package com.example.ui.calculator
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -63,6 +64,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 // Dynamic Premium Color Palette Values matching prompt
 val PremiumPrimaryAccent = Color(0xFFFF7433)
@@ -88,6 +92,7 @@ fun CalculatorScreen(
     val inputState by viewModel.inputState.collectAsState()
     val result by viewModel.result.collectAsState()
     val activeHistory by viewModel.activeHistory.collectAsState()
+    val clearedHistoryTime by viewModel.clearedHistoryTimestamp.collectAsState()
     val recycleBinHistory by viewModel.recycleBinHistory.collectAsState()
     val isDegree by viewModel.isDegree.collectAsState()
     val isHistoryLocked by viewModel.isHistoryLocked.collectAsState()
@@ -100,6 +105,33 @@ fun CalculatorScreen(
     var isHistoryUnlocked by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
     var isScientificMode by remember { mutableStateOf(false) }
+    var isKeypadVisible by remember { mutableStateOf(true) }
+
+    BackHandler(enabled = !isKeypadVisible) {
+        isKeypadVisible = true
+    }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (isKeypadVisible && available.y > 15f) {
+                    isKeypadVisible = false
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (!isKeypadVisible && available.y < -15f) {
+                    isKeypadVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     val isDark = isSystemInDarkTheme()
     val themeBgColor = MaterialTheme.colorScheme.background
@@ -142,6 +174,7 @@ fun CalculatorScreen(
                 modifier = Modifier
                     .weight(1.3f)
                     .fillMaxHeight()
+                    .animateContentSize()
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
@@ -290,60 +323,69 @@ fun CalculatorScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
+                            .weight(1f)
+                            .nestedScroll(nestedScrollConnection)
+                            .pointerInput(isKeypadVisible) {
+                                if (isKeypadVisible) {
+                                    detectVerticalDragGestures { _, dragAmount ->
+                                        if (dragAmount > 15f) {
+                                            isKeypadVisible = false
+                                        }
+                                    }
+                                }
+                            },
                         verticalArrangement = Arrangement.Bottom,
                         horizontalAlignment = Alignment.End
                     ) {
                         // ── RECENT HISTORY PREVIEW (top of card) ──
-                        val recentHistory = activeHistory.take(3).reversed()
-                        Column(
+                        val recentHistory = activeHistory.filter { it.timestamp > clearedHistoryTime }
+                        val displayHistory = if (isKeypadVisible) recentHistory.take(2) else recentHistory
+                        
+                        LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .weight(1f)
                                 .padding(vertical = 4.dp),
                             horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            reverseLayout = true
                         ) {
-                            recentHistory.forEachIndexed { index, histEntry ->
-                                val itemAlpha = when {
-                                    recentHistory.size == 3 && index == 0 -> 0.4f
-                                    recentHistory.size == 3 && index == 1 -> 0.7f
-                                    recentHistory.size == 2 && index == 0 -> 0.7f
-                                    else -> 1.0f
-                                }
+                            items(displayHistory) { histEntry ->
                                 Column(
-                                    modifier = Modifier.fillMaxWidth().alpha(itemAlpha),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            viewModel.restoreEquation(histEntry.expression, histEntry.result)
+                                            isKeypadVisible = true
+                                        }
+                                        .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.End
                                 ) {
-                                    // Line 1: calculated value / expression (increased text size)
+                                    // Line 1: calculated value / expression (decreased text size, faded color)
                                     Text(
                                         text = histEntry.expression,
                                         style = TextStyle(
-                                            fontSize = 18.sp,
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.Normal,
-                                            color = themeTextColor,
+                                            color = themeSecText.copy(alpha = 0.7f),
                                             textAlign = TextAlign.End
                                         ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    // Line 2: result starts with '=' (increased text size)
+                                    // Line 2: result starts with '=' (decreased text size, faded color)
                                     Text(
                                         text = "= ${histEntry.result}",
                                         style = TextStyle(
-                                            fontSize = 32.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = themeTextColor,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = themeSecText.copy(alpha = 0.85f),
                                             textAlign = TextAlign.End
                                         ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                            }
-                            // Keep layout stable: pad to exactly 3 items
-                            val itemsNeeded = 3 - recentHistory.size
-                            repeat(itemsNeeded) {
-                                Spacer(modifier = Modifier.height(72.dp))
                             }
                         }
 
@@ -382,13 +424,7 @@ fun CalculatorScreen(
                                 "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
                             }
 
-                            val targetResultFontSize = when {
-                                cleanRes.length <= 6  -> 52f
-                                cleanRes.length <= 9  -> 44f
-                                cleanRes.length <= 12 -> 36f
-                                cleanRes.length <= 15 -> 28f
-                                else                  -> 22f
-                            }
+                            val targetResultFontSize = (52f * (7f / maxOf(7f, cleanRes.length.toFloat()))).coerceIn(22f, 52f)
 
                             val animatedResultFontSize by animateFloatAsState(
                                 targetValue = targetResultFontSize,
@@ -420,12 +456,13 @@ fun CalculatorScreen(
                             )
                         } else {
                             // 1. BasicTextField showing inputState (large size)
-                            val inputFontSize = when {
-                                inputState.text.length > 20 -> 22.sp
-                                inputState.text.length > 14 -> 30.sp
-                                inputState.text.length > 10 -> 36.sp
-                                else -> 44.sp
-                            }
+                            val targetInputFontSize = (44f * (11f / maxOf(11f, inputState.text.length.toFloat()))).coerceIn(18f, 44f)
+                            val animatedInputFontSize by animateFloatAsState(
+                                targetValue = targetInputFontSize,
+                                animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                                label = "inputFontSize"
+                            )
+                            val inputFontSize = animatedInputFontSize.sp
 
                             BasicTextField(
                                 value = inputState,
@@ -435,6 +472,7 @@ fun CalculatorScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("calc_input_field"),
+                                readOnly = true,
                                 textStyle = TextStyle(
                                     fontSize = inputFontSize,
                                     fontWeight = FontWeight.Medium,
@@ -442,8 +480,7 @@ fun CalculatorScreen(
                                     textAlign = TextAlign.End,
                                     lineHeight = (inputFontSize.value * 1.25f).sp
                                 ),
-                                singleLine = false,
-                                maxLines = 3,
+                                singleLine = true,
                                 cursorBrush = SolidColor(PremiumPrimaryAccent),
                                 decorationBox = { innerTextField ->
                                     Box(
@@ -477,11 +514,7 @@ fun CalculatorScreen(
                                     "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
                                 }
 
-                                val targetResultFontSize = when {
-                                    cleanRes.length <= 10 -> 20f
-                                    cleanRes.length <= 16 -> 16f
-                                    else                  -> 14f
-                                }
+                                val targetResultFontSize = (22f * (10f / maxOf(10f, cleanRes.length.toFloat()))).coerceIn(12f, 22f)
 
                                 val animatedResultFontSize by animateFloatAsState(
                                     targetValue = targetResultFontSize,
@@ -516,15 +549,23 @@ fun CalculatorScreen(
                 )
 
                 // ── KEYPAD AREA (Feature 6: background follows system dark/light) ──
-                Column(
+                AnimatedVisibility(
+                    visible = isKeypadVisible,
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 480.dp)
                         .align(Alignment.CenterHorizontally)
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                        .then(if (isKeypadVisible) Modifier.weight(1.2f) else Modifier),
+                    enter = slideInVertically(initialOffsetY = { it }) + expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
                     // ── Scientific expansion rows ──────────────────────────
                     val sciKeyHeight = if (isScientificMode) 56.dp else 0.dp
                     AnimatedVisibility(
@@ -575,21 +616,27 @@ fun CalculatorScreen(
                     }
 
                     // ── Standard rows ──────────────────────────────────────
-                    val stdH = 72.dp  // slightly compact to give room for sci rows
+                    val stdH = androidx.compose.ui.unit.Dp.Unspecified  // Use unspecified so keys expand to fill row weight
 
                     // Row 1: C, ⌫, %, ÷  (Feature 3: C and ⌫ share operator accent colour)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        SimpleKey(text = "C", tag = "key_btn_C", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("C") })
+                        val clearText = if (inputState.text.isNotEmpty()) "C" else "AC"
+                        SimpleKey(text = clearText, tag = "key_btn_C", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = {
+                            if (clearText == "AC") {
+                                viewModel.clearCalcScreenHistory()
+                            }
+                            viewModel.onKeyPress(clearText)
+                        })
                         SimpleKey(icon = Icons.AutoMirrored.Filled.Backspace, tag = "key_btn_⌫", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("⌫") })
                         SimpleKey(text = "%", tag = "key_btn_%", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("%") })
                         SimpleKey(text = "÷", tag = "key_btn_÷", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("÷") })
                     }
                     // Row 2: 7, 8, 9, ×
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         SimpleKey(text = "7", tag = "key_btn_7", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("7") })
@@ -599,7 +646,7 @@ fun CalculatorScreen(
                     }
                     // Row 3: 4, 5, 6, −
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         SimpleKey(text = "4", tag = "key_btn_4", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("4") })
@@ -609,7 +656,7 @@ fun CalculatorScreen(
                     }
                     // Row 4: 1, 2, 3, +
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         SimpleKey(text = "1", tag = "key_btn_1", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("1") })
@@ -619,7 +666,7 @@ fun CalculatorScreen(
                     }
                     // Row 5: Scientific toggle, 0, ., =
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -627,7 +674,7 @@ fun CalculatorScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(stdH)
+                                .fillMaxHeight()
                                 .background(
                                     if (isScientificMode)
                                         MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
@@ -678,7 +725,7 @@ fun CalculatorScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(stdH)
+                                .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
@@ -726,6 +773,7 @@ fun CalculatorScreen(
                             }
                         }
                     }
+                }
                 }
             }
 
@@ -899,7 +947,7 @@ fun SimpleKey(
 
     Box(
         modifier = modifier
-            .height(keyHeight)
+            .then(if (keyHeight == androidx.compose.ui.unit.Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
             .background(MaterialTheme.colorScheme.surface)
             .combinedClickable(
                 interactionSource = interactionSource,
