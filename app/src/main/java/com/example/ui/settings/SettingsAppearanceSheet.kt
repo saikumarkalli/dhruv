@@ -60,7 +60,8 @@ fun SettingsAppearanceSheet(
                 AccentTarget("calculator", "Calculator", uiState.calculatorColor),
                 AccentTarget("converter", "Converter", uiState.converterColor),
                 AccentTarget("date", "Date & Time", uiState.dateColor),
-                AccentTarget("finance", "Finance", uiState.financeColor)
+                AccentTarget("finance", "Finance", uiState.financeColor),
+                AccentTarget("time", "Time Tools", uiState.timeColor)
             )
 
             targets.forEach { target ->

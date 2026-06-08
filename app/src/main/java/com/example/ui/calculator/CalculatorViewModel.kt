@@ -60,6 +60,13 @@ class CalculatorViewModel(
     private val _shakeEvent = MutableSharedFlow<Unit>()
     val shakeEvent: SharedFlow<Unit> = _shakeEvent.asSharedFlow()
 
+    private val _clearedHistoryTimestamp = MutableStateFlow(0L)
+    val clearedHistoryTimestamp: StateFlow<Long> = _clearedHistoryTimestamp.asStateFlow()
+
+    fun clearCalcScreenHistory() {
+        _clearedHistoryTimestamp.value = System.currentTimeMillis()
+    }
+
     // Active calculations (not in recycle bin)
     val activeHistory: StateFlow<List<HistoryEntity>> = historyRepository.activeHistory
         .stateIn(

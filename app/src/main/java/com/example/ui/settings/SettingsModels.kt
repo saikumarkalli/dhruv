@@ -30,4 +30,8 @@ object SettingsConstants {
         "GST / Tax", "Discount & Markup", "Tip & Bill Split", "Salary Breakup",
         "Inflation Adjusted", "FD / RD Maturity"
     )
+
+    val TIME_TOOLS = listOf(
+        "Stopwatch", "Timer", "Alarm"
+    )
 }

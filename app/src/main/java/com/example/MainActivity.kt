@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +53,8 @@ import com.example.ui.date.DateScreen
 import com.example.ui.date.DateViewModel
 import com.example.ui.finance.FinanceScreen
 import com.example.ui.finance.FinanceViewModel
+import com.example.ui.time.TimeScreen
+import com.example.ui.time.TimeViewModel
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.SectionTheme
@@ -82,18 +85,21 @@ class MainActivity : ComponentActivity() {
             val converterColor by settingsRepository.converterColor.collectAsState()
             val dateColor by settingsRepository.dateColor.collectAsState()
             val financeColor by settingsRepository.financeColor.collectAsState()
+            val timeColor by settingsRepository.timeColor.collectAsState()
 
             val isConverterEnabled by settingsRepository.isConverterEnabled.collectAsState()
             val isDateEnabled by settingsRepository.isDateEnabled.collectAsState()
             val isFinanceEnabled by settingsRepository.isFinanceEnabled.collectAsState()
+            val isTimeEnabled by settingsRepository.isTimeEnabled.collectAsState()
 
             val calculatorViewModel: CalculatorViewModel = koinViewModel()
             val converterViewModel: ConverterViewModel = koinViewModel()
             val dateViewModel: DateViewModel = koinViewModel()
             val financeViewModel: FinanceViewModel = koinViewModel()
+            val timeViewModel: TimeViewModel = koinViewModel()
 
             MyApplicationTheme(darkModePreference = darkModePreference) {
-                val activeNavItems = remember(isConverterEnabled, isDateEnabled, isFinanceEnabled) {
+                val activeNavItems = remember(isConverterEnabled, isDateEnabled, isFinanceEnabled, isTimeEnabled) {
                     buildList {
                         add(NavItem("Calc", Icons.Default.Calculate, "Calculator", "nav_item_calculator", pageIndex = 0))
                         if (isConverterEnabled) {
@@ -105,7 +111,10 @@ class MainActivity : ComponentActivity() {
                         if (isFinanceEnabled) {
                             add(NavItem("Finance", Icons.AutoMirrored.Filled.TrendingUp, "Finance", "nav_item_finance", pageIndex = 3))
                         }
-                        add(NavItem("Settings", Icons.Default.Settings, "Settings", "nav_item_settings", pageIndex = 4))
+                        if (isTimeEnabled) {
+                            add(NavItem("Time", Icons.Default.AccessTime, "Time Tools", "nav_item_time", pageIndex = 4))
+                        }
+                        add(NavItem("Settings", Icons.Default.Settings, "Settings", "nav_item_settings", pageIndex = 5))
                     }
                 }
 
@@ -135,6 +144,7 @@ class MainActivity : ComponentActivity() {
                         1 -> converterColor
                         2 -> dateColor
                         3 -> financeColor
+                        4 -> timeColor
                         else -> "cyan"
                     }
                 } else {
@@ -238,11 +248,12 @@ class MainActivity : ComponentActivity() {
                                     3 -> SectionTheme(colorPreference = financeColor, darkModePreference = darkModePreference) {
                                         FinanceScreen(viewModel = financeViewModel)
                                     }
-                                    4 -> SettingsScreen(
+                                    4 -> SectionTheme(colorPreference = timeColor, darkModePreference = darkModePreference) {
+                                        TimeScreen(viewModel = timeViewModel)
+                                    }
+                                    5 -> SettingsScreen(
                                         settingsRepository = settingsRepository,
-                                        calculatorViewModel = calculatorViewModel,
-                                        appVersion = BuildConfig.VERSION_NAME,
-                                        appVersionCode = BuildConfig.VERSION_CODE
+                                        calculatorViewModel = calculatorViewModel
                                     )
                                 }
                             }
