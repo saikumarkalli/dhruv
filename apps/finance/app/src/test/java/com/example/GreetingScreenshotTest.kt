@@ -1,9 +1,9 @@
-package com.example
+﻿package com.example
 
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import com.example.ui.theme.MyApplicationTheme
+import com.dhruv.core.ui.theme.DhruvTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -26,7 +26,7 @@ class GreetingScreenshotTest {
   @Test
   fun greeting_screenshot() {
     composeTestRule.setContent {
-      MyApplicationTheme {
+      DhruvTheme {
         Text("dhruv Preview Layout")
       }
     }

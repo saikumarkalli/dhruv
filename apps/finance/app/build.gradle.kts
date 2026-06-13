@@ -33,6 +33,8 @@ secrets {
 }
 
 dependencies {
+    implementation(project(":libs:core"))
+
     // Firebase BOM (Compose BOM comes from dhruv.android.compose convention plugin)
     implementation(platform(libs.firebase.bom))
 
@@ -74,6 +76,7 @@ dependencies {
     implementation(libs.google.generativeai)
 
     // Testing
+    testImplementation(libs.archunit.core)
     testImplementation(libs.junit)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.androidx.core)

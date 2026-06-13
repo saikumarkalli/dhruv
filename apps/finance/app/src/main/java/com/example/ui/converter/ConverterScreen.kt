@@ -1,4 +1,4 @@
-package com.example.ui.converter
+﻿package com.example.ui.converter
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.TextStyle
-import com.example.ui.theme.*
+import com.dhruv.core.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -1503,12 +1503,12 @@ private fun getTimeUnits() = listOf(
 )
 
 private fun getAreaUnits() = listOf(
-    UnifiedUnit("Square Meters", 1.0, "m²"),
-    UnifiedUnit("Square Kilometers", 1000000.0, "km²"),
-    UnifiedUnit("Square Miles", 2589988.11, "mi²"),
-    UnifiedUnit("Square Yards", 0.83612736, "yd²"),
-    UnifiedUnit("Square Feet", 0.09290304, "ft²"),
-    UnifiedUnit("Square Inches", 0.00064516, "in²"),
+    UnifiedUnit("Square Meters", 1.0, "mÂ²"),
+    UnifiedUnit("Square Kilometers", 1000000.0, "kmÂ²"),
+    UnifiedUnit("Square Miles", 2589988.11, "miÂ²"),
+    UnifiedUnit("Square Yards", 0.83612736, "ydÂ²"),
+    UnifiedUnit("Square Feet", 0.09290304, "ftÂ²"),
+    UnifiedUnit("Square Inches", 0.00064516, "inÂ²"),
     UnifiedUnit("Acres", 4046.8564, "ac"),
     UnifiedUnit("Hectares", 10000.0, "ha")
 )
@@ -1520,8 +1520,8 @@ private fun getVolumeUnits() = listOf(
     UnifiedUnit("Quarts US", 0.94635294, "qt"),
     UnifiedUnit("Pints US", 0.473176473, "pt"),
     UnifiedUnit("Cups", 0.24, "cup"),
-    UnifiedUnit("Cubic Meters", 1000.0, "m³"),
-    UnifiedUnit("Cubic Feet", 28.3168465, "ft³")
+    UnifiedUnit("Cubic Meters", 1000.0, "mÂ³"),
+    UnifiedUnit("Cubic Feet", 28.3168465, "ftÂ³")
 )
 
 private fun getDataStorageUnits() = listOf(

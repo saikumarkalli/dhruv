@@ -1,4 +1,4 @@
-package com.example.ui.theme
+package com.dhruv.core.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -74,7 +74,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun MyApplicationTheme(
+fun DhruvTheme(
     darkModePreference: String = "system",
     content: @Composable () -> Unit
 ) {

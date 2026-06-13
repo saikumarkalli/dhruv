@@ -1,4 +1,4 @@
-package com.example.ui.calculator
+﻿package com.example.ui.calculator
 
 import android.content.Context
 import android.content.Intent
@@ -52,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.HistoryEntity
-import com.example.ui.theme.*
+import com.dhruv.core.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -206,7 +206,7 @@ fun CalculatorScreen(
                                     if (dragAccumulatedX < -150f) {
                                         viewModel.deleteLastToken()
                                     } else if (dragAccumulatedX < -30f) {
-                                        viewModel.onKeyPress("⌫")
+                                        viewModel.onKeyPress("âŒ«")
                                     }
                                 }
                             )
@@ -297,13 +297,13 @@ fun CalculatorScreen(
                                             .replace("sqrt", "")
                                             .replace("pi", "")
                                             .replace("e", "")
-                                        val allowedPattern = "^[0-9\\s\\.\\+\\-\\×\\÷\\*\\/\\%\\^\\!\\(\\)]*$"
+                                        val allowedPattern = "^[0-9\\s\\.\\+\\-\\Ã—\\Ã·\\*\\/\\%\\^\\!\\(\\)]*$"
                                         return cleaned.matches(Regex(allowedPattern))
                                     }
                                     if (isValidExpression(pasted)) {
                                         val normalized = pasted
-                                            .replace("*", "×")
-                                            .replace("/", "÷")
+                                            .replace("*", "Ã—")
+                                            .replace("/", "Ã·")
                                         val current = inputState.text
                                         val start = inputState.selection.min
                                         val end = inputState.selection.max
@@ -337,7 +337,7 @@ fun CalculatorScreen(
                         verticalArrangement = Arrangement.Bottom,
                         horizontalAlignment = Alignment.End
                     ) {
-                        // ── RECENT HISTORY PREVIEW (top of card) ──
+                        // â”€â”€ RECENT HISTORY PREVIEW (top of card) â”€â”€
                         val recentHistory = activeHistory.filter { it.timestamp > clearedHistoryTime }
                         val displayHistory = if (isKeypadVisible) recentHistory.take(2) else recentHistory
                         
@@ -396,7 +396,7 @@ fun CalculatorScreen(
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
 
-                        // ── CURRENT CALCULATION (bottom of card) ──
+                        // â”€â”€ CURRENT CALCULATION (bottom of card) â”€â”€
                         if (isResultFinalised) {
                             // 1. Current expression with math signs (small size)
                             val lastExpr by viewModel.lastExpression.collectAsState()
@@ -548,7 +548,7 @@ fun CalculatorScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
-                // ── KEYPAD AREA (Feature 6: background follows system dark/light) ──
+                // â”€â”€ KEYPAD AREA (Feature 6: background follows system dark/light) â”€â”€
                 AnimatedVisibility(
                     visible = isKeypadVisible,
                     modifier = Modifier
@@ -566,7 +566,7 @@ fun CalculatorScreen(
                             .padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                    // ── Scientific expansion rows ──────────────────────────
+                    // â”€â”€ Scientific expansion rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     val sciKeyHeight = if (isScientificMode) 56.dp else 0.dp
                     AnimatedVisibility(
                         visible = isScientificMode,
@@ -599,9 +599,9 @@ fun CalculatorScreen(
                                 SimpleKey(text = "sin", tag = "key_btn_sin", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("sin") })
                                 SimpleKey(text = "cos", tag = "key_btn_cos", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("cos") })
                                 SimpleKey(text = "tan", tag = "key_btn_tan", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("tan") })
-                                SimpleKey(text = "xʸ", tag = "key_btn_power", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("^") })
+                                SimpleKey(text = "xÊ¸", tag = "key_btn_power", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("^") })
                             }
-                            // Sci row B: (, ), log, ln, √
+                            // Sci row B: (, ), log, ln, âˆš
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(1.dp)
@@ -610,15 +610,15 @@ fun CalculatorScreen(
                                 SimpleKey(text = ")", tag = "key_btn_close_bracket", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, onClick = { viewModel.onKeyPress(")") })
                                 SimpleKey(text = "log", tag = "key_btn_log", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("log") })
                                 SimpleKey(text = "ln", tag = "key_btn_ln", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("ln") })
-                                SimpleKey(text = "√", tag = "key_btn_sqrt", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("sqrt") })
+                                SimpleKey(text = "âˆš", tag = "key_btn_sqrt", fontSize = 13.sp, modifier = Modifier.weight(1f), keyHeight = sciKeyHeight, isOperator = true, onClick = { viewModel.onKeyPress("sqrt") })
                             }
                         }
                     }
 
-                    // ── Standard rows ──────────────────────────────────────
+                    // â”€â”€ Standard rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     val stdH = androidx.compose.ui.unit.Dp.Unspecified  // Use unspecified so keys expand to fill row weight
 
-                    // Row 1: C, ⌫, %, ÷  (Feature 3: C and ⌫ share operator accent colour)
+                    // Row 1: C, âŒ«, %, Ã·  (Feature 3: C and âŒ« share operator accent colour)
                     Row(
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
@@ -630,11 +630,11 @@ fun CalculatorScreen(
                             }
                             viewModel.onKeyPress(clearText)
                         })
-                        SimpleKey(icon = Icons.AutoMirrored.Filled.Backspace, tag = "key_btn_⌫", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("⌫") })
+                        SimpleKey(icon = Icons.AutoMirrored.Filled.Backspace, tag = "key_btn_âŒ«", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("âŒ«") })
                         SimpleKey(text = "%", tag = "key_btn_%", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("%") })
-                        SimpleKey(text = "÷", tag = "key_btn_÷", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("÷") })
+                        SimpleKey(text = "Ã·", tag = "key_btn_Ã·", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("Ã·") })
                     }
-                    // Row 2: 7, 8, 9, ×
+                    // Row 2: 7, 8, 9, Ã—
                     Row(
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
@@ -642,9 +642,9 @@ fun CalculatorScreen(
                         SimpleKey(text = "7", tag = "key_btn_7", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("7") })
                         SimpleKey(text = "8", tag = "key_btn_8", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("8") })
                         SimpleKey(text = "9", tag = "key_btn_9", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("9") })
-                        SimpleKey(text = "×", tag = "key_btn_×", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("×") })
+                        SimpleKey(text = "Ã—", tag = "key_btn_Ã—", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("Ã—") })
                     }
-                    // Row 3: 4, 5, 6, −
+                    // Row 3: 4, 5, 6, âˆ’
                     Row(
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(1.dp)
@@ -652,7 +652,7 @@ fun CalculatorScreen(
                         SimpleKey(text = "4", tag = "key_btn_4", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("4") })
                         SimpleKey(text = "5", tag = "key_btn_5", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("5") })
                         SimpleKey(text = "6", tag = "key_btn_6", modifier = Modifier.weight(1f), keyHeight = stdH, onClick = { viewModel.onKeyPress("6") })
-                        SimpleKey(text = "−", tag = "key_btn_-", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("-") })
+                        SimpleKey(text = "âˆ’", tag = "key_btn_-", modifier = Modifier.weight(1f), keyHeight = stdH, isOperator = true, onClick = { viewModel.onKeyPress("-") })
                     }
                     // Row 4: 1, 2, 3, +
                     Row(
@@ -693,7 +693,7 @@ fun CalculatorScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = if (isScientificMode) "SCI ✓" else "SCI",
+                                    text = if (isScientificMode) "SCI âœ“" else "SCI",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = if (isScientificMode) MaterialTheme.colorScheme.primary else themeSecText
@@ -1108,7 +1108,7 @@ fun CalendarHistoryFullView(
 
     // Statistical analysis computation
     val analyticsStats = remember(activeHistory) {
-        val operatorCounts = mutableMapOf("+" to 0, "-" to 0, "×" to 0, "÷" to 0, "%" to 0)
+        val operatorCounts = mutableMapOf("+" to 0, "-" to 0, "Ã—" to 0, "Ã·" to 0, "%" to 0)
         activeHistory.forEach {
             operatorCounts.keys.forEach { op ->
                 if (it.expression.contains(op)) {
@@ -1504,7 +1504,7 @@ fun HistoryEntryCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "$formattedTime • ${item.deviceSource}",
+                        text = "$formattedTime â€¢ ${item.deviceSource}",
                         fontSize = 10.sp,
                         color = secCol
                     )
@@ -1822,8 +1822,8 @@ private fun shareLogsAsText(context: Context, history: List<HistoryEntity>, mime
         history.forEach {
             val formattedDate = SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(Date(it.timestamp))
             stringBuilder.append("[$formattedDate] ${it.expression} = ${it.result}\n")
-            if (it.note.isNotEmpty()) stringBuilder.append("👉 Note: ${it.note}\n")
-            if (it.tags.isNotEmpty()) stringBuilder.append("🏷️ Tags: ${it.tags}\n")
+            if (it.note.isNotEmpty()) stringBuilder.append("ðŸ‘‰ Note: ${it.note}\n")
+            if (it.tags.isNotEmpty()) stringBuilder.append("ðŸ·ï¸ Tags: ${it.tags}\n")
             stringBuilder.append("--------------------------------------------------\n")
         }
     }
@@ -1915,7 +1915,7 @@ fun SecureHistoryLockGuard(
                 listOf("1", "2", "3"),
                 listOf("4", "5", "6"),
                 listOf("7", "8", "9"),
-                listOf("C", "0", "⌫")
+                listOf("C", "0", "âŒ«")
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1931,7 +1931,7 @@ fun SecureHistoryLockGuard(
                                         pinError = false
                                         when (digit) {
                                             "C" -> enteredPin = ""
-                                            "⌫" -> if (enteredPin.isNotEmpty()) enteredPin = enteredPin.dropLast(1)
+                                            "âŒ«" -> if (enteredPin.isNotEmpty()) enteredPin = enteredPin.dropLast(1)
                                             else -> {
                                                 if (enteredPin.length < 4) {
                                                     enteredPin += digit
