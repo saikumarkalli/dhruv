@@ -1,8 +1,11 @@
 name: CI
 
 on:
+  # Feature branches (feat/**, fix/**, chore/**) are validated via their PR below,
+  # not on push — pushing a branch that already has an open PR would otherwise run
+  # the pipeline twice (once per event) on the same commit.
   push:
-    branches: [ main, develop, "feat/**" ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
