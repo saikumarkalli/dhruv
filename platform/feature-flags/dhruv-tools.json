@@ -1,0 +1,12 @@
+{
+  "_comment": "Schema mirrored in Firebase Remote Config. Priority at runtime: remote -> cached last-known-good -> these hardcoded defaults. NavHost checks the flag before rendering a route; disabled -> FeatureDisabledCard.",
+  "app": "tools",
+  "features": {
+    "notes":     { "enabled": true,  "minVersion": "1.0.0" },
+    "clipboard": { "enabled": true,  "minVersion": "1.0.0" },
+    "timer":     { "enabled": true,  "minVersion": "1.0.0" },
+    "qr":        { "enabled": true,  "minVersion": "1.0.0" },
+    "weather":   { "enabled": false, "minVersion": "1.1.0" },
+    "assistant": { "enabled": false, "minVersion": "1.2.0", "requiresConsent": true }
+  }
+}
