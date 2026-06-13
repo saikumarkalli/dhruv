@@ -35,14 +35,25 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
 
-      - name: ktlint
-        uses: nicowillis/action-ktlint@v1
-        with:
-          args: "--reporter=checkstyle,output=build/reports/ktlint.xml"
+      # Download ktlint binary directly — no third-party action dependency.
+      - name: Download ktlint
+        run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
+          chmod +x ktlint
 
+      # Fails the job (non-zero exit) on any style violation.
+      - name: ktlint check
+        run: |
+          ./ktlint \
+            --reporter=plain \
+            --reporter=checkstyle,output=build/reports/ktlint/ktlint.xml \
+            "apps/**/*.kt" "libs/**/*.kt" "build-logic/**/*.kt"
+
+      # No --continue: first detekt violation fails the step immediately.
       - name: Detekt
-        run: ./gradlew detekt --continue
+        run: ./gradlew detekt
 
+      # Lint runs on the debug variant; non-zero exit on errors (not warnings).
       - name: Android Lint
         run: ./gradlew :apps:finance:app:lintDebug
 
@@ -54,7 +65,7 @@ jobs:
           path: |
             **/build/reports/lint-results*.html
             **/build/reports/detekt/*.html
-            build/reports/ktlint.xml
+            build/reports/ktlint/ktlint.xml
 
   # ── Gate 2: Security scan ─────────────────────────────────────────────────
   security:
@@ -65,6 +76,7 @@ jobs:
         with:
           fetch-depth: 0  # GitLeaks needs full history
 
+      # Hard failure on any detected secret — no continue-on-error.
       - name: GitLeaks — secret scan
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -81,9 +93,11 @@ jobs:
         with:
           cache-read-only: true
 
+      # OWASP: warn-only until the dependency-check plugin is wired in build-logic.
+      # Flip continue-on-error to false once the plugin is configured.
       - name: OWASP Dependency Check
-        run: ./gradlew dependencyCheckAnalyze --continue
-        continue-on-error: true  # warn-only until plugin is wired in build-logic
+        run: ./gradlew dependencyCheckAnalyze
+        continue-on-error: true
 
       - name: Upload OWASP report
         if: always()
@@ -110,10 +124,13 @@ jobs:
         with:
           cache-read-only: true
 
+      # --continue: run all test tasks across all modules even if one fails,
+      # so we get a complete failure report. The job still fails (non-zero exit).
       - name: Unit tests + ArchUnit
         run: ./gradlew test --continue
 
       - name: Upload test reports
+        # always() ensures reports are uploaded even on test failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
