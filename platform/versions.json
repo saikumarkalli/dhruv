@@ -8,7 +8,8 @@
     "finance": {
       "version": "1.2.0",
       "requiresCore": ">=1.0.0",
-      "requiresSettings": ">=1.0.0"
+      "requiresSettings": ">=1.0.0",
+      "buildNumber": 1
     },
     "tools": {
       "version": "0.0.0",
