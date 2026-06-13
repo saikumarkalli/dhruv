@@ -1,27 +1,40 @@
 pluginManagement {
-  repositories {
-    google {
-      content {
-        includeGroupByRegex("com\\.android.*")
-        includeGroupByRegex("com\\.google.*")
-        includeGroupByRegex("androidx.*")
-      }
+    includeBuild("build-logic")
+    // Default versions for plugins applied via bare id("...") inside convention plugin bodies.
+    // alias(libs.plugins.*) in build files handles versioning itself; this covers the gap
+    // for plugins that convention plugins apply without an inline version.
+    plugins {
+        id("com.google.devtools.ksp")          version "2.3.5"
+        id("com.google.dagger.hilt.android")   version "2.52"
+        id("io.gitlab.arturbosch.detekt")      version "1.23.7"
     }
-    mavenCentral()
-    gradlePluginPortal()
-  }
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 
-plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 
 dependencyResolutionManagement {
-  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-  repositories {
-    google()
-    mavenCentral()
-  }
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "dhruv"
 
-include(":app")
+include(":apps:finance:app")
+include(":libs:core")
+include(":libs:settings")
