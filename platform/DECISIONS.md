@@ -87,3 +87,15 @@ deferred. Users must enable install-from-unknown-sources for direct APKs.
 - **Firebase vs self-hosted** → Firebase (ADR-0006).
 - **Public vs private repos** → moot under the monorepo (ADR-0001): one private repo, no GitHub
   Packages.
+
+## ADR-0009 — Branch strategy: develop for all work, main for Play Store only
+**Context.** Need a clear branch model for a solo developer with incremental APK releases now
+and a future Play Store launch.
+**Decision.** `develop` is the default branch — all feature work, all PRs, APK builds, GitHub
+Releases. `main` is reserved for Play Store deployment only; PRs to main come only from develop.
+Both branches run identical 4-gate CI. `develop` builds a signed APK; `main` builds a signed AAB.
+**Why.** Keeps the release loop simple now (tag develop → APK on GitHub) while ensuring main is
+always Play-ready (AAB, same CI gates) whenever that decision is made. No last-minute pipeline
+changes needed at Play launch time.
+**Consequences.** develop is set as the GitHub default branch. Branch protection on both branches.
+All feature branches: `feat/* → develop`. Play launch = merge develop → main + tag.

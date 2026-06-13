@@ -1,4 +1,4 @@
-package com.example.ui.settings
+﻿package com.example.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ColorOptions
+import com.dhruv.core.ui.theme.ColorOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

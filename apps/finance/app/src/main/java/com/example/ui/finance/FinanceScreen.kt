@@ -1,4 +1,4 @@
-package com.example.ui.finance
+﻿package com.example.ui.finance
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.collectAsState
@@ -38,7 +38,7 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 import kotlin.math.pow
-import com.example.ui.theme.*
+import com.dhruv.core.ui.theme.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @Composable
@@ -292,11 +292,11 @@ fun GorgeousLoanEmiCalculator(viewModel: FinanceViewModel) {
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Principal Loan Sum (₹)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                Text("Principal Loan Sum (â‚¹)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                 OutlinedTextField(
                     value = principalInput,
                     onValueChange = { principalInput = it },
-                    prefix = { Text("₹ ") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().testTag("loan_amount_input"),
                     singleLine = true,
@@ -511,8 +511,8 @@ fun SimpleCompoundInterestCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = principalInput,
                     onValueChange = { principalInput = it },
-                    label = { Text("Principal Sum (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Principal Sum (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -637,8 +637,8 @@ fun SipCalculatorRedesign(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
-                    label = { Text("Monthly Contribution (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Monthly Contribution (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -726,8 +726,8 @@ fun RoiCagrCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = initialInput,
                     onValueChange = { initialInput = it },
-                    label = { Text("Initial Investment Principal (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Initial Investment Principal (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -735,8 +735,8 @@ fun RoiCagrCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = finalInput,
                     onValueChange = { finalInput = it },
-                    label = { Text("Final Maturity Asset Value (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Final Maturity Asset Value (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -809,8 +809,8 @@ fun GstTaxCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
-                    label = { Text("Financial Base Sum (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Financial Base Sum (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -947,8 +947,8 @@ fun DiscountMarkupCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
-                    label = { Text(if (isDiscountMode) "List Price Base (₹)" else "Cost Pricing Base (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text(if (isDiscountMode) "List Price Base (â‚¹)" else "Cost Pricing Base (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1022,8 +1022,8 @@ fun TipBillSplitCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = billInput,
                     onValueChange = { billInput = it },
-                    label = { Text("Base dining subtotal (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Base dining subtotal (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1041,7 +1041,7 @@ fun TipBillSplitCalculator(viewModel: FinanceViewModel) {
                     value = peopleInput,
                     onValueChange = { peopleInput = it },
                     label = { Text("Active bill dynamic split headcount") },
-                    prefix = { Text("🧑‍🤝‍🧑 ") },
+                    prefix = { Text("ðŸ§‘â€ðŸ¤â€ðŸ§‘ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1116,8 +1116,8 @@ fun SalaryCtcCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = ctcInput,
                     onValueChange = { ctcInput = it },
-                    label = { Text("Annual Gross CTC (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Annual Gross CTC (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1192,8 +1192,8 @@ fun InflationAdjustedCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
-                    label = { Text("Base valuation asset (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text("Base valuation asset (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1312,8 +1312,8 @@ fun FdRdBatCalculator(viewModel: FinanceViewModel) {
                 OutlinedTextField(
                     value = investAmountInput,
                     onValueChange = { investAmountInput = it },
-                    label = { Text(if (isFixedDeposit) "Lumpsum Deposit Principal (₹)" else "Monthly Deposit Contribution (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = { Text(if (isFixedDeposit) "Lumpsum Deposit Principal (â‚¹)" else "Monthly Deposit Contribution (â‚¹)") },
+                    prefix = { Text("â‚¹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)

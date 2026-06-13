@@ -28,12 +28,26 @@
    cd .. && mv dhruv-calc-android dhruv && cd dhruv
    ```
 
-### 0.3 — Create the restructure branch
+### 0.3 — Set up branch strategy + create restructure branch
 🧑
 ```bash
-git pull origin main
+# If develop branch doesn't exist yet, create it from main
+git checkout main
+git checkout -b develop
+git push origin develop
+
+# Set develop as default branch in GitHub:
+# GitHub → Settings → Branches → Default branch → change to develop
+
+# All feature work branches from develop
+git switch develop
 git switch -c feat/monorepo-restructure
 ```
+
+**Branch rules (set in GitHub → Settings → Branches → Branch protection):**
+- `develop` — default branch. All PRs target here. CI gates required. Direct push blocked.
+- `main` — Play Store only (future). PRs only from `develop`. Same CI gates + AAB build.
+- `feat/*`, `fix/*`, `chore/*` — always branch from `develop`, merge back to `develop`.
 
 ### 0.4 — Commit platform docs
 🧑 Copy the platform files into the repo:
@@ -100,6 +114,7 @@ git commit -m "chore: add root CLAUDE.md for Claude Code sessions"
 git tag pre-monorepo
 git push origin feat/monorepo-restructure --tags
 ```
+> All subsequent branch pushes go to `develop`. Never push feature branches to `main`.
 
 ---
 
@@ -181,13 +196,13 @@ git log --follow -- apps/finance/app/src/main/java/<any-file>  # shows history
 git add -A && git commit -m "refactor: monorepo skeleton — relocate finance, add build-logic"
 git push origin feat/monorepo-restructure
 ```
-🧑 PR → self-review (restructure only) → merge to main.
+🧑 PR → self-review (restructure only) → merge to **develop**.
 
 ---
 
 ## PHASE 2 — `:libs:core` + CI + release pipeline → 📦 `v0.1.0`
 
-🧑 `git switch -c feat/libs-core`
+🧑 `git switch develop && git switch -c feat/libs-core`
 
 ### 2.1 — Identify extractable code
 🤖 **Claude Code:**
@@ -236,32 +251,51 @@ Run as part of ./gradlew test.
 ### 2.5 — CI pipeline
 🤖 **Claude Code:**
 ```
-Create .github/workflows/ci.yml — 4 gates, triggered on push to main + PRs:
+Create .github/workflows/ci.yml — 4 gates:
+
+Triggers:
+  - push to develop
+  - push to main
+  - pull_request targeting develop or main
+
+Gates (all must pass — PR blocked otherwise):
 1. Static analysis: ktlint, detekt, lint
 2. Security: GitLeaks, OWASP dependency-check
 3. Tests: ./gradlew test (unit + ArchUnit)
-4. Build: debug APK + signed release APK (reuse existing keystore secrets)
-   + APK size check (fail if >50MB)
+4. Build:
+   - On develop: debug APK + signed release APK, APK size check (fail if >50MB)
+   - On main: debug APK + signed release AAB (Play Store ready), APK size check
+   Use BUILD_TARGET env var to switch: APK for develop, AAB for main.
+
+Note: main branch uses AAB so it is always Play Store ready when that time comes.
+develop uses APK for fast local distribution via GitHub Releases.
 ```
 
 ### 2.6 — GitHub Release workflow
 🤖 **Claude Code:**
 ```
 Create .github/workflows/release.yml:
-- Trigger: push tag matching "v*"
-- Depends on: ci.yml (all 4 gates must pass first)
-- Build signed release APK for each app that exists
-- Create GitHub Release with tag name + auto-generated changelog
-- Attach APK(s) as release assets
-- Use a BUILD_TYPE variable so APK→AAB is a one-line swap later
+
+Trigger: push tag matching "v*" on develop branch only
+Depends on: ci.yml (all 4 gates must pass first)
+
+Steps:
+1. Build signed release APK for each app that exists
+2. Create GitHub Release with tag name + auto-generated changelog
+3. Attach APK(s) as release assets
+
+Future Play Store trigger (separate job, only on main):
+- Trigger: push tag matching "v*" on main branch
+- Build signed AAB
+- Upload to Play Store internal track (add when Play launch is planned)
 
 Also create scripts/bump-version.sh:
 - Reads current version from platform/versions.json
 - Accepts: major | minor | patch
-- Updates versions.json + app build.gradle.kts versionName
+- Updates versions.json + each app's build.gradle.kts versionName
 - Auto-increments versionCode
-- Git commit + tag
-- Prints: "Run 'git push origin main --tags' to trigger release"
+- Git commit on develop + tag
+- Prints: "Run 'git push origin develop --tags' to trigger APK release"
 ```
 
 ### 2.7 — Verify + release
@@ -271,14 +305,15 @@ Also create scripts/bump-version.sh:
 ./gradlew :libs:core:assembleDebug
 ./gradlew test                             # ArchUnit passes
 ./gradlew detekt                           # clean
-# Push PR → all 4 CI gates green
+# Push PR to develop → all 4 CI gates green
 ```
-🧑 Merge PR to main.
+🧑 Merge PR to **develop**.
 
 📦 **First release:**
 ```bash
+git switch develop
 ./scripts/bump-version.sh minor            # → v0.1.0
-git push origin main --tags
+git push origin develop --tags
 ```
 ✅ GitHub Release appears with `dhruv-finance-v0.1.0-release.apk` attached.
    Download → install → runs correctly.
@@ -287,7 +322,7 @@ git push origin main --tags
 
 ## PHASE 3 — `:libs:settings` → 📦 `v0.2.0`
 
-🧑 `git switch -c feat/libs-settings`
+🧑 `git switch develop && git switch -c feat/libs-settings`
 
 ### 3.1 — Settings data layer
 🤖 **Claude Code:**
@@ -330,12 +365,12 @@ Initialize Firebase in Application class.
 ```bash
 ./gradlew test && ./gradlew detekt
 ```
-🧑 Merge PR.
+🧑 Merge PR to **develop**.
 
 📦 **Release:**
 ```bash
 ./scripts/bump-version.sh minor            # → v0.2.0
-git push origin main --tags
+git push origin develop --tags
 ```
 ✅ GitHub Release: `dhruv-finance-v0.2.0-release.apk` — now with settings.
 
@@ -343,7 +378,7 @@ git push origin main --tags
 
 ## PHASE 4 — `:apps:tools` → 📦 `v0.3.0`
 
-🧑 `git switch -c feat/apps-tools`
+🧑 `git switch develop && git switch -c feat/apps-tools`
 
 ### 4.1 — Tools app shell
 🤖 **Claude Code:**
@@ -407,12 +442,12 @@ Crashlytics tag + trace. Unit tests.
 - `./gradlew test` → ArchUnit green
 - Full CI green
 
-🧑 Merge PR.
+🧑 Merge PR to **develop**.
 
 📦 **Release:**
 ```bash
 ./scripts/bump-version.sh minor            # → v0.3.0
-git push origin main --tags
+git push origin develop --tags
 ```
 ✅ GitHub Release: **two APKs** — `dhruv-finance-v0.3.0` + `dhruv-tools-v0.3.0`.
 
@@ -420,7 +455,7 @@ git push origin main --tags
 
 ## PHASE 5 — Finance feature split + AI + consent → 📦 `v0.4.0`
 
-🧑 `git switch -c feat/finance-ai`
+🧑 `git switch develop && git switch -c feat/finance-ai`
 
 ### 5.1 — Split Finance into feature modules
 🤖 **Claude Code** (plan mode):
@@ -482,12 +517,12 @@ Enable assistant flag (requiresConsent: true). Crashlytics tag + trace.
    Consent screen blocks online AI until accepted. `strings *.apk | grep gemini` → nothing.
    Privacy policy live.
 
-🧑 Merge PR.
+🧑 Merge PR to **develop**.
 
 📦 **Release:**
 ```bash
 ./scripts/bump-version.sh minor            # → v0.4.0
-git push origin main --tags
+git push origin develop --tags
 ```
 ✅ GitHub Release: APKs with AI assistant live.
 
@@ -495,7 +530,7 @@ git push origin main --tags
 
 ## PHASE 6 — `:apps:vault` → 📦 `v0.5.0`
 
-🧑 `git switch -c feat/apps-vault`
+🧑 `git switch develop && git switch -c feat/apps-vault`
 
 ### 6.0 — Vault crypto spec (BEFORE any code)
 🤖 **Claude Code:**
@@ -568,12 +603,13 @@ Test: Device A export → Device B import → all entries present.
    Export → reinstall → import → all data. Wrong password → denied, not crash.
    ArchUnit: vault has no network/ai/analytics deps. `screencap` → black (FLAG_SECURE).
 
-🧑 Merge PR.
+🧑 Merge PR to **develop**.
 
 📦 **Release:**
 ```bash
+git switch develop
 ./scripts/bump-version.sh minor            # → v0.5.0
-git push origin main --tags
+git push origin develop --tags
 ```
 ✅ GitHub Release: **three APKs** — Finance + Tools + Vault.
 
@@ -587,19 +623,20 @@ Each of these is an independent phase you can tackle anytime. Each produces a re
 - **Tools: AI assistant** — reuse Finance's AiProviderResolver + consent → `v0.7.0`
 - **Dhruv ID (Firebase Auth)** — SSO, userId migration from "local" → `v1.0.0`
 - **Sync (Supabase)** — offline-first sync engine, HLC conflict resolution → `v1.1.0`
-- **Play Store launch** — AAB, Play App Signing, Data Safety form → when ready
+- **Play Store launch** — merge `develop → main`, AAB already builds on main CI, add Play Publisher step → when ready
 - **New apps** — health, relationship → whenever
 
 ---
 
 ## Quick reference
 
-| Working on      | Read first                                  | Branch name         |
-|-----------------|---------------------------------------------|---------------------|
-| Phase 1         | PLATFORM.md §2                              | feat/monorepo-restructure |
-| Phase 2         | contracts/DhruvEntity.kt                    | feat/libs-core      |
-| Phase 3         | DECISIONS.md ADR-0002                       | feat/libs-settings  |
-| Phase 4         | PLATFORM.md §4, feature-flags/dhruv-tools   | feat/apps-tools     |
-| Phase 5         | DECISIONS.md ADR-0002 + ADR-0005 + ADR-0007 | feat/finance-ai     |
-| Phase 6         | adr/0003-vault-crypto-spec.md               | feat/apps-vault     |
-| Release         | versions.json + scripts/bump-version.sh     | main (tag only)     |
+| Working on      | Read first                                  | Branch from     | Branch name         |
+|-----------------|---------------------------------------------|-----------------|---------------------|
+| Phase 1         | PLATFORM.md §2                              | develop         | feat/monorepo-restructure |
+| Phase 2         | contracts/DhruvEntity.kt                    | develop         | feat/libs-core      |
+| Phase 3         | DECISIONS.md ADR-0002                       | develop         | feat/libs-settings  |
+| Phase 4         | PLATFORM.md §4, feature-flags/dhruv-tools   | develop         | feat/apps-tools     |
+| Phase 5         | DECISIONS.md ADR-0002 + ADR-0005 + ADR-0007 | develop         | feat/finance-ai     |
+| Phase 6         | adr/0003-vault-crypto-spec.md               | develop         | feat/apps-vault     |
+| Release (APK)   | versions.json + scripts/bump-version.sh     | develop (tag)   | —                   |
+| Play Store (future) | ADR-0009                               | develop → main  | —                   |

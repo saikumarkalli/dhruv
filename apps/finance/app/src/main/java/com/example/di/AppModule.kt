@@ -1,5 +1,7 @@
 package com.example.di
 
+import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.CrashlyticsReporter
 import com.example.data.*
 import com.example.ui.calculator.CalculatorViewModel
 import com.example.ui.converter.ConverterViewModel
@@ -14,6 +16,9 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
+    // Observability
+    single<CrashReporter> { CrashlyticsReporter() }
+
     // Database and DAOs
     single { AppDatabase.getDatabase(androidContext()) }
     single { get<AppDatabase>().historyDao() }

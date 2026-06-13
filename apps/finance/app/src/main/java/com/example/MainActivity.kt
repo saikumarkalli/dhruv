@@ -1,4 +1,4 @@
-package com.example
+﻿package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -56,8 +56,8 @@ import com.example.ui.finance.FinanceViewModel
 import com.example.ui.time.TimeScreen
 import com.example.ui.time.TimeViewModel
 import com.example.ui.settings.SettingsScreen
-import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.theme.SectionTheme
+import com.dhruv.core.ui.theme.DhruvTheme
+import com.dhruv.core.ui.theme.SectionTheme
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
             val financeViewModel: FinanceViewModel = koinViewModel()
             val timeViewModel: TimeViewModel = koinViewModel()
 
-            MyApplicationTheme(darkModePreference = darkModePreference) {
+            DhruvTheme(darkModePreference = darkModePreference) {
                 val activeNavItems = remember(isConverterEnabled, isDateEnabled, isFinanceEnabled, isTimeEnabled) {
                     buildList {
                         add(NavItem("Calc", Icons.Default.Calculate, "Calculator", "nav_item_calculator", pageIndex = 0))
@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
                 val pagerState = rememberPagerState(pageCount = { activeNavItems.size })
                 val coroutineScope = rememberCoroutineScope()
 
-                // ── Back-press: navigate to Calc tab instead of closing the app ──
+                // â”€â”€ Back-press: navigate to Calc tab instead of closing the app â”€â”€
                 DisposableEffect(pagerState.currentPage) {
                     val callback = object : OnBackPressedCallback(pagerState.currentPage != 0) {
                         override fun handleOnBackPressed() {
@@ -157,7 +157,7 @@ class MainActivity : ComponentActivity() {
                     else -> isSystemInDarkTheme()
                 }
                 val activeAccentColor by animateColorAsState(
-                    targetValue = com.example.ui.theme.getAccentColor(activeAccentName, isDarkTheme),
+                    targetValue = com.dhruv.core.ui.theme.getAccentColor(activeAccentName, isDarkTheme),
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "accentColor"
                 )

@@ -1,4 +1,4 @@
-package com.example.ui.settings
+﻿package com.example.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.SettingsRepository
 import com.example.ui.calculator.CalculatorViewModel
-import com.example.ui.theme.appGradientBackground
+import com.dhruv.core.ui.theme.appGradientBackground
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale

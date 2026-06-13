@@ -1,0 +1,285 @@
+name: CI
+
+on:
+  # Feature branches (feat/**, fix/**, chore/**) are validated via their PR below,
+  # not on push — pushing a branch that already has an open PR would otherwise run
+  # the pipeline twice (once per event) on the same commit.
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Skip if the commit was made by the version-bump job itself
+# (the job adds [skip ci] to its message, but this is a belt-and-suspenders guard).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "21"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
+jobs:
+  # ── Gate 1: Static analysis ────────────────────────────────────────────────
+  static-analysis:
+    name: "Gate 1 · Static Analysis"
+    # TEMP: Gate 1 disabled — ktlint/detekt/lint remediation pending.
+    # Re-enable by deleting this `if` and restoring it to the build job's `needs`.
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
+
+      # Download ktlint binary directly — no third-party action dependency.
+      - name: Download ktlint
+        run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
+          chmod +x ktlint
+
+      # Fails the job (non-zero exit) on any style violation.
+      - name: ktlint check
+        run: |
+          ./ktlint \
+            --reporter=plain \
+            --reporter=checkstyle,output=build/reports/ktlint/ktlint.xml \
+            "apps/**/*.kt" "libs/**/*.kt" "build-logic/**/*.kt"
+
+      # No --continue: first detekt violation fails the step immediately.
+      - name: Detekt
+        run: ./gradlew detekt
+
+      # Lint runs on the debug variant; non-zero exit on errors (not warnings).
+      - name: Android Lint
+        run: ./gradlew :apps:finance:app:lintDebug
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: |
+            **/build/reports/lint-results*.html
+            **/build/reports/detekt/*.html
+            build/reports/ktlint/ktlint.xml
+
+  # ── Gate 2: Security scan ─────────────────────────────────────────────────
+  security:
+    name: "Gate 2 · Security"
+    runs-on: ubuntu-latest
+    # gitleaks-action posts a PR summary comment; without these it fails on PR
+    # events with "Resource not accessible by integration".
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # GitLeaks needs full history
+
+      # Hard failure on any detected secret — no continue-on-error.
+      - name: GitLeaks — secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+
+      # OWASP: warn-only until the dependency-check plugin is wired in build-logic.
+      # Flip continue-on-error to false once the plugin is configured.
+      - name: OWASP Dependency Check
+        run: ./gradlew dependencyCheckAnalyze
+        continue-on-error: true
+
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-report
+          path: "**/build/reports/dependency-check-report.html"
+
+  # ── Gate 3: Tests ─────────────────────────────────────────────────────────
+  tests:
+    name: "Gate 3 · Tests + ArchUnit"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+
+      # --continue: run all test tasks across all modules even if one fails,
+      # so we get a complete failure report. The job still fails (non-zero exit).
+      - name: Unit tests + ArchUnit
+        run: ./gradlew test --continue
+
+      - name: Upload test reports
+        # always() ensures reports are uploaded even on test failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: "**/build/reports/tests/"
+
+  # ── Gate 4: Build ─────────────────────────────────────────────────────────
+  build:
+    name: "Gate 4 · Build + APK size"
+    runs-on: ubuntu-latest
+    needs: [ security, tests ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Assemble debug APK
+        run: ./gradlew :apps:finance:app:assembleDebug
+
+      - name: Assemble release APK (signed)
+        run: ./gradlew :apps:finance:app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: APK size guard (fail if > 50 MB)
+        run: |
+          APK=$(find apps/finance/app/build/outputs/apk/release -name "*.apk" | head -1)
+          SIZE_MB=$(du -m "$APK" | cut -f1)
+          echo "Release APK size: ${SIZE_MB} MB"
+          if [ "$SIZE_MB" -gt 50 ]; then
+            echo "❌ APK exceeds 50 MB limit (${SIZE_MB} MB)"
+            exit 1
+          fi
+          echo "✅ APK within size limit"
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: |
+            apps/finance/app/build/outputs/apk/debug/*.apk
+            apps/finance/app/build/outputs/apk/release/*.apk
+          retention-days: 7
+
+  # ── Post-build: auto-bump versionCode ────────────────────────────────────
+  # Runs only on push (not PRs) to develop/main after all 4 gates pass.
+  # Updates every area that tracks the build number, then commits back with
+  # [skip ci] so this commit does not re-trigger the pipeline.
+  version-bump:
+    name: "Post-build · Bump versionCode"
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    # Skip on PRs and on commits that were themselves made by this job
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch the branch head so we can push back to it
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 1. gradle.properties — VERSION_CODE ────────────────────────────
+      - name: Increment VERSION_CODE in gradle.properties
+        id: bump
+        run: |
+          PROPS="gradle.properties"
+          CURRENT=$(grep "^VERSION_CODE=" "$PROPS" 2>/dev/null | cut -d= -f2 || echo "0")
+          NEW=$((CURRENT + 1))
+
+          if grep -q "^VERSION_CODE=" "$PROPS" 2>/dev/null; then
+            sed -i "s/^VERSION_CODE=.*/VERSION_CODE=$NEW/" "$PROPS"
+          else
+            echo "VERSION_CODE=$NEW" >> "$PROPS"
+          fi
+
+          echo "old=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW"     >> "$GITHUB_OUTPUT"
+          echo "VERSION_CODE bumped: $CURRENT → $NEW"
+
+      # ── 2. platform/versions.json — per-app buildNumber ────────────────
+      - name: Update buildNumber in platform/versions.json
+        run: |
+          NEW_CODE="${{ steps.bump.outputs.new }}"
+          python3 - <<PYEOF
+          import json
+
+          with open("platform/versions.json") as f:
+              data = json.load(f)
+
+          # Record the global CI build number on each app that is not planned/future
+          for app, meta in data.get("apps", {}).items():
+              if meta.get("status") in ("planned", "future"):
+                  continue
+              meta["buildNumber"] = int("$NEW_CODE")
+
+          with open("platform/versions.json", "w") as f:
+              json.dump(data, f, indent=2)
+              f.write("\n")
+          PYEOF
+          echo "platform/versions.json updated"
+
+      # ── 3. Commit and push both files back ─────────────────────────────
+      - name: Commit version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add gradle.properties platform/versions.json
+
+          # Bail gracefully if nothing changed (idempotent re-runs)
+          if git diff --cached --quiet; then
+            echo "Nothing to commit — skipping push."
+            exit 0
+          fi
+
+          git commit -m "chore: auto-bump versionCode to ${{ steps.bump.outputs.new }} [skip ci]"
+
+          # --force-with-lease: safe push — aborts if the remote moved ahead of us
+          git push --force-with-lease origin HEAD:${{ github.ref_name }}

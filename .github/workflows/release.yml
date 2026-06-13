@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "dhruv-finance-v*"
+      - "dhruv-tools-v*"
+      - "dhruv-vault-v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # never cancel an in-flight release
+
+env:
+  JAVA_VERSION: "21"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+jobs:
+  release:
+    name: "Build & Publish Release"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to create GitHub Release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for changelog
+
+      # ── Detect which app this tag is for ────────────────────────────────
+      - name: Resolve app from tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" == dhruv-finance-* ]]; then
+            echo "app=finance"   >> "$GITHUB_OUTPUT"
+            echo "module=:apps:finance:app" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == dhruv-tools-* ]]; then
+            echo "app=tools"     >> "$GITHUB_OUTPUT"
+            echo "module=:apps:tools:app"   >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == dhruv-vault-* ]]; then
+            echo "app=vault"     >> "$GITHUB_OUTPUT"
+            echo "module=:apps:vault:app"   >> "$GITHUB_OUTPUT"
+          fi
+          VERSION="${TAG#dhruv-*-}"          # strip prefix → "v1.2.0"
+          echo "version=$VERSION"    >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"            >> "$GITHUB_OUTPUT"
+
+      # ── Run CI gates first ───────────────────────────────────────────────
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run tests
+        run: ./gradlew ${{ steps.tag.outputs.module }}:test
+
+      # ── Build signed APK ─────────────────────────────────────────────────
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
+
+      - name: Assemble release APK
+        run: ./gradlew ${{ steps.tag.outputs.module }}:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.tag.outputs.version }}
+
+      # ── Locate APK ───────────────────────────────────────────────────────
+      - name: Find APK
+        id: apk
+        run: |
+          APP="${{ steps.tag.outputs.app }}"
+          APK=$(find "apps/$APP/app/build/outputs/apk/release" -name "*.apk" | head -1)
+          FILENAME="dhruv-${APP}-${{ steps.tag.outputs.version }}-release.apk"
+          mv "$APK" "$FILENAME"
+          echo "path=$FILENAME" >> "$GITHUB_OUTPUT"
+          echo "name=$FILENAME" >> "$GITHUB_OUTPUT"
+
+      # ── Generate changelog ────────────────────────────────────────────────
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep "dhruv-${{ steps.tag.outputs.app }}-v" | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" | head -20)
+          else
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)")
+          fi
+          {
+            echo "changelog<<EOF"
+            echo "## What's changed"
+            echo ""
+            echo "$COMMITS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # ── Create GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "Dhruv ${{ steps.tag.outputs.app }} ${{ steps.tag.outputs.version }}"
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: ${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.version, '-') }}
