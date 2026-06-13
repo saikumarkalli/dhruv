@@ -1,0 +1,25 @@
+{
+  "platformContractVersion": "1.0.0",
+  "libs": {
+    "core": "1.0.0",
+    "settings": "1.0.0"
+  },
+  "apps": {
+    "finance": {
+      "version": "1.0.0",
+      "requiresCore": ">=1.0.0",
+      "requiresSettings": ">=1.0.0"
+    },
+    "tools": {
+      "version": "0.0.0",
+      "status": "planned",
+      "requiresCore": ">=1.0.0"
+    },
+    "vault": {
+      "version": "0.0.0",
+      "status": "future",
+      "requiresCore": ">=1.0.0"
+    }
+  },
+  "notes": "versionCode is auto-incremented by CI only. Update requiresCore when a breaking core change lands (see DECISIONS.md ADR semantics)."
+}
