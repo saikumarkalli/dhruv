@@ -19,6 +19,7 @@ val appModule = module {
     single { get<AppDatabase>().historyDao() }
     single { get<AppDatabase>().currencyRateDao() }
     single { get<AppDatabase>().alarmDao() }
+    single { get<AppDatabase>().chatDao() }
     single<com.example.service.alarm.AlarmScheduler> { com.example.service.alarm.AlarmSchedulerImpl(androidContext()) }
 
     // Repositories
@@ -26,6 +27,7 @@ val appModule = module {
     single<ICurrencyRepository> { CurrencyRepository(get()) }
     single { SettingsRepository(androidContext()) }
     single { GeminiRepository() }
+    single { AiChatRepository(get(), get()) }
 
     // ViewModels
     viewModel { CalculatorViewModel(get(), get(), get()) }
@@ -36,4 +38,5 @@ val appModule = module {
     viewModel { StopwatchViewModel() }
     viewModel { TimerViewModel() }
     viewModel { AlarmViewModel(get(), get()) }
+    viewModel { com.example.ui.aichat.AiChatViewModel(get()) }
 }

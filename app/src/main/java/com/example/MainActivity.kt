@@ -55,7 +55,19 @@ import com.example.ui.finance.FinanceScreen
 import com.example.ui.finance.FinanceViewModel
 import com.example.ui.time.TimeScreen
 import com.example.ui.time.TimeViewModel
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.AutoAwesome
 import com.example.ui.settings.SettingsScreen
+import com.example.ui.aichat.AiChatScreen
+import com.example.ui.aichat.AiChatViewModel
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.SectionTheme
 import kotlinx.coroutines.launch
@@ -97,6 +109,7 @@ class MainActivity : ComponentActivity() {
             val dateViewModel: DateViewModel = koinViewModel()
             val financeViewModel: FinanceViewModel = koinViewModel()
             val timeViewModel: TimeViewModel = koinViewModel()
+            val aiChatViewModel: AiChatViewModel = koinViewModel()
 
             MyApplicationTheme(darkModePreference = darkModePreference) {
                 val activeNavItems = remember(isConverterEnabled, isDateEnabled, isFinanceEnabled, isTimeEnabled) {
@@ -162,8 +175,29 @@ class MainActivity : ComponentActivity() {
                     label = "accentColor"
                 )
 
+                var showAiChat by remember { mutableStateOf(false) }
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    floatingActionButton = {
+                        AnimatedVisibility(
+                            visible = !showAiChat,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            FloatingActionButton(
+                                onClick = { showAiChat = true },
+                                containerColor = activeAccentColor,
+                                elevation = FloatingActionButtonDefaults.elevation(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "Open AI Assistant",
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
+                    },
                     bottomBar = {
                         Column(
                             modifier = Modifier
@@ -257,6 +291,19 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        }
+
+                        // AI Chat Overlay
+                        AnimatedVisibility(
+                            visible = showAiChat,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            AiChatScreen(
+                                viewModel = aiChatViewModel,
+                                onDismiss = { showAiChat = false }
+                            )
                         }
                     }
                 }

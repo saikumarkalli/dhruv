@@ -10,9 +10,11 @@ import java.io.IOException
 
 class GeminiRepository {
 
-    private val generativeModel by lazy {
-        GenerativeModel(
-            modelName = "gemini-1.5-flash",
+    private val modelNames = listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro")
+
+    private fun getModel(modelName: String): GenerativeModel {
+        return GenerativeModel(
+            modelName = modelName,
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
@@ -34,12 +36,29 @@ class GeminiRepository {
                 Keep the response concise, engaging, and format it nicely. Do not use markdown titles.
             """.trimIndent()
 
-            val response = generativeModel.generateContent(prompt)
-            val text = response.text
-            if (!text.isNullOrBlank()) {
-                Result.success(text)
+            var responseText: String? = null
+            var lastException: Exception? = null
+
+            for (modelName in modelNames) {
+                try {
+                    val model = getModel(modelName)
+                    val response = model.generateContent(prompt)
+                    responseText = response.text
+                    if (!responseText.isNullOrBlank()) {
+                        break // Success, exit loop
+                    }
+                } catch (e: Exception) {
+                    lastException = e
+                    if (e.message?.contains("quota", ignoreCase = true) == true) {
+                        break // Don't fallback on quota errors
+                    }
+                }
+            }
+
+            if (!responseText.isNullOrBlank()) {
+                Result.success(responseText)
             } else {
-                Result.failure(Exception("Gemini returned an empty response."))
+                throw lastException ?: Exception("All Gemini models returned an empty response.")
             }
         } catch (e: IOException) {
             Result.failure(Exception("Network error. Please check your internet connection and try again."))
