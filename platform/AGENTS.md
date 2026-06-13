@@ -14,6 +14,8 @@ Read this first in every AI/agent session, before touching code.
 - **No code in `platform/`.** Docs and contracts only.
 - **Do not redesign.** Decisions in `DECISIONS.md` are accepted. Propose a new ADR if you think one
   is wrong; do not silently diverge.
+- **Branch rules**: always branch from `develop`. PRs target `develop`. Never push to `main` —
+  that is for Play Store deployment only (future). Tags on `develop` trigger APK + GitHub Release.
 - **Module boundaries are enforced** (ArchUnit + Gradle): `feature → feature` forbidden;
   `vault → network/ai/analytics` forbidden; `feature → data` via Repository only; `core` depends on
   nothing internal.

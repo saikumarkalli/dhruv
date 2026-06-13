@@ -85,7 +85,7 @@ dependency — no Gradle composite-build dance, no published artifact.
 | Crash / Perf    | Firebase Crashlytics + Performance (free tier)                         |
 | Future auth     | Firebase Auth (Dhruv ID SSO)                                           |
 | Future sync     | Supabase (RLS) + Cloudflare R2                                         |
-| CI/CD           | GitHub Actions → signed release **APK** via GitHub Releases (Play/AAB deferred) |
+| CI/CD           | GitHub Actions: `develop` → signed APK + GitHub Release; `main` → signed AAB (Play-ready, deferred) |
 | minSdk / target | minSdk 26 · targetSdk = latest Play-required (bump yearly)             |
 
 ---
@@ -229,17 +229,25 @@ or tombstone-GC timer.*
 
 ## 11. CI/CD (right-sized for a solo maintainer)
 
-Four unattended gates per PR (branch protection requires all green; you self-merge):
+**Branch strategy:**
+
+| Branch | Purpose | Artifact | Trigger |
+|--------|----------|----------|---------|
+| `develop` | Default. All development, validation, APK distribution | Signed APK → GitHub Release | All PRs target here |
+| `main` | Play Store only (future) | Signed AAB | PR from `develop` only |
+| `feat/*` `fix/*` `chore/*` | Feature work | — | Branch from `develop`, PR back to `develop` |
+
+Four unattended gates per PR — run on both `develop` and `main` (branch protection, you self-merge):
 
 1. **Static analysis** — ktlint, detekt (per-module ruleset), Android lint
 2. **Security scan** — OWASP dependency-check, GitLeaks, permission audit
 3. **Tests** — unit (per module), integration (Room, DataStore), **ArchUnit** (dependency rules)
-4. **Build** — debug APK + **signed release APK** (existing keystore), APK-size delta check
+4. **Build** — debug + signed release artifact, size delta check
+   - `develop`: signed **APK** → attached to GitHub Release on version tag
+   - `main`: signed **AAB** → Play Store ready (deployment deferred)
 
-Distribution (current): CI attaches the signed release APK to a **GitHub Release** per version tag —
-no Play deployment yet. **Deferred until a Play launch is planned**: AAB output, Play App Signing,
-internal/production tracks, staged rollout. The build job is written so swapping APK→AAB later is a
-one-line change.
+Tags on `develop` → GitHub Release with APK(s).
+Tags on `main` (future) → Play Store internal track.
 
 ---
 

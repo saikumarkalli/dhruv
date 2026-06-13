@@ -1,207 +1,188 @@
 ---
-name: dhruv-feature-scaffold
-description: Scaffold a new Dhruv feature module with all required files. Use whenever the user says "create feature", "add feature", "scaffold", "new module", "add a X feature to tools/finance/vault", or any request to add a new capability to a Dhruv app. Also triggers on "stub out", "wire up", "add route for". This skill creates the entire module — build.gradle, Screen, ViewModel, Navigation, Hilt module, flag entry, Crashlytics tag, Performance trace, test stubs, and ArchUnit compliance — in one pass. Always use this instead of creating files manually.
+name: dhruv-release
+description: Handle Dhruv platform releases — version bumps, changelogs, tagging, and GitHub Release creation. Use whenever the user says "release", "bump version", "tag a release", "ship it", "create a release", "prepare release", "what version are we on", "changelog", or any request related to versioning or distributing APKs. Also triggers on "push to GitHub Releases", "make an APK", "version bump". This skill manages the full release flow from version increment through tag push.
 ---
 
-# Dhruv Feature Scaffold
+# Dhruv Release
 
-Creates a complete, architecture-compliant feature module inside the Dhruv monorepo.
+Manages versioning, changelogs, and GitHub Release workflow.
 
-## Before you start
+## Branch strategy (read first)
 
-1. Read `platform/AGENTS.md` — confirm you know the hard rules.
-2. Identify: which app (`finance`, `tools`, `vault`) and what feature name.
-3. If vault: remember vault features have NO network/ai/analytics deps.
+| Branch | Purpose | Artifact | Who tags |
+|--------|----------|----------|----------|
+| `develop` | Default — all dev work | Signed APK → GitHub Release | You, via bump-version.sh |
+| `main` | Play Store only (future) | Signed AAB | Only when Play launch planned |
+| `feat/*` etc. | Feature work | — | Never tagged |
 
-## What gets created
+**All release tags go on `develop`. Never tag main manually — that is for Play Store deployment only.**
 
-For a feature called `{name}` in app `{app}`:
+## Version scheme
 
-```
-apps/{app}/feature/{name}/
-├── build.gradle.kts
-└── src/
-    ├── main/
-    │   └── java/com/dhruv/{app}/feature/{name}/
-    │       ├── {Name}Screen.kt          # Compose UI
-    │       ├── {Name}ViewModel.kt       # StateFlow-based VM
-    │       ├── {Name}Navigation.kt      # NavGraphBuilder extension
-    │       ├── {Name}UiState.kt         # Sealed interface for UI states
-    │       └── di/
-    │           └── {Name}Module.kt      # Hilt module (if data deps exist)
-    └── test/
-        └── java/com/dhruv/{app}/feature/{name}/
-            └── {Name}ViewModelTest.kt   # Unit test stub
-```
+Format: `dhruv-{app}-v{MAJOR}.{MINOR}.{PATCH}`
+- **MAJOR** — breaking change (new minSdk, architecture overhaul)
+- **MINOR** — new feature module added
+- **PATCH** — bug fix, UI tweak
 
-Plus updates to:
-- `settings.gradle.kts` — add module include
-- `apps/{app}/app/build.gradle.kts` — add dependency
-- `apps/{app}/app/.../NavHost` — add FeatureHost-wrapped route
-- `platform/feature-flags/dhruv-{app}.json` — add flag entry
+`versionCode` — auto-incremented by CI only, never manual.
+Source of truth: `platform/versions.json`
 
-## Templates
+## Release flow (develop → GitHub Release APK)
 
-### build.gradle.kts
-```kotlin
-plugins {
-    id("dhruv.android.library")
-    id("dhruv.android.compose")
-    id("dhruv.hilt")
-}
-
-android {
-    namespace = "com.dhruv.{app}.feature.{name}"
-}
-
-dependencies {
-    implementation(project(":libs:core"))
-    // Add feature-specific deps here
-}
+### Step 1: Pre-release audit
+```bash
+git switch develop
+./gradlew test detekt
+./gradlew :apps:finance:app:assembleRelease   # signed APK builds
+# Repeat for each app that changed
 ```
 
-### {Name}Screen.kt
-```kotlin
-package com.dhruv.{app}.feature.{name}
+### Step 2: Generate changelog
+```bash
+git log $(git describe --tags --abbrev=0)..HEAD --oneline --no-merges
+```
+Group into Features / Fixes / Internal.
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
-@Composable
-fun {Name}Screen(
-    viewModel: {Name}ViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    when (val state = uiState) {
-        is {Name}UiState.Loading -> {
-            // Loading indicator from :libs:core
-        }
-        is {Name}UiState.Success -> {
-            {Name}Content(state = state)
-        }
-        is {Name}UiState.Error -> {
-            // Error display from :libs:core
-        }
-    }
-}
-
-@Composable
-private fun {Name}Content(state: {Name}UiState.Success) {
-    // TODO: Implement UI with glassmorphism tokens from :libs:core
-}
+### Step 3: Version bump on develop
+```bash
+git switch develop
+./scripts/bump-version.sh {major|minor|patch}
 ```
 
-### {Name}ViewModel.kt
-```kotlin
-package com.dhruv.{app}.feature.{name}
+### Step 4: Push tag — triggers GitHub Release
+```bash
+git push origin develop --tags
+```
+CI runs 4 gates → builds signed APK → creates GitHub Release → attaches APK(s).
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.dhruv.core.crash.CrashReporter
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
+### Step 5: Verify
+- [ ] GitHub Release page shows new version
+- [ ] APK(s) attached and downloadable
+- [ ] Install APK on device — runs correctly
+- [ ] Crashlytics shows new version string
 
-@HiltViewModel
-class {Name}ViewModel @Inject constructor(
-    private val crashReporter: CrashReporter
-) : ViewModel() {
+## bump-version.sh
 
-    private val _uiState = MutableStateFlow<{Name}UiState>({Name}UiState.Loading)
-    val uiState: StateFlow<{Name}UiState> = _uiState.asStateFlow()
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-    init {
-        crashReporter.setModule("{name}")
-        // TODO: Initialize feature
-    }
-}
+VERSIONS_FILE="platform/versions.json"
+BUMP_TYPE="${1:?Usage: bump-version.sh [major|minor|patch]}"
+
+CURRENT=$(grep -oP '"version":\s*"\K[^"]+' "$VERSIONS_FILE" | head -1)
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+case "$BUMP_TYPE" in
+  major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+  minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+  patch) PATCH=$((PATCH + 1)) ;;
+  *) echo "Invalid: use major, minor, or patch"; exit 1 ;;
+esac
+
+NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+echo "Bumping: ${CURRENT} → ${NEW_VERSION}"
+
+sed -i "s/\"version\": \"${CURRENT}\"/\"version\": \"${NEW_VERSION}\"/g" "$VERSIONS_FILE"
+
+find apps/*/app/build.gradle.kts -exec \
+  sed -i "s/versionName = \".*\"/versionName = \"${NEW_VERSION}\"/" {} \;
+
+find apps/*/app/build.gradle.kts -exec \
+  sed -i -E 's/versionCode = ([0-9]+)/echo "versionCode = $((\1+1))"/e' {} \;
+
+git add -A
+git commit -m "release: bump to v${NEW_VERSION}"
+git tag "v${NEW_VERSION}"
+
+echo ""
+echo "✅ Version bumped to v${NEW_VERSION} on develop"
+echo "Run: git push origin develop --tags"
 ```
 
-### {Name}UiState.kt
-```kotlin
-package com.dhruv.{app}.feature.{name}
+## ci.yml structure
 
-sealed interface {Name}UiState {
-    data object Loading : {Name}UiState
-    data class Success(/* TODO: add fields */) : {Name}UiState
-    data class Error(val message: String) : {Name}UiState
-}
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  lint:
+    # ktlint, detekt, android lint
+
+  security:
+    # GitLeaks, OWASP dependency-check
+
+  test:
+    # ./gradlew test (unit + ArchUnit)
+
+  build:
+    steps:
+      - name: Build
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            # main: AAB for Play Store
+            ./gradlew bundleRelease
+          else
+            # develop: APK for GitHub Releases
+            ./gradlew assembleRelease
+          fi
 ```
 
-### {Name}Navigation.kt
-```kotlin
-package com.dhruv.{app}.feature.{name}
+## release.yml structure
 
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
+```yaml
+name: Release
 
-const val {NAME}_ROUTE = "{name}"
+on:
+  push:
+    tags: ['v*']
 
-fun NavGraphBuilder.{name}Screen() {
-    composable(route = {NAME}_ROUTE) {
-        {Name}Screen()
-    }
-}
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml    # all 4 gates must pass
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Detect branch for tag
+        run: |
+          BRANCH=$(git branch -r --contains ${{ github.ref }} | grep -v HEAD | head -1 | xargs)
+          echo "TAG_BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Build signed APK (develop tags only)
+        if: contains(env.TAG_BRANCH, 'develop')
+        run: ./gradlew assembleRelease
+        # signs using KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD secrets
+
+      - name: Create GitHub Release (develop tags only)
+        if: contains(env.TAG_BRANCH, 'develop')
+        uses: softprops/action-gh-release@v2
+        with:
+          body: "Auto-generated changelog from commits"
+          files: apps/*/app/build/outputs/apk/release/*.apk
+
+      # Future: main tag → Play Store AAB upload (add when Play launch planned)
 ```
 
-### NavHost wiring (add to existing NavHost in apps/{app}/app)
-```kotlin
-// Inside NavHost { ... }
-FeatureHost(featureKey = "{name}") {
-    {name}Screen()
-}
-```
+## When to use which bump
 
-### Feature flag entry (add to platform/feature-flags/dhruv-{app}.json)
-```json
-"{name}": { "enabled": true, "minVersion": "CURRENT_VERSION" }
-```
-If the feature requires consent (sends data off-device), add `"requiresConsent": true`.
+| Change | Bump | Example |
+|--------|------|---------|
+| New feature module | minor | Added QR scanner |
+| Existing feature enhanced | patch | Added lap tracking to timer |
+| Bug fix | patch | Fixed crash on empty list |
+| New app added | minor | Added vault app |
+| Architecture / minSdk change | major | — |
 
-### {Name}ViewModelTest.kt
-```kotlin
-package com.dhruv.{app}.feature.{name}
-
-import kotlinx.coroutines.test.runTest
-import org.junit.Test
-import org.junit.Assert.*
-
-class {Name}ViewModelTest {
-
-    @Test
-    fun `initial state is Loading`() = runTest {
-        // TODO: Create VM with fake dependencies
-        // assertEquals({Name}UiState.Loading, viewModel.uiState.value)
-    }
-}
-```
-
-## Checklist (verify before done)
-
-- [ ] Module compiles: `./gradlew :apps:{app}:feature:{name}:assembleDebug`
-- [ ] App compiles with new module: `./gradlew :apps:{app}:app:assembleDebug`
-- [ ] settings.gradle.kts includes the module
-- [ ] App build.gradle.kts depends on the module
-- [ ] NavHost has FeatureHost-wrapped route
-- [ ] Feature flag entry exists in dhruv-{app}.json
-- [ ] CrashReporter.setModule("{name}") called in ViewModel init
-- [ ] No feature→feature dependencies (ArchUnit will catch this)
-- [ ] If vault feature: no network/ai/analytics imports
-- [ ] Test stub exists and passes
-
-## Common variations
-
-**Feature with Room data**: also create `{Name}Entity.kt` (implementing DhruvEntity),
-`{Name}Dao.kt`, `{Name}Repository.kt` interface, and `{Name}RepositoryImpl.kt`. Use the
-`dhruv-room-entity` skill for the data layer.
-
-**Feature with AI**: depend on `AiProviderResolver` from `:libs:core`. Add
-`requiresConsent: true` to the flag. Wire `ConsentManager` check before any AI call.
-
-**Vault feature**: FORBIDDEN deps on network, ai, analytics. Entity does NOT implement
-DhruvEntity. FLAG_SECURE on all screens.
+## Future: Play Store (main branch)
+When ready: merge `develop → main` → tag on main → CI builds AAB → upload to Play.
+The only addition needed is a Play Publisher step in release.yml gated on `main` branch.
