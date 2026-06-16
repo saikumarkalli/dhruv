@@ -33,23 +33,7 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name=".service.alarm.AlarmReceiver" android:exported="false" />
-        <receiver android:name=".service.alarm.BootReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-        
-        <service 
-            android:name=".service.alarm.AlarmService" 
-            android:exported="false" 
-            android:foregroundServiceType="mediaPlayback" />
-            
-        <activity 
-            android:name=".ui.time.alarm.MathPuzzleActivity" 
-            android:exported="false" 
-            android:showWhenLocked="true" 
-            android:turnScreenOn="true" />
+        <!-- Alarm components relocated to :apps:finance:feature:time -->
     </application>
 
 </manifest>

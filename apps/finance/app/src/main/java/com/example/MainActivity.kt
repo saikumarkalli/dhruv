@@ -1,4 +1,4 @@
-﻿package com.example
+package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,24 +16,29 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,125 +50,175 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.calculator.CalculatorScreen
-import com.example.ui.calculator.CalculatorViewModel
-import com.example.ui.converter.ConverterScreen
-import com.example.ui.converter.ConverterViewModel
-import com.example.ui.date.DateScreen
-import com.example.ui.date.DateViewModel
-import com.example.ui.finance.FinanceScreen
-import com.example.ui.finance.FinanceViewModel
-import com.example.ui.time.TimeScreen
-import com.example.ui.time.TimeViewModel
-import com.example.ui.settings.SettingsScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhruv.core.flags.FeatureFlagResolver
+import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.ui.FeatureHost
+import com.dhruv.core.ui.theme.AppTheme
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.SectionTheme
+import com.dhruv.core.ui.theme.getAccentColor
+import com.dhruv.finance.assistant.AssistantScreen
+import com.dhruv.finance.assistant.AssistantViewModel
+import com.dhruv.finance.calculator.CalculatorScreen
+import com.dhruv.finance.calculator.CalculatorViewModel
+import com.dhruv.finance.date.DateScreen
+import com.dhruv.finance.date.DateViewModel
+import com.dhruv.finance.time.TimeScreen
+import com.dhruv.finance.time.TimeViewModel
+import com.dhruv.settings.SettingsRepository
+import com.example.ui.hub.ConverterHub
+import com.example.ui.hub.FinanceHub
+import com.example.ui.settings.SettingsScreen
+import com.example.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
-// Navigation destination descriptor
-private data class NavItem(
+/**
+ * A bottom-nav destination. [content] is the already-FeatureHost-wrapped screen (or a hub of several
+ * feature screens). [colorName] selects the per-section accent from user settings (preserved UX).
+ */
+private data class NavTab(
+    val key: String,
     val label: String,
     val icon: ImageVector,
-    val contentDescription: String,
-    val testTag: String,
-    val pageIndex: Int
+    val colorName: String,
+    val content: @Composable () -> Unit,
 )
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalFoundationApi::class)
+    @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
-            val settingsRepository: com.example.data.SettingsRepository = koinInject()
-            val darkModePreference by settingsRepository.darkModePreference.collectAsState()
+            val settingsRepository: SettingsRepository = koinInject()
+            val resolver: FeatureFlagResolver = koinInject()
+            val crashReporter: CrashReporter = koinInject()
+            val settingsViewModel: SettingsViewModel = koinViewModel()
 
+            val appSettings by settingsViewModel.settings.collectAsState()
+
+            // Per-section accent colours (legacy settings flows) — preserved for the bottom nav.
+            val darkModePreference by settingsRepository.darkModePreference.collectAsState()
             val calculatorColor by settingsRepository.calculatorColor.collectAsState()
             val converterColor by settingsRepository.converterColor.collectAsState()
             val dateColor by settingsRepository.dateColor.collectAsState()
             val financeColor by settingsRepository.financeColor.collectAsState()
             val timeColor by settingsRepository.timeColor.collectAsState()
 
-            val isConverterEnabled by settingsRepository.isConverterEnabled.collectAsState()
-            val isDateEnabled by settingsRepository.isDateEnabled.collectAsState()
-            val isFinanceEnabled by settingsRepository.isFinanceEnabled.collectAsState()
-            val isTimeEnabled by settingsRepository.isTimeEnabled.collectAsState()
-
+            // Calculator VM is shared: the Calc route and the Settings "clear history" action.
             val calculatorViewModel: CalculatorViewModel = koinViewModel()
-            val converterViewModel: ConverterViewModel = koinViewModel()
-            val dateViewModel: DateViewModel = koinViewModel()
-            val financeViewModel: FinanceViewModel = koinViewModel()
-            val timeViewModel: TimeViewModel = koinViewModel()
 
-            DhruvTheme(darkModePreference = darkModePreference) {
-                val activeNavItems = remember(isConverterEnabled, isDateEnabled, isFinanceEnabled, isTimeEnabled) {
+            DhruvTheme(
+                theme = appSettings.theme,
+                accentColorHex = appSettings.accentColorHex,
+                font = appSettings.fontFamily
+            ) {
+                // Build the visible tabs. Feature flags gate Date / Time / Assistant; Converter and
+                // Finance are hubs shown when any of their sub-features is enabled.
+                val tabs = remember(resolver) {
                     buildList {
-                        add(NavItem("Calc", Icons.Default.Calculate, "Calculator", "nav_item_calculator", pageIndex = 0))
-                        if (isConverterEnabled) {
-                            add(NavItem("Converter", Icons.Default.SwapHoriz, "Converter", "nav_item_converter", pageIndex = 1))
+                        add(
+                            NavTab("calculator", "Calc", Icons.Default.Calculate, calculatorColor) {
+                                val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
+                                FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
+                                    CalculatorScreen(viewModel = calculatorViewModel)
+                                }
+                            }
+                        )
+                        if (resolver.isEnabled("currency") || resolver.isEnabled("unit")) {
+                            add(NavTab("converter", "Converter", Icons.Default.SwapHoriz, converterColor) {
+                                ConverterHub(resolver, crashReporter)
+                            })
                         }
-                        if (isDateEnabled) {
-                            add(NavItem("Date", Icons.Default.DateRange, "Date", "nav_item_date", pageIndex = 2))
+                        if (resolver.isEnabled("date")) {
+                            add(NavTab("date", "Date", Icons.Default.DateRange, dateColor) {
+                                val vm: DateViewModel = koinViewModel()
+                                val error by vm.featureError.collectAsStateWithLifecycle()
+                                FeatureHost("date", true, error, crashReporter) { DateScreen(viewModel = vm) }
+                            })
                         }
-                        if (isFinanceEnabled) {
-                            add(NavItem("Finance", Icons.AutoMirrored.Filled.TrendingUp, "Finance", "nav_item_finance", pageIndex = 3))
+                        if (listOf("loans", "investments", "tax", "everyday").any { resolver.isEnabled(it) }) {
+                            add(NavTab("finance", "Finance", Icons.AutoMirrored.Filled.TrendingUp, financeColor) {
+                                FinanceHub(resolver, crashReporter)
+                            })
                         }
-                        if (isTimeEnabled) {
-                            add(NavItem("Time", Icons.Default.AccessTime, "Time Tools", "nav_item_time", pageIndex = 4))
+                        if (resolver.isEnabled("time")) {
+                            add(NavTab("time", "Time", Icons.Default.AccessTime, timeColor) {
+                                val vm: TimeViewModel = koinViewModel()
+                                val error by vm.featureError.collectAsStateWithLifecycle()
+                                FeatureHost("time", true, error, crashReporter) { TimeScreen(viewModel = vm) }
+                            })
                         }
-                        add(NavItem("Settings", Icons.Default.Settings, "Settings", "nav_item_settings", pageIndex = 5))
+                        if (resolver.isEnabled("assistant")) {
+                            add(NavTab("assistant", "Assistant", Icons.Default.AutoAwesome, "cyan") {
+                                val vm: AssistantViewModel = koinViewModel()
+                                val error by vm.featureError.collectAsStateWithLifecycle()
+                                FeatureHost("assistant", true, error, crashReporter) { AssistantScreen(viewModel = vm) }
+                            })
+                        }
+                        add(NavTab("settings", "Settings", Icons.Default.Settings, "cyan") {
+                            SettingsScreen(
+                                settingsRepository = settingsRepository,
+                                onClearHistory = { calculatorViewModel.clearHistory() }
+                            )
+                        })
                     }
                 }
 
-                val pagerState = rememberPagerState(pageCount = { activeNavItems.size })
+                val pagerState = rememberPagerState(pageCount = { tabs.size })
                 val coroutineScope = rememberCoroutineScope()
+                val settingsTabIndex = tabs.indexOfFirst { it.key == "settings" }
 
-                // â”€â”€ Back-press: navigate to Calc tab instead of closing the app â”€â”€
+                // Back-press: return to the first tab instead of closing the app.
                 DisposableEffect(pagerState.currentPage) {
                     val callback = object : OnBackPressedCallback(pagerState.currentPage != 0) {
                         override fun handleOnBackPressed() {
-                            coroutineScope.launch {
-                                if (pagerState.currentPage > 1) {
-                                    pagerState.scrollToPage(0)
-                                } else {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                            }
+                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
                         }
                     }
                     onBackPressedDispatcher.addCallback(this@MainActivity, callback)
                     onDispose { callback.remove() }
                 }
 
-                val activeAccentName = if (pagerState.currentPage in activeNavItems.indices) {
-                    when (activeNavItems[pagerState.currentPage].pageIndex) {
-                        0 -> calculatorColor
-                        1 -> converterColor
-                        2 -> dateColor
-                        3 -> financeColor
-                        4 -> timeColor
-                        else -> "cyan"
-                    }
-                } else {
-                    "cyan"
-                }
-
-                val isDarkTheme = when (darkModePreference) {
-                    "always_dark" -> true
-                    "always_light" -> false
-                    else -> isSystemInDarkTheme()
+                val activeColorName = tabs.getOrNull(pagerState.currentPage)?.colorName ?: "cyan"
+                val isDarkTheme = when (appSettings.theme) {
+                    AppTheme.DARK -> true
+                    AppTheme.LIGHT -> false
+                    AppTheme.SYSTEM -> isSystemInDarkTheme()
                 }
                 val activeAccentColor by animateColorAsState(
-                    targetValue = com.dhruv.core.ui.theme.getAccentColor(activeAccentName, isDarkTheme),
+                    targetValue = getAccentColor(activeColorName, isDarkTheme),
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "accentColor"
                 )
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = { },
+                            actions = {
+                                IconButton(
+                                    onClick = {
+                                        if (settingsTabIndex >= 0) {
+                                            coroutineScope.launch { pagerState.animateScrollToPage(settingsTabIndex) }
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("top_bar_settings_button")
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Open Settings")
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    },
                     bottomBar = {
                         Column(
                             modifier = Modifier
@@ -175,33 +230,21 @@ class MainActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
                             NavigationBar(
-                                modifier = Modifier
-                                    .testTag("app_navigation_bar"),
+                                modifier = Modifier.testTag("app_navigation_bar"),
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 tonalElevation = 0.dp
                             ) {
-                                activeNavItems.forEachIndexed { index, item ->
+                                tabs.forEachIndexed { index, tab ->
                                     val selected = pagerState.currentPage == index
                                     NavigationBarItem(
                                         selected = selected,
                                         onClick = {
-                                            coroutineScope.launch {
-                                                if (kotlin.math.abs(pagerState.currentPage - index) > 1) {
-                                                    pagerState.scrollToPage(index)
-                                                } else {
-                                                    pagerState.animateScrollToPage(index)
-                                                }
-                                            }
+                                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
                                         },
-                                        icon = {
-                                            Icon(
-                                                imageVector = item.icon,
-                                                contentDescription = item.contentDescription
-                                            )
-                                        },
+                                        icon = { Icon(tab.icon, contentDescription = tab.label) },
                                         label = {
                                             Text(
-                                                text = item.label,
+                                                text = tab.label,
                                                 fontSize = 11.sp,
                                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                                 maxLines = 1
@@ -215,7 +258,7 @@ class MainActivity : ComponentActivity() {
                                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                                             indicatorColor = activeAccentColor.copy(alpha = 0.14f)
                                         ),
-                                        modifier = Modifier.testTag(item.testTag)
+                                        modifier = Modifier.testTag("nav_item_${tab.key}")
                                     )
                                 }
                             }
@@ -226,7 +269,6 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
-                            .statusBarsPadding()
                     ) {
                         HorizontalPager(
                             state = pagerState,
@@ -234,28 +276,9 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .testTag("app_horizontal_pager")
                         ) { page ->
-                            if (page in activeNavItems.indices) {
-                                when (activeNavItems[page].pageIndex) {
-                                    0 -> SectionTheme(colorPreference = calculatorColor, darkModePreference = darkModePreference) {
-                                        CalculatorScreen(viewModel = calculatorViewModel)
-                                    }
-                                    1 -> SectionTheme(colorPreference = converterColor, darkModePreference = darkModePreference) {
-                                        ConverterScreen(viewModel = converterViewModel)
-                                    }
-                                    2 -> SectionTheme(colorPreference = dateColor, darkModePreference = darkModePreference) {
-                                        DateScreen(viewModel = dateViewModel)
-                                    }
-                                    3 -> SectionTheme(colorPreference = financeColor, darkModePreference = darkModePreference) {
-                                        FinanceScreen(viewModel = financeViewModel)
-                                    }
-                                    4 -> SectionTheme(colorPreference = timeColor, darkModePreference = darkModePreference) {
-                                        TimeScreen(viewModel = timeViewModel)
-                                    }
-                                    5 -> SettingsScreen(
-                                        settingsRepository = settingsRepository,
-                                        calculatorViewModel = calculatorViewModel
-                                    )
-                                }
+                            val tab = tabs[page]
+                            SectionTheme(colorPreference = tab.colorName, darkModePreference = darkModePreference) {
+                                tab.content()
                             }
                         }
                     }

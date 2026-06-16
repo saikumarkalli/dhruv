@@ -283,3 +283,65 @@ jobs:
 
           # --force-with-lease: safe push — aborts if the remote moved ahead of us
           git push --force-with-lease origin HEAD:${{ github.ref_name }}
+
+  # ── Post-build: auto-tag the release version ──────────────────────────────
+  # Runs after the versionCode bump on a push (merge) to develop/main. Reads the
+  # semantic version from platform/versions.json and creates `dhruv-<app>-v<version>`
+  # for every active app — IDEMPOTENTLY: the tag is created once (typically on the
+  # develop merge) and the same version is reused when develop is promoted to main,
+  # so develop and main always carry the SAME version tag (never a duplicate/clash).
+  # Pushing the tag triggers the Release workflow (APK on develop; AAB on main is deferred).
+  #
+  # IMPORTANT: a tag pushed with the default GITHUB_TOKEN does NOT trigger other
+  # workflows (GitHub's anti-recursion rule), so Release would not fire. Provide a PAT
+  # in the `RELEASE_TOKEN` secret (repo + workflow scope). Without it we fall back to
+  # GITHUB_TOKEN — the tag is still created, but you must run Release manually.
+  auto-tag:
+    name: "Post-build · Auto-tag version"
+    runs-on: ubuntu-latest
+    needs: [ version-bump ]
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Branch head — includes the versionCode bump commit just pushed by version-bump.
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # Derive one tag per active (non-planned/future) app from the source-of-truth version file.
+      - name: Resolve release tags from platform/versions.json
+        run: |
+          python3 - <<'PYEOF' > tags.txt
+          import json
+          data = json.load(open("platform/versions.json"))
+          for app, meta in data.get("apps", {}).items():
+              if meta.get("status") in ("planned", "future"):
+                  continue
+              print(f"dhruv-{app}-v{meta['version']}")
+          PYEOF
+          echo "Resolved release tags:"; cat tags.txt
+
+      # Create + push each tag only if it does not already exist (same version → no re-tag).
+      - name: Create & push version tags (idempotent)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --quiet || true
+          while IFS= read -r TAG; do
+            [ -z "$TAG" ] && continue
+            if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+              echo "↺ ${TAG} already exists — same version reused on ${{ github.ref_name }}, not re-tagging."
+              continue
+            fi
+            git tag -a "${TAG}" -m "Release ${TAG} (auto-tagged from ${{ github.ref_name }} @ ${GITHUB_SHA::7})"
+            git push origin "refs/tags/${TAG}"
+            echo "✅ Created and pushed ${TAG} → triggers Release workflow."
+          done < tags.txt

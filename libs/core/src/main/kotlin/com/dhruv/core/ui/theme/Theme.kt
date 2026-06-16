@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
@@ -73,18 +74,62 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF374151)
 )
 
+/**
+ * Primary DhruvTheme overload used by the Finance app and driven by [AppSettings].
+ * - [theme] maps to the global dark/light/system preference.
+ * - [accentColorHex] optionally overrides [MaterialTheme.colorScheme.primary] with a custom hex
+ *   string in "#RRGGBB" format (Dhruv-gold default "#D4AF37" when null).
+ * - [font] selects the global [FontFamily] (DEFAULT→Default, MONO→Monospace, ROUNDED→SansSerif).
+ */
 @Composable
 fun DhruvTheme(
-    darkModePreference: String = "system",
+    theme: AppTheme = AppTheme.SYSTEM,
+    accentColorHex: String? = null,
+    font: DhruvFont = DhruvFont.DEFAULT,
     content: @Composable () -> Unit
 ) {
-    val darkTheme = when (darkModePreference) {
-        "always_dark" -> true
-        "always_light" -> false
-        else -> isSystemInDarkTheme()
+    val darkTheme = when (theme) {
+        AppTheme.DARK -> true
+        AppTheme.LIGHT -> false
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = if (accentColorHex != null) {
+        val accent = runCatching { Color(android.graphics.Color.parseColor(accentColorHex)) }
+            .getOrElse { baseScheme.primary }
+        baseScheme.copy(primary = accent, secondary = accent)
+    } else {
+        baseScheme
+    }
+
+    val fontFamily = when (font) {
+        DhruvFont.DEFAULT -> FontFamily.Default
+        DhruvFont.MONO -> FontFamily.Monospace
+        DhruvFont.ROUNDED -> FontFamily.SansSerif // placeholder — real rounded font is a follow-up
+    }
+    val resolvedTypography = if (font == DhruvFont.DEFAULT) {
+        Typography
+    } else {
+        Typography.copy(
+            displayLarge = Typography.displayLarge.copy(fontFamily = fontFamily),
+            displayMedium = Typography.displayMedium.copy(fontFamily = fontFamily),
+            displaySmall = Typography.displaySmall.copy(fontFamily = fontFamily),
+            headlineLarge = Typography.headlineLarge.copy(fontFamily = fontFamily),
+            headlineMedium = Typography.headlineMedium.copy(fontFamily = fontFamily),
+            headlineSmall = Typography.headlineSmall.copy(fontFamily = fontFamily),
+            titleLarge = Typography.titleLarge.copy(fontFamily = fontFamily),
+            titleMedium = Typography.titleMedium.copy(fontFamily = fontFamily),
+            titleSmall = Typography.titleSmall.copy(fontFamily = fontFamily),
+            bodyLarge = Typography.bodyLarge.copy(fontFamily = fontFamily),
+            bodyMedium = Typography.bodyMedium.copy(fontFamily = fontFamily),
+            bodySmall = Typography.bodySmall.copy(fontFamily = fontFamily),
+            labelLarge = Typography.labelLarge.copy(fontFamily = fontFamily),
+            labelMedium = Typography.labelMedium.copy(fontFamily = fontFamily),
+            labelSmall = Typography.labelSmall.copy(fontFamily = fontFamily)
+        )
+    }
+
     val configuration = LocalConfiguration.current
     val (dimens, responsiveType) = calculateResponsiveMetrics(
         configuration.screenWidthDp,
@@ -97,10 +142,27 @@ fun DhruvTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = resolvedTypography,
             content = content
         )
     }
+}
+
+/**
+ * Legacy overload — kept for existing callers that pass [darkModePreference] as a raw string.
+ * Delegates to the enum-based overload.
+ */
+@Composable
+fun DhruvTheme(
+    darkModePreference: String = "system",
+    content: @Composable () -> Unit
+) {
+    val theme = when (darkModePreference) {
+        "always_dark" -> AppTheme.DARK
+        "always_light" -> AppTheme.LIGHT
+        else -> AppTheme.SYSTEM
+    }
+    DhruvTheme(theme = theme, accentColorHex = null, font = DhruvFont.DEFAULT, content = content)
 }
 
 @Composable

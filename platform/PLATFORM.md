@@ -33,7 +33,7 @@ without the publish/version/submodule overhead.
 ```
 dhruv/
 ├── settings.gradle.kts          # includes all modules
-├── build-logic/                 # Gradle convention plugins (shared Android/Compose/Hilt config)
+├── build-logic/                 # Gradle convention plugins (shared Android/Compose/Koin config)
 ├── platform/                    # THIS folder — docs & contracts only, no code
 │   ├── PLATFORM.md
 │   ├── DECISIONS.md
@@ -46,11 +46,11 @@ dhruv/
 │   └── settings/                # :libs:settings — color picker, theme, font, sync, biometric toggles
 └── apps/
     ├── finance/
-    │   ├── app/                 # :apps:finance:app  — shell, MainActivity, NavHost
-    │   └── feature/
-    │       ├── calculator/      # :apps:finance:feature:calculator
-    │       ├── emi/  sip/  loan/  currency/
-    │       └── assistant/
+    │   ├── app/                 # :apps:finance:app  — shell, MainActivity, hubs
+    │   ├── data/                # :apps:finance:data — Room/repos/api (feature→data only)
+    │   └── feature/             # Phase 4: calculator, loans, investments, tax, everyday,
+    │       │                    #          currency, unit, date, time, assistant
+    │       └── …                # (loans/investments/tax/everyday supersede emi/sip/loan)
     ├── tools/
     │   ├── app/
     │   └── feature/ { notes, clipboard, timer, qr, weather, assistant }
@@ -59,7 +59,7 @@ dhruv/
         └── feature/ { ... }
 ```
 
-Shared config (Android, Compose, Hilt, detekt, test setup) is centralised in `build-logic/`
+Shared config (Android, Compose, Koin, detekt, test setup) is centralised in `build-logic/`
 convention plugins so modules stay thin. `:libs:core` is consumed as a normal project
 dependency — no Gradle composite-build dance, no published artifact.
 
@@ -70,7 +70,7 @@ dependency — no Gradle composite-build dance, no published artifact.
 | Concern         | Choice                                                                 |
 |-----------------|------------------------------------------------------------------------|
 | UI              | Jetpack Compose                                                        |
-| DI              | Hilt                                                                   |
+| DI              | Koin (Hilt deferred — Gradle plugin incompatible with AGP 9; see ADR-0010) |
 | Navigation      | Single-activity NavHost                                                |
 | DB (main)       | Room + Jetpack Security (EncryptedSharedPreferences for the key)       |
 | DB (vault)      | SQLCipher — separate file, AES-256, separate key                       |

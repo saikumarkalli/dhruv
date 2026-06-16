@@ -1,0 +1,16 @@
+{
+  "_comment": "Schema mirrored in Firebase Remote Config. Priority at runtime: remote -> cached last-known-good -> these hardcoded defaults. NavHost checks the flag before rendering a route; disabled -> FeatureDisabledCard.",
+  "app": "finance",
+  "features": {
+    "calculator":  { "enabled": true,  "minVersion": "1.0.0" },
+    "loans":       { "enabled": true,  "minVersion": "1.0.0" },
+    "investments": { "enabled": true,  "minVersion": "1.0.0" },
+    "tax":         { "enabled": true,  "minVersion": "1.0.0" },
+    "everyday":    { "enabled": true,  "minVersion": "1.0.0" },
+    "currency":    { "enabled": true,  "minVersion": "1.0.0" },
+    "unit":        { "enabled": true,  "minVersion": "1.0.0" },
+    "date":        { "enabled": false, "minVersion": "1.0.0" },
+    "time":        { "enabled": false, "minVersion": "1.0.0" },
+    "assistant":   { "enabled": false, "minVersion": "1.2.0", "requiresConsent": true }
+  }
+}

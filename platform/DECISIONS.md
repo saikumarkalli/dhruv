@@ -99,3 +99,28 @@ always Play-ready (AAB, same CI gates) whenever that decision is made. No last-m
 changes needed at Play launch time.
 **Consequences.** develop is set as the GitHub default branch. Branch protection on both branches.
 All feature branches: `feat/* → develop`. Play launch = merge develop → main + tag.
+
+---
+
+## ADR-0010 — DI is Koin (Hilt deferred); Finance split is thematic + hub-navigated
+**Context.** PLATFORM.md originally specified Hilt, but the Hilt Gradle plugin (2.52) is incompatible
+with AGP 9 (it looks up the removed `BaseExtension`), so the app was already wired with Koin. Phase 4
+also had to place 10 calculators that lived in one `FinanceViewModel`/`FinanceScreen` and a 14-tool
+`ConverterScreen` into modules, against a strict "code-move, not rewrite" rule.
+**Decision.**
+1. **Koin is the DI framework** for all modules until a Hilt version supporting AGP 9 lands. Each
+   feature exposes a `module {}` object; the app aggregates them in `CalculatorApplication`.
+2. **Finance calculators are grouped thematically** into `loans` (EMI + comparison), `investments`
+   (SIP/ROI/FD-RD), `tax` (GST/salary), `everyday` (interest/discount/tip/inflation) — superseding the
+   originally-sketched `emi`/`sip`/`loan` modules.
+3. A shared **`:apps:finance:data`** module holds the single Room DB + repositories; features depend
+   on it (Repository-only), satisfying `feature → data` without splitting the database.
+4. The app keeps its **pager + bottom-nav** UX; `currency`+`unit` and the four finance themes are
+   presented behind **Converter/Finance hub** screens, each sub-feature wrapped in `FeatureHost`.
+**Why.** Koin is the only DI that builds today; thematic grouping keeps the screen split a move rather
+than a rewrite; a shared data module avoids a risky multi-database migration; hubs preserve existing
+navigation while honouring "every route in FeatureHost".
+**Consequences.** Docs saying "Hilt only" are corrected. `GeminiRepository` takes its key as a ctor
+arg (app supplies `BuildConfig.GEMINI_API_KEY`) so it can live in `:data` and be shared without a
+`feature → feature` edge. `date`/`time` ship flag-disabled; `assistant` disabled + consent-gated.
+`AlarmViewModel`/`BootReceiver` still touch Room directly (documented follow-up).

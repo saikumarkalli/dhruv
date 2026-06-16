@@ -1,44 +1,14 @@
 package com.example.di
 
-import com.dhruv.core.observability.CrashReporter
-import com.dhruv.core.observability.CrashlyticsReporter
-import com.example.data.*
-import com.example.ui.calculator.CalculatorViewModel
-import com.example.ui.converter.ConverterViewModel
-import com.example.ui.date.DateViewModel
-import com.example.ui.finance.FinanceViewModel
-import com.example.ui.time.TimeViewModel
-import com.example.ui.time.stopwatch.StopwatchViewModel
-import com.example.ui.time.timer.TimerViewModel
-import com.example.ui.time.alarm.AlarmViewModel
-import org.koin.android.ext.koin.androidContext
+import com.example.ui.settings.SettingsViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
+/**
+ * App-shell Koin module. Only app-owned wiring lives here — Settings is part of the shell, not a
+ * feature module. Platform singletons are in [platformModule]; the Room/repository layer is in
+ * :apps:finance:data's dataModule; each feature provides its own module (see CalculatorApplication).
+ */
 val appModule = module {
-    // Observability
-    single<CrashReporter> { CrashlyticsReporter() }
-
-    // Database and DAOs
-    single { AppDatabase.getDatabase(androidContext()) }
-    single { get<AppDatabase>().historyDao() }
-    single { get<AppDatabase>().currencyRateDao() }
-    single { get<AppDatabase>().alarmDao() }
-    single<com.example.service.alarm.AlarmScheduler> { com.example.service.alarm.AlarmSchedulerImpl(androidContext()) }
-
-    // Repositories
-    single { HistoryRepository(get()) }
-    single<ICurrencyRepository> { CurrencyRepository(get()) }
-    single { SettingsRepository(androidContext()) }
-    single { GeminiRepository() }
-
-    // ViewModels
-    viewModel { CalculatorViewModel(get(), get(), get()) }
-    viewModel { ConverterViewModel(get()) }
-    viewModel { DateViewModel() }
-    viewModel { FinanceViewModel() }
-    viewModel { TimeViewModel() }
-    viewModel { StopwatchViewModel() }
-    viewModel { TimerViewModel() }
-    viewModel { AlarmViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get()) }
 }

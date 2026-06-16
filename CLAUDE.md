@@ -7,7 +7,7 @@ Read before any work:
 
 ## Project
 - Kotlin + Jetpack Compose monorepo: multiple apps sharing :libs:core and :libs:settings
-- Architecture: single-activity NavHost, Hilt DI, Room + EncryptedDataStore, MVVM
+- Architecture: single-activity NavHost, Koin DI, Room + EncryptedDataStore, MVVM
 - minSdk 26, targetSdk latest
 
 ## Skills (read the relevant skill BEFORE doing the task)
@@ -28,5 +28,5 @@ Read before any work:
 - Module boundaries enforced by ArchUnit (feature→feature FORBIDDEN, vault→network/ai/analytics FORBIDDEN).
 - Every feature route wrapped in FeatureHost — never a blank crash.
 - No secrets or API keys in the repo or APK. GitLeaks gates CI.
-- Kotlin only, Compose only, Hilt only, Coroutines+Flow only.
+- Kotlin only, Compose only, Koin only (DI), Coroutines+Flow only. (Hilt is NOT used — its Gradle plugin is incompatible with AGP 9; see ADR-0010.)
 - DPDP: consent screen before any data leaves the device.

@@ -23,17 +23,22 @@ object NoOpCrashReporter : CrashReporter {
  */
 class CrashlyticsReporter : CrashReporter {
 
-    private val crashlytics get() = FirebaseCrashlytics.getInstance()
+    // Firebase may be absent in this build (no google-services.json / FirebaseApp not initialized).
+    // Observability must NEVER crash the app (PLATFORM.md §4), so resolve defensively once and
+    // degrade to no-op if unavailable.
+    private val crashlytics: FirebaseCrashlytics? by lazy {
+        runCatching { FirebaseCrashlytics.getInstance() }.getOrNull()
+    }
 
     override fun setModule(name: String) {
-        crashlytics.setCustomKey("module", name)
+        crashlytics?.setCustomKey("module", name)
     }
 
     override fun recordException(t: Throwable) {
-        crashlytics.recordException(t)
+        crashlytics?.recordException(t)
     }
 
     override fun log(message: String) {
-        crashlytics.log(message)
+        crashlytics?.log(message)
     }
 }

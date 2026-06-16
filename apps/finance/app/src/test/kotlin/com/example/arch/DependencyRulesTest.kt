@@ -1,8 +1,11 @@
 package com.example.arch
 
+import com.tngtech.archunit.base.DescribedPredicate.alwaysTrue
+import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
 import org.junit.Test
 
 /**
@@ -21,17 +24,17 @@ class DependencyRulesTest {
     }
 
     /**
-     * Feature modules must not import directly from each other.
-     * Enforces once com.dhruv.*.feature.* packages exist (Phase 4).
+     * Finance feature modules must not depend on each other (PLATFORM.md §4, ADR-0001).
+     * Each `com.dhruv.finance.<feature>` package is a slice; slices must not depend on one another.
+     * Dependencies onto the shared :apps:finance:data layer (`com.dhruv.finance.data`) are allowed
+     * (features → data via Repository is the sanctioned path), so they are ignored here.
      */
     @Test
-    fun `feature packages must not depend on each other`() {
-        noClasses()
-            .that().resideInAPackage("..feature.(*)..")
-            .should().dependOnClassesThat()
-            .resideInAPackage("..feature.(*.)")
-            .because("feature→feature imports are FORBIDDEN (ADR-0001 module boundaries)")
-            .allowEmptyShould(true)
+    fun `finance feature modules must not depend on each other`() {
+        slices()
+            .matching("com.dhruv.finance.(*)..")
+            .should().notDependOnEachOther()
+            .ignoreDependency(alwaysTrue(), resideInAPackage("com.dhruv.finance.data.."))
             .check(classes)
     }
 
