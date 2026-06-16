@@ -5,6 +5,35 @@ All notable changes to the **Dhruv Calculator & Conversions** application will b
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - Phase 4: Finance feature split
+
+### Added
+- Split the Finance monolith into **10 feature modules** under `apps/finance/feature/` (`calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`) plus a shared **`:apps:finance:data`** module (Room DB, DAOs, repositories, `CurrencyApi`, `GeminiRepository`, `CurrencyFormatter`).
+- Every route wrapped in `FeatureHost` (disabled → `FeatureDisabledCard`, error → `FeatureErrorCard`); `FeatureFlagResolver` gating from `platform/feature-flags/dhruv-finance.json`; Converter & Finance **hub** screens in the app shell.
+- `PerformanceTracer` (`:libs:core`) Firebase Performance wrapper; each feature VM does `crashReporter.setModule(...)` + one `performanceTracer.trace(...)` + exposes `featureError`.
+- `platform/skills/dhruv-feature-scaffold/SKILL.md` (Koin-based scaffold procedure).
+- ArchUnit `DependencyRulesTest` now enforces real `feature → feature` isolation via package slices.
+- **CI auto-tagging** (`ci.yml` `auto-tag` job): after a merge to `develop`/`main`, reads each active app's version from `platform/versions.json` and creates `dhruv-<app>-v<version>` idempotently — develop and main share the **same** version tag (created once, reused on promotion). The tag push triggers the Release workflow. Requires a PAT in the `RELEASE_TOKEN` secret (tags pushed with the default `GITHUB_TOKEN` do not trigger other workflows); falls back to `GITHUB_TOKEN` (tag created, Release run started manually).
+
+### Changed
+- **DI corrected to Koin everywhere** (the Hilt Gradle plugin is incompatible with AGP 9). Stale "Hilt only" wording updated in `CLAUDE.md` and `PLATFORM.md`; see ADR-0010.
+- `GeminiRepository` moved to `:apps:finance:data` and now takes the API key as a constructor parameter (app supplies `BuildConfig.GEMINI_API_KEY` via Koin) so it no longer depends on the app's `BuildConfig` — keeps it shareable by `calculator` and `assistant` without a `feature → feature` edge.
+- Thematic grouping of the 10 original Finance calculators into `loans`/`investments`/`tax`/`everyday` (supersedes the originally-proposed separate `emi`/`sip`/`loan` modules).
+
+### Removed / relocated tests
+- Relocated `CalculatorEngine` tests → `:feature:calculator`; converter/formatter tests → `:feature:unit`.
+- Removed `FinanceViewModelTest`, `FinanceViewModelEdgeCaseTest`, `SddSpecFirstTests` (bound to the now-split monolithic `FinanceViewModel`). **Follow-up:** re-author per-module calc tests using `NoOpCrashReporter` + `NoOpPerformanceTracer`.
+
+### Fixed
+- **Launch crash when Firebase is not configured.** With no `google-services.json`, `FirebaseApp` is uninitialized, so the first `CrashlyticsReporter.setModule(...)` (invoked while Koin built `SettingsRepositoryImpl` at startup) threw `IllegalStateException` and killed the app before any UI. `CrashlyticsReporter` and `FirebasePerformanceTracer` (`:libs:core`) now resolve Firebase defensively (`runCatching`) and degrade to no-op when it's absent — observability never crashes the app (PLATFORM.md §4). Add `google-services.json` to enable real Crashlytics/Performance.
+
+### Follow-ups / known debt
+- `time` module: `BootReceiver`/`AlarmViewModel` access Room (`AppDatabase`/`AlarmDao`) directly rather than via a repository; `time` declares `room-runtime` for this. Refactor to a repository later (`feature → data via Repository only`).
+- `date` and `time` ship flag-disabled (code preserved); `assistant` disabled + `requiresConsent`.
+- `detekt` is not wired into the build (`./gradlew detekt` task is absent — the `dhruv.detekt` convention plugin is applied by no module). Pre-existing; wire up separately.
+- The legacy `dhruv-compose-screen` SKILL is stale (shows Hilt / `DhruvTheme.colors` / `crashReporter.report`); `dhruv-feature-scaffold` is authoritative for the real Koin patterns.
+- App `build.gradle.kts` still lists unused Room/network/Moshi/KSP deps (harmless) — prune in a cleanup pass.
+
 ## [1.1.0] - 2026-06-07
 
 ### Added

@@ -34,6 +34,20 @@ secrets {
 
 dependencies {
     implementation(project(":libs:core"))
+    implementation(project(":libs:settings"))
+
+    // Shared data layer + feature modules (Phase 4 split)
+    implementation(project(":apps:finance:data"))
+    implementation(project(":apps:finance:feature:calculator"))
+    implementation(project(":apps:finance:feature:loans"))
+    implementation(project(":apps:finance:feature:investments"))
+    implementation(project(":apps:finance:feature:tax"))
+    implementation(project(":apps:finance:feature:everyday"))
+    implementation(project(":apps:finance:feature:currency"))
+    implementation(project(":apps:finance:feature:unit"))
+    implementation(project(":apps:finance:feature:date"))
+    implementation(project(":apps:finance:feature:time"))
+    implementation(project(":apps:finance:feature:assistant"))
 
     // Firebase BOM (Compose BOM comes from dhruv.android.compose convention plugin)
     implementation(platform(libs.firebase.bom))

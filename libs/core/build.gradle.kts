@@ -18,6 +18,7 @@ dependencies {
     // Observability
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.perf)
 
     // Feature flags
     implementation(libs.firebase.remote.config)

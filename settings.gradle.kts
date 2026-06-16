@@ -36,5 +36,16 @@ dependencyResolutionManagement {
 rootProject.name = "dhruv"
 
 include(":apps:finance:app")
+include(":apps:finance:data")
+include(":apps:finance:feature:calculator")
+include(":apps:finance:feature:loans")
+include(":apps:finance:feature:investments")
+include(":apps:finance:feature:tax")
+include(":apps:finance:feature:everyday")
+include(":apps:finance:feature:currency")
+include(":apps:finance:feature:unit")
+include(":apps:finance:feature:date")
+include(":apps:finance:feature:time")
+include(":apps:finance:feature:assistant")
 include(":libs:core")
 include(":libs:settings")

@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.SettingsRepository
+import com.dhruv.settings.SettingsRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

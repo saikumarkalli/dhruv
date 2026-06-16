@@ -13,8 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.SettingsRepository
-import com.example.ui.calculator.CalculatorViewModel
+import com.dhruv.settings.SettingsRepository
 import com.dhruv.core.ui.theme.appGradientBackground
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -23,7 +22,7 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
-    calculatorViewModel: CalculatorViewModel,
+    onClearHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Collect State
@@ -296,7 +295,7 @@ fun SettingsScreen(
     if (showClearHistoryDialog) {
         ClearHistoryDialog(
             onConfirm = {
-                calculatorViewModel.clearHistory()
+                onClearHistory()
                 showClearHistoryDialog = false
             },
             onDismiss = { showClearHistoryDialog = false }
