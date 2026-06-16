@@ -27,7 +27,7 @@ val financeFeatureDefaults: Map<String, Boolean> = mapOf(
     "unit" to true,
     "date" to false,
     "time" to false,
-    "assistant" to false,
+    "assistant" to true,
 )
 
 val platformModule = module {

@@ -18,9 +18,18 @@ class GeminiRepository(
     private val apiKey: String
 ) {
 
+    private companion object {
+        /**
+         * Moving alias that always points at the current Gemini Flash model, so a future
+         * model retirement never 404s us again. (The pinned "gemini-1.5-flash" was retired
+         * from the v1beta surface this SDK targets, which produced a NOT_FOUND/404.)
+         */
+        const val MODEL_NAME = "gemini-flash-latest"
+    }
+
     private val generativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = MODEL_NAME,
             apiKey = apiKey
         )
     }

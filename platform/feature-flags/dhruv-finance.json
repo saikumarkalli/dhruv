@@ -11,6 +11,6 @@
     "unit":        { "enabled": true,  "minVersion": "1.0.0" },
     "date":        { "enabled": false, "minVersion": "1.0.0" },
     "time":        { "enabled": false, "minVersion": "1.0.0" },
-    "assistant":   { "enabled": false, "minVersion": "1.2.0", "requiresConsent": true }
+    "assistant":   { "enabled": true,  "minVersion": "1.2.0", "requiresConsent": true }
   }
 }
