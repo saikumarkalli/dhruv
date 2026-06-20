@@ -11,8 +11,14 @@ Compose, Koin DI. Phase 4 split the former monolith into feature modules behind 
 See [FEATURES.md](FEATURES.md) for per-module detail (screens, ViewModels, data deps, flag keys).
 
 ## Feature flags
-`platform/feature-flags/dhruv-finance.json` (defaults mirrored in `com.example.di.PlatformModule.financeFeatureDefaults`).
-Currently OFF: `date`, `time`, `assistant` (assistant also `requiresConsent`).
+`platform/feature-flags/dhruv-finance.json` — `com.example.di.PlatformModule.financeFeatureDefaults`
+mirrors it field-for-field as a `Map<String, FeatureFlag>` (`enabled` + `minVersion` + `requiresConsent`),
+passed to `HardcodedFeatureFlagResolver` with `BuildConfig.VERSION_NAME`. The resolver gates a flag on
+`enabled && appVersion >= minVersion`, and exposes `requiresConsent(key)`.
+- OFF: `date`, `time`.
+- `assistant`: `enabled = true` but **gated to `minVersion 1.2.0`** — current app `versionName` is `1.0`,
+  so it is not surfaced yet; `isEnabled("assistant")` flips to true once the app ships ≥ 1.2.0. Also
+  `requiresConsent` (DPDP consent gate lives in `AssistantScreen`, state `ConsentNeeded → Idle`).
 
 ## Conventions (coding standards)
 - **DI = Koin**, not Hilt. Each feature exposes `val <name>Module = module { viewModel { … } }` in its `di/` package; the app aggregates them all in `CalculatorApplication`.

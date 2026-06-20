@@ -103,19 +103,22 @@ class CalculatorViewModel(
     private val _aiExplanation = MutableStateFlow<AiExplanationState>(AiExplanationState.Idle)
     val aiExplanation: StateFlow<AiExplanationState> = _aiExplanation.asStateFlow()
 
-    fun explainCurrentResult() {
-        val expr = _input.value
-        val res = _result.value
-        if (expr.isBlank() || res.isBlank() || res.startsWith("Error")) return
+    /**
+     * Sends whatever the user typed to the AI to be solved (including natural-language queries the
+     * offline engine can't evaluate) and surfaces a clean answer — not a step-by-step explanation.
+     */
+    fun solveCurrentInput() {
+        val query = _input.value
+        if (query.isBlank()) return
 
         viewModelScope.launch(coroutineExceptionHandler) {
             _aiExplanation.value = AiExplanationState.Loading
-            geminiRepository.explainCalculation(expr, res)
-                .onSuccess { explanation ->
-                    _aiExplanation.value = AiExplanationState.Success(explanation)
+            geminiRepository.solve(query)
+                .onSuccess { answer ->
+                    _aiExplanation.value = AiExplanationState.Success(answer)
                 }
                 .onFailure { exception ->
-                    _aiExplanation.value = AiExplanationState.Error(exception.localizedMessage ?: "Failed to get explanation")
+                    _aiExplanation.value = AiExplanationState.Error(exception.localizedMessage ?: "Failed to solve")
                 }
         }
     }

@@ -221,15 +221,15 @@ fun CalculatorScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // AI explain button (only visible when there is a valid result)
-                        if (result.isNotEmpty() && result != "Error" && !result.startsWith("Error") && inputState.text.isNotEmpty()) {
+                        // AI solve button (visible whenever there is something typed to solve)
+                        if (inputState.text.isNotEmpty()) {
                             IconButton(
-                                onClick = { viewModel.explainCurrentResult() },
+                                onClick = { viewModel.solveCurrentInput() },
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Explain with AI",
+                                    contentDescription = "Solve with AI",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -859,7 +859,7 @@ fun CalculatorScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "AI Calculation Explainer",
+                                text = "AI Solver",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = themeTextColor
@@ -884,13 +884,29 @@ fun CalculatorScreen(
                             }
                         }
                         is AiExplanationState.Success -> {
-                            Text(
-                                text = state.explanation,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = themeTextColor,
-                                modifier = Modifier.fillMaxWidth(),
-                                lineHeight = 22.sp
-                            )
+                            // Answer + short note: first non-blank line is the answer, the rest is context.
+                            val lines = state.explanation.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+                            val answer = lines.firstOrNull().orEmpty()
+                            val note = lines.drop(1).joinToString(" ")
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = answer,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = themeTextColor,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (note.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = note,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = themeSecText,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        lineHeight = 20.sp
+                                    )
+                                }
+                            }
                         }
                         is AiExplanationState.Error -> {
                             Text(

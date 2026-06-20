@@ -122,5 +122,30 @@ than a rewrite; a shared data module avoids a risky multi-database migration; hu
 navigation while honouring "every route in FeatureHost".
 **Consequences.** Docs saying "Hilt only" are corrected. `GeminiRepository` takes its key as a ctor
 arg (app supplies `BuildConfig.GEMINI_API_KEY`) so it can live in `:data` and be shared without a
-`feature → feature` edge. `date`/`time` ship flag-disabled; `assistant` disabled + consent-gated.
+`feature → feature` edge. `date`/`time` ship flag-disabled; `assistant` ships `enabled = true` but
+**version-gated** (`minVersion 1.2.0`, so hidden until the app reaches 1.2.0) and consent-gated — the
+`FeatureFlagResolver` now honors `minVersion`/`requiresConsent` (was boolean-only).
 `AlarmViewModel`/`BootReceiver` still touch Room directly (documented follow-up).
+
+## ADR-0011 — CI auto-increments patch version on every merge
+**Context.** The original `version-bump` CI job only incremented `versionCode` (build number) and
+updated `buildNumber` in `platform/versions.json`. The semantic `version` field (e.g. `"1.2.0"`)
+was never touched by automation. The `auto-tag` job reads that field to derive the tag name
+(`dhruv-finance-v1.2.0`), and it is idempotent — once a tag exists it is never re-created. Result:
+the tag was created exactly once (on the first merge) and silently skipped on every subsequent merge,
+so no new GitHub Release was ever produced. Additionally, `VERSION_NAME` was absent from
+`gradle.properties`, so `BuildConfig.VERSION_NAME` and the APK filename always defaulted to `"1.0"`.
+**Decision.** The `version-bump` job now also increments the patch segment (`MAJOR.MINOR.PATCH+1`)
+for every active app in `platform/versions.json` and writes `VERSION_NAME` to `gradle.properties`.
+Major and minor remain manually controlled. The commit message format changes from
+`auto-bump versionCode to N` to `auto-bump to vX.Y.Z (versionCode=N)`.
+**Why.** A patch bump on every merge matches the project's versioning semantics (PATCH = fix/merge)
+and requires zero developer action for the common case. It guarantees that every merge produces a
+unique tag and therefore a unique GitHub Release with a correctly-named APK. Manual major/minor
+bumps handle breaking changes and new feature modules respectively, consistent with semver intent.
+Keeping the decision in CI (not in developer workflow) removes a class of "forgot to bump" errors.
+**Consequences.** `platform/versions.json` and `gradle.properties` are modified by CI on every
+develop/main push (two extra changed files in the auto-bump commit). Developers must not manually
+edit `VERSION_CODE`, `VERSION_NAME`, or `buildNumber` — those are CI-owned. To ship a minor/major
+release, bump only the `version` field in `platform/versions.json` before merging; CI handles
+everything else from that baseline.

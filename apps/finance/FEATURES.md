@@ -76,4 +76,4 @@ Standalone online AI assistant. Shows a DPDP consent gate before any Gemini call
 - **Screens:** `AssistantScreen` (+ `AssistantUiState`)
 - **ViewModels:** `AssistantViewModel`
 - **Data deps:** `GeminiRepository` (from `:data`; online Gemini API).
-- **Flag:** `assistant` — **disabled**, `requiresConsent: true`.
+- **Flag:** `assistant` — `enabled = true` but **gated to `minVersion 1.2.0`** (hidden until the app ships ≥ 1.2.0; current `versionName` is `1.0`) and `requiresConsent: true` (consent gate in `AssistantScreen` before any Gemini call).
