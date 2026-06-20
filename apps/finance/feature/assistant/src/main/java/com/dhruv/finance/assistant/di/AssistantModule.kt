@@ -1,7 +1,9 @@
 package com.dhruv.finance.assistant.di
 
+import com.dhruv.finance.assistant.AssistantViewModel
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
-/** Koin module for the assistant feature. ViewModels are registered here in Phase C. */
 val assistantModule = module {
+    viewModel { AssistantViewModel(get(), get(), get()) }
 }

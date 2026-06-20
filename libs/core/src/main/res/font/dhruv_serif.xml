@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder. Replace with bundled Tont Serif .ttf when available:
+     1. Add tont_serif.ttf to this directory
+     2. Update Type.kt: brandSerifFamily = FontFamily(Font(R.font.tont_serif))
+     3. Remove this file. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+</font-family>

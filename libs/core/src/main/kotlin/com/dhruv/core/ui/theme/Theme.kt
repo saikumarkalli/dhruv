@@ -107,6 +107,7 @@ fun DhruvTheme(
         DhruvFont.DEFAULT -> FontFamily.Default
         DhruvFont.MONO -> FontFamily.Monospace
         DhruvFont.ROUNDED -> FontFamily.SansSerif // placeholder — real rounded font is a follow-up
+        DhruvFont.BRAND_SERIF -> brandSerifFamily
     }
     val resolvedTypography = if (font == DhruvFont.DEFAULT) {
         Typography

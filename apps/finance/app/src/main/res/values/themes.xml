@@ -2,4 +2,14 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+
+    <!-- Android 12+ SplashScreen API theme.
+         The animated icon references ic_dhruv_crest from :libs:core (merged via app dependency).
+         postSplashScreenTheme hands off to the existing NoActionBar theme once the splash exits. -->
+    <style name="Theme.DhruvSplash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0D1B2A</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_dhruv_crest</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
+    </style>
+
 </resources>
