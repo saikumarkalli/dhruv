@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dhruv.settings.SettingsRepository
+import com.dhruv.core.ui.components.DhruvWordmarkVertical
 import com.dhruv.core.ui.theme.appGradientBackground
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -72,6 +73,13 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Brand header
+        DhruvWordmarkVertical(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+            crestTint = MaterialTheme.colorScheme.primary,
+            textColor = MaterialTheme.colorScheme.onSurface
+        )
+
         // Headers
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
