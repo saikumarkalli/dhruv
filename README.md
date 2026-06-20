@@ -164,5 +164,50 @@ Once completed, the compiled outputs are located in:
 2.  **Graceful Degrades**: If zero network access is detected during currency conversion, local Room database tables automatically fallback to the last successfully cached currency rate exchange list.
 3.  **Arithmetic Resilience**: All core functions catch syntax, floating anomalies, zero division, and domain violations dynamically, displaying visual "Error" states without terminating the user's view context.
 
+## 🤖 AI Agent System
+
+Dhruv uses a multi-agent system built on Claude Code subagents (`.claude/agents/`). Each agent is a focused specialist that reads the platform contracts before acting; the main Claude thread orchestrates execution.
+
+### Agent roster
+
+| Agent | Role | Invoke when… |
+|---|---|---|
+| `dhruv-orchestrator` | 🗂️ Planner — decomposes a goal into a routed task graph | Multi-step request / vague goal / "plan this out" |
+| `dhruv-feature-builder` | 💻 Scaffold a complete Gradle feature module | "add feature X", "scaffold a new module" |
+| `dhruv-screen-designer` | 💻 Compose screens, UiState, MVVM wiring (Koin-corrected) | "add a screen", "build the UI" |
+| `dhruv-data-engineer` | 💻 Room entities, DAOs, repositories, migrations | "add persistence", "create a table", "data layer" |
+| `dhruv-test-writer` | 🧪 Unit/ViewModel/DAO/ArchUnit/screenshot tests | "write tests", "cover this", after new code lands |
+| `dhruv-debugger` | 🐛 Root-cause + minimal fix for builds/tests/crashes | Build red, test fails, stack trace, CI gate broken |
+| `dhruv-ci-engineer` | 🚀 GitHub Actions, build-logic, quality gates | "fix CI", "add a workflow", "re-enable static analysis" |
+| `dhruv-release-manager` | 🚀 Version bump, tag, GitHub Release APK | "release", "bump version", "ship it" |
+| `dhruv-arch-guardian` | 🏛️ Boundary/ADR questions; writes new ADRs | "is this allowed", "add a dependency", architecture change |
+| `dhruv-module-auditor` | ✅ Read-only pre-merge compliance audit | "ready to merge?", "audit this", any merge-bound flow |
+
+### Handoff contract
+
+Every agent bootstraps from `platform/AGENTS.md → PLATFORM.md → DECISIONS.md`, then its own task.  
+Shared context: `{ codebaseLanguage: Kotlin, stack: Compose/Koin/Room, projectRoot, app, module, branch }`.  
+Every merge-bound flow ends at **`dhruv-module-auditor`**, then optionally **`dhruv-release-manager`**.
+
+### Example flows
+
+```
+# One-liner feature
+"add a loans amortisation screen with Room persistence, tests, then release"
+→ dhruv-orchestrator emits graph
+→ dhruv-feature-builder → dhruv-data-engineer → dhruv-screen-designer
+→ dhruv-test-writer → dhruv-module-auditor → dhruv-release-manager
+
+# Broken CI gate
+"the detekt job is failing"
+→ dhruv-debugger (reproduces → root-cause → minimal fix → proves green)
+
+# Architecture question first
+"I want feature A to call feature B"
+→ dhruv-arch-guardian (verdict: FORBIDDEN per ArchUnit rule, propose ADR if needed)
+```
+
+---
+
 ## 📄 License
 This application is distributed under the standard corporate MIT License. Check details corresponding with engineering guidelines.

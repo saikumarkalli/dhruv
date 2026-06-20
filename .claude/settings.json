@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$branch = git rev-parse --abbrev-ref HEAD 2>$null; $lastCommit = git log -1 --format='%s' 2>$null; $dirty = git status --porcelain 2>$null | Measure-Object -Line | Select-Object -ExpandProperty Lines; $changedModules = git diff --name-only HEAD 2>$null | Where-Object { $_ -match '^apps/[^/]+/feature/' } | ForEach-Object { ($_ -split '/')[0..2] -join '/' } | Select-Object -Unique; $ctx = \"Branch: $branch | Last commit: $lastCommit | Uncommitted files: $dirty\"; if ($changedModules) { $ctx += \" | Changed feature modules: \" + ($changedModules -join ', ') }; @{ hookSpecificOutput = @{ hookEventName = 'SessionStart'; additionalContext = $ctx } } | ConvertTo-Json -Compress",
+            "timeout": 15,
+            "statusMessage": "Loading session context..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$j = $input | ConvertFrom-Json; $f = if ($j.tool_input.file_path) { $j.tool_input.file_path } else { $j.tool_response.filePath }; if ($f -match 'apps[/\\\\][^/\\\\]+[/\\\\]feature[/\\\\]') { @{ hookSpecificOutput = @{ hookEventName = 'PostToolUse'; additionalContext = 'Feature module file edited. Invoke dhruv-module-auditor on this module before finishing.' } } | ConvertTo-Json -Compress }",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Bash(./gradlew *test*)",
+            "prompt": "A Gradle test command just ran. The hook input is: $ARGUMENTS\n\nCheck tool_response for the exit code. If any tests failed (exit_code != 0), invoke dhruv-debugger with the full error output and failing test names. If all tests passed, output nothing and exit immediately.",
+            "statusMessage": "Checking test results...",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
