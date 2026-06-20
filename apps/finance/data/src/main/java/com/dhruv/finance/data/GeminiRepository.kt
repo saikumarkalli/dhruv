@@ -51,23 +51,69 @@ class GeminiRepository(
                 Keep the response concise, engaging, and format it nicely. Do not use markdown titles.
             """.trimIndent()
 
-            val response = generativeModel.generateContent(prompt)
-            val text = response.text
-            if (!text.isNullOrBlank()) {
-                Result.success(text)
-            } else {
-                Result.failure(Exception("Gemini returned an empty response."))
+            generateText(prompt)
+        } catch (e: Exception) {
+            mapError(e)
+        }
+    }
+
+    /**
+     * Solves whatever the user typed into the calculator — including natural-language math/finance
+     * queries the offline engine can't parse (e.g. "15% tip on 1240 split by 3"). Returns a clean,
+     * minimal answer (the final value on its own line) followed by one short sentence of context,
+     * rather than a step-by-step explanation.
+     */
+    suspend fun solve(input: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
+                return@withContext Result.failure(Exception("Gemini API key is not configured. Please add it to your .env file."))
             }
-        } catch (e: IOException) {
+            if (input.isBlank()) {
+                return@withContext Result.failure(Exception("Type something to solve first."))
+            }
+
+            val prompt = """
+                You are a precise calculator and finance assistant inside an Android app.
+                The user typed this into the calculator (it may be a plain math expression or a
+                natural-language question):
+
+                "$input"
+
+                Compute or resolve it and reply with a clean, neat answer. Reply with EXACTLY:
+                - First line: the final answer only — the number or value, with a currency symbol or
+                  unit if one is implied. Nothing else on this line.
+                - A blank line, then one short plain-language sentence (max ~20 words) of context.
+
+                Do not show your working or steps. Do not use markdown, headings, bullets, or labels
+                like "Answer:". Do not restate the question. If the input can't be solved or is
+                ambiguous, say so in one short line instead.
+            """.trimIndent()
+
+            generateText(prompt)
+        } catch (e: Exception) {
+            mapError(e)
+        }
+    }
+
+    private suspend fun generateText(prompt: String): Result<String> {
+        val response = generativeModel.generateContent(prompt)
+        val text = response.text
+        return if (!text.isNullOrBlank()) {
+            Result.success(text.trim())
+        } else {
+            Result.failure(Exception("Gemini returned an empty response."))
+        }
+    }
+
+    private fun mapError(e: Exception): Result<String> = when (e) {
+        is IOException ->
             Result.failure(Exception("Network error. Please check your internet connection and try again."))
-        } catch (e: GoogleGenerativeAIException) {
+        is GoogleGenerativeAIException ->
             if (e.message?.contains("quota", ignoreCase = true) == true) {
                 Result.failure(Exception("API quota exceeded. Please try again later."))
             } else {
                 Result.failure(Exception("Gemini API error: ${e.localizedMessage}"))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        else -> Result.failure(e)
     }
 }

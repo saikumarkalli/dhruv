@@ -202,12 +202,13 @@ jobs:
             apps/finance/app/build/outputs/apk/release/*.apk
           retention-days: 7
 
-  # ── Post-build: auto-bump versionCode ────────────────────────────────────
+  # ── Post-build: auto-bump version ────────────────────────────────────────
   # Runs only on push (not PRs) to develop/main after all 4 gates pass.
-  # Updates every area that tracks the build number, then commits back with
+  # Increments the patch version (MAJOR.MINOR.PATCH+1) in platform/versions.json,
+  # syncs VERSION_CODE + VERSION_NAME in gradle.properties, then commits back with
   # [skip ci] so this commit does not re-trigger the pipeline.
   version-bump:
-    name: "Post-build · Bump versionCode"
+    name: "Post-build · Bump version"
     runs-on: ubuntu-latest
     needs: [ build ]
     # Skip on PRs and on commits that were themselves made by this job
@@ -243,8 +244,9 @@ jobs:
           echo "new=$NEW"     >> "$GITHUB_OUTPUT"
           echo "VERSION_CODE bumped: $CURRENT → $NEW"
 
-      # ── 2. platform/versions.json — per-app buildNumber ────────────────
-      - name: Update buildNumber in platform/versions.json
+      # ── 2. platform/versions.json — auto-increment patch + buildNumber ──
+      - name: Bump patch version and buildNumber in platform/versions.json
+        id: version_json
         run: |
           NEW_CODE="${{ steps.bump.outputs.new }}"
           python3 - <<PYEOF
@@ -253,19 +255,42 @@ jobs:
           with open("platform/versions.json") as f:
               data = json.load(f)
 
-          # Record the global CI build number on each app that is not planned/future
+          first_version = None
           for app, meta in data.get("apps", {}).items():
               if meta.get("status") in ("planned", "future"):
                   continue
+              # Auto-increment patch: MAJOR.MINOR.PATCH → MAJOR.MINOR.PATCH+1
+              parts = meta["version"].split(".")
+              parts[2] = str(int(parts[2]) + 1)
+              meta["version"] = ".".join(parts)
               meta["buildNumber"] = int("$NEW_CODE")
+              if first_version is None:
+                  first_version = meta["version"]
 
           with open("platform/versions.json", "w") as f:
               json.dump(data, f, indent=2)
               f.write("\n")
-          PYEOF
-          echo "platform/versions.json updated"
 
-      # ── 3. Commit and push both files back ─────────────────────────────
+          with open("/tmp/new_version.txt", "w") as f:
+              f.write(first_version or "")
+          PYEOF
+          NEW_VERSION=$(cat /tmp/new_version.txt)
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "platform/versions.json updated (version=$NEW_VERSION, buildNumber=$NEW_CODE)"
+
+      # ── 2b. gradle.properties — sync VERSION_NAME ──────────────────────
+      - name: Update VERSION_NAME in gradle.properties
+        run: |
+          NEW_VERSION="${{ steps.version_json.outputs.version }}"
+          PROPS="gradle.properties"
+          if grep -q "^VERSION_NAME=" "$PROPS" 2>/dev/null; then
+            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$NEW_VERSION/" "$PROPS"
+          else
+            echo "VERSION_NAME=$NEW_VERSION" >> "$PROPS"
+          fi
+          echo "VERSION_NAME updated to $NEW_VERSION"
+
+      # ── 3. Commit and push all three files back ─────────────────────────
       - name: Commit version bump
         run: |
           git config user.name  "github-actions[bot]"
@@ -279,7 +304,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: auto-bump versionCode to ${{ steps.bump.outputs.new }} [skip ci]"
+          git commit -m "chore: auto-bump to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
 
           # --force-with-lease: safe push — aborts if the remote moved ahead of us
           git push --force-with-lease origin HEAD:${{ github.ref_name }}

@@ -246,6 +246,16 @@ Four unattended gates per PR — run on both `develop` and `main` (branch protec
    - `develop`: signed **APK** → attached to GitHub Release on version tag
    - `main`: signed **AAB** → Play Store ready (deployment deferred)
 
+**Post-build jobs** (push to `develop`/`main` only, after all 4 gates pass):
+
+- **`version-bump`** — atomically increments `MAJOR.MINOR.PATCH+1` for every active app in
+  `platform/versions.json`, increments `VERSION_CODE`, and writes `VERSION_NAME` to
+  `gradle.properties`. Commits all three changes back with `[skip ci]`.
+- **`auto-tag`** — reads the new version from `platform/versions.json` and pushes
+  `dhruv-<app>-v<version>` tag (idempotent: skips if the tag already exists). Tag push triggers
+  the Release workflow. Requires a `RELEASE_TOKEN` PAT; falls back to `GITHUB_TOKEN` (tag is
+  still created, but Release workflow must be started manually due to GitHub's anti-recursion rule).
+
 Tags on `develop` → GitHub Release with APK(s).
 Tags on `main` (future) → Play Store internal track.
 
@@ -253,8 +263,13 @@ Tags on `main` (future) → Play Store internal track.
 
 ## 12. Versioning
 
-`dhruv-{app}-vMAJOR.MINOR.PATCH` (MAJOR = breaking/arch, MINOR = new feature module, PATCH = fix).
-`versionCode` auto-incremented by CI only. Cross-module compatibility tracked in `versions.json`.
+`dhruv-{app}-vMAJOR.MINOR.PATCH` (MAJOR = breaking/arch, MINOR = new feature module, PATCH = fix/merge).
+
+- **Patch** is auto-incremented by CI on every merge to `develop`/`main` — no manual action needed.
+- **Minor/Major** are bumped manually in `platform/versions.json` before merging when the change warrants it; CI will then auto-increment patch from the new baseline on the next merge.
+- `versionCode` (Android build number) is also auto-incremented by CI on every merge.
+- `VERSION_NAME` in `gradle.properties` is kept in sync automatically by the `version-bump` job.
+- Cross-module compatibility tracked in `versions.json`.
 
 ---
 

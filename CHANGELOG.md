@@ -16,9 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI auto-tagging** (`ci.yml` `auto-tag` job): after a merge to `develop`/`main`, reads each active app's version from `platform/versions.json` and creates `dhruv-<app>-v<version>` idempotently — develop and main share the **same** version tag (created once, reused on promotion). The tag push triggers the Release workflow. Requires a PAT in the `RELEASE_TOKEN` secret (tags pushed with the default `GITHUB_TOKEN` do not trigger other workflows); falls back to `GITHUB_TOKEN` (tag created, Release run started manually).
 
 ### Changed
+- **CI auto-version-bump now increments the patch version on every merge** (`ci.yml` `version-bump` job). Previously the job only incremented `versionCode` (build number) and left the semantic version in `platform/versions.json` static, which caused `auto-tag` to skip tag creation after the first merge (the tag already existed). Now every merge to `develop`/`main` atomically increments `MAJOR.MINOR.PATCH+1` for all active apps, syncs `VERSION_NAME` into `gradle.properties` (so the APK and `BuildConfig.VERSION_NAME` are always accurate), and commits all changes back with `[skip ci]`. Major and minor versions are still bumped manually. See ADR-0011.
+
+### Changed
 - **DI corrected to Koin everywhere** (the Hilt Gradle plugin is incompatible with AGP 9). Stale "Hilt only" wording updated in `CLAUDE.md` and `PLATFORM.md`; see ADR-0010.
 - `GeminiRepository` moved to `:apps:finance:data` and now takes the API key as a constructor parameter (app supplies `BuildConfig.GEMINI_API_KEY` via Koin) so it no longer depends on the app's `BuildConfig` — keeps it shareable by `calculator` and `assistant` without a `feature → feature` edge.
 - Thematic grouping of the 10 original Finance calculators into `loans`/`investments`/`tax`/`everyday` (supersedes the originally-proposed separate `emi`/`sip`/`loan` modules).
+- **Feature-flag resolver now honors `minVersion` + `requiresConsent`** (previously boolean-only). `:libs:core` adds a `FeatureFlag` model + lenient `SemVer`; `HardcodedFeatureFlagResolver` takes `Map<String, FeatureFlag>` + the running `versionName` and gates on `enabled && appVersion >= minVersion`. `PlatformModule.financeFeatureDefaults` now mirrors `dhruv-finance.json` field-for-field. Effect: `assistant` is `enabled = true` but stays hidden until the app ships ≥ `1.2.0`. Covered by `HardcodedFeatureFlagResolverTest`.
 
 ### Removed / relocated tests
 - Relocated `CalculatorEngine` tests → `:feature:calculator`; converter/formatter tests → `:feature:unit`.
@@ -29,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Follow-ups / known debt
 - `time` module: `BootReceiver`/`AlarmViewModel` access Room (`AppDatabase`/`AlarmDao`) directly rather than via a repository; `time` declares `room-runtime` for this. Refactor to a repository later (`feature → data via Repository only`).
-- `date` and `time` ship flag-disabled (code preserved); `assistant` disabled + `requiresConsent`.
+- `date` and `time` ship flag-disabled (code preserved); `assistant` is `enabled = true` but version-gated (`minVersion 1.2.0`) + `requiresConsent`, so it surfaces only once the app ships ≥ 1.2.0.
 - `detekt` is not wired into the build (`./gradlew detekt` task is absent — the `dhruv.detekt` convention plugin is applied by no module). Pre-existing; wire up separately.
 - The legacy `dhruv-compose-screen` SKILL is stale (shows Hilt / `DhruvTheme.colors` / `crashReporter.report`); `dhruv-feature-scaffold` is authoritative for the real Koin patterns.
 - App `build.gradle.kts` still lists unused Room/network/Moshi/KSP deps (harmless) — prune in a cleanup pass.
