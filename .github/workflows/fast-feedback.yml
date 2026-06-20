@@ -1,0 +1,66 @@
+name: Fast Feedback
+
+# Quick validation on every feature-branch commit (pre-PR feedback). Deliberately
+# LIGHTWEIGHT: compile the debug variant + run debug unit tests (incl. ArchUnit).
+# It does NOT run OWASP, signing, the release build, version bump, or tagging — those
+# belong to the full CI gate (ci.yml) on the PR and on merge to develop/main.
+#
+# Why a separate workflow: ci.yml intentionally does not trigger on feature-branch
+# pushes, so feature work got no feedback until a PR was opened. This closes that gap
+# cheaply. Once a PR is open, ci.yml (pull_request) is the authoritative merge gate;
+# this fast run is just early signal and is auto-cancelled as you push new commits.
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'chore/**'
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch — feature work is pushed rapidly and only
+# the latest commit needs validating. (Safe to cancel: this is not a release path.)
+concurrency:
+  group: fast-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "21"
+  # Daemon stays ON; gradle.properties drives parallel/caching/workers/config-cache.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+
+jobs:
+  compile-and-test:
+    name: "Compile + unit tests (debug)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      # Read-only: reuse the build cache populated by develop/main runs for fast warm
+      # builds, without letting transient feature-branch outputs write to the shared cache.
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+
+      # Debug compile + debug unit tests + ArchUnit in a single invocation.
+      # --continue: surface all failures across modules in one run.
+      - name: Assemble debug + unit tests
+        run: ./gradlew :apps:finance:app:assembleDebug testDebugUnitTest --continue
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-feedback-test-reports
+          path: "**/build/reports/tests/"
+          retention-days: 3

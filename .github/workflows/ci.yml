@@ -4,20 +4,36 @@ on:
   # Feature branches (feat/**, fix/**, chore/**) are validated via their PR below,
   # not on push — pushing a branch that already has an open PR would otherwise run
   # the pipeline twice (once per event) on the same commit.
+  #
+  # NOTE: no `paths-ignore`. With branch protection + required status checks, a push
+  # that touches only ignored paths leaves the required checks permanently "pending"
+  # and blocks the merge. A production pipeline must run reliably on every push/PR.
+  # (To skip docs-only builds safely later, use a path-filter gate job that still
+  #  reports the required status — not trigger-level paths-ignore.)
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
-# Skip if the commit was made by the version-bump job itself
-# (the job adds [skip ci] to its message, but this is a belt-and-suspenders guard).
+# Concurrency: cancel superseded PR runs (saves minutes during iteration), but NEVER
+# cancel a push to a protected branch — each merge to develop/main must run to
+# completion so it produces its build artifact, version bump, and release tag.
+# A cancelled run marks its downstream jobs (build, version-bump) as skipped, which
+# is the "cancelled + build skipped after merge" failure mode this guards against.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least-privilege default; jobs that need more elevate locally.
+permissions:
+  contents: read
 
 env:
   JAVA_VERSION: "21"
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+  # Let gradle.properties drive parallel/caching/workers (parallel=true, caching=true,
+  # workers.max=4, configuration-cache=true). Only set memory here. The daemon stays ON:
+  # on a one-shot runner it keeps a warm JVM across the multiple tasks in a job.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
 
 jobs:
   # ── Gate 1: Static analysis ────────────────────────────────────────────────
@@ -73,10 +89,14 @@ jobs:
             **/build/reports/detekt/*.html
             build/reports/ktlint/ktlint.xml
 
-  # ── Gate 2: Security scan ─────────────────────────────────────────────────
+  # ── Gate 2: Security scan (GitLeaks) ──────────────────────────────────────
+  # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP (slow NVD
+  # download, warn-only) lives in its own non-blocking job below so it never sits
+  # on the build's critical path.
   security:
     name: "Gate 2 · Security"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # gitleaks-action posts a PR summary comment; without these it fails on PR
     # events with "Resource not accessible by integration".
     permissions:
@@ -93,6 +113,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # ── Gate 2b: OWASP dependency check (non-blocking, off critical path) ──────
+  # Runs in parallel with everything; NOT in build's `needs`. The NVD database
+  # (~700 MB) is cached month-by-month so each run is an incremental update
+  # instead of a full download.
+  owasp:
+    name: "Gate 2b · OWASP (non-blocking)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -103,6 +134,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           cache-read-only: true
+
+      - name: Compute NVD cache key (year-month)
+        id: nvd
+        run: echo "ym=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      # Persist the OWASP NVD database across runs → incremental update only.
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: nvd-${{ steps.nvd.outputs.ym }}
+          restore-keys: |
+            nvd-
 
       # OWASP: warn-only until the dependency-check plugin is wired in build-logic.
       # Flip continue-on-error to false once the plugin is configured.
@@ -121,6 +165,7 @@ jobs:
   tests:
     name: "Gate 3 · Tests + ArchUnit"
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -130,15 +175,21 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
+      # tests is the cache WRITER (runs early on the critical path): it compiles the
+      # whole project once and populates the Gradle build cache so the build job
+      # reuses those compile/KSP outputs instead of recompiling cold.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-read-only: true
+          cache-read-only: false
 
+      # testDebugUnitTest only — `test` also runs testReleaseUnitTest over the SAME
+      # source, doubling the run for no extra coverage. ArchUnit (DependencyRulesTest)
+      # lives in the debug variant, so it still runs.
       # --continue: run all test tasks across all modules even if one fails,
       # so we get a complete failure report. The job still fails (non-zero exit).
       - name: Unit tests + ArchUnit
-        run: ./gradlew test --continue
+        run: ./gradlew testDebugUnitTest --continue
 
       - name: Upload test reports
         # always() ensures reports are uploaded even on test failure
@@ -148,10 +199,14 @@ jobs:
           name: test-reports
           path: "**/build/reports/tests/"
 
-  # ── Gate 4: Build ─────────────────────────────────────────────────────────
+  # ── Gate 4: Build (debug) ─────────────────────────────────────────────────
+  # Validates compile + KSP + Compose on every PR and push. The signed RELEASE
+  # build is NOT here — it is built in the `release` job below AFTER the version is
+  # bumped, so the published APK carries the correct (bumped) versionName/versionCode.
   build:
-    name: "Gate 4 · Build + APK size"
+    name: "Gate 4 · Build (debug)"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [ security, tests ]
     steps:
       - uses: actions/checkout@v4
@@ -162,54 +217,41 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
+      # Reads the warm build cache populated by the tests job (read-only here).
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
-
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        with:
+          cache-read-only: true
 
       - name: Assemble debug APK
         run: ./gradlew :apps:finance:app:assembleDebug
 
-      - name: Assemble release APK (signed)
-        run: ./gradlew :apps:finance:app:assembleRelease
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/upload-key.jks
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: APK size guard (fail if > 50 MB)
-        run: |
-          APK=$(find apps/finance/app/build/outputs/apk/release -name "*.apk" | head -1)
-          SIZE_MB=$(du -m "$APK" | cut -f1)
-          echo "Release APK size: ${SIZE_MB} MB"
-          if [ "$SIZE_MB" -gt 50 ]; then
-            echo "❌ APK exceeds 50 MB limit (${SIZE_MB} MB)"
-            exit 1
-          fi
-          echo "✅ APK within size limit"
-
-      - name: Upload APKs
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: apks
-          path: |
-            apps/finance/app/build/outputs/apk/debug/*.apk
-            apps/finance/app/build/outputs/apk/release/*.apk
+          name: debug-apk
+          path: apps/finance/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
           retention-days: 7
 
-  # ── Post-build: auto-bump version ────────────────────────────────────────
-  # Runs only on push (not PRs) to develop/main after all 4 gates pass.
-  # Increments the patch version (MAJOR.MINOR.PATCH+1) in platform/versions.json,
-  # syncs VERSION_CODE + VERSION_NAME in gradle.properties, then commits back with
-  # [skip ci] so this commit does not re-trigger the pipeline.
-  version-bump:
-    name: "Post-build · Bump version"
+  # ── Post-build: Release (bump → build → tag → publish) ────────────────────
+  # Runs only on push (not PRs) to develop/main after all 4 gates pass. Does the
+  # whole release IN THIS RUN so it cannot silently half-complete:
+  #   1. Bump patch version (MAJOR.MINOR.PATCH+1) in platform/versions.json +
+  #      VERSION_CODE/VERSION_NAME in gradle.properties.
+  #   2. Build the SIGNED release APK *at the bumped version* (gradle reads the just-
+  #      written gradle.properties), and verify it is signed and within the size budget.
+  #   3. Commit the bump back with [skip ci]; create + push the dhruv-<app>-v<version> tag.
+  #   4. Publish a GitHub Release with the APK attached.
+  #
+  # No RELEASE_TOKEN / cross-workflow trigger needed: creating a Release with the
+  # default GITHUB_TOKEN works fine (the anti-recursion rule only blocks a pushed
+  # tag from *triggering* another workflow, which we no longer rely on). Do NOT set
+  # RELEASE_TOKEN — release.yml would then also fire on the tag and double-publish.
+  release:
+    name: "Post-build · Release (bump + build + publish)"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [ build ]
     # Skip on PRs and on commits that were themselves made by this job
     if: |
@@ -217,16 +259,17 @@ jobs:
       (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
       !contains(github.event.head_commit.message, '[skip ci]')
     permissions:
-      contents: write
+      contents: write  # push bump commit + tag, create GitHub Release
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # Fetch the branch head so we can push back to it
           ref: ${{ github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 1. gradle.properties — VERSION_CODE ────────────────────────────
+      # ── 1. Bump version files ──────────────────────────────────────────
       - name: Increment VERSION_CODE in gradle.properties
         id: bump
         run: |
@@ -244,7 +287,6 @@ jobs:
           echo "new=$NEW"     >> "$GITHUB_OUTPUT"
           echo "VERSION_CODE bumped: $CURRENT → $NEW"
 
-      # ── 2. platform/versions.json — auto-increment patch + buildNumber ──
       - name: Bump patch version and buildNumber in platform/versions.json
         id: version_json
         run: |
@@ -278,7 +320,6 @@ jobs:
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           echo "platform/versions.json updated (version=$NEW_VERSION, buildNumber=$NEW_CODE)"
 
-      # ── 2b. gradle.properties — sync VERSION_NAME ──────────────────────
       - name: Update VERSION_NAME in gradle.properties
         run: |
           NEW_VERSION="${{ steps.version_json.outputs.version }}"
@@ -290,7 +331,61 @@ jobs:
           fi
           echo "VERSION_NAME updated to $NEW_VERSION"
 
-      # ── 3. Commit and push all three files back ─────────────────────────
+      # ── 2. Build the SIGNED release APK at the bumped version ───────────
+      # gradle reads VERSION_CODE/VERSION_NAME from the gradle.properties just
+      # written above, so the APK carries the correct version. Built BEFORE any
+      # push/tag so a build failure aborts the release cleanly (no orphan tag).
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Assemble signed release APK
+        run: ./gradlew :apps:finance:app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # Locate + VERIFY the APK: must exist, must be signed (no *-unsigned*), must
+      # be within the 50 MB budget. Failing here aborts before any tag/release, so
+      # we never publish a release with a missing or unsigned APK.
+      - name: Locate and verify signed APK
+        id: apk
+        run: |
+          DIR="apps/finance/app/build/outputs/apk/release"
+          APK=$(find "$DIR" -name "*.apk" ! -name "*unsigned*" | head -1)
+          if [ -z "$APK" ]; then
+            echo "❌ No signed release APK found in $DIR" >&2
+            find "$DIR" -name "*.apk" -printf '  present: %p\n' 2>/dev/null || true
+            exit 1
+          fi
+          VERSION="${{ steps.version_json.outputs.version }}"
+          DEST="dhruv-finance-v${VERSION}-release.apk"
+          cp "$APK" "$DEST"
+          SIZE_MB=$(du -m "$DEST" | cut -f1)
+          echo "Release APK: $DEST (${SIZE_MB} MB)"
+          if [ "$SIZE_MB" -gt 50 ]; then
+            echo "❌ APK exceeds 50 MB limit (${SIZE_MB} MB)" >&2
+            exit 1
+          fi
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          echo "✅ Signed APK verified within size budget"
+
+      # ── 3. Commit the bump + create/push the tag ───────────────────────
       - name: Commit version bump
         run: |
           git config user.name  "github-actions[bot]"
@@ -298,75 +393,46 @@ jobs:
 
           git add gradle.properties platform/versions.json
 
-          # Bail gracefully if nothing changed (idempotent re-runs)
           if git diff --cached --quiet; then
             echo "Nothing to commit — skipping push."
             exit 0
           fi
 
           git commit -m "chore: auto-bump to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
-
           # --force-with-lease: safe push — aborts if the remote moved ahead of us
           git push --force-with-lease origin HEAD:${{ github.ref_name }}
 
-  # ── Post-build: auto-tag the release version ──────────────────────────────
-  # Runs after the versionCode bump on a push (merge) to develop/main. Reads the
-  # semantic version from platform/versions.json and creates `dhruv-<app>-v<version>`
-  # for every active app — IDEMPOTENTLY: the tag is created once (typically on the
-  # develop merge) and the same version is reused when develop is promoted to main,
-  # so develop and main always carry the SAME version tag (never a duplicate/clash).
-  # Pushing the tag triggers the Release workflow (APK on develop; AAB on main is deferred).
-  #
-  # IMPORTANT: a tag pushed with the default GITHUB_TOKEN does NOT trigger other
-  # workflows (GitHub's anti-recursion rule), so Release would not fire. Provide a PAT
-  # in the `RELEASE_TOKEN` secret (repo + workflow scope). Without it we fall back to
-  # GITHUB_TOKEN — the tag is still created, but you must run Release manually.
-  auto-tag:
-    name: "Post-build · Auto-tag version"
-    runs-on: ubuntu-latest
-    needs: [ version-bump ]
-    if: |
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
-      !contains(github.event.head_commit.message, '[skip ci]')
-    permissions:
-      contents: write
+      # Tag points at the bump commit just pushed. Idempotent: skip if it exists
+      # (same version reused when develop is promoted to main → no duplicate tag).
+      - name: Resolve release tag (finance)
+        id: tagname
+        run: echo "tag=dhruv-finance-v${{ steps.version_json.outputs.version }}" >> "$GITHUB_OUTPUT"
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Branch head — includes the versionCode bump commit just pushed by version-bump.
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-          fetch-tags: true
-          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-
-      # Derive one tag per active (non-planned/future) app from the source-of-truth version file.
-      - name: Resolve release tags from platform/versions.json
-        run: |
-          python3 - <<'PYEOF' > tags.txt
-          import json
-          data = json.load(open("platform/versions.json"))
-          for app, meta in data.get("apps", {}).items():
-              if meta.get("status") in ("planned", "future"):
-                  continue
-              print(f"dhruv-{app}-v{meta['version']}")
-          PYEOF
-          echo "Resolved release tags:"; cat tags.txt
-
-      # Create + push each tag only if it does not already exist (same version → no re-tag).
-      - name: Create & push version tags (idempotent)
+      - name: Create & push version tag (idempotent)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch --tags --quiet || true
-          while IFS= read -r TAG; do
-            [ -z "$TAG" ] && continue
-            if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-              echo "↺ ${TAG} already exists — same version reused on ${{ github.ref_name }}, not re-tagging."
-              continue
-            fi
-            git tag -a "${TAG}" -m "Release ${TAG} (auto-tagged from ${{ github.ref_name }} @ ${GITHUB_SHA::7})"
+          TAG="${{ steps.tagname.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "↺ ${TAG} already exists — not re-tagging."
+          else
+            git tag -a "${TAG}" -m "Release ${TAG} (from ${{ github.ref_name }} @ ${GITHUB_SHA::7})"
             git push origin "refs/tags/${TAG}"
-            echo "✅ Created and pushed ${TAG} → triggers Release workflow."
-          done < tags.txt
+            echo "✅ Created and pushed ${TAG}."
+          fi
+
+      # ── 4. Publish the GitHub Release with the APK attached ─────────────
+      # fail_on_unmatched_files guarantees we never publish a release without the APK.
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tagname.outputs.tag }}
+          name: "Dhruv finance ${{ steps.version_json.outputs.version }}"
+          generate_release_notes: true
+          files: ${{ steps.apk.outputs.path }}
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

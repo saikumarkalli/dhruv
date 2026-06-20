@@ -1,11 +1,12 @@
 name: Release
 
+# MANUAL re-publish tool only. The normal release is built and published by ci.yml's
+# `release` job in the same run as the merge (APK + GitHub Release, no PAT needed).
+# This workflow exists to RE-build/RE-publish a specific existing tag on demand —
+# run it via "Run workflow" against the tag ref. It deliberately does NOT trigger on
+# tag push, so it can never double-publish against ci.yml.
 on:
-  push:
-    tags:
-      - "dhruv-finance-v*"
-      - "dhruv-tools-v*"
-      - "dhruv-vault-v*"
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
@@ -13,12 +14,14 @@ concurrency:
 
 env:
   JAVA_VERSION: "21"
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  # Daemon on: keeps a warm JVM across the build's multiple Gradle tasks in this run.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
 
 jobs:
   release:
     name: "Build & Publish Release"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write  # needed to create GitHub Release
 
@@ -46,7 +49,10 @@ jobs:
           echo "version=$VERSION"    >> "$GITHUB_OUTPUT"
           echo "tag=$TAG"            >> "$GITHUB_OUTPUT"
 
-      # ── Run CI gates first ───────────────────────────────────────────────
+      # ── Build environment ────────────────────────────────────────────────
+      # No test re-run here: the `dhruv-*-v*` tag is created by ci.yml's
+      # version-bump job only AFTER Gate 3 (tests + ArchUnit) passed on this exact
+      # commit. Re-running them would be pure duplication. Build + sign + publish only.
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -55,9 +61,8 @@ jobs:
 
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
-
-      - name: Run tests
-        run: ./gradlew ${{ steps.tag.outputs.module }}:test
+        with:
+          cache-read-only: true
 
       # ── Build signed APK ─────────────────────────────────────────────────
       - name: Decode keystore
@@ -78,7 +83,14 @@ jobs:
         id: apk
         run: |
           APP="${{ steps.tag.outputs.app }}"
-          APK=$(find "apps/$APP/app/build/outputs/apk/release" -name "*.apk" | head -1)
+          DIR="apps/$APP/app/build/outputs/apk/release"
+          # Prefer a signed APK; never pick a *-unsigned.apk.
+          APK=$(find "$DIR" -name "*.apk" ! -name "*unsigned*" | head -1)
+          if [ -z "$APK" ]; then
+            echo "❌ No signed release APK found in $DIR" >&2
+            find "$DIR" -name "*.apk" -printf '  present: %p\n' 2>/dev/null || true
+            exit 1
+          fi
           FILENAME="dhruv-${APP}-${{ steps.tag.outputs.version }}-release.apk"
           mv "$APK" "$FILENAME"
           echo "path=$FILENAME" >> "$GITHUB_OUTPUT"
@@ -110,5 +122,6 @@ jobs:
           name: "Dhruv ${{ steps.tag.outputs.app }} ${{ steps.tag.outputs.version }}"
           body: ${{ steps.changelog.outputs.changelog }}
           files: ${{ steps.apk.outputs.path }}
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(steps.tag.outputs.version, '-') }}
