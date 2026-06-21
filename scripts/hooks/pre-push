@@ -1,0 +1,75 @@
+#!/bin/sh
+# Compliance audit on feature modules before push — deterministic, zero AI tokens.
+#
+# Versioned, shared hook. Activate once per clone with:
+#     git config core.hooksPath scripts/hooks
+# (see scripts/hooks/README.md). Audits every feature module changed vs
+# origin/develop against the project's hard rules.
+
+CHANGED=$(git diff --name-only origin/develop...HEAD 2>/dev/null \
+  | grep -E '^apps/[^/]+/feature/' \
+  | sed -E 's|^(apps/[^/]+/feature/[^/]+)/.*|\1|' \
+  | sort -u)
+
+if [ -z "$CHANGED" ]; then
+  exit 0
+fi
+
+echo "Dhruv: checking feature modules before push..."
+
+PASS=0
+FAIL=0
+
+for MODULE in $CHANGED; do
+  APP=$(echo "$MODULE" | cut -d/ -f2)
+  MOD_NAME=$(echo "$MODULE" | cut -d/ -f4)
+  ISSUES=""
+
+  # Check 1: FeatureHost wrapping.
+  # Routes are wrapped in FeatureHost at the app/hub layer (e.g. FeatureHubs.kt /
+  # MainActivity), not inside the feature module itself — so accept either the module
+  # using FeatureHost directly, or the app shell wrapping this module's route as
+  # FeatureHost("<module>", ...).
+  if ! grep -rq "FeatureHost" "$MODULE/" 2>/dev/null && \
+     ! grep -rq "FeatureHost(\"$MOD_NAME\"" "apps/$APP/app/" 2>/dev/null; then
+    ISSUES="$ISSUES\n  ❌ Missing FeatureHost wrapping for '$MOD_NAME' (module or apps/$APP/app)"
+  fi
+
+  # Check 2: Feature flag entry (flag files are named dhruv-<app>.json in this repo)
+  FLAG_FILE="platform/feature-flags/dhruv-$APP.json"
+  if [ ! -f "$FLAG_FILE" ] || ! grep -q "\"$MOD_NAME\"" "$FLAG_FILE" 2>/dev/null; then
+    ISSUES="$ISSUES\n  ❌ Missing feature flag entry for '$MOD_NAME' in $FLAG_FILE"
+  fi
+
+  # Check 3: Koin module declaration
+  if ! grep -rq "fun.*[Mm]odule\(\)" "$MODULE/" 2>/dev/null && \
+     ! grep -rq "val.*[Mm]odule.*=.*module" "$MODULE/" 2>/dev/null; then
+    ISSUES="$ISSUES\n  ❌ No Koin module declared in $MODULE"
+  fi
+
+  # Check 4: No hardcoded API keys or secrets
+  SECRETS=$(grep -rE "(api_key|apiKey|API_KEY|sk-ant-|AIza)['\"]?\s*[:=]\s*['\"][A-Za-z0-9_\-]{10,}" \
+    "$MODULE/" 2>/dev/null | grep -v "BuildConfig\|secrets\|//" || true)
+  if [ -n "$SECRETS" ]; then
+    ISSUES="$ISSUES\n  ❌ Possible hardcoded secret in $MODULE"
+  fi
+
+  if [ -z "$ISSUES" ]; then
+    echo "  ✅ $MODULE"
+    PASS=$((PASS + 1))
+  else
+    echo "  ❌ $MODULE"
+    printf "%b\n" "$ISSUES"
+    FAIL=$((FAIL + 1))
+  fi
+done
+
+echo ""
+if [ "$FAIL" -eq 0 ]; then
+  echo "AUDIT PASSED — $PASS module(s) checked. Push proceeding."
+  exit 0
+else
+  echo "AUDIT FAILED — $FAIL violation(s) found. Fix them before pushing."
+  echo "Tip: run /audit for a detailed AI-powered review."
+  exit 1
+fi
