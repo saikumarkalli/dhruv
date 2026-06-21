@@ -149,3 +149,32 @@ develop/main push (two extra changed files in the auto-bump commit). Developers 
 edit `VERSION_CODE`, `VERSION_NAME`, or `buildNumber` — those are CI-owned. To ship a minor/major
 release, bump only the `version` field in `platform/versions.json` before merging; CI handles
 everything else from that baseline.
+
+## ADR-0012 — PR CI summary comment, posted via a dedicated "Dhruv Bot" GitHub App
+**Context.** Before this change, the only thing in `ci.yml` that ever commented on a PR was
+GitLeaks (`gitleaks/gitleaks-action@v2`), and only when it found a leaked secret — a clean run
+produced zero PR feedback, indistinguishable from CI not having run at all. Separately, the default
+`actions/github-script` identity (`GITHUB_TOKEN`) always posts as `github-actions[bot]`, whose
+name/avatar cannot be customized.
+**Decision.** Added a `pr-summary` job (Post-build, runs only on `pull_request`, `if: always()`)
+that posts/updates a single sticky comment (matched via a hidden HTML marker, edited in place on
+every push rather than duplicated) summarizing all four gate results — security, OWASP, tests,
+build — on every PR run, pass or fail. To brand the comment, a dedicated GitHub App named
+**"Dhruv Bot"** (custom avatar, `Issues: Read & write` permission only, installed solely on this
+repo) mints a short-lived installation token via `actions/create-github-app-token@v1`, fed from the
+`DHRUV_BOT_APP_ID` / `DHRUV_BOT_PRIVATE_KEY` repo secrets. If minting fails for any reason (secrets
+missing, App not installed, transient API error), the step falls back to the default `GITHUB_TOKEN`
+(`steps.dhruv-bot.outputs.token || github.token`) so commenting never breaks the pipeline.
+**Why.** A GitHub App is the only way to get a custom bot name/avatar with the official "Bot" badge;
+a long-lived PAT under a fake human account was rejected as a less secure, harder-to-rotate
+alternative. Scoping the App to `Issues: Read & write` only (not `Pull requests`) follows
+least-privilege, since PR conversation comments are implemented via the Issues API. The
+`continue-on-error` + `||` fallback chain mirrors the same "never block merge over a comment"
+principle already applied to GitLeaks' fork-PR token limitation.
+**Consequences.** Two new repo secrets (`DHRUV_BOT_APP_ID`, `DHRUV_BOT_PRIVATE_KEY`) exist in GitHub
+Actions secrets — never in the repo or APK, consistent with the GitLeaks-gated "no secrets in repo"
+rule. `pr-summary` is intentionally excluded from branch-protection required checks: because
+`continue-on-error: true` makes the job always report success, requiring it would be purely
+cosmetic — it is informational only, never a merge gate. OWASP's row in the comment will always show
+✅ regardless of actual findings (pre-existing `continue-on-error: true` on that scan step, §11);
+this is a known, accepted limitation, not something this change fixes.
