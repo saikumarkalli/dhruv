@@ -12,5 +12,8 @@ enum class DhruvFont {
     ROUNDED,
 
     /** Monospace font family. */
-    MONO
+    MONO,
+
+    /** Brand serif (Cormorant Garamond downloadable font) — used for wordmarks and brand headers. */
+    BRAND_SERIF
 }

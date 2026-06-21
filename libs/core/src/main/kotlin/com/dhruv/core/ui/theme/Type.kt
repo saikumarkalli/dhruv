@@ -6,6 +6,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+// Placeholder until the actual Tont Serif .ttf is bundled as res/font/tont_serif.ttf.
+// Replace with: FontFamily(Font(R.font.tont_serif))
+val brandSerifFamily = FontFamily.Serif
+
+/** Wordmark text style — used by [com.dhruv.core.ui.components.DhruvWordmark]. */
+val wordmarkStyle = TextStyle(
+    fontFamily = brandSerifFamily,
+    fontWeight = FontWeight.Normal,
+    fontSize = 28.sp,
+    letterSpacing = 0.5.sp
+)
+
 // Set of Material typography styles to start with
 val Typography =
   Typography(

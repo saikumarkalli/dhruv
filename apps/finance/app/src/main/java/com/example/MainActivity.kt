@@ -40,10 +40,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -54,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.flags.FeatureFlagResolver
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
+import com.dhruv.core.ui.components.DhruvWordmark
 import com.dhruv.core.ui.theme.AppTheme
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.SectionTheme
@@ -71,6 +75,8 @@ import com.example.ui.hub.ConverterHub
 import com.example.ui.hub.FinanceHub
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.SettingsViewModel
+import com.example.ui.splash.SplashScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -117,6 +123,17 @@ class MainActivity : ComponentActivity() {
                 accentColorHex = appSettings.accentColorHex,
                 font = appSettings.fontFamily
             ) {
+                // Branded launch splash: show the dhruv wordmark briefly, then reveal the app.
+                var showSplash by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(1200)
+                    showSplash = false
+                }
+                if (showSplash) {
+                    SplashScreen()
+                    return@DhruvTheme
+                }
+
                 // Build the visible tabs. Feature flags gate Date / Time / Assistant; Converter and
                 // Finance are hubs shown when any of their sub-features is enabled.
                 val tabs = remember(resolver) {
@@ -200,7 +217,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
                         TopAppBar(
-                            title = { },
+                            title = {
+                                DhruvWordmark(
+                                    crestTint = MaterialTheme.colorScheme.primary,
+                                    textColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             actions = {
                                 IconButton(
                                     onClick = {

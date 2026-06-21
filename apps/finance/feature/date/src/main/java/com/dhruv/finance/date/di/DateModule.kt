@@ -1,7 +1,9 @@
 package com.dhruv.finance.date.di
 
+import com.dhruv.finance.date.DateViewModel
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
-/** Koin module for the date feature. ViewModels are registered here in Phase C. */
 val dateModule = module {
+    viewModel { DateViewModel(get(), get()) }
 }
