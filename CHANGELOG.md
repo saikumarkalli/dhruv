@@ -32,8 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Launch crash when Firebase is not configured.** With no `google-services.json`, `FirebaseApp` is uninitialized, so the first `CrashlyticsReporter.setModule(...)` (invoked while Koin built `SettingsRepositoryImpl` at startup) threw `IllegalStateException` and killed the app before any UI. `CrashlyticsReporter` and `FirebasePerformanceTracer` (`:libs:core`) now resolve Firebase defensively (`runCatching`) and degrade to no-op when it's absent — observability never crashes the app (PLATFORM.md §4). Add `google-services.json` to enable real Crashlytics/Performance.
 
+### Removed
+- **Alarm sub-feature** dropped from the `time` module (Stopwatch and Timer remain). Removed `AlarmScreen`/`AlarmViewModel`/`AddAlarmSheet`/`MathPuzzleActivity`, the `service/alarm/` scheduler/receiver/service classes, and the shared `AlarmEntity`/`AlarmDao` (Room migration `MIGRATION_4_5` drops the now-unused `alarms` table). This also removes the module's only AndroidManifest component registrations (`Activity`/`BroadcastReceiver`s/`Service`), its only Room dependency, and six device permissions (`SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`, `USE_FULL_SCREEN_INTENT`) — and with it, the `BootReceiver`/`AlarmViewModel` repository-bypass exception noted below.
+
 ### Follow-ups / known debt
-- `time` module: `BootReceiver`/`AlarmViewModel` access Room (`AppDatabase`/`AlarmDao`) directly rather than via a repository; `time` declares `room-runtime` for this. Refactor to a repository later (`feature → data via Repository only`).
 - `date` and `time` ship flag-disabled (code preserved); `assistant` is `enabled = true` but version-gated (`minVersion 1.2.0`) + `requiresConsent`, so it surfaces only once the app ships ≥ 1.2.0.
 - `detekt` is not wired into the build (`./gradlew detekt` task is absent — the `dhruv.detekt` convention plugin is applied by no module). Pre-existing; wire up separately.
 - The legacy `dhruv-compose-screen` SKILL is stale (shows Hilt / `DhruvTheme.colors` / `crashReporter.report`); `dhruv-feature-scaffold` is authoritative for the real Koin patterns.

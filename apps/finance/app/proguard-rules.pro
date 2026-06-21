@@ -24,8 +24,6 @@
 -keepclassmembers class * {
     @com.squareup.moshi.Json <fields>;
 }
--keep class com.example.data.** { *; }
--keep class com.example.data.api.** { *; }
 
 # Room SQLite runtime and reflection keep rules
 -keep class * extends androidx.room.RoomDatabase { *; }

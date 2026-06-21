@@ -34,5 +34,5 @@ class TimeViewModel(
 }
 
 data class TimeUiState(
-    val selectedTab: Int = 0 // 0: Stopwatch, 1: Timer, 2: Alarm
+    val selectedTab: Int = 0 // 0: Stopwatch, 1: Timer
 )

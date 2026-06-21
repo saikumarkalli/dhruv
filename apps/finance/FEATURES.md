@@ -65,10 +65,10 @@ Date toolkit: difference, add/subtract days, age, business days, timezone, unix 
 - **Flag:** `date` — **disabled** (code preserved, hidden; re-enable via flag).
 
 ### time — `:apps:finance:feature:time`
-Stopwatch, countdown timer, and alarms (with optional math-puzzle dismissal).
-- **Screens:** `TimeScreen` (+ `stopwatch/`, `timer/`, `alarm/` sub-screens, `AddAlarmSheet`, `MathPuzzleActivity`)
-- **ViewModels:** `TimeViewModel`, `StopwatchViewModel`, `TimerViewModel`, `AlarmViewModel`
-- **Data deps:** `AlarmDao`/`AlarmEntity` (Room); `AlarmScheduler`(`Impl`) + `AlarmReceiver`/`AlarmService`/`BootReceiver` (own `service/alarm/`, manifest components merged from this module).
+Stopwatch and countdown timer.
+- **Screens:** `TimeScreen` (+ `stopwatch/`, `timer/` sub-screens)
+- **ViewModels:** `TimeViewModel`, `StopwatchViewModel`, `TimerViewModel`
+- **Data deps:** none (in-memory state only).
 - **Flag:** `time` — **disabled** (code preserved, hidden).
 
 ### assistant — `:apps:finance:feature:assistant`

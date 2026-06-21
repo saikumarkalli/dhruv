@@ -78,8 +78,6 @@ Do NOT apply `id("dhruv.hilt")`. The Hilt plugin is incompatible with AGP 9 and 
 <manifest />
 ```
 
-The `time` module is the only exception — it adds `<receiver>`, `<service>`, and `<activity>` entries for alarm components that manifest-merge into the app.
-
 ---
 
 ## 4. NavGraph extension

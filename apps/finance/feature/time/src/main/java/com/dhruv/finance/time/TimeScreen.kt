@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.dhruv.finance.time.alarm.AlarmScreen
-import com.dhruv.finance.time.alarm.AlarmViewModel
 import com.dhruv.finance.time.stopwatch.StopwatchScreen
 import com.dhruv.finance.time.stopwatch.StopwatchViewModel
 import com.dhruv.finance.time.timer.TimerScreen
@@ -18,7 +16,7 @@ fun TimeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val tabs = listOf("Stopwatch", "Timer", "Alarm")
+    val tabs = listOf("Stopwatch", "Timer")
 
     Column(modifier = modifier.fillMaxSize()) {
         TabRow(
@@ -44,10 +42,6 @@ fun TimeScreen(
                 1 -> {
                     val timerViewModel: TimerViewModel = koinViewModel()
                     TimerScreen(viewModel = timerViewModel)
-                }
-                2 -> {
-                    val alarmViewModel: AlarmViewModel = koinViewModel()
-                    AlarmScreen(viewModel = alarmViewModel)
                 }
             }
         }
