@@ -5,7 +5,10 @@ import com.dhruv.finance.data.api.CurrencyApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) : ICurrencyRepository {
+class CurrencyRepository(
+    private val currencyRateDao: CurrencyRateDao,
+    private val apiClient: CurrencyApiClient,
+) : ICurrencyRepository {
 
     override suspend fun getAllRates(): List<CurrencyRateEntity> = withContext(Dispatchers.IO) {
         return@withContext currencyRateDao.getAllRates()
@@ -22,7 +25,7 @@ class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) : ICurren
      */
     override suspend fun fetchAndCacheLatestRates(baseCurrency: String): Result<Map<String, Double>> = withContext(Dispatchers.IO) {
         try {
-            val response = CurrencyApiClient.api.getLatestRates(baseCurrency)
+            val response = apiClient.api.getLatestRates(baseCurrency)
             if (response.result == "success") {
                 val entities = response.rates.map { (code, rate) ->
                     CurrencyRateEntity(currencyCode = code, rate = rate, timestamp = System.currentTimeMillis())
@@ -36,7 +39,7 @@ class CurrencyRepository(private val currencyRateDao: CurrencyRateDao) : ICurren
         } catch (primaryException: Exception) {
             Log.e("CurrencyRepository", "Primary API failed, trying fallback API...", primaryException)
             try {
-                val responseFallback = CurrencyApiClient.api.getLatestRatesFallback(baseCurrency)
+                val responseFallback = apiClient.fallbackApi.getLatestRatesFallback(baseCurrency)
                 val entities = responseFallback.rates.map { (code, rate) ->
                     CurrencyRateEntity(currencyCode = code, rate = rate, timestamp = System.currentTimeMillis())
                 }

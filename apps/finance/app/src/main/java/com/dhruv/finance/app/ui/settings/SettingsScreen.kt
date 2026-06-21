@@ -232,7 +232,7 @@ fun SettingsScreen(
         }
 
         // About
-        Text("About Dhruv Calc", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+        Text("About Dhruv Finance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
         Text("Version $dynamicVersionName (build $dynamicVersionCode)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
         Spacer(modifier = Modifier.height(32.dp))
     }

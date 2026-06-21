@@ -16,6 +16,18 @@ android {
 
     defaultConfig {
         applicationId = "com.dhruv.finance"
+
+        // Network/data config (no hardcoded values in :data — see PlatformModule.kt).
+        buildConfigField("String", "CURRENCY_API_BASE_URL", "\"https://open.er-api.com/\"")
+        buildConfigField("String", "CURRENCY_API_FALLBACK_BASE_URL", "\"https://api.exchangerate-api.com/\"")
+        buildConfigField("long", "CURRENCY_API_TIMEOUT_SECONDS", "15L")
+        buildConfigField(
+            "String",
+            "CURRENCY_API_USER_AGENT",
+            "\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36\""
+        )
+        buildConfigField("String", "APP_DATABASE_NAME", "\"omni_calculator_db\"")
+        buildConfigField("long", "HISTORY_RECYCLE_BIN_RETENTION_MILLIS", "${30 * 24 * 60 * 60 * 1000L}L")
     }
 
     buildFeatures {
@@ -24,6 +36,15 @@ android {
 
     testOptions {
         unitTests { isIncludeAndroidResources = true }
+    }
+
+    sourceSets {
+        // platform/feature-flags/*.json bundled as assets so the JSON files there remain the
+        // single canonical source (no copy/duplication). dhruv-tools.json rides along too —
+        // harmless (tiny, non-secret) since :apps:tools doesn't exist yet to conflict.
+        getByName("main") {
+            assets.srcDirs("${rootDir}/platform/feature-flags")
+        }
     }
 }
 
@@ -110,4 +131,4 @@ dependencies {
 }
 
 val appVersionName = (project.findProperty("VERSION_NAME") as? String) ?: "1.0"
-base.archivesName.set("DhruvCalc-v${appVersionName}")
+base.archivesName.set("DhruvFinance-v${appVersionName}")

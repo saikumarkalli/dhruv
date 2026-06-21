@@ -4,14 +4,14 @@
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
 
     <!-- Android 12+ SplashScreen API theme.
-         Light background (#F4F6FA) matches the Compose splash + the new app icon, so there is no
-         navy→light flash on launch. Uses the navy crest variant from :libs:core for contrast on
-         the light background (a crisp vector at the system-splash icon size; the detailed chrome
-         logo appears on the Compose splash that follows).
+         Black background matches the Compose transition screen that follows, so there is no flash
+         on launch. Uses the white crest variant from :libs:core for contrast on black (a crisp
+         vector at the system-splash icon size; the detailed chrome logo appears on the Compose
+         splash that follows).
          postSplashScreenTheme hands off to the existing NoActionBar theme once the splash exits. -->
     <style name="Theme.DhruvSplash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#F4F6FA</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_dhruv_crest_navy</item>
+        <item name="windowSplashScreenBackground">#000000</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_dhruv_crest_white</item>
         <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
     </style>
 
