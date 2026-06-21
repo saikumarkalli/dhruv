@@ -2,7 +2,10 @@ package com.dhruv.finance.data
 
 import kotlinx.coroutines.flow.Flow
 
-class HistoryRepository(private val historyDao: HistoryDao) {
+class HistoryRepository(
+    private val historyDao: HistoryDao,
+    private val recycleBinRetentionMillis: Long = 30 * 24 * 60 * 60 * 1000L,
+) {
     val allHistory: Flow<List<HistoryEntity>> = historyDao.getAllHistory()
     val activeHistory: Flow<List<HistoryEntity>> = historyDao.getActiveHistory()
     val recycleBinHistory: Flow<List<HistoryEntity>> = historyDao.getRecycleBinHistory()
@@ -39,8 +42,8 @@ class HistoryRepository(private val historyDao: HistoryDao) {
         historyDao.emptyRecycleBin()
     }
 
-    suspend fun pruneOldRecycleBin(thirtyDaysInMillis: Long = 30 * 24 * 60 * 60 * 1000L) {
-        val beforeTime = System.currentTimeMillis() - thirtyDaysInMillis
+    suspend fun pruneOldRecycleBin() {
+        val beforeTime = System.currentTimeMillis() - recycleBinRetentionMillis
         historyDao.autoRemoveRecycleBinOlderThan(beforeTime)
     }
 

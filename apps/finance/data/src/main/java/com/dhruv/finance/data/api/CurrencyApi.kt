@@ -25,28 +25,37 @@ data class ExchangeRateResponseFallback(
 interface CurrencyApi {
     @GET("v6/latest/{base}")
     suspend fun getLatestRates(@Path("base") base: String): ExchangeRateResponse
+}
 
-    @GET("https://api.exchangerate-api.com/v4/latest/{base}")
+interface CurrencyApiFallback {
+    @GET("v4/latest/{base}")
     suspend fun getLatestRatesFallback(@Path("base") base: String): ExchangeRateResponseFallback
 }
 
-object CurrencyApiClient {
+class CurrencyApiClient(
+    primaryBaseUrl: String,
+    fallbackBaseUrl: String,
+    timeoutSeconds: Long,
+    userAgent: String,
+) {
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
+        .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36")
+                .header("User-Agent", userAgent)
                 .header("Accept", "application/json")
                 .build()
             chain.proceed(request)
         }
         .build()
 
-    val api: CurrencyApi = Retrofit.Builder()
-        .baseUrl("https://open.er-api.com/")
+    private fun retrofit(baseUrl: String): Retrofit = Retrofit.Builder()
+        .baseUrl(baseUrl)
         .client(okHttpClient)
         .addConverterFactory(MoshiConverterFactory.create())
         .build()
-        .create(CurrencyApi::class.java)
+
+    val api: CurrencyApi = retrofit(primaryBaseUrl).create(CurrencyApi::class.java)
+    val fallbackApi: CurrencyApiFallback = retrofit(fallbackBaseUrl).create(CurrencyApiFallback::class.java)
 }

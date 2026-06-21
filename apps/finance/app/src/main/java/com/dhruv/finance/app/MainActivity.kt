@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +41,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,12 +71,12 @@ import com.dhruv.finance.date.DateViewModel
 import com.dhruv.finance.time.TimeScreen
 import com.dhruv.finance.time.TimeViewModel
 import com.dhruv.settings.SettingsRepository
+import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.hub.ConverterHub
 import com.dhruv.finance.app.ui.hub.FinanceHub
 import com.dhruv.finance.app.ui.settings.SettingsScreen
 import com.dhruv.finance.app.ui.settings.SettingsViewModel
 import com.dhruv.finance.app.ui.splash.SplashScreen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -123,21 +123,19 @@ class MainActivity : ComponentActivity() {
                 accentColorHex = appSettings.accentColorHex,
                 font = appSettings.fontFamily
             ) {
-                // Branded launch splash: show the dhruv wordmark briefly, then reveal the app.
+                // The whole app UI is composed immediately and the branded splash is overlaid on
+                // top of it (see the Box below). Because the app renders underneath during the
+                // splash, it is fully ready the instant the splash hands off — no blank gap.
                 var showSplash by remember { mutableStateOf(true) }
-                LaunchedEffect(Unit) {
-                    delay(1200)
-                    showSplash = false
-                }
-                if (showSplash) {
-                    SplashScreen()
-                    return@DhruvTheme
-                }
+                Box(modifier = Modifier.fillMaxSize()) {
 
                 // Build the visible tabs. Feature flags gate Date / Time / Assistant; Converter and
                 // Finance are hubs shown when any of their sub-features is enabled.
                 val tabs = remember(resolver) {
                     buildList {
+                        add(NavTab("dashboard", "Dashboard", Icons.Default.Home, "cyan") {
+                            DashboardScreen()
+                        })
                         add(
                             NavTab("calculator", "Calc", Icons.Default.Calculate, calculatorColor) {
                                 val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
@@ -194,7 +192,7 @@ class MainActivity : ComponentActivity() {
                 DisposableEffect(pagerState.currentPage) {
                     val callback = object : OnBackPressedCallback(pagerState.currentPage != 0) {
                         override fun handleOnBackPressed() {
-                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                            coroutineScope.launch { pagerState.scrollToPage(0) }
                         }
                     }
                     onBackPressedDispatcher.addCallback(this@MainActivity, callback)
@@ -224,7 +222,7 @@ class MainActivity : ComponentActivity() {
                                 IconButton(
                                     onClick = {
                                         if (settingsTabIndex >= 0) {
-                                            coroutineScope.launch { pagerState.animateScrollToPage(settingsTabIndex) }
+                                            coroutineScope.launch { pagerState.scrollToPage(settingsTabIndex) }
                                         }
                                     },
                                     modifier = Modifier.testTag("top_bar_settings_button")
@@ -254,11 +252,12 @@ class MainActivity : ComponentActivity() {
                                 tonalElevation = 0.dp
                             ) {
                                 tabs.forEachIndexed { index, tab ->
+                                    if (tab.key == "settings") return@forEachIndexed
                                     val selected = pagerState.currentPage == index
                                     NavigationBarItem(
                                         selected = selected,
                                         onClick = {
-                                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                            coroutineScope.launch { pagerState.scrollToPage(index) }
                                         },
                                         icon = { Icon(tab.icon, contentDescription = tab.label) },
                                         label = {
@@ -301,6 +300,13 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                }
+
+                // Branded splash overlaid on the already-composed app; it owns its timeline and
+                // fades out on hand-off (see SplashScreen), so the app is revealed with no blank gap.
+                if (showSplash) {
+                    SplashScreen(onFinished = { showSplash = false })
+                }
                 }
             }
         }

@@ -79,7 +79,7 @@ PYEOF
 # ── Update versionName in build.gradle.kts ────────────────────────────────────
 if [[ -f "$BUILD_GRADLE" ]]; then
   # Update the archivesName line that embeds version
-  sed -i "s/base\.archivesName\.set(\"DhruvCalc-v.*\")/base.archivesName.set(\"Dhruv${APP^}-v${NEW_VERSION}\")/" "$BUILD_GRADLE"
+  sed -i "s/base\.archivesName\.set(\"Dhruv${APP^}-v.*\")/base.archivesName.set(\"Dhruv${APP^}-v${NEW_VERSION}\")/" "$BUILD_GRADLE"
 fi
 
 # ── Auto-increment versionCode via Gradle property ────────────────────────────
