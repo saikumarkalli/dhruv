@@ -47,7 +47,7 @@ import com.dhruv.core.ui.theme.DhruvTheme
 fun TimeMock() {
     DhruvTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Stopwatch", "Timer", "Alarm")
+        val tabs = listOf("Stopwatch", "Timer")
 
         Scaffold(
             topBar = {

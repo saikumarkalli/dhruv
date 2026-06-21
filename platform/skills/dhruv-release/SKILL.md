@@ -7,6 +7,16 @@ description: Handle Dhruv platform releases — version bumps, changelogs, taggi
 
 Manages versioning, changelogs, and GitHub Release workflow.
 
+## Branch strategy (read first)
+
+| Branch | Purpose | Artifact | Who tags |
+|--------|----------|----------|----------|
+| `develop` | Default — all dev work | Signed APK → GitHub Release | You, via bump-version.sh |
+| `main` | Play Store only (future) | Signed AAB | Only when Play launch planned |
+| `feat/*` etc. | Feature work | — | Never tagged |
+
+**All release tags go on `develop`. Never tag main manually — that is for Play Store deployment only.**
+
 ## Version scheme
 
 Format: `dhruv-{app}-v{MAJOR}.{MINOR}.{PATCH}`
@@ -17,11 +27,12 @@ Format: `dhruv-{app}-v{MAJOR}.{MINOR}.{PATCH}`
 `versionCode` — auto-incremented by CI only, never manual.
 Source of truth: `platform/versions.json`
 
-## Release flow
+## Release flow (develop → GitHub Release APK)
 
 ### Step 1: Pre-release audit
 Before any release, verify:
 ```bash
+git switch develop
 ./gradlew test detekt                    # all tests + lint pass
 ./gradlew :apps:finance:app:assembleRelease  # signed APK builds
 # Repeat for each app that changed (tools, vault)
@@ -62,11 +73,11 @@ What the script does:
 5. Auto-increments `versionCode` (+1)
 6. Creates git commit: `release: bump to v{NEW_VERSION}`
 7. Creates git tag: `v{NEW_VERSION}`
-8. Prints: `Run 'git push origin main --tags' to trigger release`
+8. Prints: `Run 'git push origin develop --tags' to trigger release`
 
 ### Step 4: Push and release
 ```bash
-git push origin main --tags
+git push origin develop --tags
 ```
 
 This triggers `.github/workflows/release.yml`:
@@ -123,8 +134,8 @@ git commit -m "release: bump to v${NEW_VERSION}"
 git tag "v${NEW_VERSION}"
 
 echo ""
-echo "✅ Version bumped to v${NEW_VERSION}"
-echo "Run: git push origin main --tags"
+echo "✅ Version bumped to v${NEW_VERSION} on develop"
+echo "Run: git push origin develop --tags"
 ```
 
 ## release.yml workflow
@@ -211,7 +222,7 @@ jobs:
 | Core library breaking change | major | DhruvEntity contract changed |
 
 ## Future: Play Store release
-When ready for Play, the only changes needed:
+When ready: merge `develop → main`, tag on `main` → CI builds AAB → upload to Play. Remaining changes needed:
 1. `BUILD_TYPE=bundleRelease` (one-line swap)
 2. Add Gradle Play Publisher plugin or manual upload
 3. Add Play App Signing setup step

@@ -14,7 +14,6 @@ val dataModule = module {
     // DAOs
     single { get<AppDatabase>().historyDao() }
     single { get<AppDatabase>().currencyRateDao() }
-    single { get<AppDatabase>().alarmDao() }
 
     // Repositories
     single { HistoryRepository(get()) }

@@ -1,6 +1,6 @@
 # :apps:finance
 
-Finance app (`applicationId = com.dhruv.finance`, app namespace `com.example`). Single-activity,
+Finance app (`applicationId = com.dhruv.finance`, app namespace `com.dhruv.finance.app`). Single-activity,
 Compose, Koin DI. Phase 4 split the former monolith into feature modules behind `FeatureHost`.
 
 ## Modules
@@ -11,7 +11,7 @@ Compose, Koin DI. Phase 4 split the former monolith into feature modules behind 
 See [FEATURES.md](FEATURES.md) for per-module detail (screens, ViewModels, data deps, flag keys).
 
 ## Feature flags
-`platform/feature-flags/dhruv-finance.json` — `com.example.di.PlatformModule.financeFeatureDefaults`
+`platform/feature-flags/dhruv-finance.json` — `com.dhruv.finance.app.di.PlatformModule.financeFeatureDefaults`
 mirrors it field-for-field as a `Map<String, FeatureFlag>` (`enabled` + `minVersion` + `requiresConsent`),
 passed to `HardcodedFeatureFlagResolver` with `BuildConfig.VERSION_NAME`. The resolver gates a flag on
 `enabled && appVersion >= minVersion`, and exposes `requiresConsent(key)`.
@@ -25,7 +25,7 @@ passed to `HardcodedFeatureFlagResolver` with `BuildConfig.VERSION_NAME`. The re
 - **Every route is wrapped in `FeatureHost(featureKey, isEnabled = resolver.isEnabled(key), featureError, crashReporter)`** (`:libs:core`). Disabled → `FeatureDisabledCard`; thrown error surfaced via the ViewModel's `featureError: StateFlow<Throwable?>` → `FeatureErrorCard`. Never a blank crash.
 - **Every feature ViewModel**: `init { crashReporter.setModule("<key>") }`, exposes `featureError` (set by a `CoroutineExceptionHandler`), and wraps one primary operation in `performanceTracer.trace("<key>_…")`.
 - **Module boundaries** (ArchUnit `DependencyRulesTest`): `feature → feature` FORBIDDEN; `feature → data` only (shared `:data`); `core → app` FORBIDDEN.
-- **SOLID/altitude**: a feature ViewModel owns one concern; calculation logic is pure (`BigDecimal` for money); data access goes through repositories (exception: `AlarmViewModel`/`BootReceiver` touch Room directly — see CHANGELOG follow-up).
+- **SOLID/altitude**: a feature ViewModel owns one concern; calculation logic is pure (`BigDecimal` for money); data access goes through repositories.
 
 ## Build
 - `./gradlew :apps:finance:app:assembleDebug`

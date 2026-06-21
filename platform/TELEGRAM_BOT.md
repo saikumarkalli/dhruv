@@ -61,7 +61,7 @@ The monolith was split into feature modules:
 | Currency converter | `:apps:finance:feature:currency` |
 | Unit converter | `:apps:finance:feature:unit` |
 | Date calculator | `:apps:finance:feature:date` |
-| Time / Alarm | `:apps:finance:feature:time` |
+| Time | `:apps:finance:feature:time` |
 | AI Assistant | `:apps:finance:feature:assistant` |
 
 #### Core Libraries

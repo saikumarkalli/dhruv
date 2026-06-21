@@ -15,6 +15,9 @@ build/
 .cxx
 .env
 debug.keystore
+*.keystore.base64
 *.jks
 my-upload-key.jks
 my-upload-key-base64.txt
+.build-outputs/
+all_files.txt

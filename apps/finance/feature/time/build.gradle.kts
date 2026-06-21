@@ -12,10 +12,6 @@ dependencies {
     implementation(project(":libs:core"))
     implementation(project(":libs:settings"))
 
-    // BootReceiver opens AppDatabase directly outside the Koin scope (BroadcastReceiver lifecycle),
-    // so Room's RoomDatabase supertype must be on this module's classpath. See CHANGELOG / follow-up.
-    implementation(libs.androidx.room.runtime)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

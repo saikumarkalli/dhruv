@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example"
+    namespace = "com.dhruv.finance.app"
 
     defaultConfig {
         applicationId = "com.dhruv.finance"

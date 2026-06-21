@@ -27,6 +27,16 @@ Official brand palette and assets for all Dhruv apps.
 | Horizontal wordmark   | `svg/ic_dhruv_wordmark_h.svg`     | Splash, onboarding header, about page  |
 | Vertical stack        | `svg/ic_dhruv_wordmark_v.svg`     | Settings header, empty states          |
 
+## Master Art
+High-resolution source art from the Master Brand Kit lives in `master/`:
+- `master/dhruv_icon_master.png` — the compass-star icon mark (square)
+- `master/dhruv_wordmark_master.png` — the "dhruv" wordmark
+- `master/dhruv_logo_horizontal.png` — crest + wordmark lockup
+
+These are the canonical raster sources. The Android launcher PNGs below are generated from
+`master/dhruv_icon_master.png` (1024² master), trimmed to content and composited on the
+`#0D1B2A` (DhruvNavy) app-icon background.
+
 ## App Icon Sizes (Android)
 mdpi:    48×48 px   → `png/ic_launcher_mdpi.png`
 hdpi:    72×72 px   → `png/ic_launcher_hdpi.png`
@@ -34,6 +44,11 @@ xhdpi:   96×96 px   → `png/ic_launcher_xhdpi.png`
 xxhdpi:  144×144 px → `png/ic_launcher_xxhdpi.png`
 xxxhdpi: 192×192 px → `png/ic_launcher_xxxhdpi.png`
 Play Store: 512×512 px → `png/ic_launcher_play.png`
+
+The finance app ships these as an **adaptive icon** (`mipmap-anydpi-v26/ic_launcher.xml`):
+foreground = the compass art (≈0.66 of the 108dp canvas, mask-safe), background = `#0D1B2A`
+(DhruvNavy), monochrome = `ic_dhruv_crest` (themed icons). The `png/` files here are the
+legacy/fallback raster (compass on navy) + the 512² Play listing icon.
 
 ## What NOT to Do
 - ❌ Stretch or skew the crest
