@@ -42,5 +42,20 @@ To make this work, the repository relies on 4 GitHub Secrets configured in the r
 > [!TIP]
 > **Unsigned Fallback Strategy**: If the `STORE_PASSWORD` secret is missing or empty, the `build.gradle.kts` signing configuration safely aborts the signing process. Instead of crashing the CI pipeline, it logs a warning and successfully generates an *unsigned* APK (e.g., `DhruvCalc-v...-release-unsigned.apk`). This ensures continuous delivery of testable artifacts even if production secrets are temporarily unavailable.
 
+### PR Comment Bot ("Dhruv Bot")
+The `pr-summary` job in `ci.yml` posts a sticky CI-results comment on every PR. To brand that
+comment under a custom identity/avatar instead of the default `github-actions[bot]`, it mints a
+token from a dedicated GitHub App named **Dhruv Bot** (`Issues: Read & write` permission only,
+installed solely on this repo) via `actions/create-github-app-token@v1`. This relies on 2 more
+GitHub Secrets:
+- `DHRUV_BOT_APP_ID`: the numeric App ID of the Dhruv Bot GitHub App.
+- `DHRUV_BOT_PRIVATE_KEY`: the full contents of the App's generated private key (`.pem` file).
+
+> [!TIP]
+> **Fallback Strategy**: If either secret is missing or the App isn't installed on the repo, token
+> minting fails silently (`continue-on-error: true`) and the comment step falls back to the default
+> `GITHUB_TOKEN`, posting as `github-actions[bot]` instead. The PR comment itself never blocks CI or
+> merge — see ADR-0012 in `platform/DECISIONS.md`.
+
 ### Local Development Safety
 The local project `.gitignore` is configured to ignore `*.jks` and `*-base64.txt` files to guarantee that keystores generated on developer machines are never tracked by git.

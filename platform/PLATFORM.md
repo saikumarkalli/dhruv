@@ -246,6 +246,14 @@ Four unattended gates per PR — run on both `develop` and `main` (branch protec
    - `develop`: signed **APK** → attached to GitHub Release on version tag
    - `main`: signed **AAB** → Play Store ready (deployment deferred)
 
+**PR feedback** — a `pr-summary` job (`pull_request`-only, `if: always()`) posts a single sticky
+comment per PR summarizing all 4 gate results, updating it in place on every push instead of
+spamming new comments. It posts under a dedicated **"Dhruv Bot"** GitHub App identity (custom
+avatar, `Issues: Read & write` only, installed solely on this repo), minting a short-lived token via
+`actions/create-github-app-token@v1`; if that fails (secrets missing, App not installed), it falls
+back to the default `GITHUB_TOKEN` (`github-actions[bot]`) so commenting never blocks merge. It is
+informational only — never added to branch-protection required checks. See ADR-0012.
+
 **Post-build jobs** (push to `develop`/`main` only, after all 4 gates pass):
 
 - **`version-bump`** — atomically increments `MAJOR.MINOR.PATCH+1` for every active app in
