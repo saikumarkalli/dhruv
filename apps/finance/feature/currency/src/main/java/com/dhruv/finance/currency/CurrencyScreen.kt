@@ -9,13 +9,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 
 /**
  * Currency converter screen extracted from the monolithic ConverterScreen.
@@ -29,7 +29,7 @@ import androidx.compose.runtime.collectAsState
 @Composable
 fun CurrencyScreen(
     viewModel: CurrencyViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     CurrencyConverterContent(viewModel = viewModel, modifier = modifier)
 }
@@ -37,7 +37,7 @@ fun CurrencyScreen(
 @Composable
 fun CurrencyConverterContent(
     viewModel: CurrencyViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val currencyInput by viewModel.currencyInput.collectAsState()
     val currencyFrom by viewModel.currencyFrom.collectAsState()
@@ -50,72 +50,99 @@ fun CurrencyConverterContent(
     var showToMenu by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         when (val status = currencyStatus) {
             is CurrencyViewModel.CurrencyStatus.Loading -> {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Refreshing currency rates...",
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 36.dp)
+                        modifier = Modifier.padding(start = 36.dp),
                     )
                 }
             }
             is CurrencyViewModel.CurrencyStatus.Success -> {
                 Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (status.isOffline) MaterialTheme.colorScheme.errorContainer
-                                         else MaterialTheme.colorScheme.primaryContainer
-                    ),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                if (status.isOffline) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                },
+                        ),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
                             imageVector = if (status.isOffline) Icons.Default.CloudOff else Icons.Default.CloudQueue,
                             contentDescription = null,
-                            tint = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer
-                                   else MaterialTheme.colorScheme.onPrimaryContainer
+                            tint =
+                                if (status.isOffline) {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                },
                         )
                         Column {
                             Text(
                                 text = if (status.isOffline) "Offline Backup Mode" else "Rates Live & Connected",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer
-                                        else MaterialTheme.colorScheme.onPrimaryContainer
+                                color =
+                                    if (status.isOffline) {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    },
                             )
-                            val timeStr = remember(lastUpdatedTime) {
-                                lastUpdatedTime?.let {
-                                    val diffMs = System.currentTimeMillis() - it
-                                    val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(diffMs)
-                                    val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(diffMs) % 60
-                                    when {
-                                        hours > 0 -> "Rates cached: $hours hours $minutes mins ago"
-                                        minutes > 0 -> "Rates cached: $minutes mins ago"
-                                        else -> "Rates cached: Just now"
-                                    }
-                                } ?: "Never synced"
-                            }
+                            val timeStr =
+                                remember(lastUpdatedTime) {
+                                    lastUpdatedTime?.let {
+                                        val diffMs = System.currentTimeMillis() - it
+                                        val hours =
+                                            java.util.concurrent.TimeUnit.MILLISECONDS
+                                                .toHours(diffMs)
+                                        val minutes =
+                                            java.util.concurrent.TimeUnit.MILLISECONDS
+                                                .toMinutes(diffMs) % 60
+                                        when {
+                                            hours > 0 -> "Rates cached: $hours hours $minutes mins ago"
+                                            minutes > 0 -> "Rates cached: $minutes mins ago"
+                                            else -> "Rates cached: Just now"
+                                        }
+                                    } ?: "Never synced"
+                                }
                             Text(
-                                text = if (status.isOffline) "Using cached local exchange rates. $timeStr"
-                                       else "Local storage cache synced. $timeStr",
+                                text =
+                                    if (status.isOffline) {
+                                        "Using cached local exchange rates. $timeStr"
+                                    } else {
+                                        "Local storage cache synced. $timeStr"
+                                    },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (status.isOffline) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                                        else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                color =
+                                    if (status.isOffline) {
+                                        MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    },
                             )
                         }
                     }
@@ -124,13 +151,13 @@ fun CurrencyConverterContent(
             is CurrencyViewModel.CurrencyStatus.Error -> {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
                         text = "Error: ${status.message}",
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -138,13 +165,14 @@ fun CurrencyConverterContent(
 
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("From", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
 
@@ -152,16 +180,17 @@ fun CurrencyConverterContent(
                     Button(
                         onClick = { showFromMenu = true },
                         modifier = Modifier.fillMaxWidth().testTag("currency_from_btn"),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                        shape = RoundedCornerShape(12.dp),
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(currencyFrom)
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -169,7 +198,7 @@ fun CurrencyConverterContent(
                     }
                     DropdownMenu(
                         expanded = showFromMenu,
-                        onDismissRequest = { showFromMenu = false }
+                        onDismissRequest = { showFromMenu = false },
                     ) {
                         viewModel.availableCurrencies.forEach { code ->
                             DropdownMenuItem(
@@ -177,7 +206,7 @@ fun CurrencyConverterContent(
                                 onClick = {
                                     viewModel.setCurrencyFrom(code)
                                     showFromMenu = false
-                                }
+                                },
                             )
                         }
                     }
@@ -190,7 +219,7 @@ fun CurrencyConverterContent(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().testTag("currency_input_field"),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
@@ -205,7 +234,7 @@ fun CurrencyConverterContent(
                 },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.testTag("currency_swap_btn")
+                modifier = Modifier.testTag("currency_swap_btn"),
             ) {
                 Icon(Icons.Default.SwapVert, contentDescription = "Swap Currencies")
             }
@@ -213,13 +242,14 @@ fun CurrencyConverterContent(
 
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("To", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
 
@@ -227,16 +257,17 @@ fun CurrencyConverterContent(
                     Button(
                         onClick = { showToMenu = true },
                         modifier = Modifier.fillMaxWidth().testTag("currency_to_btn"),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                        shape = RoundedCornerShape(12.dp),
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(currencyTo)
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -244,7 +275,7 @@ fun CurrencyConverterContent(
                     }
                     DropdownMenu(
                         expanded = showToMenu,
-                        onDismissRequest = { showToMenu = false }
+                        onDismissRequest = { showToMenu = false },
                     ) {
                         viewModel.availableCurrencies.forEach { code ->
                             DropdownMenuItem(
@@ -252,7 +283,7 @@ fun CurrencyConverterContent(
                                 onClick = {
                                     viewModel.setCurrencyTo(code)
                                     showToMenu = false
-                                }
+                                },
                             )
                         }
                     }
@@ -260,19 +291,19 @@ fun CurrencyConverterContent(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             "Calculated Exchange",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                         )
                         Text(
                             text = currencyResult,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(top = 4.dp).testTag("currency_output_val")
+                            modifier = Modifier.padding(top = 4.dp).testTag("currency_output_val"),
                         )
                     }
                 }

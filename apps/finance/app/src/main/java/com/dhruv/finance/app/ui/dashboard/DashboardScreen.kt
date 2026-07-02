@@ -20,7 +20,7 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DhruvLogo(modifier = Modifier.height(72.dp))
         Spacer(modifier = Modifier.height(16.dp))
@@ -30,7 +30,7 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
             text = "Your personalized overview is coming soon.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }

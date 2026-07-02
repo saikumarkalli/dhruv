@@ -23,4 +23,7 @@ dependencies {
     // DI (Koin)
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

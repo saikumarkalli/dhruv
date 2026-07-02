@@ -1,0 +1,22 @@
+root = true
+
+[*.{kt,kts}]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+max_line_length = 140
+ktlint_code_style = ktlint_official
+
+# Compose-aware relaxations (kept in sync with config/detekt/detekt.yml):
+# @Composable functions are PascalCase by official convention.
+ktlint_standard_function-naming = disabled
+# Wildcard imports are permitted project-wide (Compose APIs are large).
+ktlint_standard_no-wildcard-imports = disabled
+# ViewModels use the `_state` (mutable) / `state` (public) backing-property pattern.
+ktlint_standard_backing-property-naming = disabled
+
+[**/src/test/**/*.kt]
+# Test fixtures use terse math names (e.g. `D` for a float-comparison tolerance).
+ktlint_standard_property-naming = disabled

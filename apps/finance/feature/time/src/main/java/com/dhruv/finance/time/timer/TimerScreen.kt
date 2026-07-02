@@ -12,10 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalConfiguration
 import java.util.Locale
 
 @Composable
@@ -26,7 +26,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (state.isInputMode) {
             // Input Mode
@@ -48,7 +48,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                 val animatedProgress by animateFloatAsState(
                     targetValue = state.progress,
                     animationSpec = tween(50),
-                    label = "progressAnim"
+                    label = "progressAnim",
                 )
                 val primaryColor = MaterialTheme.colorScheme.primary
                 val trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -59,14 +59,14 @@ fun TimerScreen(viewModel: TimerViewModel) {
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,
-                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
                     )
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
                         sweepAngle = animatedProgress * 360f,
                         useCenter = false,
-                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
                     )
                 }
 
@@ -74,7 +74,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                     text = formatCountdown(state.remainingTimeMs),
                     fontSize = responsiveFontSize,
                     fontWeight = FontWeight.Light,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -83,31 +83,34 @@ fun TimerScreen(viewModel: TimerViewModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(
                     onClick = { viewModel.resetTimer() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
                 ) {
                     Text("Reset")
                 }
                 if (state.isRunning) {
                     Button(
                         onClick = { viewModel.pauseTimer() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
                     ) { Text("Pause") }
                 } else {
                     Button(
                         onClick = { viewModel.startTimer() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp)
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
                     ) { Text("Resume") }
                 }
             }

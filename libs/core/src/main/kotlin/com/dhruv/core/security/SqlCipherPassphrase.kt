@@ -18,7 +18,6 @@ private const val PASSPHRASE_BYTE_LENGTH = 32
  * The returned CharArray should be wiped by the caller after use.
  */
 object SqlCipherPassphrase {
-
     fun getOrCreate(context: Context): CharArray {
         val prefs: SharedPreferences =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -33,7 +32,8 @@ object SqlCipherPassphrase {
         // First run — generate and persist.
         val passphrase = ByteArray(PASSPHRASE_BYTE_LENGTH).also { SecureRandom().nextBytes(it) }
         val blob = KeystoreHelper.encrypt(KEYSTORE_ALIAS, passphrase)
-        prefs.edit()
+        prefs
+            .edit()
             .putString(KEY_ENCRYPTED_PASSPHRASE, Base64.encodeToString(blob.toByteArray(), Base64.NO_WRAP))
             .apply()
 

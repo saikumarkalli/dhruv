@@ -53,10 +53,10 @@ fun FinanceHubMock() {
                             DhruvCrest(modifier = Modifier.size(24.dp), tint = DhruvGold)
                             Text("Finance", fontWeight = FontWeight.SemiBold)
                         }
-                    }
+                    },
                 )
             },
-            bottomBar = { MockBottomNav(selected = "Finance") }
+            bottomBar = { MockBottomNav(selected = "Finance") },
         ) { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
@@ -64,7 +64,7 @@ fun FinanceHubMock() {
                         Tab(
                             selected = selectedTab == idx,
                             onClick = { selectedTab = idx },
-                            text = { Text(label) }
+                            text = { Text(label) },
                         )
                     }
                 }
@@ -81,11 +81,12 @@ fun FinanceHubMock() {
 @Composable
 private fun LoansTabContent() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("EMI Calculator", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
 
@@ -93,25 +94,25 @@ private fun LoansTabContent() {
             value = "5,00,000",
             onValueChange = {},
             label = { Text("Principal (₹)") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = "8.5",
             onValueChange = {},
             label = { Text("Annual Interest Rate (%)") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = "60",
             onValueChange = {},
             label = { Text("Tenure (months)") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Button(
             onClick = {},
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = DhruvGold)
+            colors = ButtonDefaults.buttonColors(containerColor = DhruvGold),
         ) {
             Text("Calculate EMI", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
@@ -119,12 +120,12 @@ private fun LoansTabContent() {
         // Result card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0001))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0001)),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text("Monthly EMI", fontSize = 12.sp, color = Color(0xFF9E9E9E))
                 Text("₹10,233", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = DhruvGold, textAlign = TextAlign.Center)
@@ -148,7 +149,7 @@ private fun PlaceholderTabContent(name: String) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(name, fontSize = 24.sp, color = Color(0xFF9E9E9E))
         Text("(collapsed placeholder)", fontSize = 12.sp, color = Color(0xFF666666))

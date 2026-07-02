@@ -57,10 +57,10 @@ fun TimeMock() {
                             DhruvCrest(modifier = Modifier.size(24.dp), tint = DhruvGold)
                             Text("Time", fontWeight = FontWeight.SemiBold)
                         }
-                    }
+                    },
                 )
             },
-            bottomBar = { MockBottomNav(selected = "Time") }
+            bottomBar = { MockBottomNav(selected = "Time") },
         ) { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 TabRow(selectedTabIndex = selectedTab) {
@@ -71,13 +71,14 @@ fun TimeMock() {
 
                 when (selectedTab) {
                     0 -> StopwatchContent()
-                    else -> Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(tabs[selectedTab], fontSize = 24.sp, color = Color(0xFF9E9E9E))
-                    }
+                    else ->
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(tabs[selectedTab], fontSize = 24.sp, color = Color(0xFF9E9E9E))
+                        }
                 }
             }
         }
@@ -89,21 +90,22 @@ private fun StopwatchContent() {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
+        verticalArrangement = Arrangement.SpaceEvenly,
     ) {
         // Circular timer display
         Box(
-            modifier = Modifier
-                .size(220.dp)
-                .border(4.dp, DhruvGold, CircleShape),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(220.dp)
+                    .border(4.dp, DhruvGold, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 "00:00:00",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Light,
                 fontFamily = FontFamily.Monospace,
-                color = Color.White
+                color = Color.White,
             )
         }
 
@@ -112,7 +114,7 @@ private fun StopwatchContent() {
         // Control buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             OutlinedButton(onClick = {}) {
                 Text("Lap")
@@ -121,7 +123,7 @@ private fun StopwatchContent() {
                 onClick = {},
                 modifier = Modifier.size(72.dp),
                 shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = DhruvGold)
+                colors = ButtonDefaults.buttonColors(containerColor = DhruvGold),
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.White, modifier = Modifier.size(32.dp))
             }

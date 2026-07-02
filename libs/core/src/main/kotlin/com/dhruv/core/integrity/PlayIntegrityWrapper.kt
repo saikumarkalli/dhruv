@@ -8,7 +8,11 @@ import kotlinx.coroutines.tasks.await
 
 sealed class IntegrityResult {
     object Pass : IntegrityResult()
-    data class Fail(val reason: String, val fatal: Boolean = false) : IntegrityResult()
+
+    data class Fail(
+        val reason: String,
+        val fatal: Boolean = false,
+    ) : IntegrityResult()
 }
 
 /**
@@ -26,32 +30,39 @@ class PlayIntegrityWrapper(
     context: Context,
     private val cloudProjectNumber: Long,
 ) {
-    private val manager = IntegrityManagerFactory
-        .createStandard(context.applicationContext)
+    private val manager =
+        IntegrityManagerFactory
+            .createStandard(context.applicationContext)
 
     private var tokenProvider: com.google.android.play.core.integrity.StandardIntegrityManager
         .StandardIntegrityTokenProvider? = null
 
     suspend fun prepare() {
         runCatching {
-            tokenProvider = manager.prepareIntegrityToken(
-                PrepareIntegrityTokenRequest.builder()
-                    .setCloudProjectNumber(cloudProjectNumber)
-                    .build()
-            ).await()
+            tokenProvider =
+                manager
+                    .prepareIntegrityToken(
+                        PrepareIntegrityTokenRequest
+                            .builder()
+                            .setCloudProjectNumber(cloudProjectNumber)
+                            .build(),
+                    ).await()
         }
     }
 
     suspend fun check(requestHash: String): IntegrityResult {
-        val provider = tokenProvider
-            ?: return IntegrityResult.Fail("Integrity not prepared", fatal = false)
+        val provider =
+            tokenProvider
+                ?: return IntegrityResult.Fail("Integrity not prepared", fatal = false)
 
         return runCatching {
-            provider.request(
-                StandardIntegrityTokenRequest.builder()
-                    .setRequestHash(requestHash)
-                    .build()
-            ).await()
+            provider
+                .request(
+                    StandardIntegrityTokenRequest
+                        .builder()
+                        .setRequestHash(requestHash)
+                        .build(),
+                ).await()
             IntegrityResult.Pass
         }.getOrElse { e ->
             IntegrityResult.Fail(reason = e.message ?: "Unknown integrity error", fatal = false)

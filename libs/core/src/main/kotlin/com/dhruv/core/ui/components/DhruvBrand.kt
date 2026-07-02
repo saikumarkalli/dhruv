@@ -30,13 +30,13 @@ import com.dhruv.core.ui.theme.wordmarkStyle
 @Composable
 fun DhruvCrest(
     modifier: Modifier = Modifier,
-    tint: Color = DhruvSilverLight
+    tint: Color = DhruvSilverLight,
 ) {
     Image(
         painter = painterResource(id = R.drawable.ic_dhruv_crest),
         contentDescription = "Dhruv crest",
         colorFilter = ColorFilter.tint(tint),
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -46,13 +46,11 @@ fun DhruvCrest(
  * theme-adaptive UI marks use [DhruvCrest] instead.
  */
 @Composable
-fun DhruvLogo(
-    modifier: Modifier = Modifier
-) {
+fun DhruvLogo(modifier: Modifier = Modifier) {
     Image(
         painter = painterResource(id = R.drawable.ic_dhruv_logo),
         contentDescription = "Dhruv logo",
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -66,15 +64,16 @@ private const val WORDMARK_ASPECT = 944f / 256f
 @Composable
 fun DhruvWordmarkImage(
     modifier: Modifier = Modifier,
-    height: Dp = 26.dp
+    height: Dp = 26.dp,
 ) {
     Image(
         painter = painterResource(id = R.drawable.ic_dhruv_wordmark),
         contentDescription = "dhruv",
         contentScale = ContentScale.Fit,
-        modifier = modifier
-            .height(height)
-            .aspectRatio(WORDMARK_ASPECT, matchHeightConstraintsFirst = true)
+        modifier =
+            modifier
+                .height(height)
+                .aspectRatio(WORDMARK_ASPECT, matchHeightConstraintsFirst = true),
     )
 }
 
@@ -88,17 +87,17 @@ fun DhruvLogoWordmark(
     appName: String = "",
     modifier: Modifier = Modifier,
     logoSize: Dp = 32.dp,
-    textColor: Color = DhruvNavy
+    textColor: Color = DhruvNavy,
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DhruvLogo(modifier = Modifier.size(logoSize))
         Text(
             text = if (appName.isBlank()) "dhruv" else "dhruv $appName",
-            style = wordmarkStyle.copy(color = textColor)
+            style = wordmarkStyle.copy(color = textColor),
         )
     }
 }
@@ -113,17 +112,17 @@ fun DhruvLogoWordmarkVertical(
     appName: String = "",
     modifier: Modifier = Modifier,
     logoSize: Dp = 96.dp,
-    textColor: Color = DhruvNavy
+    textColor: Color = DhruvNavy,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         DhruvLogo(modifier = Modifier.size(logoSize))
         Text(
             text = if (appName.isBlank()) "dhruv" else "dhruv $appName",
-            style = wordmarkStyle.copy(color = textColor)
+            style = wordmarkStyle.copy(color = textColor),
         )
     }
 }
@@ -139,20 +138,20 @@ fun DhruvWordmark(
     appName: String = "",
     modifier: Modifier = Modifier,
     crestTint: Color = DhruvSilverLight,
-    textColor: Color = DhruvSilver
+    textColor: Color = DhruvSilver,
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DhruvCrest(
             tint = crestTint,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(32.dp),
         )
         Text(
             text = if (appName.isBlank()) "dhruv" else "dhruv $appName",
-            style = wordmarkStyle.copy(color = textColor)
+            style = wordmarkStyle.copy(color = textColor),
         )
     }
 }
@@ -168,20 +167,20 @@ fun DhruvWordmarkVertical(
     appName: String = "",
     modifier: Modifier = Modifier,
     crestTint: Color = DhruvSilverLight,
-    textColor: Color = DhruvSilver
+    textColor: Color = DhruvSilver,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DhruvCrest(
             tint = crestTint,
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier.size(48.dp),
         )
         Text(
             text = if (appName.isBlank()) "dhruv" else "dhruv $appName",
-            style = wordmarkStyle.copy(color = textColor)
+            style = wordmarkStyle.copy(color = textColor),
         )
     }
 }
@@ -191,12 +190,10 @@ fun DhruvWordmarkVertical(
  * Renders the white-on-transparent variant — no tint applied.
  */
 @Composable
-fun DhruvNotificationIcon(
-    modifier: Modifier = Modifier
-) {
+fun DhruvNotificationIcon(modifier: Modifier = Modifier) {
     Image(
         painter = painterResource(id = R.drawable.ic_dhruv_crest_white),
         contentDescription = null,
-        modifier = modifier
+        modifier = modifier,
     )
 }

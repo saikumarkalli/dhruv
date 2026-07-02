@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.library")
+    id("dhruv.detekt")
 }
 
 // AGP 9.x auto-applies kotlin.android when Kotlin sources are present.
@@ -18,6 +19,10 @@ configure<LibraryExtension> {
     }
 
     buildTypes {
+        debug {
+            // Emit JaCoCo execution data from debug unit tests (consumed by dhruv.coverage).
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -30,6 +35,13 @@ configure<LibraryExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    testOptions {
+        // Robolectric needs merged Android resources; default-return stubs keep
+        // un-mocked android.* calls from throwing in plain JVM unit tests.
+        unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
     }
 }
 

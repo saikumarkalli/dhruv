@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
+    id("dhruv.detekt")
 }
 
 // AGP 9.x auto-applies kotlin.android when Kotlin sources are present.
@@ -49,12 +50,18 @@ configure<ApplicationExtension> {
         }
         debug {
             isMinifyEnabled = false
+            enableUnitTestCoverage = true
         }
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
     }
 }
 

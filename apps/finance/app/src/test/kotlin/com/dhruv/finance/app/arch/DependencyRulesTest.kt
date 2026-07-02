@@ -16,7 +16,6 @@ import org.junit.Test
  * in Phase 4–6.
  */
 class DependencyRulesTest {
-
     private val classes by lazy {
         ClassFileImporter()
             .withImportOption(ImportOption.DoNotIncludeTests())
@@ -37,7 +36,8 @@ class DependencyRulesTest {
     fun `finance feature modules must not depend on each other`() {
         slices()
             .matching("com.dhruv.finance.(*)..")
-            .should().notDependOnEachOther()
+            .should()
+            .notDependOnEachOther()
             .ignoreDependency(alwaysTrue(), resideInAPackage("com.dhruv.finance.data.."))
             .ignoreDependency(resideInAPackage("com.dhruv.finance.app.."), alwaysTrue())
             .ignoreDependency(resideInAPackage("com.dhruv.finance.mocks.."), alwaysTrue())
@@ -48,14 +48,15 @@ class DependencyRulesTest {
     @Test
     fun `core lib must not depend on app-specific code`() {
         noClasses()
-            .that().resideInAPackage("com.dhruv.core..")
-            .should().dependOnClassesThat()
+            .that()
+            .resideInAPackage("com.dhruv.core..")
+            .should()
+            .dependOnClassesThat()
             .resideInAnyPackage(
                 "com.dhruv.finance..",
                 "com.dhruv.tools..",
-                "com.dhruv.vault.."
-            )
-            .because("core→app imports are FORBIDDEN — core is a shared library")
+                "com.dhruv.vault..",
+            ).because("core→app imports are FORBIDDEN — core is a shared library")
             .allowEmptyShould(true)
             .check(classes)
     }
@@ -67,8 +68,10 @@ class DependencyRulesTest {
     @Test
     fun `vault must not depend on network, ai or analytics packages`() {
         noClasses()
-            .that().resideInAPackage("com.dhruv.vault..")
-            .should().dependOnClassesThat()
+            .that()
+            .resideInAPackage("com.dhruv.vault..")
+            .should()
+            .dependOnClassesThat()
             .resideInAnyPackage("..network..", "..ai..", "..analytics..")
             .because("vault→network/ai/analytics is FORBIDDEN (PLATFORM.md §6 vault isolation)")
             .allowEmptyShould(true)
@@ -82,8 +85,10 @@ class DependencyRulesTest {
     @Test
     fun `feature UI must not import DAOs directly`() {
         noClasses()
-            .that().resideInAPackage("com.dhruv..feature..ui..")
-            .should().dependOnClassesThat()
+            .that()
+            .resideInAPackage("com.dhruv..feature..ui..")
+            .should()
+            .dependOnClassesThat()
             .haveNameMatching(".*Dao")
             .because("feature UI must access data only through Repository classes")
             .allowEmptyShould(true)
@@ -97,9 +102,12 @@ class DependencyRulesTest {
     @Test
     fun `new feature screens must not import other screens directly`() {
         noClasses()
-            .that().haveNameMatching(".*Screen")
-            .and().resideInAPackage("com.dhruv..")
-            .should().dependOnClassesThat()
+            .that()
+            .haveNameMatching(".*Screen")
+            .and()
+            .resideInAPackage("com.dhruv..")
+            .should()
+            .dependOnClassesThat()
             .haveNameMatching(".*Screen")
             .because("screens must navigate via NavHost, not direct class references")
             .allowEmptyShould(true)

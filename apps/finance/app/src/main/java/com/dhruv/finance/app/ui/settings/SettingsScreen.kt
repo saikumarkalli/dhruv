@@ -13,9 +13,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dhruv.settings.SettingsRepository
 import com.dhruv.core.ui.components.DhruvLogoWordmarkVertical
 import com.dhruv.core.ui.theme.appGradientBackground
+import com.dhruv.settings.SettingsRepository
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -24,37 +24,39 @@ import java.util.Locale
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
     onClearHistory: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // Collect State
-    val uiState = SettingsUiState(
-        isDegree = settingsRepository.isDegree.collectAsState(initial = true).value,
-        darkModePreference = settingsRepository.darkModePreference.collectAsState(initial = "system").value,
-        decimalPrecision = settingsRepository.decimalPrecision.collectAsState(initial = 4).value,
-        formatLocale = settingsRepository.formatLocale.collectAsState(initial = "international").value,
-        isHistoryLocked = settingsRepository.isHistoryLocked.collectAsState(initial = false).value,
-        historyPinCode = settingsRepository.historyPinCode.collectAsState(initial = "").value,
-        isConverterEnabled = settingsRepository.isConverterEnabled.collectAsState(initial = true).value,
-        isDateEnabled = settingsRepository.isDateEnabled.collectAsState(initial = true).value,
-        isFinanceEnabled = settingsRepository.isFinanceEnabled.collectAsState(initial = true).value,
-        calculatorColor = settingsRepository.calculatorColor.collectAsState(initial = "cyan").value,
-        converterColor = settingsRepository.converterColor.collectAsState(initial = "purple").value,
-        dateColor = settingsRepository.dateColor.collectAsState(initial = "coral").value,
-        financeColor = settingsRepository.financeColor.collectAsState(initial = "amber").value,
-        isTimeEnabled = settingsRepository.isTimeEnabled.collectAsState(initial = true).value,
-        timeColor = settingsRepository.timeColor.collectAsState(initial = "teal").value
-    )
+    val uiState =
+        SettingsUiState(
+            isDegree = settingsRepository.isDegree.collectAsState(initial = true).value,
+            darkModePreference = settingsRepository.darkModePreference.collectAsState(initial = "system").value,
+            decimalPrecision = settingsRepository.decimalPrecision.collectAsState(initial = 4).value,
+            formatLocale = settingsRepository.formatLocale.collectAsState(initial = "international").value,
+            isHistoryLocked = settingsRepository.isHistoryLocked.collectAsState(initial = false).value,
+            historyPinCode = settingsRepository.historyPinCode.collectAsState(initial = "").value,
+            isConverterEnabled = settingsRepository.isConverterEnabled.collectAsState(initial = true).value,
+            isDateEnabled = settingsRepository.isDateEnabled.collectAsState(initial = true).value,
+            isFinanceEnabled = settingsRepository.isFinanceEnabled.collectAsState(initial = true).value,
+            calculatorColor = settingsRepository.calculatorColor.collectAsState(initial = "cyan").value,
+            converterColor = settingsRepository.converterColor.collectAsState(initial = "purple").value,
+            dateColor = settingsRepository.dateColor.collectAsState(initial = "coral").value,
+            financeColor = settingsRepository.financeColor.collectAsState(initial = "amber").value,
+            isTimeEnabled = settingsRepository.isTimeEnabled.collectAsState(initial = true).value,
+            timeColor = settingsRepository.timeColor.collectAsState(initial = "teal").value,
+        )
 
     // Dynamic Version Info
     val context = LocalContext.current
     val packageInfo = remember { context.packageManager.getPackageInfo(context.packageName, 0) }
     val dynamicVersionName = packageInfo.versionName ?: "1.0"
-    val dynamicVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-        packageInfo.longVersionCode.toInt()
-    } else {
-        @Suppress("DEPRECATION")
-        packageInfo.versionCode
-    }
+    val dynamicVersionCode =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode.toInt()
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode
+        }
 
     // Dialog & Sheet States
     var showPrecisionSheet by remember { mutableStateOf(false) }
@@ -66,35 +68,35 @@ fun SettingsScreen(
     var activeSectionConfig by remember { mutableStateOf<SettingsSectionConfig?>(null) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .appGradientBackground()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .appGradientBackground()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Brand header
         DhruvLogoWordmarkVertical(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
             logoSize = 88.dp,
-            textColor = MaterialTheme.colorScheme.onSurface
+            textColor = MaterialTheme.colorScheme.onSurface,
         )
 
         // Headers
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(32.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
-
 
         // General
         SettingsCategory(title = "General") {
@@ -102,14 +104,14 @@ fun SettingsScreen(
                 title = "Number format",
                 valueDisplay = if (uiState.formatLocale == "indian") "Indian" else "International",
                 onClick = { showLocaleDialog = true },
-                tag = "settings_locale_item"
+                tag = "settings_locale_item",
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             SettingsClickableItem(
                 title = "Decimal precision",
                 valueDisplay = "${uiState.decimalPrecision} places",
                 onClick = { showPrecisionSheet = true },
-                tag = "settings_precision_item"
+                tag = "settings_precision_item",
             )
         }
 
@@ -119,13 +121,13 @@ fun SettingsScreen(
                 title = "Angle mode",
                 options = listOf("DEG", "RAD"),
                 selectedIndex = if (uiState.isDegree) 0 else 1,
-                onOptionSelected = { settingsRepository.setDegree(it == 0) }
+                onOptionSelected = { settingsRepository.setDegree(it == 0) },
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Preview", fontWeight = FontWeight.Medium, fontSize = 15.sp)
                 val pattern = if (uiState.decimalPrecision > 0) "#." + "#".repeat(uiState.decimalPrecision) else "#"
@@ -141,51 +143,71 @@ fun SettingsScreen(
                 valueDisplay = "Always on",
                 showChevron = false,
                 onClick = { },
-                tag = "settings_section_calc"
+                tag = "settings_section_calc",
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             SettingsClickableItem(
                 title = "Converter",
                 valueDisplay = if (uiState.isConverterEnabled) "On" else "Off",
                 onClick = {
-                    activeSectionConfig = SettingsSectionConfig(
-                        "converter", "Converter", uiState.isConverterEnabled, true, SettingsConstants.CONVERTER_TOOLS
-                    )
+                    activeSectionConfig =
+                        SettingsSectionConfig(
+                            "converter",
+                            "Converter",
+                            uiState.isConverterEnabled,
+                            true,
+                            SettingsConstants.CONVERTER_TOOLS,
+                        )
                 },
-                tag = "settings_section_conv"
+                tag = "settings_section_conv",
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             SettingsClickableItem(
                 title = "Date & Time",
                 valueDisplay = if (uiState.isDateEnabled) "On" else "Off",
                 onClick = {
-                    activeSectionConfig = SettingsSectionConfig(
-                        "date", "Date & Time", uiState.isDateEnabled, true, SettingsConstants.DATE_TOOLS
-                    )
+                    activeSectionConfig =
+                        SettingsSectionConfig(
+                            "date",
+                            "Date & Time",
+                            uiState.isDateEnabled,
+                            true,
+                            SettingsConstants.DATE_TOOLS,
+                        )
                 },
-                tag = "settings_section_date"
+                tag = "settings_section_date",
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             SettingsClickableItem(
                 title = "Finance",
                 valueDisplay = if (uiState.isFinanceEnabled) "On" else "Off",
                 onClick = {
-                    activeSectionConfig = SettingsSectionConfig(
-                        "finance", "Finance", uiState.isFinanceEnabled, true, SettingsConstants.FINANCE_TOOLS
-                    )
+                    activeSectionConfig =
+                        SettingsSectionConfig(
+                            "finance",
+                            "Finance",
+                            uiState.isFinanceEnabled,
+                            true,
+                            SettingsConstants.FINANCE_TOOLS,
+                        )
                 },
-                tag = "settings_section_fin"
+                tag = "settings_section_fin",
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             SettingsClickableItem(
                 title = "Time Tools",
                 valueDisplay = if (uiState.isTimeEnabled) "On" else "Off",
                 onClick = {
-                    activeSectionConfig = SettingsSectionConfig(
-                        "time", "Time Tools", uiState.isTimeEnabled, true, SettingsConstants.TIME_TOOLS
-                    )
+                    activeSectionConfig =
+                        SettingsSectionConfig(
+                            "time",
+                            "Time Tools",
+                            uiState.isTimeEnabled,
+                            true,
+                            SettingsConstants.TIME_TOOLS,
+                        )
                 },
-                tag = "settings_section_time"
+                tag = "settings_section_time",
             )
         }
 
@@ -195,7 +217,7 @@ fun SettingsScreen(
                 title = "Appearance & Colors",
                 valueDisplay = "Theme & Accents",
                 onClick = { showAppearanceSheet = true },
-                tag = "settings_appearance_item"
+                tag = "settings_appearance_item",
             )
         }
 
@@ -211,7 +233,7 @@ fun SettingsScreen(
                         settingsRepository.setHistoryLocked(locked)
                     }
                 },
-                tag = "settings_history_lock"
+                tag = "settings_history_lock",
             )
             if (uiState.isHistoryLocked) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -219,7 +241,7 @@ fun SettingsScreen(
                     title = "Change PIN",
                     valueDisplay = "****",
                     onClick = { showPinDialog = true },
-                    tag = "settings_change_pin"
+                    tag = "settings_change_pin",
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -227,13 +249,24 @@ fun SettingsScreen(
                 title = "Clear history",
                 valueDisplay = "Permanently wipe",
                 onClick = { showClearHistoryDialog = true },
-                tag = "settings_clear_history"
+                tag = "settings_clear_history",
             )
         }
 
         // About
-        Text("About Dhruv Finance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
-        Text("Version $dynamicVersionName (build $dynamicVersionCode)", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+        Text(
+            "About Dhruv Finance",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+        )
+        Text(
+            "Version $dynamicVersionName (build $dynamicVersionCode)",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp),
+        )
         Spacer(modifier = Modifier.height(32.dp))
     }
 
@@ -242,16 +275,22 @@ fun SettingsScreen(
     if (showLocaleDialog) {
         LocaleFormatDialog(
             currentLocale = uiState.formatLocale,
-            onLocaleSelected = { settingsRepository.setFormatLocale(it); showLocaleDialog = false },
-            onDismiss = { showLocaleDialog = false }
+            onLocaleSelected = {
+                settingsRepository.setFormatLocale(it)
+                showLocaleDialog = false
+            },
+            onDismiss = { showLocaleDialog = false },
         )
     }
 
     if (showPrecisionSheet) {
         SettingsPrecisionSheet(
             currentPrecision = uiState.decimalPrecision,
-            onPrecisionSelected = { settingsRepository.setDecimalPrecision(it); showPrecisionSheet = false },
-            onDismiss = { showPrecisionSheet = false }
+            onPrecisionSelected = {
+                settingsRepository.setDecimalPrecision(it)
+                showPrecisionSheet = false
+            },
+            onDismiss = { showPrecisionSheet = false },
         )
     }
 
@@ -268,7 +307,7 @@ fun SettingsScreen(
                     "time" -> settingsRepository.setTimeColor(colorId)
                 }
             },
-            onDismiss = { showAppearanceSheet = false }
+            onDismiss = { showAppearanceSheet = false },
         )
     }
 
@@ -285,7 +324,7 @@ fun SettingsScreen(
                 }
                 activeSectionConfig = activeSectionConfig?.copy(enabled = enabled)
             },
-            onDismiss = { activeSectionConfig = null }
+            onDismiss = { activeSectionConfig = null },
         )
     }
 
@@ -296,7 +335,7 @@ fun SettingsScreen(
                 settingsRepository.setHistoryLocked(true)
                 showPinDialog = false
             },
-            onDismiss = { showPinDialog = false }
+            onDismiss = { showPinDialog = false },
         )
     }
 
@@ -306,7 +345,7 @@ fun SettingsScreen(
                 onClearHistory()
                 showClearHistoryDialog = false
             },
-            onDismiss = { showClearHistoryDialog = false }
+            onDismiss = { showClearHistoryDialog = false },
         )
     }
 }

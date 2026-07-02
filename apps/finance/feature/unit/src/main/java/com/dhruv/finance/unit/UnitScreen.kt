@@ -32,7 +32,7 @@ fun UnitScreen(viewModel: UnitViewModel) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -61,9 +61,11 @@ private fun LengthConverter(viewModel: UnitViewModel) {
         onFromSelected = { idx -> viewModel.setLengthFromUnit(LengthUnit.entries[idx]) },
         onToSelected = { idx -> viewModel.setLengthToUnit(LengthUnit.entries[idx]) },
         onSwap = {
-            val f = fromUnit; val t = toUnit
-            viewModel.setLengthFromUnit(t); viewModel.setLengthToUnit(f)
-        }
+            val f = fromUnit
+            val t = toUnit
+            viewModel.setLengthFromUnit(t)
+            viewModel.setLengthToUnit(f)
+        },
     )
 }
 
@@ -85,9 +87,11 @@ private fun MassConverter(viewModel: UnitViewModel) {
         onFromSelected = { idx -> viewModel.setMassFromUnit(MassUnit.entries[idx]) },
         onToSelected = { idx -> viewModel.setMassToUnit(MassUnit.entries[idx]) },
         onSwap = {
-            val f = fromUnit; val t = toUnit
-            viewModel.setMassFromUnit(t); viewModel.setMassToUnit(f)
-        }
+            val f = fromUnit
+            val t = toUnit
+            viewModel.setMassFromUnit(t)
+            viewModel.setMassToUnit(f)
+        },
     )
 }
 
@@ -102,25 +106,32 @@ private fun UnitConverterBody(
     units: List<String>,
     onFromSelected: (Int) -> Unit,
     onToSelected: (Int) -> Unit,
-    onSwap: () -> Unit
+    onSwap: () -> Unit,
 ) {
     var showFromMenu by remember { mutableStateOf(false) }
     var showToMenu by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("From", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                UnitDropdown(label = fromLabel, expanded = showFromMenu, onExpand = { showFromMenu = true }, onDismiss = { showFromMenu = false }, units = units, onSelected = { onFromSelected(it); showFromMenu = false })
+                UnitDropdown(label = fromLabel, expanded = showFromMenu, onExpand = { showFromMenu = true }, onDismiss = {
+                    showFromMenu =
+                        false
+                }, units = units, onSelected = {
+                    onFromSelected(it)
+                    showFromMenu = false
+                })
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
@@ -128,7 +139,7 @@ private fun UnitConverterBody(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
@@ -137,7 +148,7 @@ private fun UnitConverterBody(
             SmallFloatingActionButton(
                 onClick = onSwap,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
                 Icon(Icons.Default.SwapVert, contentDescription = "Swap Units")
             }
@@ -145,22 +156,32 @@ private fun UnitConverterBody(
 
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("To", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                UnitDropdown(label = toLabel, expanded = showToMenu, onExpand = { showToMenu = true }, onDismiss = { showToMenu = false }, units = units, onSelected = { onToSelected(it); showToMenu = false })
+                UnitDropdown(label = toLabel, expanded = showToMenu, onExpand = {
+                    showToMenu = true
+                }, onDismiss = { showToMenu = false }, units = units, onSelected = {
+                    onToSelected(it)
+                    showToMenu =
+                        false
+                })
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Converted Value", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                        Text(
+                            "Converted Value",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        )
                         Text(
                             text = "$result $resultSymbol",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                 }
@@ -176,19 +197,24 @@ private fun UnitDropdown(
     onExpand: () -> Unit,
     onDismiss: () -> Unit,
     units: List<String>,
-    onSelected: (Int) -> Unit
+    onSelected: (Int) -> Unit,
 ) {
     Box {
         Button(
             onClick = onExpand,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(12.dp)
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            shape = RoundedCornerShape(12.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(label)
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
             }

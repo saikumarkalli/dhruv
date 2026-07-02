@@ -1,39 +1,45 @@
 package com.dhruv.finance.calculator
 
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.observability.PerformanceTracer
+import com.dhruv.finance.calculator.engine.CalculatorEngine
 import com.dhruv.finance.data.GeminiRepository
 import com.dhruv.finance.data.HistoryEntity
 import com.dhruv.finance.data.HistoryRepository
-import com.dhruv.finance.calculator.engine.CalculatorEngine
 import com.dhruv.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
-import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.round
 
 sealed interface AiExplanationState {
     object Idle : AiExplanationState
+
     object Loading : AiExplanationState
-    data class Success(val explanation: String) : AiExplanationState
-    data class Error(val message: String) : AiExplanationState
+
+    data class Success(
+        val explanation: String,
+    ) : AiExplanationState
+
+    data class Error(
+        val message: String,
+    ) : AiExplanationState
 }
 
 class CalculatorViewModel(
@@ -41,17 +47,17 @@ class CalculatorViewModel(
     private val settingsRepository: SettingsRepository,
     private val geminiRepository: GeminiRepository,
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     // FeatureHost error surface
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, e ->
-        crashReporter.recordException(e)
-        _featureError.value = e
-    }
+    private val coroutineExceptionHandler =
+        CoroutineExceptionHandler { _, e ->
+            crashReporter.recordException(e)
+            _featureError.value = e
+        }
 
     private val _input = MutableStateFlow("")
     val input: StateFlow<String> = _input.asStateFlow()
@@ -79,20 +85,22 @@ class CalculatorViewModel(
     }
 
     // Active calculations (not in recycle bin)
-    val activeHistory: StateFlow<List<HistoryEntity>> = historyRepository.activeHistory
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val activeHistory: StateFlow<List<HistoryEntity>> =
+        historyRepository.activeHistory
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList(),
+            )
 
     // Recycle bin calculations
-    val recycleBinHistory: StateFlow<List<HistoryEntity>> = historyRepository.recycleBinHistory
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val recycleBinHistory: StateFlow<List<HistoryEntity>> =
+        historyRepository.recycleBinHistory
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList(),
+            )
 
     val isDegree: StateFlow<Boolean> = settingsRepository.isDegree
     val decimalPrecision: StateFlow<Int> = settingsRepository.decimalPrecision
@@ -113,11 +121,11 @@ class CalculatorViewModel(
 
         viewModelScope.launch(coroutineExceptionHandler) {
             _aiExplanation.value = AiExplanationState.Loading
-            geminiRepository.solve(query)
+            geminiRepository
+                .solve(query)
                 .onSuccess { answer ->
                     _aiExplanation.value = AiExplanationState.Success(answer)
-                }
-                .onFailure { exception ->
+                }.onFailure { exception ->
                     _aiExplanation.value = AiExplanationState.Error(exception.localizedMessage ?: "Failed to solve")
                 }
         }
@@ -164,7 +172,22 @@ class CalculatorViewModel(
         val currentResult = _result.value
 
         val hasError = currentResult.startsWith("Error")
-        if (hasError && (key.firstOrNull()?.isDigit() == true || key == "." || key == "sin" || key == "cos" || key == "tan" || key == "asin" || key == "acos" || key == "atan" || key == "log" || key == "ln" || key == "sqrt" || key == "(")) {
+        if (hasError &&
+            (
+                key.firstOrNull()?.isDigit() == true ||
+                    key == "." ||
+                    key == "sin" ||
+                    key == "cos" ||
+                    key == "tan" ||
+                    key == "asin" ||
+                    key == "acos" ||
+                    key == "atan" ||
+                    key == "log" ||
+                    key == "ln" ||
+                    key == "sqrt" ||
+                    key == "("
+            )
+        ) {
             _inputState.value = TextFieldValue("")
             _input.value = ""
             _result.value = ""
@@ -212,11 +235,12 @@ class CalculatorViewModel(
                         return
                     }
                     if (currentInput.isNotEmpty()) {
-                        val newText = if (currentInput.startsWith("-")) {
-                            currentInput.removePrefix("-")
-                        } else {
-                            "-$currentInput"
-                        }
+                        val newText =
+                            if (currentInput.startsWith("-")) {
+                                currentInput.removePrefix("-")
+                            } else {
+                                "-$currentInput"
+                            }
                         val newVal = TextFieldValue(newText, TextRange(newText.length))
                         _inputState.value = newVal
                         _input.value = newText
@@ -226,11 +250,12 @@ class CalculatorViewModel(
                     }
                 }
                 "sin", "cos", "tan", "asin", "acos", "atan", "log", "ln", "sqrt" -> {
-                    val newText = if (!hasErrorBefore && currentInput.isNotEmpty()) {
-                        "$key($currentInput)"
-                    } else {
-                        "$key("
-                    }
+                    val newText =
+                        if (!hasErrorBefore && currentInput.isNotEmpty()) {
+                            "$key($currentInput)"
+                        } else {
+                            "$key("
+                        }
                     val newVal = TextFieldValue(newText, TextRange(newText.length))
                     _inputState.value = newVal
                     _input.value = newText
@@ -388,6 +413,7 @@ class CalculatorViewModel(
         if (trimmed.isEmpty()) return expr
 
         var end = trimmed.length - 1
+
         @Suppress("UNUSED_VALUE")
         var hasFactorial = false
         if (trimmed[end] == '!') {
@@ -400,8 +426,9 @@ class CalculatorViewModel(
             var depth = 0
             var i = end
             while (i >= 0) {
-                if (trimmed[i] == ')') depth++
-                else if (trimmed[i] == '(') {
+                if (trimmed[i] == ')') {
+                    depth++
+                } else if (trimmed[i] == '(') {
                     depth--
                     if (depth == 0) {
                         start = i
@@ -476,7 +503,10 @@ class CalculatorViewModel(
         }
     }
 
-    fun restoreEquation(expression: String, resultStr: String) {
+    fun restoreEquation(
+        expression: String,
+        resultStr: String,
+    ) {
         val rawRes = resultStr.replace(",", "")
         _inputState.value = TextFieldValue(expression, TextRange(expression.length))
         _input.value = expression
@@ -493,14 +523,20 @@ class CalculatorViewModel(
     }
 
     // Update Note column
-    fun updateNote(historyItem: HistoryEntity, newNote: String) {
+    fun updateNote(
+        historyItem: HistoryEntity,
+        newNote: String,
+    ) {
         viewModelScope.launch(coroutineExceptionHandler) {
             historyRepository.update(historyItem.copy(note = newNote, edited = true))
         }
     }
 
     // Update Tags column
-    fun updateTags(historyItem: HistoryEntity, newTags: String) {
+    fun updateTags(
+        historyItem: HistoryEntity,
+        newTags: String,
+    ) {
         viewModelScope.launch(coroutineExceptionHandler) {
             historyRepository.update(historyItem.copy(tags = newTags, edited = true))
         }
@@ -577,9 +613,10 @@ class CalculatorViewModel(
         }
 
         try {
-            val rawResult = performanceTracer.trace("calculator_evaluate") {
-                CalculatorEngine.evaluate(currentExpression, isDegree.value)
-            }
+            val rawResult =
+                performanceTracer.trace("calculator_evaluate") {
+                    CalculatorEngine.evaluate(currentExpression, isDegree.value)
+                }
             if (rawResult.isNaN() || rawResult.isInfinite()) {
                 _result.value = ""
             } else {
@@ -597,101 +634,112 @@ class CalculatorViewModel(
         if (currentExpression.isBlank()) return
 
         viewModelScope.launch(coroutineExceptionHandler) {
-                try {
-                    val rawResult = CalculatorEngine.evaluate(currentExpression, isDegree.value)
-                    if (rawResult.isNaN() || rawResult.isInfinite()) {
-                        _result.value = "Error"
-                        _lastExpression.value = currentExpression
-                        _isResultFinalised.value = true
-                        isResultFresh = true
-                    } else {
-                        val formatted = formatResult(rawResult, decimalPrecision.value)
-
-                        // Auto-close open parentheses in history expression
-                        var autoClosedExpression = currentExpression
-                        var openCount = 0
-                        for (ch in autoClosedExpression) {
-                            if (ch == '(') openCount++
-                            else if (ch == ')') {
-                                if (openCount > 0) openCount--
-                            }
-                        }
-                        if (openCount > 0) {
-                            autoClosedExpression += ")".repeat(openCount)
-                        }
-
-                        val isSci = checkIsScientific(autoClosedExpression)
-                        historyRepository.insert(
-                            HistoryEntity(
-                                expression = autoClosedExpression,
-                                result = formatLocaleSeparator(formatted, formatLocale.value),
-                                isScientific = isSci,
-                                calculationType = if (isSci) "scientific" else "standard",
-                                deviceSource = "Android Device"
-                            )
-                        )
-
-                        _lastExpression.value = autoClosedExpression
-                        _isResultFinalised.value = true
-                        _inputState.value = TextFieldValue(formatted, TextRange(formatted.length))
-                        _input.value = formatted
-                        _result.value = ""
-                        isResultFresh = true
-                    }
-                } catch (e: ArithmeticException) {
-                    _result.value = arithmeticErrorMessage(e)
-                    _lastExpression.value = currentExpression
-                    _isResultFinalised.value = true
-                    isResultFresh = true
-                } catch (e: Exception) {
+            try {
+                val rawResult = CalculatorEngine.evaluate(currentExpression, isDegree.value)
+                if (rawResult.isNaN() || rawResult.isInfinite()) {
                     _result.value = "Error"
                     _lastExpression.value = currentExpression
                     _isResultFinalised.value = true
                     isResultFresh = true
+                } else {
+                    val formatted = formatResult(rawResult, decimalPrecision.value)
+
+                    // Auto-close open parentheses in history expression
+                    var autoClosedExpression = currentExpression
+                    var openCount = 0
+                    for (ch in autoClosedExpression) {
+                        if (ch == '(') {
+                            openCount++
+                        } else if (ch == ')') {
+                            if (openCount > 0) openCount--
+                        }
+                    }
+                    if (openCount > 0) {
+                        autoClosedExpression += ")".repeat(openCount)
+                    }
+
+                    val isSci = checkIsScientific(autoClosedExpression)
+                    historyRepository.insert(
+                        HistoryEntity(
+                            expression = autoClosedExpression,
+                            result = formatLocaleSeparator(formatted, formatLocale.value),
+                            isScientific = isSci,
+                            calculationType = if (isSci) "scientific" else "standard",
+                            deviceSource = "Android Device",
+                        ),
+                    )
+
+                    _lastExpression.value = autoClosedExpression
+                    _isResultFinalised.value = true
+                    _inputState.value = TextFieldValue(formatted, TextRange(formatted.length))
+                    _input.value = formatted
+                    _result.value = ""
+                    isResultFresh = true
                 }
+            } catch (e: ArithmeticException) {
+                _result.value = arithmeticErrorMessage(e)
+                _lastExpression.value = currentExpression
+                _isResultFinalised.value = true
+                isResultFresh = true
+            } catch (e: Exception) {
+                _result.value = "Error"
+                _lastExpression.value = currentExpression
+                _isResultFinalised.value = true
+                isResultFresh = true
+            }
         }
     }
 
-    fun formatLocaleSeparator(numberStr: String, format: String): String {
+    fun formatLocaleSeparator(
+        numberStr: String,
+        format: String,
+    ): String {
         if (numberStr.isEmpty() || numberStr == "Error" || numberStr.startsWith("Error")) return numberStr
-        if (numberStr.contains("E") || numberStr.contains("e") || numberStr.contains("Infinity") || numberStr.contains("NaN")) return numberStr
+        if (numberStr.contains("E") ||
+            numberStr.contains("e") ||
+            numberStr.contains("Infinity") ||
+            numberStr.contains("NaN")
+        ) {
+            return numberStr
+        }
 
         val parts = numberStr.split(".")
         val intPart = parts[0]
         val isNegative = intPart.startsWith("-")
         val cleanInt = if (isNegative) intPart.substring(1) else intPart
 
-        val formattedInt = if (format == "indian") {
-            if (cleanInt.length <= 3) {
-                cleanInt
+        val formattedInt =
+            if (format == "indian") {
+                if (cleanInt.length <= 3) {
+                    cleanInt
+                } else {
+                    val last3 = cleanInt.substring(cleanInt.length - 3)
+                    val remaining = cleanInt.substring(0, cleanInt.length - 3)
+                    val sb = StringBuilder()
+                    var count = 0
+                    for (i in remaining.length - 1 downTo 0) {
+                        sb.insert(0, remaining[i])
+                        count++
+                        if (count == 2 && i > 0) {
+                            sb.insert(0, ',')
+                            count = 0
+                        }
+                    }
+                    sb.append(',').append(last3).toString()
+                }
             } else {
-                val last3 = cleanInt.substring(cleanInt.length - 3)
-                val remaining = cleanInt.substring(0, cleanInt.length - 3)
                 val sb = StringBuilder()
                 var count = 0
-                for (i in remaining.length - 1 downTo 0) {
-                    sb.insert(0, remaining[i])
+                for (i in cleanInt.length - 1 downTo 0) {
+                    sb.insert(0, cleanInt[i])
                     count++
-                    if (count == 2 && i > 0) {
+                    if (count == 3 && i > 0) {
                         sb.insert(0, ',')
                         count = 0
                     }
                 }
-                sb.append(',').append(last3).toString()
+                sb.toString()
             }
-        } else {
-            val sb = StringBuilder()
-            var count = 0
-            for (i in cleanInt.length - 1 downTo 0) {
-                sb.insert(0, cleanInt[i])
-                count++
-                if (count == 3 && i > 0) {
-                    sb.insert(0, ',')
-                    count = 0
-                }
-            }
-            sb.toString()
-        }
 
         val finalInt = if (isNegative) "-$formattedInt" else formattedInt
         return if (parts.size > 1) {
@@ -701,16 +749,20 @@ class CalculatorViewModel(
         }
     }
 
-    private fun formatResult(value: Double, precision: Int): String {
+    private fun formatResult(
+        value: Double,
+        precision: Int,
+    ): String {
         if (value.isNaN()) return "Error"
         if (value.isInfinite()) return if (value > 0) "Infinity" else "-Infinity"
 
-        val roundedValue = try {
-            val bd = java.math.BigDecimal(value)
-            bd.setScale(12, java.math.RoundingMode.HALF_UP).toDouble()
-        } catch (e: Exception) {
-            value
-        }
+        val roundedValue =
+            try {
+                val bd = java.math.BigDecimal(value)
+                bd.setScale(12, java.math.RoundingMode.HALF_UP).toDouble()
+            } catch (e: Exception) {
+                value
+            }
 
         val absVal = abs(roundedValue)
 
@@ -765,7 +817,7 @@ class CalculatorViewModel(
         private val settingsRepository: SettingsRepository,
         private val geminiRepository: GeminiRepository,
         private val crashReporter: CrashReporter,
-        private val performanceTracer: PerformanceTracer
+        private val performanceTracer: PerformanceTracer,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CalculatorViewModel::class.java)) {
@@ -806,7 +858,10 @@ internal fun arithmeticErrorMessage(e: ArithmeticException): String {
  *
  * Top-level (and `internal`) so the pure logic is unit-testable without constructing the ViewModel.
  */
-internal fun appendOperator(expr: String, op: String): String {
+internal fun appendOperator(
+    expr: String,
+    op: String,
+): String {
     if (expr.isEmpty()) {
         return if (op == "-") "-" else "0$op"
     }

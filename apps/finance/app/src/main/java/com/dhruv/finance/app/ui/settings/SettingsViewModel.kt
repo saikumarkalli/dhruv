@@ -20,20 +20,20 @@ import kotlinx.coroutines.launch
  */
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val crashReporter: CrashReporter
+    private val crashReporter: CrashReporter,
 ) : ViewModel() {
-
     init {
         crashReporter.setModule("settings")
     }
 
-    val settings: StateFlow<AppSettings> = settingsRepository
-        .observe()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = AppSettings()
-        )
+    val settings: StateFlow<AppSettings> =
+        settingsRepository
+            .observe()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = AppSettings(),
+            )
 
     fun setTheme(theme: AppTheme) = update { copy(theme = theme) }
 

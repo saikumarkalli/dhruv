@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
  * SettingsSectionDetailSheet, and SettingsScreen continue to compile without change.
  */
 interface SettingsRepository {
-
     // ── New Phase-3 API ───────────────────────────────────────────────────────
 
     /** Emits an [AppSettings] snapshot whenever any value changes. Never errors. */
@@ -53,24 +52,44 @@ interface SettingsRepository {
     // ── Legacy setter methods ─────────────────────────────────────────────────
 
     fun setDegree(degree: Boolean)
+
     fun setDarkModePreference(preference: String)
+
     fun setDecimalPrecision(precision: Int)
+
     fun setHistoryLocked(locked: Boolean)
+
     fun setHistoryPinCode(pin: String)
+
     fun setCalculatorColor(color: String)
+
     fun setConverterColor(color: String)
+
     fun setDateColor(color: String)
+
     fun setFinanceColor(color: String)
+
     fun setFormatLocale(locale: String)
+
     fun setConverterEnabled(enabled: Boolean)
+
     fun setDateEnabled(enabled: Boolean)
+
     fun setFinanceEnabled(enabled: Boolean)
+
     fun setTimeColor(color: String)
+
     fun setTimeEnabled(enabled: Boolean)
 
     /** Returns a [Flow] indicating whether a specific tool within a section is enabled. */
-    fun isToolEnabled(key: String, defaultValue: Boolean = true): Flow<Boolean>
+    fun isToolEnabled(
+        key: String,
+        defaultValue: Boolean = true,
+    ): Flow<Boolean>
 
     /** Persists the enabled/disabled state of a specific tool within a section. */
-    fun setToolEnabled(key: String, enabled: Boolean)
+    fun setToolEnabled(
+        key: String,
+        enabled: Boolean,
+    )
 }

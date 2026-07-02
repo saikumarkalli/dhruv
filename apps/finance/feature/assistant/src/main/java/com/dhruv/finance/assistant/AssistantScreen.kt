@@ -33,9 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dhruv.core.observability.NoOpCrashReporter
-import com.dhruv.core.observability.NoOpPerformanceTracer
-import com.dhruv.finance.data.GeminiRepository
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -61,74 +58,82 @@ private fun AssistantContent(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         when (state) {
             is AssistantUiState.ConsentNeeded -> ConsentGate(onGrantConsent = onGrantConsent)
 
             is AssistantUiState.Idle -> PromptInput(onAsk = onAsk, previousResponse = null)
 
-            is AssistantUiState.Loading -> Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Thinking…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            is AssistantUiState.Success -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ),
+            is AssistantUiState.Loading ->
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = state.response,
+                        text = "Thinking…",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                PromptInput(onAsk = onAsk, previousResponse = state.response)
-            }
 
-            is AssistantUiState.Error -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
+            is AssistantUiState.Success ->
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp),
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                    ) {
+                        Text(
+                            text = state.response,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    PromptInput(onAsk = onAsk, previousResponse = state.response)
                 }
-                PromptInput(onAsk = onAsk, previousResponse = null)
-            }
+
+            is AssistantUiState.Error ->
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                            ),
+                    ) {
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    PromptInput(onAsk = onAsk, previousResponse = null)
+                }
         }
     }
 }
@@ -147,9 +152,10 @@ private fun ConsentGate(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -163,8 +169,9 @@ private fun ConsentGate(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Your prompt will be sent to Google Gemini (an online service). " +
-                        "This means your text will leave this device and be processed by Google's servers.",
+                    text =
+                        "Your prompt will be sent to Google Gemini (an online service). " +
+                            "This means your text will leave this device and be processed by Google's servers.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -211,11 +218,12 @@ private fun PromptInput(
                 Icon(
                     imageVector = Icons.Default.Send,
                     contentDescription = "Send",
-                    tint = if (text.isNotBlank()) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    },
+                    tint =
+                        if (text.isNotBlank()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
                 )
             }
         },
@@ -256,7 +264,10 @@ private fun PreviewConsentDark() {
 private fun PreviewSuccessLight() {
     MaterialTheme {
         AssistantContent(
-            state = AssistantUiState.Success("The expression 2 + 2 equals 4. This is simple addition — combining two quantities of two gives a total of four."),
+            state =
+                AssistantUiState.Success(
+                    "The expression 2 + 2 equals 4. This is simple addition — combining two quantities of two gives a total of four.",
+                ),
             onGrantConsent = {},
             onAsk = {},
         )

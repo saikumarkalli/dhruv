@@ -12,9 +12,8 @@ import java.math.RoundingMode
 
 class TaxViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     init {
         crashReporter.setModule("tax")
     }
@@ -23,30 +22,35 @@ class TaxViewModel(
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
     @Suppress("unused")
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     // --- Data structures for results ---
 
     data class GstResult(
         val preTaxBase: BigDecimal,
         val taxAmount: BigDecimal,
-        val totalAmount: BigDecimal
+        val totalAmount: BigDecimal,
     )
 
     data class SalaryBreakupResult(
         val grossMonthly: BigDecimal,
         val pfContribution: BigDecimal,
         val estimatedTax: BigDecimal,
-        val takeHome: BigDecimal
+        val takeHome: BigDecimal,
     )
 
     // --- Calculations ---
 
     // GST / Tax
-    fun calculateGst(amount: Double, gstPercent: Double, isAddGst: Boolean): GstResult {
+    fun calculateGst(
+        amount: Double,
+        gstPercent: Double,
+        isAddGst: Boolean,
+    ): GstResult {
         return performanceTracer.trace("tax_calc") {
             if (amount <= 0.0 || gstPercent < 0.0) {
                 return@trace GstResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)
@@ -80,11 +84,12 @@ class TaxViewModel(
         val pf = grossMonthly.multiply(BigDecimal("0.12"))
         val capPF = if (pf > BigDecimal("15000")) BigDecimal("15000") else pf
 
-        val estimatedTax = when {
-            ctc > 1000000.0 -> grossMonthly.multiply(BigDecimal("0.15"))
-            ctc > 500000.0 -> grossMonthly.multiply(BigDecimal("0.05"))
-            else -> BigDecimal.ZERO
-        }
+        val estimatedTax =
+            when {
+                ctc > 1000000.0 -> grossMonthly.multiply(BigDecimal("0.15"))
+                ctc > 500000.0 -> grossMonthly.multiply(BigDecimal("0.05"))
+                else -> BigDecimal.ZERO
+            }
 
         val takeHome = grossMonthly.subtract(capPF).subtract(estimatedTax).coerceAtLeast(BigDecimal.ZERO)
         return SalaryBreakupResult(grossMonthly, capPF, estimatedTax, takeHome)

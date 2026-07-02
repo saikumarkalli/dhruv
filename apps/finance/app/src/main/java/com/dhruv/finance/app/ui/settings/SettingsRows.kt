@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun SettingsCategory(
     title: String,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Column {
         Text(
@@ -26,16 +26,17 @@ fun SettingsCategory(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
         )
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
             ) {
                 content()
             }
@@ -49,14 +50,15 @@ fun SettingsToggleItem(
     subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    tag: String
+    tag: String,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -68,7 +70,7 @@ fun SettingsToggleItem(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.testTag(tag)
+            modifier = Modifier.testTag(tag),
         )
     }
 }
@@ -80,17 +82,18 @@ fun SettingsClickableItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     onClick: () -> Unit,
     tag: String,
-    showChevron: Boolean = true
+    showChevron: Boolean = true,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(8.dp)
-            .testTag(tag),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onClick() }
+                .padding(8.dp)
+                .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
@@ -98,7 +101,7 @@ fun SettingsClickableItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             }
@@ -111,7 +114,7 @@ fun SettingsClickableItem(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 )
             }
         }
@@ -124,14 +127,15 @@ fun SettingsSegmentedControlItem(
     title: String,
     options: List<String>,
     selectedIndex: Int,
-    onOptionSelected: (Int) -> Unit
+    onOptionSelected: (Int) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(title, fontWeight = FontWeight.Medium, fontSize = 15.sp)
         Spacer(modifier = Modifier.width(16.dp))
@@ -140,7 +144,7 @@ fun SettingsSegmentedControlItem(
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                     onClick = { onOptionSelected(index) },
-                    selected = index == selectedIndex
+                    selected = index == selectedIndex,
                 ) {
                     Text(label)
                 }

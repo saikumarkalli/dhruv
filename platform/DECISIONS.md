@@ -178,3 +178,40 @@ rule. `pr-summary` is intentionally excluded from branch-protection required che
 cosmetic — it is informational only, never a merge gate. OWASP's row in the comment will always show
 ✅ regardless of actual findings (pre-existing `continue-on-error: true` on that scan step, §11);
 this is a known, accepted limitation, not something this change fixes.
+
+---
+
+## ADR-0013 — Pre-merge regression suite: one `regressionCheck` gate, JaCoCo (not Kover) coverage
+**Context.** Gate 3 already ran `testDebugUnitTest` on every PR, but there was (a) no coverage
+measurement or floor, so coverage could silently erode, and (b) no visible test/coverage result on a
+merge — a push to `develop`/`main` produces no PR comment, so nothing surfaced the numbers. The most
+correctness-critical code (the finance calculators) needed a non-regression ratchet, and the
+maintainer asked to *see* the test results and coverage on every merge, not just on PRs.
+**Decision.**
+1. A single Gradle entry point **`./gradlew regressionCheck`** = every module's `testDebugUnitTest`
+   (ArchUnit + Robolectric live in the debug variant) + a **merged JaCoCo report** +
+   **`jacocoCoverageVerification`** (a global LINE-coverage floor). CI Gate 3 runs this.
+2. **Coverage is JaCoCo, not Kover.** Kover 0.9.1 applies on AGP 9.1.1 but its Android integration
+   creates **no per-variant report tasks** and measures nothing — the same class of AGP-9
+   incompatibility that rules out Hilt (ADR-0010). JaCoCo is the Gradle built-in and AGP-version-
+   agnostic: modules emit exec data via `enableUnitTestCoverage = true` (set in the
+   `dhruv.android.library`/`.application` convention plugins) and the root aggregates it. On AGP 9 the
+   Kotlin classes live under `build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`.
+3. The floor starts at the **measured baseline (~6.7% line; most of the tree is Compose UI)** as a
+   non-regression ratchet and is ramped at checkpoints as tests land — it is **not** a hard 40/70/85
+   target on day one (the original plan's ~40% baseline assumption was wrong).
+4. **Merge visibility**: `scripts/ci/regression_summary.py` parses JUnit + JaCoCo XML into one
+   Markdown summary (test pass/fail/skip + per-module line coverage) reused by three surfaces so the
+   numbers show up regardless of event type — GitHub **Job Summary** (push + PR), the sticky PR
+   comment (PR), and the **GitHub Release notes** with the coverage HTML attached (each merge).
+5. The sticky-comment GitHub App is renamed **"Dhruv Bot" → "Dhruv CI Bot"** (display-name change in
+   App settings only; the `DHRUV_BOT_APP_ID`/`DHRUV_BOT_PRIVATE_KEY` secret names are unchanged).
+**Why.** One command is the whole gate for CI and developers; JaCoCo is the only coverage tool that
+actually works on this AGP 9 / Gradle 9 toolchain; a baseline-anchored ratchet gates real regressions
+without blocking unrelated PRs; a single parse step feeding three surfaces guarantees every merge
+shows its coverage + test results, which PR-only comments cannot.
+**Consequences.** New dev deps: JaCoCo (root), `turbine`, `androidx-room-testing` in the catalog.
+`enableUnitTestCoverage = true` on the debug build type of every module. The coverage floor
+(`globalLineFloor` in the root `build.gradle.kts`) is CI-owned and bumped only at plan checkpoints,
+never ahead of landed tests. Instrumented (`connectedAndroidTest`) tests stay developer-local — the
+gate is JVM + Robolectric only. Re-enabling static analysis in the gate is tracked separately.

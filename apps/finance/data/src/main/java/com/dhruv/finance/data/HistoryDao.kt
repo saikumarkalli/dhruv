@@ -27,10 +27,16 @@ interface HistoryDao {
     suspend fun deleteMultipleHistoryByIds(ids: List<Long>)
 
     @Query("UPDATE calculation_history SET isInRecycleBin = 1, deletedTimestamp = :deletedTime WHERE id = :id")
-    suspend fun moveToRecycleBin(id: Long, deletedTime: Long)
+    suspend fun moveToRecycleBin(
+        id: Long,
+        deletedTime: Long,
+    )
 
     @Query("UPDATE calculation_history SET isInRecycleBin = 1, deletedTimestamp = :deletedTime WHERE id IN (:ids)")
-    suspend fun moveMultipleToRecycleBin(ids: List<Long>, deletedTime: Long)
+    suspend fun moveMultipleToRecycleBin(
+        ids: List<Long>,
+        deletedTime: Long,
+    )
 
     @Query("UPDATE calculation_history SET isInRecycleBin = 0 WHERE id = :id")
     suspend fun restoreFromRecycleBin(id: Long)

@@ -9,6 +9,7 @@ import org.koin.dsl.module
  * feature module. Platform singletons are in [platformModule]; the Room/repository layer is in
  * :apps:finance:data's dataModule; each feature provides its own module (see CalculatorApplication).
  */
-val appModule = module {
-    viewModel { SettingsViewModel(get(), get()) }
-}
+val appModule =
+    module {
+        viewModel { SettingsViewModel(get(), get()) }
+    }

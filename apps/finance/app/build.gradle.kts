@@ -1,11 +1,8 @@
 plugins {
     id("dhruv.android.application")
     id("dhruv.android.compose")
-    // dhruv.hilt intentionally not applied yet: app is on Koin (see deps below).
-    // The Hilt Gradle plugin (2.52) is also incompatible with AGP 9 (looks up the
-    // removed BaseExtension). Re-add when the Koin→Hilt migration lands on a
-    // Hilt version that supports AGP 9.
-    // KSP is needed for Room + Moshi codegen below (was previously pulled in by dhruv.hilt).
+    // DI is Koin, not Hilt (ADR-0010 — the Hilt Gradle plugin is incompatible with AGP 9).
+    // KSP here is only for the Moshi codegen used by FeatureFlagAssetLoader.
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.roborazzi)
     alias(libs.plugins.secrets)
@@ -87,16 +84,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
 
-    // Data
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.runtime)
-    ksp(libs.androidx.room.compiler)
-
-    // Network
-    implementation(libs.retrofit)
-    implementation(libs.converter.moshi)
-    implementation(libs.okhttp)
-    implementation(libs.logging.interceptor)
+    // Moshi — used by FeatureFlagAssetLoader to parse platform/feature-flags/*.json.
+    // Room/Retrofit/OkHttp/Gemini deps deliberately live only in :apps:finance:data, which
+    // encapsulates them; the app shell touches just :data's public types, so it needs none here.
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
 
@@ -104,12 +94,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
 
-    // DI (Koin — Hilt migration is a separate step)
+    // DI (Koin)
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
-
-    // AI
-    implementation(libs.google.generativeai)
 
     // Testing
     testImplementation(libs.archunit.core)

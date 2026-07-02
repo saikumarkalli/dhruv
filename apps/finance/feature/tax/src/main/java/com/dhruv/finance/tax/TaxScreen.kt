@@ -31,7 +31,7 @@ fun TaxScreen(viewModel: TaxViewModel) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -54,25 +54,27 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
     val amount = amountInput.toDoubleOrNull() ?: 0.0
     val gstPercent = gstInput.toDoubleOrNull() ?: 0.0
 
-    val gstResult = remember(amount, gstPercent, isAddGst) {
-        viewModel.calculateGst(amount, gstPercent, isAddGst)
-    }
+    val gstResult =
+        remember(amount, gstPercent, isAddGst) {
+            viewModel.calculateGst(amount, gstPercent, isAddGst)
+        }
 
     val taxAmount = gstResult.taxAmount
     val totalAmount = gstResult.totalAmount
     val originalBase = gstResult.preTaxBase
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("GST / Tax Assessment Engine", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -82,7 +84,7 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = gstInput,
@@ -91,37 +93,50 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(4.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(4.dp),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
-                            .clickable { isAddGst = true }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .clickable { isAddGst = true }
+                                .padding(8.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text("Add GST / tax", color = if (isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(
+                            "Add GST / tax",
+                            color = if (isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                        )
                     }
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (!isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
-                            .clickable { isAddGst = false }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (!isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .clickable { isAddGst = false }
+                                .padding(8.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text("Remove GST / tax", color = if (!isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(
+                            "Remove GST / tax",
+                            color = if (!isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                        )
                     }
                 }
             }
@@ -129,7 +144,7 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -143,7 +158,12 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Final Gross Total:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(formatCurrency(totalAmount), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(totalAmount),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -159,9 +179,10 @@ fun SalaryCtcCalculator(viewModel: TaxViewModel) {
 
     val ctcPrice = ctcInput.toDoubleOrNull() ?: 0.0
 
-    val salaryResult = remember(ctcPrice) {
-        viewModel.calculateSalaryBreakup(ctcPrice)
-    }
+    val salaryResult =
+        remember(ctcPrice) {
+            viewModel.calculateSalaryBreakup(ctcPrice)
+        }
 
     val grossMonthly = salaryResult.grossMonthly
     val statePF = salaryResult.pfContribution
@@ -169,16 +190,17 @@ fun SalaryCtcCalculator(viewModel: TaxViewModel) {
     val standardTakeHome = salaryResult.takeHome
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Salary Bracket Breakdowns & PF Indicators", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -188,17 +210,21 @@ fun SalaryCtcCalculator(viewModel: TaxViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Accurate Monthly Pro-Rata breakdowns", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "Accurate Monthly Pro-Rata breakdowns",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Pro-Rata gross monthly rate:", fontSize = 12.sp)
@@ -217,7 +243,12 @@ fun SalaryCtcCalculator(viewModel: TaxViewModel) {
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Net Monthly Take-Home (estimated):", fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    Text(formatCurrency(standardTakeHome), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(standardTakeHome),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }

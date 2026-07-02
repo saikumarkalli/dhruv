@@ -5,6 +5,7 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 /** Koin module for the unit feature. */
-val unitModule = module {
-    viewModel { UnitViewModel(get(), get()) }
-}
+val unitModule =
+    module {
+        viewModel { UnitViewModel(get(), get()) }
+    }

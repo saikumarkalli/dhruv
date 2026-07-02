@@ -16,18 +16,18 @@ data class LapData(
     val lapNumber: Int,
     val lapTimeMs: Long,
     val totalTimeMs: Long,
-    val deltaMs: Long
+    val deltaMs: Long,
 )
 
 data class StopwatchState(
     val timeMs: Long = 0L,
     val isRunning: Boolean = false,
-    val laps: List<LapData> = emptyList()
+    val laps: List<LapData> = emptyList(),
 )
 
 class StopwatchViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
     private val _state = MutableStateFlow(StopwatchState())
     val state: StateFlow<StopwatchState> = _state.asStateFlow()
@@ -35,10 +35,11 @@ class StopwatchViewModel(
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     private var timerJob: Job? = null
     private var startTime = 0L
@@ -53,12 +54,13 @@ class StopwatchViewModel(
                 startTime = System.currentTimeMillis() - _state.value.timeMs
                 _state.value = _state.value.copy(isRunning = true)
             }
-            timerJob = viewModelScope.launch(exceptionHandler) {
-                while (true) {
-                    _state.value = _state.value.copy(timeMs = System.currentTimeMillis() - startTime)
-                    delay(10) // 10ms update rate
+            timerJob =
+                viewModelScope.launch(exceptionHandler) {
+                    while (true) {
+                        _state.value = _state.value.copy(timeMs = System.currentTimeMillis() - startTime)
+                        delay(10) // 10ms update rate
+                    }
                 }
-            }
         }
     }
 
@@ -67,15 +69,19 @@ class StopwatchViewModel(
             // Lap
             val currentMs = _state.value.timeMs
             val lapTime = currentMs - lastLapTime
-            val prevLapTime = _state.value.laps.firstOrNull()?.lapTimeMs ?: 0L
+            val prevLapTime =
+                _state.value.laps
+                    .firstOrNull()
+                    ?.lapTimeMs ?: 0L
             val delta = if (_state.value.laps.isEmpty()) 0L else lapTime - prevLapTime
 
-            val newLap = LapData(
-                lapNumber = _state.value.laps.size + 1,
-                lapTimeMs = lapTime,
-                totalTimeMs = currentMs,
-                deltaMs = delta
-            )
+            val newLap =
+                LapData(
+                    lapNumber = _state.value.laps.size + 1,
+                    lapTimeMs = lapTime,
+                    totalTimeMs = currentMs,
+                    deltaMs = delta,
+                )
             _state.value = _state.value.copy(laps = listOf(newLap) + _state.value.laps)
             lastLapTime = currentMs
         } else {

@@ -19,15 +19,16 @@ fun SettingsSectionDetailSheet(
     config: SettingsSectionConfig,
     settingsRepository: SettingsRepository,
     onPageToggle: (Boolean) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(config.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
@@ -35,7 +36,7 @@ fun SettingsSectionDetailSheet(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("Show ${config.title} in bottom navigation")
                     Switch(checked = config.enabled, onCheckedChange = onPageToggle)
@@ -47,25 +48,26 @@ fun SettingsSectionDetailSheet(
                 Text("Visible tools", fontWeight = FontWeight.Bold)
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         config.tools.forEach { tool ->
                             val isEnabledState = settingsRepository.isToolEnabled(tool).collectAsState(initial = true)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp, horizontal = 8.dp)
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp, horizontal = 8.dp),
                             ) {
                                 Text(tool, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                                 Switch(
                                     checked = isEnabledState.value,
-                                    onCheckedChange = { settingsRepository.setToolEnabled(tool, it) }
+                                    onCheckedChange = { settingsRepository.setToolEnabled(tool, it) },
                                 )
                             }
                         }
@@ -74,7 +76,7 @@ fun SettingsSectionDetailSheet(
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     TextButton(onClick = {
                         config.tools.forEach { settingsRepository.setToolEnabled(it, true) }

@@ -20,5 +20,5 @@ data class AppSettings(
     val fontFamily: DhruvFont = DhruvFont.DEFAULT,
     val biometricEnabled: Boolean = false,
     val syncEnabled: Boolean = false,
-    val geminiApiKey: String? = null
+    val geminiApiKey: String? = null,
 )

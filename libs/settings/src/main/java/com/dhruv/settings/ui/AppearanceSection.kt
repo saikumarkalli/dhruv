@@ -2,11 +2,9 @@ package com.dhruv.settings.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,23 +47,24 @@ fun AppearanceSection(
     onThemeChanged: (AppTheme) -> Unit,
     onAccentColorHexChanged: (String) -> Unit,
     onFontChanged: (DhruvFont) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Theme", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
 
-        val themes = listOf(
-            AppTheme.SYSTEM to "System",
-            AppTheme.LIGHT to "Light",
-            AppTheme.DARK to "Dark"
-        )
+        val themes =
+            listOf(
+                AppTheme.SYSTEM to "System",
+                AppTheme.LIGHT to "Light",
+                AppTheme.DARK to "Dark",
+            )
         val selectedIndex = themes.indexOfFirst { it.first == settings.theme }.coerceAtLeast(0)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             themes.forEachIndexed { index, (theme, label) ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = themes.size),
                     onClick = { onThemeChanged(theme) },
-                    selected = index == selectedIndex
+                    selected = index == selectedIndex,
                 ) {
                     Text(label)
                 }
@@ -92,13 +91,13 @@ fun AppearanceSection(
             isError = hexInput.isNotEmpty() && !isHexValid,
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         if (hexInput.isNotEmpty() && !isHexValid) {
             Text(
                 text = "Enter a valid hex colour, e.g. #D4AF37",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
 
@@ -107,15 +106,16 @@ fun AppearanceSection(
         Text("Font", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
 
         var fontExpanded by remember { mutableStateOf(false) }
-        val fontLabels = mapOf(
-            DhruvFont.DEFAULT to "Default",
-            DhruvFont.ROUNDED to "Rounded",
-            DhruvFont.MONO to "Monospace"
-        )
+        val fontLabels =
+            mapOf(
+                DhruvFont.DEFAULT to "Default",
+                DhruvFont.ROUNDED to "Rounded",
+                DhruvFont.MONO to "Monospace",
+            )
 
         ExposedDropdownMenuBox(
             expanded = fontExpanded,
-            onExpandedChange = { fontExpanded = it }
+            onExpandedChange = { fontExpanded = it },
         ) {
             OutlinedTextField(
                 value = fontLabels[settings.fontFamily] ?: "Default",
@@ -123,13 +123,14 @@ fun AppearanceSection(
                 readOnly = true,
                 label = { Text("Font family") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fontExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
+                modifier =
+                    Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
             )
             ExposedDropdownMenu(
                 expanded = fontExpanded,
-                onDismissRequest = { fontExpanded = false }
+                onDismissRequest = { fontExpanded = false },
             ) {
                 fontLabels.forEach { (font, label) ->
                     DropdownMenuItem(
@@ -138,7 +139,7 @@ fun AppearanceSection(
                             onFontChanged(font)
                             fontExpanded = false
                         },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }

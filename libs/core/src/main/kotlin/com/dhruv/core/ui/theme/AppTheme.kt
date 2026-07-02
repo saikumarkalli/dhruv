@@ -9,5 +9,5 @@ enum class AppTheme {
     LIGHT,
 
     /** Follow the system dark/light setting (default). DataStore value: "system". */
-    SYSTEM
+    SYSTEM,
 }

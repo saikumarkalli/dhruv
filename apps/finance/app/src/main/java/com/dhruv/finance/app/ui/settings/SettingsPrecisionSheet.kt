@@ -16,17 +16,21 @@ import java.util.Locale
 fun SettingsPrecisionSheet(
     currentPrecision: Int,
     onPrecisionSelected: (Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Decimal Precision", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Choose how many decimal places results should show across the calculator.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Choose how many decimal places results should show across the calculator.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             // Preview
             val previewNumber = 12.3456789
@@ -35,7 +39,7 @@ fun SettingsPrecisionSheet(
             val formatted = df.format(previewNumber)
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Text("Preview", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -54,7 +58,7 @@ fun SettingsPrecisionSheet(
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = precs.size),
                         onClick = { onPrecisionSelected(num) },
-                        selected = currentPrecision == num
+                        selected = currentPrecision == num,
                     ) {
                         Text("$num")
                     }

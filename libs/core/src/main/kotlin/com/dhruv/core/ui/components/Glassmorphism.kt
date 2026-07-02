@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +33,7 @@ fun DhruvGlassCard(
     blurRadiusPx: Float = 20f,
     borderAlpha: Float = 0.20f,
     contentPadding: Dp = 16.dp,
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable BoxScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
     val surface = MaterialTheme.colorScheme.surface
@@ -42,32 +41,33 @@ fun DhruvGlassCard(
     Box(modifier = modifier.clip(shape)) {
         // Background layer — blurred on API 31+, plain semi-transparent below
         Spacer(
-            modifier = Modifier
-                .matchParentSize()
-                .then(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Modifier.graphicsLayer {
-                            renderEffect = BlurEffect(blurRadiusPx, blurRadiusPx, TileMode.Clamp)
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
-                .background(color = surface.copy(alpha = backgroundAlpha))
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .then(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            Modifier.graphicsLayer {
+                                renderEffect = BlurEffect(blurRadiusPx, blurRadiusPx, TileMode.Clamp)
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).background(color = surface.copy(alpha = backgroundAlpha)),
         )
         // Glass border shimmer
         Spacer(
-            modifier = Modifier
-                .matchParentSize()
-                .border(
-                    border = BorderStroke(width = 1.dp, color = Color.White.copy(alpha = borderAlpha)),
-                    shape = shape
-                )
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .border(
+                        border = BorderStroke(width = 1.dp, color = Color.White.copy(alpha = borderAlpha)),
+                        shape = shape,
+                    ),
         )
         // Content sits on top, unblurred
         Box(
             modifier = Modifier.padding(contentPadding),
-            content = content
+            content = content,
         )
     }
 }

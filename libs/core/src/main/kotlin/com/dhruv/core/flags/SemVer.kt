@@ -8,8 +8,9 @@ package com.dhruv.core.flags
  * `"1.2"` compares equal to `"1.2.0"`. Garbage components fall back to 0 rather than throwing —
  * a flag must never crash the app over a malformed version string.
  */
-class SemVer private constructor(private val parts: List<Int>) : Comparable<SemVer> {
-
+class SemVer private constructor(
+    private val parts: List<Int>,
+) : Comparable<SemVer> {
     override fun compareTo(other: SemVer): Int {
         val size = maxOf(parts.size, other.parts.size)
         for (i in 0 until size) {
@@ -21,10 +22,13 @@ class SemVer private constructor(private val parts: List<Int>) : Comparable<SemV
 
     companion object {
         /** Parses [raw] leniently; each component keeps only its leading digits, defaulting to 0. */
-        fun parse(raw: String): SemVer = SemVer(
-            raw.trim().split('.')
-                .map { component -> component.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
-                .ifEmpty { listOf(0) }
-        )
+        fun parse(raw: String): SemVer =
+            SemVer(
+                raw
+                    .trim()
+                    .split('.')
+                    .map { component -> component.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+                    .ifEmpty { listOf(0) },
+            )
     }
 }

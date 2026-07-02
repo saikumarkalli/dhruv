@@ -24,15 +24,16 @@ fun SettingsAppearanceSheet(
     uiState: SettingsUiState,
     onThemeChanged: (String) -> Unit,
     onColorChanged: (String, String) -> Unit, // section, colorId
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
@@ -46,7 +47,7 @@ fun SettingsAppearanceSheet(
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = themes.size),
                         onClick = { onThemeChanged(pair.first) },
-                        selected = index == selectedIndex
+                        selected = index == selectedIndex,
                     ) {
                         Text(pair.second)
                     }
@@ -56,19 +57,20 @@ fun SettingsAppearanceSheet(
             Spacer(modifier = Modifier.height(8.dp))
             Text("Section colors", fontWeight = FontWeight.Bold)
 
-            val targets = listOf(
-                AccentTarget("calculator", "Calculator", uiState.calculatorColor),
-                AccentTarget("converter", "Converter", uiState.converterColor),
-                AccentTarget("date", "Date & Time", uiState.dateColor),
-                AccentTarget("finance", "Finance", uiState.financeColor),
-                AccentTarget("time", "Time Tools", uiState.timeColor)
-            )
+            val targets =
+                listOf(
+                    AccentTarget("calculator", "Calculator", uiState.calculatorColor),
+                    AccentTarget("converter", "Converter", uiState.converterColor),
+                    AccentTarget("date", "Date & Time", uiState.dateColor),
+                    AccentTarget("finance", "Finance", uiState.financeColor),
+                    AccentTarget("time", "Time Tools", uiState.timeColor),
+                )
 
             targets.forEach { target ->
                 ColorPickerRow(
                     label = target.label,
                     selectedColorId = target.selectedColorId,
-                    onColorSelected = { colorId -> onColorChanged(target.id, colorId) }
+                    onColorSelected = { colorId -> onColorChanged(target.id, colorId) },
                 )
             }
 
@@ -81,11 +83,11 @@ fun SettingsAppearanceSheet(
 fun ColorPickerRow(
     label: String,
     selectedColorId: String,
-    onColorSelected: (String) -> Unit
+    onColorSelected: (String) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -94,19 +96,21 @@ fun ColorPickerRow(
                 items(ColorOptions) { opt ->
                     val isSelected = opt.id == selectedColorId
                     Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(opt.darkPrimary)
-                            .clickable { onColorSelected(opt.id) }
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(opt.darkPrimary)
+                                .clickable { onColorSelected(opt.id) },
                     ) {
                         if (isSelected) {
                             Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .align(Alignment.Center)
+                                modifier =
+                                    Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .align(Alignment.Center),
                             )
                         }
                     }

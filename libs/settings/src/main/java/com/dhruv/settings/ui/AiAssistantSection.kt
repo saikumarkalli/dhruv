@@ -46,7 +46,7 @@ fun AiAssistantSection(
     geminiApiKey: String?,
     onKeyChanged: (String) -> Unit,
     onClearKey: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var keyInput by remember(geminiApiKey) { mutableStateOf(geminiApiKey ?: "") }
     var keyVisible by remember { mutableStateOf(false) }
@@ -55,13 +55,13 @@ fun AiAssistantSection(
         Text(
             text = "Gemini API Key",
             fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge,
         )
         Text(
             text = "Optional. Your key bypasses the shared usage limit.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
+            fontSize = 12.sp,
         )
 
         OutlinedTextField(
@@ -70,26 +70,27 @@ fun AiAssistantSection(
             label = { Text("API key") },
             placeholder = { Text("Paste your Gemini key here") },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
             visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { keyVisible = !keyVisible }) {
                     Icon(
                         imageVector = if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (keyVisible) "Hide key" else "Show key"
+                        contentDescription = if (keyVisible) "Hide key" else "Show key",
                     )
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (geminiApiKey != null) {
                 TextButton(onClick = {

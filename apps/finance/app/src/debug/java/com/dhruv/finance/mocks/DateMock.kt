@@ -46,17 +46,18 @@ fun DateMock() {
                             DhruvCrest(modifier = Modifier.size(24.dp), tint = DhruvGold)
                             Text("Date", fontWeight = FontWeight.SemiBold)
                         }
-                    }
+                    },
                 )
             },
-            bottomBar = { MockBottomNav(selected = "Date") }
+            bottomBar = { MockBottomNav(selected = "Date") },
         ) { padding ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // From date picker
                 DatePickerStub(label = "From", value = "1 Jan 2024")
@@ -67,12 +68,12 @@ fun DateMock() {
                 // Primary result
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0001))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0001)),
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text("Duration", fontSize = 12.sp, color = Color(0xFF9E9E9E))
                         Text(
@@ -80,7 +81,7 @@ fun DateMock() {
                             fontSize = 48.sp,
                             fontWeight = FontWeight.Bold,
                             color = DhruvGold,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -98,10 +99,13 @@ fun DateMock() {
 }
 
 @Composable
-private fun DatePickerStub(label: String, value: String) {
+private fun DatePickerStub(
+    label: String,
+    value: String,
+) {
     OutlinedButton(
         onClick = {},
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
         Text("  $label: $value", modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
@@ -109,10 +113,13 @@ private fun DatePickerStub(label: String, value: String) {
 }
 
 @Composable
-private fun ResultRow(label: String, value: String) {
+private fun ResultRow(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, color = Color(0xFF9E9E9E))
         Text(value, fontWeight = FontWeight.Medium)

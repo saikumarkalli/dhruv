@@ -2,7 +2,6 @@ package com.dhruv.finance.loans
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -33,7 +31,7 @@ fun LoansScreen(viewModel: LoansViewModel) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -58,30 +56,32 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
     val annualRate = interestInput.toDoubleOrNull() ?: 0.0
     val tenureYears = tenureInput.toDoubleOrNull() ?: 0.0
 
-    val emiResult = remember(principal, annualRate, tenureYears) {
-        viewModel.calculateEmi(principal, annualRate, tenureYears)
-    }
+    val emiResult =
+        remember(principal, annualRate, tenureYears) {
+            viewModel.calculateEmi(principal, annualRate, tenureYears)
+        }
 
     val emi = emiResult.emi
     val totalInterest = emiResult.totalInterest
     val totalPayment = emiResult.totalPayment
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Interactive Loan Amortization Plans", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         // Inputs Card
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text("Principal Loan Sum (₹)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                 OutlinedTextField(
@@ -91,7 +91,7 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (principal.toFloat().coerceIn(10000f, 10000000f) - 10000f) / (10000000f - 10000f),
@@ -99,10 +99,14 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         val v = 10000f + it * (10000000f - 10000f)
                         principalInput = v.toInt().toString()
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
-                Text("Interest Factor Rate (% p.a.)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "Interest Factor Rate (% p.a.)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
                 OutlinedTextField(
                     value = interestInput,
                     onValueChange = { interestInput = it },
@@ -110,7 +114,7 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (annualRate.toFloat().coerceIn(1f, 25f) - 1f) / 24f,
@@ -118,7 +122,7 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         val r = 1f + it * 24f
                         interestInput = "%.2f".format(java.util.Locale.US, r)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Text("Pay Back Tenure (Years)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
@@ -129,7 +133,7 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (tenureYears.toFloat().coerceIn(1f, 30f) - 1f) / 29f,
@@ -137,7 +141,7 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         val y = 1f + it * 29f
                         tenureInput = y.toInt().toString()
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -146,34 +150,40 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp),
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     "Calculated Monthly Installment",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 )
                 Text(
                     text = formatCurrency(emi),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                )
 
                 // Beautiful hollow ring Canvas representation
                 EmiRatioPieRing(principal = principal, interest = totalInterest.toDouble())
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
                         Text("Borrowed Principal", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
@@ -189,7 +199,12 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
 
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Total Outlay (Principal + Interest)", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(totalPayment), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(totalPayment),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -197,7 +212,10 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
 }
 
 @Composable
-fun EmiRatioPieRing(principal: Double, interest: Double) {
+fun EmiRatioPieRing(
+    principal: Double,
+    interest: Double,
+) {
     val total = principal + interest
     if (total <= 0) return
     val principalSweep = (principal / total * 360f).toFloat()
@@ -207,17 +225,19 @@ fun EmiRatioPieRing(principal: Double, interest: Double) {
     val interestColor = Color(0xFFFF5252)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Hollow ring canvas
         Canvas(
-            modifier = Modifier
-                .size(70.dp)
-                .padding(4.dp)
+            modifier =
+                Modifier
+                    .size(70.dp)
+                    .padding(4.dp),
         ) {
             val strokeWidth = 16f
             drawArc(
@@ -225,20 +245,20 @@ fun EmiRatioPieRing(principal: Double, interest: Double) {
                 startAngle = -90f,
                 sweepAngle = interestSweep,
                 useCenter = false,
-                style = Stroke(width = strokeWidth)
+                style = Stroke(width = strokeWidth),
             )
             drawArc(
                 color = principalColor,
                 startAngle = -90f + interestSweep,
                 sweepAngle = principalSweep,
                 useCenter = false,
-                style = Stroke(width = strokeWidth)
+                style = Stroke(width = strokeWidth),
             )
         }
 
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(10.dp).background(principalColor, RoundedCornerShape(2.dp)))
@@ -246,7 +266,7 @@ fun EmiRatioPieRing(principal: Double, interest: Double) {
                 Text(
                     text = "Loan Principal: ${(principal / total * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,7 +276,7 @@ fun EmiRatioPieRing(principal: Double, interest: Double) {
                     text = "Interest Burden: ${(interest / total * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF5252)
+                    color = Color(0xFFFF5252),
                 )
             }
         }
@@ -286,48 +306,65 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
     val rateB = rateBInput.toDoubleOrNull() ?: 0.0
     val tenureB = tenureBInput.toDoubleOrNull() ?: 0.0
 
-    val resultA = remember(principalA, rateA, tenureA) {
-        viewModel.calculateEmi(principalA, rateA, tenureA)
-    }
-    val resultB = remember(principalB, rateB, tenureB) {
-        viewModel.calculateEmi(principalB, rateB, tenureB)
-    }
+    val resultA =
+        remember(principalA, rateA, tenureA) {
+            viewModel.calculateEmi(principalA, rateA, tenureA)
+        }
+    val resultB =
+        remember(principalB, rateB, tenureB) {
+            viewModel.calculateEmi(principalB, rateB, tenureB)
+        }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Side-by-Side Loan Comparison", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         // Loan A inputs
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Loan A", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                OutlinedTextField(
-                    value = principalAInput, onValueChange = { principalAInput = it },
-                    label = { Text("Principal (₹)") }, prefix = { Text("₹ ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                Text(
+                    "Loan A",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 OutlinedTextField(
-                    value = rateAInput, onValueChange = { rateAInput = it },
-                    label = { Text("Interest Rate (% p.a.)") }, suffix = { Text("%") },
+                    value = principalAInput,
+                    onValueChange = { principalAInput = it },
+                    label = { Text("Principal (₹)") },
+                    prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
-                    value = tenureAInput, onValueChange = { tenureAInput = it },
-                    label = { Text("Tenure (Years)") }, suffix = { Text("Yrs") },
+                    value = rateAInput,
+                    onValueChange = { rateAInput = it },
+                    label = { Text("Interest Rate (% p.a.)") },
+                    suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                OutlinedTextField(
+                    value = tenureAInput,
+                    onValueChange = { tenureAInput = it },
+                    label = { Text("Tenure (Years)") },
+                    suffix = { Text("Yrs") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
@@ -335,30 +372,44 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
         // Loan B inputs
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Loan B", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                OutlinedTextField(
-                    value = principalBInput, onValueChange = { principalBInput = it },
-                    label = { Text("Principal (₹)") }, prefix = { Text("₹ ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                Text(
+                    "Loan B",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
                 OutlinedTextField(
-                    value = rateBInput, onValueChange = { rateBInput = it },
-                    label = { Text("Interest Rate (% p.a.)") }, suffix = { Text("%") },
+                    value = principalBInput,
+                    onValueChange = { principalBInput = it },
+                    label = { Text("Principal (₹)") },
+                    prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
-                    value = tenureBInput, onValueChange = { tenureBInput = it },
-                    label = { Text("Tenure (Years)") }, suffix = { Text("Yrs") },
+                    value = rateBInput,
+                    onValueChange = { rateBInput = it },
+                    label = { Text("Interest Rate (% p.a.)") },
+                    suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                OutlinedTextField(
+                    value = tenureBInput,
+                    onValueChange = { tenureBInput = it },
+                    label = { Text("Tenure (Years)") },
+                    suffix = { Text("Yrs") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
@@ -367,7 +418,7 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp),
         ) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Comparison Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -375,13 +426,23 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Loan A EMI", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(formatCurrency(resultA.emi), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            formatCurrency(resultA.emi),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                         Text("Interest: ${formatCurrency(resultA.totalInterest)}", fontSize = 10.sp)
                         Text("Total: ${formatCurrency(resultA.totalPayment)}", fontSize = 10.sp)
                     }
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                         Text("Loan B EMI", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(formatCurrency(resultB.emi), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.secondary)
+                        Text(
+                            formatCurrency(resultB.emi),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
                         Text("Interest: ${formatCurrency(resultB.totalInterest)}", fontSize = 10.sp)
                         Text("Total: ${formatCurrency(resultB.totalPayment)}", fontSize = 10.sp)
                     }
@@ -390,7 +451,18 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
                 val interestDiff = resultA.totalInterest.subtract(resultB.totalInterest)
-                val cheaperLabel = if (interestDiff > BigDecimal.ZERO) "Loan B saves ${formatCurrency(interestDiff)} in interest" else if (interestDiff < BigDecimal.ZERO) "Loan A saves ${formatCurrency(interestDiff.negate())} in interest" else "Both loans cost the same in interest"
+                val cheaperLabel =
+                    if (interestDiff >
+                        BigDecimal.ZERO
+                    ) {
+                        "Loan B saves ${formatCurrency(interestDiff)} in interest"
+                    } else if (interestDiff <
+                        BigDecimal.ZERO
+                    ) {
+                        "Loan A saves ${formatCurrency(interestDiff.negate())} in interest"
+                    } else {
+                        "Both loans cost the same in interest"
+                    }
                 Text(cheaperLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
             }
         }
@@ -398,4 +470,5 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
 }
 
 private fun formatCurrency(value: Double): String = CurrencyFormatter.format(value)
+
 private fun formatCurrency(value: BigDecimal): String = CurrencyFormatter.format(value)

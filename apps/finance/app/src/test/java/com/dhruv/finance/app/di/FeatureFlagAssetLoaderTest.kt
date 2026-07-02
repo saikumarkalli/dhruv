@@ -10,16 +10,20 @@ import org.junit.Test
 
 private class FakeCrashReporter : CrashReporter {
     var lastException: Throwable? = null
+
     override fun setModule(name: String) = Unit
+
     override fun recordException(t: Throwable) {
         lastException = t
     }
+
     override fun log(message: String) = Unit
 }
 
 // Mirrors platform/feature-flags/dhruv-finance.json — kept in sync manually since this test
 // guards against the schema (not the literal values) drifting unnoticed.
-private val FINANCE_FLAGS_JSON = """
+private val FINANCE_FLAGS_JSON =
+    """
 {
   "app": "finance",
   "features": {
@@ -35,10 +39,9 @@ private val FINANCE_FLAGS_JSON = """
     "assistant":   { "enabled": true,  "minVersion": "1.2.0", "requiresConsent": true }
   }
 }
-""".trimIndent()
+    """.trimIndent()
 
 class FeatureFlagAssetLoaderTest {
-
     @Test
     fun `parses all flags from the finance JSON schema`() {
         val flags = parseFeatureFlags(FINANCE_FLAGS_JSON, NoOpCrashReporter)

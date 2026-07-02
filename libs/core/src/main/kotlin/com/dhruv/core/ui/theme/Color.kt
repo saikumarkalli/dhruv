@@ -3,18 +3,18 @@ package com.dhruv.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Dhruv Brand Colors (navy + silver, per brand kit)
-val DhruvNavy         = Color(0xFF0D1B2A) // primary background / icon bg
+val DhruvNavy = Color(0xFF0D1B2A) // primary background / icon bg
 val DhruvNavyElevated = Color(0xFF132B4D) // elevated navy surface
-val DhruvBlue         = Color(0xFF1E3A6D) // mid navy / accents
-val DhruvSilver       = Color(0xFFC0C6D1) // primary silver (refined from #C0C0C0)
-val DhruvSilverLight  = Color(0xFFE6E9EF) // bright silver highlight
-val DhruvSteel        = Color(0xFF8E97A6) // muted steel (orbital rings)
-val DhruvAccent       = Color(0xFF3FA7FF) // accent blue
-val DhruvLogoBg       = Color(0xFFF4F6FA) // light tint behind the full-color logo / app icon
+val DhruvBlue = Color(0xFF1E3A6D) // mid navy / accents
+val DhruvSilver = Color(0xFFC0C6D1) // primary silver (refined from #C0C0C0)
+val DhruvSilverLight = Color(0xFFE6E9EF) // bright silver highlight
+val DhruvSteel = Color(0xFF8E97A6) // muted steel (orbital rings)
+val DhruvAccent = Color(0xFF3FA7FF) // accent blue
+val DhruvLogoBg = Color(0xFFF4F6FA) // light tint behind the full-color logo / app icon
 
 // Legacy accent (a muted purple, historically mislabeled "gold"). Brand chrome now uses
 // DhruvSilver/DhruvSilverLight; this is kept only for existing accent references (debug mocks etc.).
-val DhruvGold   = Color(0xFF665080)
+val DhruvGold = Color(0xFF665080)
 
 // Light Theme Palettes (with some elegant refinements)
 val PrimaryLight = Color(0xFFF05A28) // MIUI Orange
@@ -55,4 +55,3 @@ val SophScienceKeyBg = Color(0xFFF5F5F5)
 val SophScienceKeyText = Color(0xFF455A64)
 val SophScienceKeyBorder = Color(0xFFE0E0E0)
 val SophScienceKeyActiveBg = Color(0xFFCFD8DC)
-

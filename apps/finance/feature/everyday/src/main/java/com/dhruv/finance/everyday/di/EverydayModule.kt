@@ -5,6 +5,7 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 /** Koin module for the everyday feature. */
-val everydayModule = module {
-    viewModel { EverydayViewModel(get(), get()) }
-}
+val everydayModule =
+    module {
+        viewModel { EverydayViewModel(get(), get()) }
+    }

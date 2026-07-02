@@ -15,5 +15,5 @@ data class SettingsUiState(
     val converterColor: String = "purple",
     val dateColor: String = "coral",
     val financeColor: String = "amber",
-    val timeColor: String = "teal"
+    val timeColor: String = "teal",
 )

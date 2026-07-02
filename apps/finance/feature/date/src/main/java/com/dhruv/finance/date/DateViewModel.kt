@@ -1,12 +1,14 @@
 package com.dhruv.finance.date
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.observability.PerformanceTracer
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -17,16 +19,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 class DateViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     init {
         crashReporter.setModule("date")
     }
@@ -34,10 +31,11 @@ class DateViewModel(
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     private val _activeSubCalculator = MutableStateFlow<Int?>(null)
     val activeSubCalculator: StateFlow<Int?> = _activeSubCalculator.asStateFlow()
@@ -53,10 +51,13 @@ class DateViewModel(
         val months: Int,
         val days: Int,
         val weeks: Long,
-        val remainingDays: Long
+        val remainingDays: Long,
     )
 
-    fun calculateDifference(date1: Calendar, date2: Calendar): DateDifferenceResult {
+    fun calculateDifference(
+        date1: Calendar,
+        date2: Calendar,
+    ): DateDifferenceResult {
         val d1 = date1.timeInMillis
         val d2 = date2.timeInMillis
         val diffMs = Math.abs(d2 - d1)
@@ -87,12 +88,16 @@ class DateViewModel(
             months = mths,
             days = dys,
             weeks = totalDays / 7,
-            remainingDays = totalDays % 7
+            remainingDays = totalDays % 7,
         )
     }
 
     // --- 2. Add / Subtract Days ---
-    fun offsetDate(baseDate: Calendar, offsetDays: Int, isSubtract: Boolean): Date {
+    fun offsetDate(
+        baseDate: Calendar,
+        offsetDays: Int,
+        isSubtract: Boolean,
+    ): Date {
         val clone = baseDate.clone() as Calendar
         if (isSubtract) {
             clone.add(Calendar.DAY_OF_YEAR, -offsetDays)
@@ -114,10 +119,13 @@ class DateViewModel(
         val totalMonths: Int,
         val totalWeeks: Long,
         val totalHours: Long,
-        val totalMinutes: Long
+        val totalMinutes: Long,
     )
 
-    fun calculateAge(birthDate: Calendar, referenceDate: Calendar): AgeResult {
+    fun calculateAge(
+        birthDate: Calendar,
+        referenceDate: Calendar,
+    ): AgeResult {
         if (birthDate.after(referenceDate)) {
             return AgeResult(0, 0, 0, 0, 0, "Monday", 0L, 0, 0L, 0L, 0L)
         }
@@ -173,7 +181,7 @@ class DateViewModel(
             totalMonths = yrs * 12 + mths,
             totalWeeks = tDays / 7,
             totalHours = tDays * 24,
-            totalMinutes = tDays * 24 * 60
+            totalMinutes = tDays * 24 * 60,
         )
     }
 
@@ -181,10 +189,13 @@ class DateViewModel(
     data class BusinessDaysResult(
         val workingDays: Int,
         val weekends: Int,
-        val totalDays: Int
+        val totalDays: Int,
     )
 
-    fun calculateBusinessDays(date1: Calendar, date2: Calendar): BusinessDaysResult {
+    fun calculateBusinessDays(
+        date1: Calendar,
+        date2: Calendar,
+    ): BusinessDaysResult {
         val y1 = date1.get(Calendar.YEAR)
         val m1 = date1.get(Calendar.MONTH) + 1
         val d1 = date1.get(Calendar.DAY_OF_MONTH)
@@ -218,7 +229,7 @@ class DateViewModel(
             BusinessDaysResult(
                 workingDays = (totalDays - weekends).toInt(),
                 weekends = weekends.toInt(),
-                totalDays = totalDays.toInt()
+                totalDays = totalDays.toInt(),
             )
         } catch (e: Exception) {
             BusinessDaysResult(0, 0, 0)
@@ -226,51 +237,66 @@ class DateViewModel(
     }
 
     // --- 5. Time Zone Conversion ---
-    fun convertTimeZone(sourceHour: Int, sourceMinute: Int, sourceZone: ZoneId, targetZone: ZoneId): String {
-        return try {
+    fun convertTimeZone(
+        sourceHour: Int,
+        sourceMinute: Int,
+        sourceZone: ZoneId,
+        targetZone: ZoneId,
+    ): String =
+        try {
             val now = Calendar.getInstance()
-            val zonedDateTime = ZonedDateTime.of(
-                now.get(Calendar.YEAR),
-                now.get(Calendar.MONTH) + 1,
-                now.get(Calendar.DAY_OF_MONTH),
-                sourceHour.coerceIn(0, 23),
-                sourceMinute.coerceIn(0, 59),
-                0, 0, sourceZone
-            )
+            val zonedDateTime =
+                ZonedDateTime.of(
+                    now.get(Calendar.YEAR),
+                    now.get(Calendar.MONTH) + 1,
+                    now.get(Calendar.DAY_OF_MONTH),
+                    sourceHour.coerceIn(0, 23),
+                    sourceMinute.coerceIn(0, 59),
+                    0,
+                    0,
+                    sourceZone,
+                )
             val convertedTime = zonedDateTime.withZoneSameInstant(targetZone)
             val formatter = DateTimeFormatter.ofPattern("hh:mm a (EEEE)", Locale.US)
             convertedTime.format(formatter)
         } catch (e: Exception) {
             "---"
         }
-    }
 
     // --- 6. Unix Epoch Conversion ---
-    fun unixTimestampToDateString(unixSeconds: Long): String {
-        return try {
+    fun unixTimestampToDateString(unixSeconds: Long): String =
+        try {
             val date = Date(unixSeconds * 1000)
             val sdfLocal = SimpleDateFormat("yyyy-MM-dd HH:mm:ss (z)", Locale.US)
-            val sdfUtc = SimpleDateFormat("yyyy-MM-dd HH:mm:ss UTC", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+            // 'UTC' must be quoted — unquoted U/T/C are reserved SimpleDateFormat pattern letters and
+            // throw IllegalArgumentException, which previously made this whole method return the
+            // "Invalid Timestamp Number" fallback for every input.
+            val sdfUtc = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
             "Local: ${sdfLocal.format(date)}\nUTC: ${sdfUtc.format(date)}"
         } catch (e: Exception) {
             "Invalid Timestamp Number"
         }
-    }
 
-    fun dateComponentsToUnixTimestamp(year: Int, month: Int, day: Int, hour: Int, minute: Int): Long {
-        return try {
-            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, month - 1)
-                set(Calendar.DAY_OF_MONTH, day)
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
+    fun dateComponentsToUnixTimestamp(
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        minute: Int,
+    ): Long =
+        try {
+            val cal =
+                Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month - 1)
+                    set(Calendar.DAY_OF_MONTH, day)
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
             cal.timeInMillis / 1000
         } catch (e: Exception) {
             0L
         }
-    }
 }

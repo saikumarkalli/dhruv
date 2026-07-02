@@ -18,28 +18,30 @@ import androidx.compose.ui.unit.sp
 fun LocaleFormatDialog(
     currentLocale: String,
     onLocaleSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Display Separators Format", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val locales = listOf(
-                    "international" to "International (1,000,000)",
-                    "indian" to "Indian (10,00,000)"
-                )
+                val locales =
+                    listOf(
+                        "international" to "International (1,000,000)",
+                        "indian" to "Indian (10,00,000)",
+                    )
                 locales.forEach { (key, name) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onLocaleSelected(key) }
-                            .padding(vertical = 12.dp, horizontal = 8.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onLocaleSelected(key) }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
                     ) {
                         RadioButton(
                             selected = currentLocale == key,
-                            onClick = { onLocaleSelected(key) }
+                            onClick = { onLocaleSelected(key) },
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -52,14 +54,14 @@ fun LocaleFormatDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(24.dp),
     )
 }
 
 @Composable
 fun ClearHistoryDialog(
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -67,13 +69,13 @@ fun ClearHistoryDialog(
         text = {
             Text(
                 "This permanently deletes saved calculation logs on this device.",
-                fontSize = 15.sp
+                fontSize = 15.sp,
             )
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
             ) {
                 Text("Clear")
             }
@@ -83,14 +85,14 @@ fun ClearHistoryDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(24.dp),
     )
 }
 
 @Composable
 fun PinEntryDialog(
     onPinSaved: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var tempPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
@@ -121,7 +123,7 @@ fun PinEntryDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     placeholder = { Text("e.g., 1234") },
-                    modifier = Modifier.fillMaxWidth().testTag("settings_pin_textfield")
+                    modifier = Modifier.fillMaxWidth().testTag("settings_pin_textfield"),
                 )
             }
         },
@@ -133,7 +135,7 @@ fun PinEntryDialog(
                     } else {
                         pinError = "PIN must be exactly 4 digits long."
                     }
-                }
+                },
             ) {
                 Text("Save PIN")
             }
@@ -143,6 +145,6 @@ fun PinEntryDialog(
                 Text("Dismiss")
             }
         },
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(24.dp),
     )
 }

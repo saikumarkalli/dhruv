@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>VariableNaming:ConverterAndFormatterTest.kt$ConverterAndFormatterTest$private val D = 1e-9</ID>
+  </CurrentIssues>
+</SmellBaseline>

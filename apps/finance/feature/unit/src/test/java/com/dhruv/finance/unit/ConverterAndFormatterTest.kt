@@ -10,42 +10,68 @@ import java.math.BigDecimal
  * Relocated from the app module during the Phase 4 feature split.
  */
 class ConverterAndFormatterTest {
-
     private val converter: IUnitConverter = UnitConverter
     private val D = 1e-9
 
     // ── LENGTH ──
-    @Test fun lengthMetersToMeters()       = assertLength(5.0, LengthUnit.METERS, LengthUnit.METERS, 5.0)
-    @Test fun lengthKmToKm()               = assertLength(1.0, LengthUnit.KILOMETERS, LengthUnit.KILOMETERS, 1.0)
-    @Test fun lengthMilesToMiles()         = assertLength(3.0, LengthUnit.MILES, LengthUnit.MILES, 3.0)
-    @Test fun lengthKmToMeters()           = assertLength(2.0, LengthUnit.KILOMETERS, LengthUnit.METERS, 2000.0)
-    @Test fun lengthMeterToKm()            = assertLength(1000.0, LengthUnit.METERS, LengthUnit.KILOMETERS, 1.0)
-    @Test fun lengthMeterToFeet()          = assertLength(1.0, LengthUnit.METERS, LengthUnit.FEET, 1.0 / 0.3048)
-    @Test fun lengthFeetToMeter()          = assertLength(3.048, LengthUnit.FEET, LengthUnit.METERS, 3.048 * 0.3048)
-    @Test fun lengthMeterToInches()        = assertLength(1.0, LengthUnit.METERS, LengthUnit.INCHES, 1.0 / 0.0254)
-    @Test fun lengthInchesToCm()           = assertLength(1.0, LengthUnit.INCHES, LengthUnit.CENTIMETERS, 2.54)
-    @Test fun lengthMilesToKm()            = assertLength(1.0, LengthUnit.MILES, LengthUnit.KILOMETERS, 1.609344)
-    @Test fun lengthKmToMiles()            = assertLength(1.609344, LengthUnit.KILOMETERS, LengthUnit.MILES, 1.0)
-    @Test fun lengthMmToMeter()            = assertLength(1000.0, LengthUnit.MILLIMETERS, LengthUnit.METERS, 1.0)
-    @Test fun lengthMeterToYards()         = assertLength(0.9144, LengthUnit.METERS, LengthUnit.YARDS, 1.0)
-    @Test fun lengthZeroValue()            = assertLength(0.0, LengthUnit.KILOMETERS, LengthUnit.METERS, 0.0)
-    @Test fun lengthNegative()             = assertLength(-1.0, LengthUnit.KILOMETERS, LengthUnit.METERS, -1000.0)
-    @Test fun lengthVeryLarge()            = assertLength(1_000_000.0, LengthUnit.METERS, LengthUnit.KILOMETERS, 1000.0)
+    @Test fun lengthMetersToMeters() = assertLength(5.0, LengthUnit.METERS, LengthUnit.METERS, 5.0)
+
+    @Test fun lengthKmToKm() = assertLength(1.0, LengthUnit.KILOMETERS, LengthUnit.KILOMETERS, 1.0)
+
+    @Test fun lengthMilesToMiles() = assertLength(3.0, LengthUnit.MILES, LengthUnit.MILES, 3.0)
+
+    @Test fun lengthKmToMeters() = assertLength(2.0, LengthUnit.KILOMETERS, LengthUnit.METERS, 2000.0)
+
+    @Test fun lengthMeterToKm() = assertLength(1000.0, LengthUnit.METERS, LengthUnit.KILOMETERS, 1.0)
+
+    @Test fun lengthMeterToFeet() = assertLength(1.0, LengthUnit.METERS, LengthUnit.FEET, 1.0 / 0.3048)
+
+    @Test fun lengthFeetToMeter() = assertLength(3.048, LengthUnit.FEET, LengthUnit.METERS, 3.048 * 0.3048)
+
+    @Test fun lengthMeterToInches() = assertLength(1.0, LengthUnit.METERS, LengthUnit.INCHES, 1.0 / 0.0254)
+
+    @Test fun lengthInchesToCm() = assertLength(1.0, LengthUnit.INCHES, LengthUnit.CENTIMETERS, 2.54)
+
+    @Test fun lengthMilesToKm() = assertLength(1.0, LengthUnit.MILES, LengthUnit.KILOMETERS, 1.609344)
+
+    @Test fun lengthKmToMiles() = assertLength(1.609344, LengthUnit.KILOMETERS, LengthUnit.MILES, 1.0)
+
+    @Test fun lengthMmToMeter() = assertLength(1000.0, LengthUnit.MILLIMETERS, LengthUnit.METERS, 1.0)
+
+    @Test fun lengthMeterToYards() = assertLength(0.9144, LengthUnit.METERS, LengthUnit.YARDS, 1.0)
+
+    @Test fun lengthZeroValue() = assertLength(0.0, LengthUnit.KILOMETERS, LengthUnit.METERS, 0.0)
+
+    @Test fun lengthNegative() = assertLength(-1.0, LengthUnit.KILOMETERS, LengthUnit.METERS, -1000.0)
+
+    @Test fun lengthVeryLarge() = assertLength(1_000_000.0, LengthUnit.METERS, LengthUnit.KILOMETERS, 1000.0)
 
     // ── MASS ──
-    @Test fun massKgToKg()         = assertMass(5.0, MassUnit.KILOGRAMS, MassUnit.KILOGRAMS, 5.0)
-    @Test fun massGramToGram()     = assertMass(100.0, MassUnit.GRAMS, MassUnit.GRAMS, 100.0)
-    @Test fun massKgToGrams()      = assertMass(2.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, 2000.0)
-    @Test fun massGramToKg()       = assertMass(1000.0, MassUnit.GRAMS, MassUnit.KILOGRAMS, 1.0)
-    @Test fun massKgToPounds()     = assertMass(1.0, MassUnit.KILOGRAMS, MassUnit.POUNDS, 1.0 / 0.45359237)
-    @Test fun massPoundsToKg()     = assertMass(1.0, MassUnit.POUNDS, MassUnit.KILOGRAMS, 0.45359237)
-    @Test fun massKgToOunces()     = assertMass(1.0, MassUnit.KILOGRAMS, MassUnit.OUNCES, 1.0 / 0.028349523125)
-    @Test fun massMgToKg()         = assertMass(1_000_000.0, MassUnit.MILLIGRAMS, MassUnit.KILOGRAMS, 1.0)
-    @Test fun massMgToPounds()     = assertMass(1_000_000.0, MassUnit.MILLIGRAMS, MassUnit.POUNDS, 1.0 / 0.45359237)
-    @Test fun massOuncesToGrams()  = assertMass(1.0, MassUnit.OUNCES, MassUnit.GRAMS, 0.028349523125 / 0.001)
-    @Test fun massZero()           = assertMass(0.0, MassUnit.KILOGRAMS, MassUnit.POUNDS, 0.0)
-    @Test fun massNegative()       = assertMass(-2.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, -2000.0)
-    @Test fun massVeryLarge()      = assertMass(1_000_000.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, 1e9)
+    @Test fun massKgToKg() = assertMass(5.0, MassUnit.KILOGRAMS, MassUnit.KILOGRAMS, 5.0)
+
+    @Test fun massGramToGram() = assertMass(100.0, MassUnit.GRAMS, MassUnit.GRAMS, 100.0)
+
+    @Test fun massKgToGrams() = assertMass(2.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, 2000.0)
+
+    @Test fun massGramToKg() = assertMass(1000.0, MassUnit.GRAMS, MassUnit.KILOGRAMS, 1.0)
+
+    @Test fun massKgToPounds() = assertMass(1.0, MassUnit.KILOGRAMS, MassUnit.POUNDS, 1.0 / 0.45359237)
+
+    @Test fun massPoundsToKg() = assertMass(1.0, MassUnit.POUNDS, MassUnit.KILOGRAMS, 0.45359237)
+
+    @Test fun massKgToOunces() = assertMass(1.0, MassUnit.KILOGRAMS, MassUnit.OUNCES, 1.0 / 0.028349523125)
+
+    @Test fun massMgToKg() = assertMass(1_000_000.0, MassUnit.MILLIGRAMS, MassUnit.KILOGRAMS, 1.0)
+
+    @Test fun massMgToPounds() = assertMass(1_000_000.0, MassUnit.MILLIGRAMS, MassUnit.POUNDS, 1.0 / 0.45359237)
+
+    @Test fun massOuncesToGrams() = assertMass(1.0, MassUnit.OUNCES, MassUnit.GRAMS, 0.028349523125 / 0.001)
+
+    @Test fun massZero() = assertMass(0.0, MassUnit.KILOGRAMS, MassUnit.POUNDS, 0.0)
+
+    @Test fun massNegative() = assertMass(-2.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, -2000.0)
+
+    @Test fun massVeryLarge() = assertMass(1_000_000.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, 1e9)
 
     // ── CURRENCY FORMATTER ──
     @Test
@@ -115,9 +141,19 @@ class ConverterAndFormatterTest {
         assertTrue("Should handle negative values", result.contains("500.00"))
     }
 
-    private fun assertLength(value: Double, from: LengthUnit, to: LengthUnit, expected: Double, delta: Double = D) =
-        assertEquals(expected, converter.convertLength(value, from, to), delta)
+    private fun assertLength(
+        value: Double,
+        from: LengthUnit,
+        to: LengthUnit,
+        expected: Double,
+        delta: Double = D,
+    ) = assertEquals(expected, converter.convertLength(value, from, to), delta)
 
-    private fun assertMass(value: Double, from: MassUnit, to: MassUnit, expected: Double, delta: Double = D) =
-        assertEquals(expected, converter.convertMass(value, from, to), delta)
+    private fun assertMass(
+        value: Double,
+        from: MassUnit,
+        to: MassUnit,
+        expected: Double,
+        delta: Double = D,
+    ) = assertEquals(expected, converter.convertMass(value, from, to), delta)
 }

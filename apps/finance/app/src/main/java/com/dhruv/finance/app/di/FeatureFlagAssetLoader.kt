@@ -22,11 +22,18 @@ data class FeatureFlagsFileDto(
 
 // Last-resort fallback if the bundled asset is ever missing or fails to parse. Calculator-only
 // (minVersion default "0.0.0") so the app degrades to its primary feature rather than going blank.
-private val safetyDefaults: Map<String, FeatureFlag> = mapOf(
-    "calculator" to FeatureFlag(enabled = true),
-)
+private val safetyDefaults: Map<String, FeatureFlag> =
+    mapOf(
+        "calculator" to FeatureFlag(enabled = true),
+    )
 
-internal fun parseFeatureFlags(json: String, crashReporter: CrashReporter): Map<String, FeatureFlag> =
+// Broad catch is intentional: any JSON/parse failure must fall back to the calculator-only
+// safety map (and report it) so a malformed flags asset can never blank the app.
+@Suppress("TooGenericExceptionCaught")
+internal fun parseFeatureFlags(
+    json: String,
+    crashReporter: CrashReporter,
+): Map<String, FeatureFlag> =
     try {
         val adapter = Moshi.Builder().build().adapter(FeatureFlagsFileDto::class.java)
         val parsed = adapter.fromJson(json)
@@ -43,9 +50,16 @@ internal fun parseFeatureFlags(json: String, crashReporter: CrashReporter): Map<
  * via the app module's assets.srcDirs), making that file the single source of truth instead of a
  * hand-duplicated Kotlin literal.
  */
-fun loadFinanceFeatureFlags(context: Context, crashReporter: CrashReporter): Map<String, FeatureFlag> =
+fun loadFinanceFeatureFlags(
+    context: Context,
+    crashReporter: CrashReporter,
+): Map<String, FeatureFlag> =
     try {
-        val json = context.assets.open("dhruv-finance.json").bufferedReader().use { it.readText() }
+        val json =
+            context.assets
+                .open("dhruv-finance.json")
+                .bufferedReader()
+                .use { it.readText() }
         parseFeatureFlags(json, crashReporter)
     } catch (e: IOException) {
         crashReporter.recordException(e)

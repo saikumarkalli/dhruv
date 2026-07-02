@@ -2,8 +2,8 @@ package com.dhruv.core.domain
 
 import android.content.Context
 import android.provider.Settings
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Hybrid Logical Clock for Last-Write-Wins conflict resolution (ADR-0004).
@@ -16,14 +16,16 @@ import java.util.concurrent.atomic.AtomicInteger
  * Example:      "1718273645123-0000-a1b2c3d4"
  */
 object HlcClock {
-
     private val lastL = AtomicLong(0L)
     private val lastC = AtomicInteger(0)
     private var nodeId: String = "00000000"
 
     fun init(context: Context) {
-        nodeId = (Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            ?: "00000000").take(8).padEnd(8, '0')
+        nodeId =
+            (
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+                    ?: "00000000"
+            ).take(8).padEnd(8, '0')
     }
 
     @Synchronized
@@ -44,11 +46,12 @@ object HlcClock {
         val wall = System.currentTimeMillis()
         val prevL = lastL.get()
         val newL = maxOf(wall, remoteL, prevL)
-        val newC = when (newL) {
-            remoteL -> lastC.get() + 1
-            prevL   -> lastC.get() + 1
-            else    -> 0
-        }
+        val newC =
+            when (newL) {
+                remoteL -> lastC.get() + 1
+                prevL -> lastC.get() + 1
+                else -> 0
+            }
         lastL.set(newL)
         lastC.set(newC)
         return "$newL-${newC.toString().padStart(4, '0')}-$nodeId"

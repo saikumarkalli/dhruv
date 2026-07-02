@@ -8,14 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.math.pow
 
 class InvestmentsViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     init {
         crashReporter.setModule("investments")
     }
@@ -23,34 +21,39 @@ class InvestmentsViewModel(
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     // --- Data structures for results ---
 
     data class SipResult(
         val totalInvested: BigDecimal,
         val estimatedReturns: BigDecimal,
-        val futureValue: BigDecimal
+        val futureValue: BigDecimal,
     )
 
     data class RoiCagrResult(
         val absoluteReturn: Double,
-        val cagr: Double
+        val cagr: Double,
     )
 
     data class FdRdResult(
         val principalInvested: BigDecimal,
         val interestGains: BigDecimal,
-        val maturityValue: BigDecimal
+        val maturityValue: BigDecimal,
     )
 
     // --- Calculations ---
 
     // SIP Growth
-    fun calculateSip(amount: Double, rate: Double, years: Double): SipResult {
+    fun calculateSip(
+        amount: Double,
+        rate: Double,
+        years: Double,
+    ): SipResult {
         return performanceTracer.trace("investments_calc") {
             if (amount <= 0.0 || rate < 0.0 || years <= 0.0) {
                 return@trace SipResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)
@@ -73,7 +76,11 @@ class InvestmentsViewModel(
     }
 
     // ROI / CAGR
-    fun calculateRoiCagr(initial: Double, finalVal: Double, years: Double): RoiCagrResult {
+    fun calculateRoiCagr(
+        initial: Double,
+        finalVal: Double,
+        years: Double,
+    ): RoiCagrResult {
         if (initial <= 0.0 || finalVal < 0.0 || years <= 0.0) {
             return RoiCagrResult(0.0, 0.0)
         }
@@ -83,7 +90,12 @@ class InvestmentsViewModel(
     }
 
     // FD / RD Maturity
-    fun calculateFdRd(amount: Double, rate: Double, years: Double, isFixedDeposit: Boolean): FdRdResult {
+    fun calculateFdRd(
+        amount: Double,
+        rate: Double,
+        years: Double,
+        isFixedDeposit: Boolean,
+    ): FdRdResult {
         if (amount <= 0.0 || rate < 0.0 || years <= 0.0) {
             return FdRdResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)
         }

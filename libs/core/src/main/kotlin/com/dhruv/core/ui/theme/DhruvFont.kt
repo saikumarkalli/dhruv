@@ -15,5 +15,5 @@ enum class DhruvFont {
     MONO,
 
     /** Brand serif (Cormorant Garamond downloadable font) — used for wordmarks and brand headers. */
-    BRAND_SERIF
+    BRAND_SERIF,
 }
