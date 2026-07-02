@@ -17,7 +17,11 @@ import java.util.Calendar
 class DateViewModelTest {
     private val vm = DateViewModel(NoOpCrashReporter, NoOpPerformanceTracer)
 
-    private fun cal(year: Int, month: Int, day: Int): Calendar =
+    private fun cal(
+        year: Int,
+        month: Int,
+        day: Int,
+    ): Calendar =
         Calendar.getInstance().apply {
             clear()
             set(year, month - 1, day, 0, 0, 0)

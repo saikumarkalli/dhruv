@@ -10,7 +10,11 @@ import org.junit.Test
  * `init(Context)` is not exercised (it touches Android Settings) — the node id defaults to 8 zeros.
  */
 class HlcClockTest {
-    private data class Stamp(val l: Long, val c: Int, val node: String)
+    private data class Stamp(
+        val l: Long,
+        val c: Int,
+        val node: String,
+    )
 
     private val stampFormat = Regex("""\d+-\d{4}-.{8}""")
 

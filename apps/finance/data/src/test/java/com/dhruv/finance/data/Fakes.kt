@@ -15,8 +15,7 @@ class FakeHistoryDao : HistoryDao {
     private val rows = MutableStateFlow<List<HistoryEntity>>(emptyList())
     private var nextId = 1L
 
-    override fun getAllHistory(): Flow<List<HistoryEntity>> =
-        rows.map { list -> list.sortedByDescending { it.timestamp } }
+    override fun getAllHistory(): Flow<List<HistoryEntity>> = rows.map { list -> list.sortedByDescending { it.timestamp } }
 
     override fun getActiveHistory(): Flow<List<HistoryEntity>> =
         rows.map { list -> list.filter { !it.isInRecycleBin }.sortedByDescending { it.timestamp } }
@@ -41,16 +40,24 @@ class FakeHistoryDao : HistoryDao {
         rows.value = rows.value.filterNot { it.id in ids }
     }
 
-    override suspend fun moveToRecycleBin(id: Long, deletedTime: Long) {
-        rows.value = rows.value.map {
-            if (it.id == id) it.copy(isInRecycleBin = true, deletedTimestamp = deletedTime) else it
-        }
+    override suspend fun moveToRecycleBin(
+        id: Long,
+        deletedTime: Long,
+    ) {
+        rows.value =
+            rows.value.map {
+                if (it.id == id) it.copy(isInRecycleBin = true, deletedTimestamp = deletedTime) else it
+            }
     }
 
-    override suspend fun moveMultipleToRecycleBin(ids: List<Long>, deletedTime: Long) {
-        rows.value = rows.value.map {
-            if (it.id in ids) it.copy(isInRecycleBin = true, deletedTimestamp = deletedTime) else it
-        }
+    override suspend fun moveMultipleToRecycleBin(
+        ids: List<Long>,
+        deletedTime: Long,
+    ) {
+        rows.value =
+            rows.value.map {
+                if (it.id in ids) it.copy(isInRecycleBin = true, deletedTimestamp = deletedTime) else it
+            }
     }
 
     override suspend fun restoreFromRecycleBin(id: Long) {

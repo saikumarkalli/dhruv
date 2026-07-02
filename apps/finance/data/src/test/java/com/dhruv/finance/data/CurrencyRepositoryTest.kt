@@ -27,29 +27,33 @@ class CurrencyRepositoryTest {
     private val repo = CurrencyRepository(dao, offlineClient)
 
     @Test
-    fun fetchFallsBackToCacheWhenAllApisFail() = runBlocking {
-        dao.insertRates(listOf(CurrencyRateEntity("USD", 1.0, 0), CurrencyRateEntity("INR", 83.0, 0)))
-        val result = repo.fetchAndCacheLatestRates("USD")
-        assertTrue(result.isSuccess)
-        assertEquals(83.0, result.getOrThrow()["INR"]!!, 0.0001)
-    }
+    fun fetchFallsBackToCacheWhenAllApisFail() =
+        runBlocking {
+            dao.insertRates(listOf(CurrencyRateEntity("USD", 1.0, 0), CurrencyRateEntity("INR", 83.0, 0)))
+            val result = repo.fetchAndCacheLatestRates("USD")
+            assertTrue(result.isSuccess)
+            assertEquals(83.0, result.getOrThrow()["INR"]!!, 0.0001)
+        }
 
     @Test
-    fun fetchFailsWhenApisFailAndCacheIsEmpty() = runBlocking {
-        val result = repo.fetchAndCacheLatestRates("USD")
-        assertTrue(result.isFailure)
-    }
+    fun fetchFailsWhenApisFailAndCacheIsEmpty() =
+        runBlocking {
+            val result = repo.fetchAndCacheLatestRates("USD")
+            assertTrue(result.isFailure)
+        }
 
     @Test
-    fun getRateReadsFromCacheAndNullsUnknown() = runBlocking {
-        dao.insertRates(listOf(CurrencyRateEntity("EUR", 0.9, 0)))
-        assertEquals(0.9, repo.getRate("EUR")!!, 0.0001)
-        assertNull(repo.getRate("XYZ"))
-    }
+    fun getRateReadsFromCacheAndNullsUnknown() =
+        runBlocking {
+            dao.insertRates(listOf(CurrencyRateEntity("EUR", 0.9, 0)))
+            assertEquals(0.9, repo.getRate("EUR")!!, 0.0001)
+            assertNull(repo.getRate("XYZ"))
+        }
 
     @Test
-    fun getAllRatesReturnsCachedEntities() = runBlocking {
-        dao.insertRates(listOf(CurrencyRateEntity("USD", 1.0, 0)))
-        assertEquals(1, repo.getAllRates().size)
-    }
+    fun getAllRatesReturnsCachedEntities() =
+        runBlocking {
+            dao.insertRates(listOf(CurrencyRateEntity("USD", 1.0, 0)))
+            assertEquals(1, repo.getAllRates().size)
+        }
 }
