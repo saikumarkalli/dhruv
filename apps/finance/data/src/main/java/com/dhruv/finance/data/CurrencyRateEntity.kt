@@ -7,5 +7,5 @@ import androidx.room.PrimaryKey
 data class CurrencyRateEntity(
     @PrimaryKey val currencyCode: String,
     val rate: Double,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )

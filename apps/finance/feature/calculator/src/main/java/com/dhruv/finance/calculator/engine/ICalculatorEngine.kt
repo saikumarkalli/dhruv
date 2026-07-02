@@ -9,7 +9,10 @@ interface ICalculatorEngine {
      * @throws ArithmeticException under domain violations (division by zero, negative square root, log of non-positive).
      * @throws RuntimeException under syntax or parsing errors.
      */
-    fun evaluate(expression: String, isDegree: Boolean): Double
+    fun evaluate(
+        expression: String,
+        isDegree: Boolean,
+    ): Double
 
     /**
      * Computes the factorial of a number.

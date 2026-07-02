@@ -13,9 +13,8 @@ import kotlin.math.pow
 
 class EverydayViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     init {
         crashReporter.setModule("everyday")
     }
@@ -24,10 +23,11 @@ class EverydayViewModel(
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
     @Suppress("unused")
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     // --- Data structures for results ---
 
@@ -35,30 +35,35 @@ class EverydayViewModel(
         val simpleInterest: BigDecimal,
         val simpleTotal: BigDecimal,
         val compoundInterest: BigDecimal,
-        val compoundTotal: BigDecimal
+        val compoundTotal: BigDecimal,
     )
 
     data class DiscountMarkupResult(
         val offset: BigDecimal,
-        val finalVal: BigDecimal
+        val finalVal: BigDecimal,
     )
 
     data class TipSplitResult(
         val totalTip: BigDecimal,
         val overallTotal: BigDecimal,
         val splitTip: BigDecimal,
-        val splitBill: BigDecimal
+        val splitBill: BigDecimal,
     )
 
     data class InflationResult(
         val futurePurchasePower: BigDecimal,
-        val amountNeeded: BigDecimal
+        val amountNeeded: BigDecimal,
     )
 
     // --- Calculations ---
 
     // Simple & Compound Interest
-    fun calculateSimpleCompound(principal: Double, rate: Double, years: Double, compoundingPeriods: Int): SimpleCompoundResult {
+    fun calculateSimpleCompound(
+        principal: Double,
+        rate: Double,
+        years: Double,
+        compoundingPeriods: Int,
+    ): SimpleCompoundResult {
         return performanceTracer.trace("everyday_calc") {
             if (principal <= 0.0 || rate < 0.0 || years <= 0.0) {
                 return@trace SimpleCompoundResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)
@@ -83,7 +88,11 @@ class EverydayViewModel(
     }
 
     // Discount & Markup
-    fun calculateDiscountMarkup(basePrice: Double, percent: Double, isDiscount: Boolean): DiscountMarkupResult {
+    fun calculateDiscountMarkup(
+        basePrice: Double,
+        percent: Double,
+        isDiscount: Boolean,
+    ): DiscountMarkupResult {
         if (basePrice <= 0.0 || percent < 0.0) {
             return DiscountMarkupResult(BigDecimal.ZERO, BigDecimal.ZERO)
         }
@@ -96,7 +105,11 @@ class EverydayViewModel(
     }
 
     // Tip & Bill Split
-    fun calculateTipSplit(bill: Double, tipPercent: Double, people: Int): TipSplitResult {
+    fun calculateTipSplit(
+        bill: Double,
+        tipPercent: Double,
+        people: Int,
+    ): TipSplitResult {
         if (bill <= 0.0 || tipPercent < 0.0 || people <= 0) {
             return TipSplitResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)
         }
@@ -114,7 +127,11 @@ class EverydayViewModel(
     }
 
     // Inflation Adjusted Value
-    fun calculateInflation(amount: Double, rate: Double, years: Double): InflationResult {
+    fun calculateInflation(
+        amount: Double,
+        rate: Double,
+        years: Double,
+    ): InflationResult {
         if (amount <= 0.0 || rate < 0.0 || years <= 0.0) {
             return InflationResult(BigDecimal.ZERO, BigDecimal.ZERO)
         }

@@ -32,7 +32,7 @@ fun EverydayScreen(viewModel: EverydayViewModel) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -59,9 +59,10 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
     val rate = rateInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    val scResult = remember(principal, rate, years, compoundFrequency) {
-        viewModel.calculateSimpleCompound(principal, rate, years, compoundFrequency)
-    }
+    val scResult =
+        remember(principal, rate, years, compoundFrequency) {
+            viewModel.calculateSimpleCompound(principal, rate, years, compoundFrequency)
+        }
 
     val simpleInterest = scResult.simpleInterest
     val simpleTotal = scResult.simpleTotal
@@ -69,17 +70,18 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
     val compoundTotal = scResult.compoundTotal
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Interest Compounding Estimations", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -89,7 +91,7 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = rateInput,
@@ -98,7 +100,7 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("% p.a.") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = yearsInput,
@@ -107,31 +109,42 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("Yrs") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
 
-                Text("Compounding Interval Frequency", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "Compounding Interval Frequency",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(4.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(4.dp),
                 ) {
                     val frequencies = listOf("Annual", "Quarterly", "Monthly")
                     val freqVals = listOf(1, 4, 12)
                     frequencies.forEachIndexed { idx, label ->
                         val isSel = freqVals[idx] == compoundFrequency
                         Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .clickable { compoundFrequency = freqVals[idx] }
-                                .padding(8.dp),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable { compoundFrequency = freqVals[idx] }
+                                    .padding(8.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(label, color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(
+                                label,
+                                color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                            )
                         }
                     }
                 }
@@ -140,10 +153,14 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Yield Performance side-by-side", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "Yield Performance side-by-side",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -167,7 +184,7 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -186,56 +203,71 @@ fun DiscountMarkupCalculator(viewModel: EverydayViewModel) {
     val base = amountInput.toDoubleOrNull() ?: 0.0
     val pct = percentInput.toDoubleOrNull() ?: 0.0
 
-    val dmResult = remember(base, pct, isDiscountMode) {
-        viewModel.calculateDiscountMarkup(base, pct, isDiscountMode)
-    }
+    val dmResult =
+        remember(base, pct, isDiscountMode) {
+            viewModel.calculateDiscountMarkup(base, pct, isDiscountMode)
+        }
 
     val offset = dmResult.offset
     val finalVal = dmResult.finalVal
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Product Pricing Adjuster", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isDiscountMode) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { isDiscountMode = true }
-                    .padding(10.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDiscountMode) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isDiscountMode = true }
+                        .padding(10.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("Discount mode", color = if (isDiscountMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(
+                    "Discount mode",
+                    color = if (isDiscountMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                )
             }
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (!isDiscountMode) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { isDiscountMode = false }
-                    .padding(10.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (!isDiscountMode) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isDiscountMode = false }
+                        .padding(10.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("Markup mode", color = if (!isDiscountMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(
+                    "Markup mode",
+                    color = if (!isDiscountMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                )
             }
         }
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -245,7 +277,7 @@ fun DiscountMarkupCalculator(viewModel: EverydayViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = percentInput,
@@ -254,24 +286,33 @@ fun DiscountMarkupCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(if (isDiscountMode) "Total retail savings offset:" else "Added wholesale markup value:", fontSize = 12.sp)
-                    Text(formatCurrency(offset), fontWeight = FontWeight.Bold, color = if (isDiscountMode) Color(0xFF4CAF50) else Color(0xFFFF5252))
+                    Text(
+                        formatCurrency(offset),
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDiscountMode) Color(0xFF4CAF50) else Color(0xFFFF5252),
+                    )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Target Final Price Item tag:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(formatCurrency(finalVal), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(finalVal),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -291,9 +332,10 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
     val tipPercent = tipInput.toDoubleOrNull() ?: 10.0
     val totalPeople = peopleInput.toIntOrNull() ?: 1
 
-    val tipResult = remember(bill, tipPercent, totalPeople) {
-        viewModel.calculateTipSplit(bill, tipPercent, totalPeople)
-    }
+    val tipResult =
+        remember(bill, tipPercent, totalPeople) {
+            viewModel.calculateTipSplit(bill, tipPercent, totalPeople)
+        }
 
     val totalTip = tipResult.totalTip
     val overallTotal = tipResult.overallTotal
@@ -301,17 +343,18 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
     val splitBill = tipResult.splitBill
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Dining Apportionment Clocks", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -321,7 +364,7 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = tipInput,
@@ -330,7 +373,7 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = peopleInput,
@@ -338,14 +381,14 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
                     label = { Text("Active bill split headcount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -368,7 +411,12 @@ fun TipBillSplitCalculator(viewModel: EverydayViewModel) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Cost sum share per seat:", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(formatCurrency(splitBill), fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            formatCurrency(splitBill),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
             }
@@ -389,25 +437,27 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
     val rate = inflationRateInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    val inflationResult = remember(amount, rate, years) {
-        viewModel.calculateInflation(amount, rate, years)
-    }
+    val inflationResult =
+        remember(amount, rate, years) {
+            viewModel.calculateInflation(amount, rate, years)
+        }
 
     val futurePurchasePower = inflationResult.futurePurchasePower
     val amountNeeded = inflationResult.amountNeeded
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Inflationary Purchase Power Trackers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -417,7 +467,7 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = inflationRateInput,
@@ -426,7 +476,7 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = yearsInput,
@@ -435,26 +485,35 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
                     suffix = { Text("Yrs") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column {
                     Text("Future real value (Purchasing Power):", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(futurePurchasePower), fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(futurePurchasePower),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Text("Value of " + formatCurrency(amount) + " today in ${years.toInt()} years", fontSize = 11.sp)
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f))
 
                 Column {
-                    Text("Amount needed to match purchase power in ${years.toInt()} years:", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                    Text(
+                        "Amount needed to match purchase power in ${years.toInt()} years:",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
                     Text(formatCurrency(amountNeeded), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFFFF5252))
                 }
             }
@@ -463,4 +522,5 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
 }
 
 private fun formatCurrency(value: Double): String = CurrencyFormatter.format(value)
+
 private fun formatCurrency(value: BigDecimal): String = CurrencyFormatter.format(value)

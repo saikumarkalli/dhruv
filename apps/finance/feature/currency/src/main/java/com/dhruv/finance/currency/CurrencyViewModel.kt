@@ -17,16 +17,16 @@ import java.util.Locale
 class CurrencyViewModel(
     private val currencyRepository: ICurrencyRepository,
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     // --- Currency Conversion State ---
     private val _currencyInput = MutableStateFlow("1")
@@ -52,13 +52,32 @@ class CurrencyViewModel(
 
     sealed interface CurrencyStatus {
         object Loading : CurrencyStatus
-        data class Success(val isOffline: Boolean) : CurrencyStatus
-        data class Error(val message: String) : CurrencyStatus
+
+        data class Success(
+            val isOffline: Boolean,
+        ) : CurrencyStatus
+
+        data class Error(
+            val message: String,
+        ) : CurrencyStatus
     }
 
-    val availableCurrencies = listOf(
-        "USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD", "CNY", "CHF", "NZD", "ZAR", "SGD", "BRL"
-    )
+    val availableCurrencies =
+        listOf(
+            "USD",
+            "EUR",
+            "GBP",
+            "INR",
+            "JPY",
+            "CAD",
+            "AUD",
+            "CNY",
+            "CHF",
+            "NZD",
+            "ZAR",
+            "SGD",
+            "BRL",
+        )
 
     init {
         crashReporter.setModule("currency")
@@ -71,26 +90,27 @@ class CurrencyViewModel(
         }
         viewModelScope.launch(exceptionHandler) {
             val result = currencyRepository.fetchAndCacheLatestRates("USD")
-            result.onSuccess { rates ->
-                _ratesMap.value = rates
-                val cached = currencyRepository.getAllRates()
-                val ts = cached.firstOrNull()?.timestamp ?: System.currentTimeMillis()
-                _lastUpdatedTime.value = ts
-                _currencyStatus.value = CurrencyStatus.Success(isOffline = false)
-                recalculateCurrency()
-            }.onFailure { err ->
-                crashReporter.recordException(err)
-                val cached = currencyRepository.getAllRates()
-                if (cached.isNotEmpty()) {
-                    val map = cached.associate { it.currencyCode to it.rate }
-                    _ratesMap.value = map
-                    _lastUpdatedTime.value = cached.firstOrNull()?.timestamp
-                    _currencyStatus.value = CurrencyStatus.Success(isOffline = true)
+            result
+                .onSuccess { rates ->
+                    _ratesMap.value = rates
+                    val cached = currencyRepository.getAllRates()
+                    val ts = cached.firstOrNull()?.timestamp ?: System.currentTimeMillis()
+                    _lastUpdatedTime.value = ts
+                    _currencyStatus.value = CurrencyStatus.Success(isOffline = false)
                     recalculateCurrency()
-                } else {
-                    _currencyStatus.value = CurrencyStatus.Error("No cached or live rates found.")
+                }.onFailure { err ->
+                    crashReporter.recordException(err)
+                    val cached = currencyRepository.getAllRates()
+                    if (cached.isNotEmpty()) {
+                        val map = cached.associate { it.currencyCode to it.rate }
+                        _ratesMap.value = map
+                        _lastUpdatedTime.value = cached.firstOrNull()?.timestamp
+                        _currencyStatus.value = CurrencyStatus.Success(isOffline = true)
+                        recalculateCurrency()
+                    } else {
+                        _currencyStatus.value = CurrencyStatus.Error("No cached or live rates found.")
+                    }
                 }
-            }
         }
     }
 

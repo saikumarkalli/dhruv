@@ -13,7 +13,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun TimeScreen(
     viewModel: TimeViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val tabs = listOf("Stopwatch", "Timer")
@@ -22,13 +22,13 @@ fun TimeScreen(
         TabRow(
             selectedTabIndex = uiState.selectedTab,
             containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            contentColor = MaterialTheme.colorScheme.primary,
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = uiState.selectedTab == index,
                     onClick = { viewModel.selectTab(index) },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }

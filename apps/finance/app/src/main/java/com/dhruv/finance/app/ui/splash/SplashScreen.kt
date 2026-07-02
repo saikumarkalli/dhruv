@@ -48,7 +48,7 @@ private const val WORDMARK_ASPECT = 944f / 256f
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    onFinished: () -> Unit = {}
+    onFinished: () -> Unit = {},
 ) {
     val compassRotation = remember { Animatable(-25f) }
     val compassScale = remember { Animatable(0.8f) }
@@ -82,10 +82,11 @@ fun SplashScreen(
     val scaleDown = TOP_BAR_WORDMARK_HEIGHT.value / HERO_WORDMARK_HEIGHT.value
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .graphicsLayer { alpha = containerAlpha.value }
-            .background(Color.Black)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = containerAlpha.value }
+                .background(Color.Black),
     ) {
         val screenW = maxWidth
         val screenH = maxHeight
@@ -98,32 +99,34 @@ fun SplashScreen(
 
         // Compass — upper-centre, spins in then fades during the hand-off.
         DhruvLogo(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(140.dp)
-                .graphicsLayer {
-                    translationY = -(96.dp.toPx())
-                    rotationZ = compassRotation.value
-                    scaleX = compassScale.value
-                    scaleY = compassScale.value
-                    alpha = compassAlpha.value
-                }
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .size(140.dp)
+                    .graphicsLayer {
+                        translationY = -(96.dp.toPx())
+                        rotationZ = compassRotation.value
+                        scaleX = compassScale.value
+                        scaleY = compassScale.value
+                        alpha = compassAlpha.value
+                    },
         )
 
         // Wordmark hero — laid out centred at hero size; transformed to the top-left on hand-off.
         DhruvWordmarkImage(
             height = HERO_WORDMARK_HEIGHT,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .graphicsLayer {
-                    val p = handoff.value
-                    val s = wordmarkScaleIn.value * (1f - p + p * scaleDown)
-                    scaleX = s
-                    scaleY = s
-                    alpha = wordmarkAlpha.value
-                    translationX = (targetCenterX - screenW / 2).toPx() * p
-                    translationY = (targetCenterY - screenH / 2).toPx() * p
-                }
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .graphicsLayer {
+                        val p = handoff.value
+                        val s = wordmarkScaleIn.value * (1f - p + p * scaleDown)
+                        scaleX = s
+                        scaleY = s
+                        alpha = wordmarkAlpha.value
+                        translationX = (targetCenterX - screenW / 2).toPx() * p
+                        translationY = (targetCenterY - screenH / 2).toPx() * p
+                    },
         )
     }
 }

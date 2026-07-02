@@ -24,22 +24,22 @@ class FirebaseFeatureFlagResolver(
     private val defaults: Map<String, Boolean> = emptyMap(),
     minimumFetchIntervalSeconds: Long = 3600L,
 ) : FeatureFlagResolver {
-
-    private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance().also {
-        it.setConfigSettingsAsync(
-            FirebaseRemoteConfigSettings.Builder()
-                .setMinimumFetchIntervalInSeconds(minimumFetchIntervalSeconds)
-                .build()
-        )
-        it.setDefaultsAsync(defaults.mapValues { (_, v) -> v })
-    }
+    private val remoteConfig: FirebaseRemoteConfig =
+        FirebaseRemoteConfig.getInstance().also {
+            it.setConfigSettingsAsync(
+                FirebaseRemoteConfigSettings
+                    .Builder()
+                    .setMinimumFetchIntervalInSeconds(minimumFetchIntervalSeconds)
+                    .build(),
+            )
+            it.setDefaultsAsync(defaults.mapValues { (_, v) -> v })
+        }
 
     suspend fun fetch() {
         runCatching { remoteConfig.fetchAndActivate().await() }
     }
 
-    override fun isEnabled(key: String): Boolean =
-        remoteConfig.getBoolean(key)
+    override fun isEnabled(key: String): Boolean = remoteConfig.getBoolean(key)
 }
 
 /**
@@ -53,7 +53,6 @@ class HardcodedFeatureFlagResolver(
     private val flags: Map<String, FeatureFlag>,
     currentVersion: String = "0.0.0",
 ) : FeatureFlagResolver {
-
     private val appVersion = SemVer.parse(currentVersion)
 
     override fun isEnabled(key: String): Boolean {

@@ -16,7 +16,7 @@ data class AppDimens(
     val spacerHeightLarge: Dp = 24.dp,
     val calculatorKeyHeight: Dp = 54.dp,
     val isTabletOrLandscape: Boolean = false,
-    val gridVerticalGap: Dp = 8.dp
+    val gridVerticalGap: Dp = 8.dp,
 )
 
 data class AppTypographyResponsive(
@@ -29,7 +29,7 @@ data class AppTypographyResponsive(
     val bodyLarge: TextUnit = 16.sp,
     val bodyMedium: TextUnit = 14.sp,
     val bodySmall: TextUnit = 12.sp,
-    val labelSmall: TextUnit = 11.sp
+    val labelSmall: TextUnit = 11.sp,
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
@@ -47,92 +47,107 @@ object ResponsiveApp {
         get() = LocalAppTypography.current
 }
 
-fun calculateResponsiveMetrics(widthDp: Int, heightDp: Int): Pair<AppDimens, AppTypographyResponsive> {
+// One cohesive breakpoint table: splitting it into helpers would scatter the dimension math
+// without making it clearer.
+@Suppress("LongMethod")
+fun calculateResponsiveMetrics(
+    widthDp: Int,
+    heightDp: Int,
+): Pair<AppDimens, AppTypographyResponsive> {
     val isTablet = widthDp >= 600
     val isLandscape = widthDp > heightDp
     val isExtremelySmall = widthDp < 360 || heightDp < 600
 
-    val dimens = when {
-        isExtremelySmall -> AppDimens(
-            screenPadding = 10.dp,
-            cardPadding = 10.dp,
-            spacerHeightSmall = 4.dp,
-            spacerHeightMedium = 10.dp,
-            spacerHeightLarge = 16.dp,
-            calculatorKeyHeight = 44.dp,
-            isTabletOrLandscape = false,
-            gridVerticalGap = 4.dp
-        )
-        isTablet || (widthDp >= 720) -> AppDimens(
-            screenPadding = 20.dp,
-            cardPadding = 20.dp,
-            spacerHeightSmall = 10.dp,
-            spacerHeightMedium = 20.dp,
-            spacerHeightLarge = 28.dp,
-            calculatorKeyHeight = 62.dp,
-            isTabletOrLandscape = true,
-            gridVerticalGap = 10.dp
-        )
-        isLandscape -> AppDimens(
-            screenPadding = 12.dp,
-            cardPadding = 12.dp,
-            spacerHeightSmall = 6.dp,
-            spacerHeightMedium = 12.dp,
-            spacerHeightLarge = 18.dp,
-            calculatorKeyHeight = 42.dp,
-            isTabletOrLandscape = true,
-            gridVerticalGap = 6.dp
-        )
-        else -> AppDimens(
-            screenPadding = 16.dp,
-            cardPadding = 16.dp,
-            spacerHeightSmall = 8.dp,
-            spacerHeightMedium = 16.dp,
-            spacerHeightLarge = 24.dp,
-            calculatorKeyHeight = 56.dp,
-            isTabletOrLandscape = false,
-            gridVerticalGap = 8.dp
-        )
-    }
+    val dimens =
+        when {
+            isExtremelySmall ->
+                AppDimens(
+                    screenPadding = 10.dp,
+                    cardPadding = 10.dp,
+                    spacerHeightSmall = 4.dp,
+                    spacerHeightMedium = 10.dp,
+                    spacerHeightLarge = 16.dp,
+                    calculatorKeyHeight = 44.dp,
+                    isTabletOrLandscape = false,
+                    gridVerticalGap = 4.dp,
+                )
+            isTablet || (widthDp >= 720) ->
+                AppDimens(
+                    screenPadding = 20.dp,
+                    cardPadding = 20.dp,
+                    spacerHeightSmall = 10.dp,
+                    spacerHeightMedium = 20.dp,
+                    spacerHeightLarge = 28.dp,
+                    calculatorKeyHeight = 62.dp,
+                    isTabletOrLandscape = true,
+                    gridVerticalGap = 10.dp,
+                )
+            isLandscape ->
+                AppDimens(
+                    screenPadding = 12.dp,
+                    cardPadding = 12.dp,
+                    spacerHeightSmall = 6.dp,
+                    spacerHeightMedium = 12.dp,
+                    spacerHeightLarge = 18.dp,
+                    calculatorKeyHeight = 42.dp,
+                    isTabletOrLandscape = true,
+                    gridVerticalGap = 6.dp,
+                )
+            else ->
+                AppDimens(
+                    screenPadding = 16.dp,
+                    cardPadding = 16.dp,
+                    spacerHeightSmall = 8.dp,
+                    spacerHeightMedium = 16.dp,
+                    spacerHeightLarge = 24.dp,
+                    calculatorKeyHeight = 56.dp,
+                    isTabletOrLandscape = false,
+                    gridVerticalGap = 8.dp,
+                )
+        }
 
-    val typography = when {
-        isExtremelySmall -> AppTypographyResponsive(
-            displayLarge = 32.sp,
-            displayMedium = 25.sp,
-            headlineLarge = 21.sp,
-            headlineMedium = 17.sp,
-            titleLarge = 16.sp,
-            titleMedium = 13.sp,
-            bodyLarge = 13.sp,
-            bodyMedium = 11.sp,
-            bodySmall = 10.sp,
-            labelSmall = 9.sp
-        )
-        isTablet || (widthDp >= 720) -> AppTypographyResponsive(
-            displayLarge = 46.sp,
-            displayMedium = 38.sp,
-            headlineLarge = 32.sp,
-            headlineMedium = 24.sp,
-            titleLarge = 22.sp,
-            titleMedium = 18.sp,
-            bodyLarge = 18.sp,
-            bodyMedium = 15.sp,
-            bodySmall = 13.sp,
-            labelSmall = 12.sp
-        )
-        else -> AppTypographyResponsive(
-            displayLarge = 40.sp,
-            displayMedium = 31.sp,
-            headlineLarge = 27.sp,
-            headlineMedium = 19.sp,
-            titleLarge = 19.sp,
-            titleMedium = 15.sp,
-            bodyLarge = 15.sp,
-            bodyMedium = 13.sp,
-            bodySmall = 11.sp,
-            labelSmall = 10.sp
-        )
-    }
+    val typography =
+        when {
+            isExtremelySmall ->
+                AppTypographyResponsive(
+                    displayLarge = 32.sp,
+                    displayMedium = 25.sp,
+                    headlineLarge = 21.sp,
+                    headlineMedium = 17.sp,
+                    titleLarge = 16.sp,
+                    titleMedium = 13.sp,
+                    bodyLarge = 13.sp,
+                    bodyMedium = 11.sp,
+                    bodySmall = 10.sp,
+                    labelSmall = 9.sp,
+                )
+            isTablet || (widthDp >= 720) ->
+                AppTypographyResponsive(
+                    displayLarge = 46.sp,
+                    displayMedium = 38.sp,
+                    headlineLarge = 32.sp,
+                    headlineMedium = 24.sp,
+                    titleLarge = 22.sp,
+                    titleMedium = 18.sp,
+                    bodyLarge = 18.sp,
+                    bodyMedium = 15.sp,
+                    bodySmall = 13.sp,
+                    labelSmall = 12.sp,
+                )
+            else ->
+                AppTypographyResponsive(
+                    displayLarge = 40.sp,
+                    displayMedium = 31.sp,
+                    headlineLarge = 27.sp,
+                    headlineMedium = 19.sp,
+                    titleLarge = 19.sp,
+                    titleMedium = 15.sp,
+                    bodyLarge = 15.sp,
+                    bodyMedium = 13.sp,
+                    bodySmall = 11.sp,
+                    labelSmall = 10.sp,
+                )
+        }
 
     return Pair(dimens, typography)
 }

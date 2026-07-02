@@ -39,22 +39,24 @@ fun SettingsMock() {
             // Settings is the last tab — no bottom nav per spec
         ) { padding ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // DhruvWordmarkVertical header at 60% alpha (brand guide: empty-state / header)
                 DhruvWordmarkVertical(
                     appName = "finance",
                     crestTint = DhruvGold,
                     textColor = DhruvGold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                        .alpha(0.60f)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp)
+                            .alpha(0.60f),
                 )
 
                 SettingsSectionMock(title = "Appearance") {
@@ -90,14 +92,17 @@ fun SettingsMock() {
 }
 
 @Composable
-private fun SettingsSectionMock(title: String, content: @Composable () -> Unit) {
+private fun SettingsSectionMock(
+    title: String,
+    content: @Composable () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
         Text(
             title,
             style = MaterialTheme.typography.labelLarge,
             color = DhruvGold,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
         )
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -108,13 +113,17 @@ private fun SettingsSectionMock(title: String, content: @Composable () -> Unit) 
 }
 
 @Composable
-private fun SettingsRowChevron(label: String, value: String) {
+private fun SettingsRowChevron(
+    label: String,
+    value: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontWeight = FontWeight.Medium, fontSize = 15.sp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -125,13 +134,17 @@ private fun SettingsRowChevron(label: String, value: String) {
 }
 
 @Composable
-private fun SettingsRowValue(label: String, value: String) {
+private fun SettingsRowValue(
+    label: String,
+    value: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontWeight = FontWeight.Medium, fontSize = 15.sp)
         Text(value, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -139,13 +152,17 @@ private fun SettingsRowValue(label: String, value: String) {
 }
 
 @Composable
-private fun SettingsRowToggle(label: String, checked: Boolean) {
+private fun SettingsRowToggle(
+    label: String,
+    checked: Boolean,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontWeight = FontWeight.Medium, fontSize = 15.sp)
         Switch(checked = checked, onCheckedChange = {})

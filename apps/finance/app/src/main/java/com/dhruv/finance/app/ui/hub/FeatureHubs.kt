@@ -76,12 +76,13 @@ fun FinanceHub(
     crashReporter: CrashReporter,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(
-        "loans" to "Loans",
-        "investments" to "Investments",
-        "tax" to "Tax",
-        "everyday" to "Everyday",
-    )
+    val tabs =
+        listOf(
+            "loans" to "Loans",
+            "investments" to "Investments",
+            "tax" to "Tax",
+            "everyday" to "Everyday",
+        )
     var selected by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {

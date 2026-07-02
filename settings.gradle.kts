@@ -5,7 +5,6 @@ pluginManagement {
     // for plugins that convention plugins apply without an inline version.
     plugins {
         id("com.google.devtools.ksp")          version "2.3.5"
-        id("com.google.dagger.hilt.android")   version "2.52"
         id("io.gitlab.arturbosch.detekt")      version "1.23.7"
     }
     repositories {

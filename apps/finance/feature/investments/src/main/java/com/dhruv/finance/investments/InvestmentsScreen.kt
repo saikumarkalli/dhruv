@@ -31,7 +31,7 @@ fun InvestmentsScreen(viewModel: InvestmentsViewModel) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -57,25 +57,27 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
     val expectedReturn = returnInput.toDoubleOrNull() ?: 0.0
     val years = yearsInput.toDoubleOrNull() ?: 0.0
 
-    val sipResult = remember(amount, expectedReturn, years) {
-        viewModel.calculateSip(amount, expectedReturn, years)
-    }
+    val sipResult =
+        remember(amount, expectedReturn, years) {
+            viewModel.calculateSip(amount, expectedReturn, years)
+        }
 
     val totalInvested = sipResult.totalInvested
     val futureValue = sipResult.futureValue
     val estimatedReturns = sipResult.estimatedReturns
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Systematic Wealth Builder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -85,7 +87,7 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = returnInput,
@@ -94,7 +96,7 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = yearsInput,
@@ -103,14 +105,14 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
                     suffix = { Text("Yrs") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -128,7 +130,12 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text("Total Ultimate Future Welth", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(futureValue), fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(futureValue),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -149,23 +156,25 @@ fun RoiCagrCalculator(viewModel: InvestmentsViewModel) {
     val finalVal = finalInput.toDoubleOrNull() ?: 0.0
     val duration = durationInput.toDoubleOrNull() ?: 0.0
 
-    val roiCagrResult = remember(initial, finalVal, duration) {
-        viewModel.calculateRoiCagr(initial, finalVal, duration)
-    }
+    val roiCagrResult =
+        remember(initial, finalVal, duration) {
+            viewModel.calculateRoiCagr(initial, finalVal, duration)
+        }
     val absoluteReturn = roiCagrResult.absoluteReturn
     val cagr = roiCagrResult.cagr
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Yield Performance Indices (ROI / CAGR)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -175,7 +184,7 @@ fun RoiCagrCalculator(viewModel: InvestmentsViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = finalInput,
@@ -184,7 +193,7 @@ fun RoiCagrCalculator(viewModel: InvestmentsViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = durationInput,
@@ -193,20 +202,25 @@ fun RoiCagrCalculator(viewModel: InvestmentsViewModel) {
                     suffix = { Text("Yrs") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         Text("Absolute Return Ratio", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text("${"%.2f".format(absoluteReturn)}%", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "${"%.2f".format(absoluteReturn)}%",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Compounded Annualized CAGR", fontSize = 11.sp, color = Color(0xFF4CAF50))
@@ -233,56 +247,71 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
     val rate = interestRateInput.toDoubleOrNull() ?: 0.0
     val years = tenureInput.toDoubleOrNull() ?: 0.0
 
-    val fdRdResult = remember(amount, rate, years, isFixedDeposit) {
-        viewModel.calculateFdRd(amount, rate, years, isFixedDeposit)
-    }
+    val fdRdResult =
+        remember(amount, rate, years, isFixedDeposit) {
+            viewModel.calculateFdRd(amount, rate, years, isFixedDeposit)
+        }
 
     val principalInvested = fdRdResult.principalInvested
     val totalInterestAccrued = fdRdResult.interestGains
     val maturityAccumulated = fdRdResult.maturityValue
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("FD / RD Sovereign Maturity Engines", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isFixedDeposit) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { isFixedDeposit = true }
-                    .padding(10.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isFixedDeposit) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isFixedDeposit = true }
+                        .padding(10.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("Fixed Deposit (FD)", color = if (isFixedDeposit) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(
+                    "Fixed Deposit (FD)",
+                    color = if (isFixedDeposit) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                )
             }
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (!isFixedDeposit) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { isFixedDeposit = false }
-                    .padding(10.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (!isFixedDeposit) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { isFixedDeposit = false }
+                        .padding(10.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("Recurring (RD)", color = if (!isFixedDeposit) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(
+                    "Recurring (RD)",
+                    color = if (!isFixedDeposit) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                )
             }
         }
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -292,7 +321,7 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
                     prefix = { Text("₹ ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = interestRateInput,
@@ -301,7 +330,7 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
                     suffix = { Text("%") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
                 OutlinedTextField(
                     value = tenureInput,
@@ -310,14 +339,14 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
                     suffix = { Text("Yrs") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -327,7 +356,12 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Accrued Interest Gains:", fontSize = 11.sp, color = Color(0xFF4CAF50))
-                        Text(formatCurrency(totalInterestAccrued), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF4CAF50))
+                        Text(
+                            formatCurrency(totalInterestAccrued),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF4CAF50),
+                        )
                     }
                 }
 
@@ -335,7 +369,12 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text("Maturity Pay Out Yield sum:", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    Text(formatCurrency(maturityAccumulated), fontWeight = FontWeight.Black, fontSize = 21.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        formatCurrency(maturityAccumulated),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 21.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -343,4 +382,5 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
 }
 
 private fun formatCurrency(value: Double): String = CurrencyFormatter.format(value)
+
 private fun formatCurrency(value: BigDecimal): String = CurrencyFormatter.format(value)

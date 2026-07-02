@@ -34,49 +34,52 @@ import androidx.compose.ui.unit.sp
 fun SecuritySection(
     biometricEnabled: Boolean,
     onBiometricToggled: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context: Context = LocalContext.current
-    val biometricStatus = remember {
-        BiometricManager.from(context)
-            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-    }
+    val biometricStatus =
+        remember {
+            BiometricManager
+                .from(context)
+                .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+        }
     val canUseBiometric = biometricStatus == BiometricManager.BIOMETRIC_SUCCESS
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Biometric unlock",
                     fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 if (!canUseBiometric) {
                     Text(
-                        text = when (biometricStatus) {
-                            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
-                                "No biometric hardware on this device."
-                            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-                                "Biometric hardware is currently unavailable."
-                            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-                                "No biometrics enrolled. Enrol in device Settings first."
-                            else -> "Biometric authentication is not available."
-                        },
+                        text =
+                            when (biometricStatus) {
+                                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+                                    "No biometric hardware on this device."
+                                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+                                    "Biometric hardware is currently unavailable."
+                                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+                                    "No biometrics enrolled. Enrol in device Settings first."
+                                else -> "Biometric authentication is not available."
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }
             Switch(
                 checked = biometricEnabled && canUseBiometric,
                 onCheckedChange = { if (canUseBiometric) onBiometricToggled(it) },
-                enabled = canUseBiometric
+                enabled = canUseBiometric,
             )
         }
     }

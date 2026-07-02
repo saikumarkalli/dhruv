@@ -26,11 +26,17 @@ class HistoryRepository(
         historyDao.deleteMultipleHistoryByIds(ids)
     }
 
-    suspend fun moveToRecycleBin(id: Long, deletedTime: Long = System.currentTimeMillis()) {
+    suspend fun moveToRecycleBin(
+        id: Long,
+        deletedTime: Long = System.currentTimeMillis(),
+    ) {
         historyDao.moveToRecycleBin(id, deletedTime)
     }
 
-    suspend fun moveMultipleToRecycleBin(ids: List<Long>, deletedTime: Long = System.currentTimeMillis()) {
+    suspend fun moveMultipleToRecycleBin(
+        ids: List<Long>,
+        deletedTime: Long = System.currentTimeMillis(),
+    ) {
         historyDao.moveMultipleToRecycleBin(ids, deletedTime)
     }
 

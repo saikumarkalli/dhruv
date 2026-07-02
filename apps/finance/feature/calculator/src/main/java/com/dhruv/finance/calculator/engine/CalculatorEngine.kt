@@ -3,19 +3,24 @@ package com.dhruv.finance.calculator.engine
 import kotlin.math.*
 
 object CalculatorEngine : ICalculatorEngine {
-    override fun evaluate(expression: String, isDegree: Boolean): Double {
+    override fun evaluate(
+        expression: String,
+        isDegree: Boolean,
+    ): Double {
         if (expression.isBlank()) return 0.0
-        
+
         // Core sanitization for calculator interface elements
-        var sanitized = expression
-            .replace("×", "*")
-            .replace("÷", "/")
+        var sanitized =
+            expression
+                .replace("×", "*")
+                .replace("÷", "/")
 
         // Auto-close any unclosed parentheses
         var openCount = 0
         for (ch in sanitized) {
-            if (ch == '(') openCount++
-            else if (ch == ')') {
+            if (ch == '(') {
+                openCount++
+            } else if (ch == ')') {
                 if (openCount > 0) openCount--
             }
         }
@@ -38,7 +43,10 @@ object CalculatorEngine : ICalculatorEngine {
         return result
     }
 
-    private class Parser(val str: String, val isDegree: Boolean) {
+    private class Parser(
+        val str: String,
+        val isDegree: Boolean,
+    ) {
         var pos = -1
         var ch = 0
 
@@ -85,15 +93,20 @@ object CalculatorEngine : ICalculatorEngine {
                     tempCh = -1
                 }
             }
-            return (tempCh == '('.code ||
+            return (
+                tempCh == '('.code ||
                     (tempCh >= '0'.code && tempCh <= '9'.code) ||
                     tempCh == '.'.code ||
                     tempCh == 'π'.code ||
                     tempCh == 'e'.code ||
-                    (tempCh >= 'a'.code && tempCh <= 'z'.code))
+                    (tempCh >= 'a'.code && tempCh <= 'z'.code)
+            )
         }
 
-        fun parseTerm(contextValue: Double? = null, isAdder: Boolean = false): Double {
+        fun parseTerm(
+            contextValue: Double? = null,
+            isAdder: Boolean = false,
+        ): Double {
             var x = parseFactor(contextValue, isAdder)
             while (true) {
                 if (eat('*'.code)) {
@@ -110,7 +123,10 @@ object CalculatorEngine : ICalculatorEngine {
             }
         }
 
-        fun parseFactor(contextValue: Double? = null, isAdder: Boolean = false): Double {
+        fun parseFactor(
+            contextValue: Double? = null,
+            isAdder: Boolean = false,
+        ): Double {
             if (eat('+'.code)) return parseFactor(contextValue, isAdder) // unary plus
             if (eat('-'.code)) return -parseFactor(contextValue, isAdder) // unary minus
 
@@ -169,47 +185,48 @@ object CalculatorEngine : ICalculatorEngine {
                     x = Math.E
                 } else {
                     x = parseFactor(null, false)
-                    x = when (func) {
-                        "sqrt" -> {
-                            if (x < 0.0) throw ArithmeticException("Square root of negative number")
-                            sqrt(x)
+                    x =
+                        when (func) {
+                            "sqrt" -> {
+                                if (x < 0.0) throw ArithmeticException("Square root of negative number")
+                                sqrt(x)
+                            }
+                            "sin" -> {
+                                val angle = if (isDegree) Math.toRadians(x) else x
+                                sin(angle)
+                            }
+                            "cos" -> {
+                                val angle = if (isDegree) Math.toRadians(x) else x
+                                cos(angle)
+                            }
+                            "tan" -> {
+                                val angle = if (isDegree) Math.toRadians(x) else x
+                                tan(angle)
+                            }
+                            "asin" -> {
+                                if (x < -1.0 || x > 1.0) throw ArithmeticException("Arcsin domain violation")
+                                val rad = asin(x)
+                                if (isDegree) Math.toDegrees(rad) else rad
+                            }
+                            "acos" -> {
+                                if (x < -1.0 || x > 1.0) throw ArithmeticException("Arccos domain violation")
+                                val rad = acos(x)
+                                if (isDegree) Math.toDegrees(rad) else rad
+                            }
+                            "atan" -> {
+                                val rad = atan(x)
+                                if (isDegree) Math.toDegrees(rad) else rad
+                            }
+                            "log" -> {
+                                if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
+                                log10(x)
+                            }
+                            "ln" -> {
+                                if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
+                                ln(x)
+                            }
+                            else -> throw RuntimeException("Unknown function: $func")
                         }
-                        "sin" -> {
-                            val angle = if (isDegree) Math.toRadians(x) else x
-                            sin(angle)
-                        }
-                        "cos" -> {
-                            val angle = if (isDegree) Math.toRadians(x) else x
-                            cos(angle)
-                        }
-                        "tan" -> {
-                            val angle = if (isDegree) Math.toRadians(x) else x
-                            tan(angle)
-                        }
-                        "asin" -> {
-                            if (x < -1.0 || x > 1.0) throw ArithmeticException("Arcsin domain violation")
-                            val rad = asin(x)
-                            if (isDegree) Math.toDegrees(rad) else rad
-                        }
-                        "acos" -> {
-                            if (x < -1.0 || x > 1.0) throw ArithmeticException("Arccos domain violation")
-                            val rad = acos(x)
-                            if (isDegree) Math.toDegrees(rad) else rad
-                        }
-                        "atan" -> {
-                            val rad = atan(x)
-                            if (isDegree) Math.toDegrees(rad) else rad
-                        }
-                        "log" -> {
-                            if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
-                            log10(x)
-                        }
-                        "ln" -> {
-                            if (x <= 0.0) throw ArithmeticException("Log of non-positive number")
-                            ln(x)
-                        }
-                        else -> throw RuntimeException("Unknown function: $func")
-                    }
                 }
             } else {
                 throw RuntimeException("Unexpected element: " + ch.toChar())
@@ -219,7 +236,7 @@ object CalculatorEngine : ICalculatorEngine {
             if (eat('^'.code)) {
                 x = x.pow(parseFactor(null, false))
             }
-            
+
             // Factorials (trailing notation)
             while (eat('!'.code)) {
                 x = CalculatorEngine.factorial(x)
@@ -227,11 +244,12 @@ object CalculatorEngine : ICalculatorEngine {
 
             // Percentage (trailing notation)
             while (eat('%'.code)) {
-                x = if (isAdder && contextValue != null) {
-                    contextValue * (x / 100.0)
-                } else {
-                    x / 100.0
-                }
+                x =
+                    if (isAdder && contextValue != null) {
+                        contextValue * (x / 100.0)
+                    } else {
+                        x / 100.0
+                    }
             }
 
             return x

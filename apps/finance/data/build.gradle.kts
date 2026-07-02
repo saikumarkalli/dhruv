@@ -35,4 +35,9 @@ dependencies {
 
     // DI (Koin)
     implementation(libs.koin.android)
+
+    // Testing — repositories are tested against pure-JVM fakes (portable, no native SQLite).
+    // Real-SQL DAO coverage is a developer-local instrumented concern (see ADR-0013).
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -16,7 +16,6 @@ class AssistantViewModel(
     private val crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow<AssistantUiState>(AssistantUiState.ConsentNeeded)
     val uiState: StateFlow<AssistantUiState> = _uiState.asStateFlow()
 
@@ -24,13 +23,15 @@ class AssistantViewModel(
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val errorHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-        _uiState.value = AssistantUiState.Error(
-            throwable.localizedMessage ?: "An unexpected error occurred."
-        )
-    }
+    private val errorHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+            _uiState.value =
+                AssistantUiState.Error(
+                    throwable.localizedMessage ?: "An unexpected error occurred.",
+                )
+        }
 
     init {
         crashReporter.setModule("assistant")
@@ -69,13 +70,14 @@ class AssistantViewModel(
             performanceTracer.trace("assistant_query") { Unit }
 
             val result = gemini.explainCalculation(prompt, "")
-            _uiState.value = result.fold(
-                onSuccess = { AssistantUiState.Success(it) },
-                onFailure = { e ->
-                    crashReporter.recordException(e)
-                    AssistantUiState.Error(e.localizedMessage ?: "Gemini call failed.")
-                }
-            )
+            _uiState.value =
+                result.fold(
+                    onSuccess = { AssistantUiState.Success(it) },
+                    onFailure = { e ->
+                        crashReporter.recordException(e)
+                        AssistantUiState.Error(e.localizedMessage ?: "Gemini call failed.")
+                    },
+                )
         }
     }
 }

@@ -17,7 +17,7 @@ data class TimerState(
     val remainingTimeMs: Long = 60000L,
     val isRunning: Boolean = false,
     val isInputMode: Boolean = true,
-    val inputString: String = ""
+    val inputString: String = "",
 ) {
     val progress: Float
         get() = if (initialTimeMs > 0) remainingTimeMs.toFloat() / initialTimeMs.toFloat() else 0f
@@ -25,7 +25,7 @@ data class TimerState(
 
 class TimerViewModel(
     private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer
+    private val performanceTracer: PerformanceTracer,
 ) : ViewModel() {
     private val _state = MutableStateFlow(TimerState())
     val state: StateFlow<TimerState> = _state.asStateFlow()
@@ -33,10 +33,11 @@ class TimerViewModel(
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        crashReporter.recordException(throwable)
-        _featureError.value = throwable
-    }
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            crashReporter.recordException(throwable)
+            _featureError.value = throwable
+        }
 
     private var timerJob: Job? = null
 
@@ -53,11 +54,12 @@ class TimerViewModel(
 
     fun setPreset(minutes: Int) {
         val ms = minutes * 60000L
-        _state.value = _state.value.copy(
-            initialTimeMs = ms,
-            remainingTimeMs = ms,
-            isInputMode = false
-        )
+        _state.value =
+            _state.value.copy(
+                initialTimeMs = ms,
+                remainingTimeMs = ms,
+                isInputMode = false,
+            )
     }
 
     fun startTimer() {
@@ -68,11 +70,12 @@ class TimerViewModel(
             val s = input.substring(4, 6).toLong()
             val ms = (h * 3600 + m * 60 + s) * 1000
             if (ms > 0) {
-                _state.value = _state.value.copy(
-                    initialTimeMs = ms,
-                    remainingTimeMs = ms,
-                    isInputMode = false
-                )
+                _state.value =
+                    _state.value.copy(
+                        initialTimeMs = ms,
+                        remainingTimeMs = ms,
+                        isInputMode = false,
+                    )
             } else {
                 return // Invalid time
             }
@@ -82,17 +85,19 @@ class TimerViewModel(
             _state.value = _state.value.copy(isRunning = true)
         }
         timerJob?.cancel()
-        timerJob = viewModelScope.launch(exceptionHandler) {
-            while (_state.value.remainingTimeMs > 0 && _state.value.isRunning) {
-                delay(50)
-                _state.value = _state.value.copy(
-                    remainingTimeMs = maxOf(0, _state.value.remainingTimeMs - 50)
-                )
-                if (_state.value.remainingTimeMs <= 0) {
-                    _state.value = _state.value.copy(isRunning = false)
+        timerJob =
+            viewModelScope.launch(exceptionHandler) {
+                while (_state.value.remainingTimeMs > 0 && _state.value.isRunning) {
+                    delay(50)
+                    _state.value =
+                        _state.value.copy(
+                            remainingTimeMs = maxOf(0, _state.value.remainingTimeMs - 50),
+                        )
+                    if (_state.value.remainingTimeMs <= 0) {
+                        _state.value = _state.value.copy(isRunning = false)
+                    }
                 }
             }
-        }
     }
 
     fun pauseTimer() {
@@ -101,13 +106,14 @@ class TimerViewModel(
     }
 
     fun resetTimer() {
-        _state.value = _state.value.copy(
-            isRunning = false,
-            isInputMode = true,
-            inputString = "",
-            remainingTimeMs = 60000L,
-            initialTimeMs = 60000L
-        )
+        _state.value =
+            _state.value.copy(
+                isRunning = false,
+                isInputMode = true,
+                inputString = "",
+                remainingTimeMs = 60000L,
+                initialTimeMs = 60000L,
+            )
         timerJob?.cancel()
     }
 }

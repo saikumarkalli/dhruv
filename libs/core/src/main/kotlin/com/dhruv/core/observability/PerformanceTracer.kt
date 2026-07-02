@@ -9,7 +9,10 @@ import com.google.firebase.perf.FirebasePerformance
  */
 interface PerformanceTracer {
     /** Run [block], bracketing it with a named Firebase Performance trace. */
-    fun <T> trace(name: String, block: () -> T): T
+    fun <T> trace(
+        name: String,
+        block: () -> T,
+    ): T
 }
 
 /**
@@ -18,7 +21,10 @@ interface PerformanceTracer {
  *   single<PerformanceTracer> { FirebasePerformanceTracer() }
  */
 class FirebasePerformanceTracer : PerformanceTracer {
-    override fun <T> trace(name: String, block: () -> T): T {
+    override fun <T> trace(
+        name: String,
+        block: () -> T,
+    ): T {
         // Firebase may be absent (FirebaseApp not initialized); tracing must never crash the app.
         val trace = runCatching { FirebasePerformance.getInstance().newTrace(name) }.getOrNull()
         trace?.start()
@@ -32,5 +38,8 @@ class FirebasePerformanceTracer : PerformanceTracer {
 
 /** No-op implementation for unit tests and modules that do not need real tracing. */
 object NoOpPerformanceTracer : PerformanceTracer {
-    override fun <T> trace(name: String, block: () -> T): T = block()
+    override fun <T> trace(
+        name: String,
+        block: () -> T,
+    ): T = block()
 }

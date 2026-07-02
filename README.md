@@ -328,8 +328,10 @@ India DPDP Rules 2025 are treated as a first-class layer ([ADR-0005](platform/DE
 ./gradlew :apps:finance:app:assembleRelease
 ```
 
-> `./gradlew detekt` is referenced in docs but **not yet wired** (no module applies the `dhruv.detekt`
-> convention plugin) — see [Known debt](#18-known-debt--follow-ups).
+> `./gradlew detekt` runs across all modules (the `dhruv.detekt` convention plugin is applied via
+> `dhruv.android.library` / `dhruv.android.application`). Pre-existing feature-module complexity is
+> grandfathered by per-module `detekt-baseline.xml`, so the gate enforces *no new* violations.
+> `ktlint` formatting is enforced with Compose-aware relaxations in `.editorconfig`.
 
 ### Secrets / API keys
 The `secrets-gradle-plugin` reads `.env` (falling back to `.env.example`) for keys such as
@@ -347,7 +349,7 @@ Runs on every push to `develop`/`main` and every PR targeting them. Right-sized 
 
 | Gate | Job | Notes |
 |---|---|---|
-| 1 · Static analysis | `static-analysis` | ktlint + detekt + Android lint — **temporarily disabled** (`if: false`) pending remediation |
+| 1 · Static analysis | `static-analysis` | ktlint + detekt + Android lint — **enabled**; gates the build job (in its `needs`) |
 | 2 · Security | `security` | **GitLeaks** secret scan — *blocking*, no `continue-on-error` |
 | 2b · OWASP | `owasp` | dependency-check — non-blocking, off critical path, NVD DB cached month-by-month |
 | 3 · Tests | `tests` | `testDebugUnitTest --continue` incl. ArchUnit; also the Gradle build-cache **writer** |
@@ -425,8 +427,10 @@ Current state:
   `src/test/screenshots/`).
 - **Locale/format tests** — `LocaleSeparatorFormatTest`.
 
-> Tests bound to the now-split monolithic `FinanceViewModel` were removed in Phase 4; per-module calc
-> tests using `NoOpCrashReporter` + `NoOpPerformanceTracer` are a tracked follow-up.
+> Tests bound to the now-split monolithic `FinanceViewModel` were removed in Phase 4. Per-module
+> ViewModel tests (using `NoOpCrashReporter` + `NoOpPerformanceTracer`) now cover the
+> loans/investments/tax/everyday planners and currency conversion; `calculator` and `date`
+> ViewModel coverage remains a tracked follow-up.
 
 ---
 
@@ -478,13 +482,15 @@ From [`platform/Implementation.md`](platform/Implementation.md) (Phase 0–7):
 
 ## 18. Known debt & follow-ups
 
-- **Static-analysis gate disabled** in CI (`if: false`) pending ktlint/detekt remediation; `./gradlew
-  detekt` is not wired (no module applies the `dhruv.detekt` convention plugin).
-- **Per-module calc tests** not yet re-authored after the monolith split (use `NoOpCrashReporter` +
-  `NoOpPerformanceTracer`).
+- **Static analysis is enabled** (Gate 1: ktlint + detekt + Android lint, gating the build). detekt is
+  wired via the convention plugins with a Compose-aware `config/detekt/detekt.yml`; pre-existing
+  feature-module complexity (notably the `calculator` engine/ViewModel) is grandfathered in per-module
+  `detekt-baseline.xml` files, so the gate enforces *no new* violations. Burning down those baselines
+  (refactoring the grandfathered complexity) is the main remaining static-analysis follow-up.
+- **Per-module ViewModel tests** now cover loans/investments/tax/everyday + currency; `calculator` and
+  `date` ViewModel coverage is still pending.
 - **Cloudflare Worker AI proxy** is designed but **not deployed** — the assistant currently relies on
   the BYO/`BuildConfig` key path; the proxy + per-device quota are pending.
-- App `build.gradle.kts` still lists some unused Room/network/Moshi/KSP deps (harmless) — prune later.
 - Legacy `dhruv-compose-screen` skill is partly stale (shows Hilt / old theme APIs);
   `dhruv-feature-scaffold` is authoritative.
 - `date` / `time` ship flag-disabled (code preserved); `assistant` is version-gated to ≥ 1.2.0.

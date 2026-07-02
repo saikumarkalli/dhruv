@@ -1,17 +1,16 @@
 package com.dhruv.finance.data
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
-
 import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "calculation_history",
     indices = [
         Index(value = ["timestamp"]),
         Index(value = ["favorite"]),
-        Index(value = ["isInRecycleBin"])
-    ]
+        Index(value = ["isInRecycleBin"]),
+    ],
 )
 data class HistoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -26,5 +25,5 @@ data class HistoryEntity(
     val deviceSource: String = "Android Device",
     val note: String = "",
     val isInRecycleBin: Boolean = false,
-    val deletedTimestamp: Long = 0L
+    val deletedTimestamp: Long = 0L,
 )

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onRoot
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,24 +14,21 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-import org.junit.Ignore
-
 @Ignore("Bypassed: Roborazzi native graphics unavailable in environment")
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
 class GreetingScreenshotTest {
+    @get:Rule val composeTestRule = createComposeRule()
 
-  @get:Rule val composeTestRule = createComposeRule()
+    @Test
+    fun greeting_screenshot() {
+        composeTestRule.setContent {
+            DhruvTheme {
+                Text("dhruv Preview Layout")
+            }
+        }
 
-  @Test
-  fun greeting_screenshot() {
-    composeTestRule.setContent {
-      DhruvTheme {
-        Text("dhruv Preview Layout")
-      }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
     }
-
-    composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
-  }
 }

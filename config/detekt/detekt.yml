@@ -8,15 +8,37 @@ config:
 complexity:
   LongMethod:
     threshold: 60
+    # Compose UI builders are declaratively long; splitting them purely to satisfy a
+    # line count adds indirection without value.
+    ignoreAnnotated: ['Composable', 'Preview']
   LongParameterList:
-    functionThreshold: 6
-    constructorThreshold: 7
+    functionThreshold: 8
+    constructorThreshold: 8
+    # Composables legitimately take state + many callbacks.
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
   TooManyFunctions:
-    thresholdInFiles: 12
-    thresholdInClasses: 12
+    # Repository / DAO facade interfaces expose many typed accessors by design.
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+    thresholdInInterfaces: 30
+    thresholdInObjects: 30
+
+naming:
+  FunctionNaming:
+    # @Composable functions are PascalCase by official Compose convention.
+    ignoreAnnotated: ['Composable', 'Preview']
 
 style:
   MagicNumber:
     active: false
   MaxLineLength:
     maxLineLength: 140
+  UnusedPrivateMember:
+    # @Preview functions are entry points for tooling, not dead code.
+    ignoreAnnotated: ['Preview']
+  WildcardImport:
+    # Allowed project-wide (kept consistent with ktlint's no-wildcard-imports being
+    # disabled in .editorconfig). Compose APIs are large and wildcard-friendly.
+    active: false

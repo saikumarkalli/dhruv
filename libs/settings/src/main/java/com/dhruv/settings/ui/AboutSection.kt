@@ -23,26 +23,26 @@ import androidx.compose.ui.unit.sp
 fun AboutSection(
     versionName: String,
     platformVersion: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = "Dhruv Finance",
             fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
         )
         Text(
             text = "Version $versionName",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
+            fontSize = 12.sp,
         )
         if (platformVersion.isNotBlank()) {
             Text(
                 text = "Platform: $platformVersion",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp
+                fontSize = 11.sp,
             )
         }
     }

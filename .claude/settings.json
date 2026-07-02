@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Skill check: before acting, scan .claude/skills/ and invoke the most relevant matching skill via the Skill tool. Prefer a matching skill over ad-hoc work.'",
+            "statusMessage": "Checking skills"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "kotlin-agent-skills@Kotlin": true,
+    "superpowers@claude-plugins-official": true,
+    "github@claude-plugins-official": true
+  }
+}

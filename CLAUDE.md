@@ -11,11 +11,26 @@ Read before any work:
 - minSdk 26, targetSdk latest
 
 ## Skills (read the relevant skill BEFORE doing the task)
+
+### Project-specific (`platform/skills/`)
 - New feature module → read platform/skills/dhruv-feature-scaffold/SKILL.md
 - New Room entity / data layer → read platform/skills/dhruv-room-entity/SKILL.md
 - New Compose screen → read platform/skills/dhruv-compose-screen/SKILL.md
 - Pre-merge check → read platform/skills/dhruv-module-audit/SKILL.md
 - Version bump / release → read platform/skills/dhruv-release/SKILL.md
+
+### General engineering (`.claude/skills/`, from addyosmani/agent-skills)
+ALWAYS check the installed skills and invoke the matching one via the Skill tool
+BEFORE starting any task — do not skip a skill because the task "looks simple".
+Match by the skill's own `description` (each says "Use when…"). Common triggers:
+- Implementing logic / fixing a bug / changing behavior → `test-driven-development`
+- Planning or breaking down work → `planning-and-task-breakdown`, `spec-driven-development`
+- Reviewing a diff / quality pass → `code-review-and-quality`, `code-simplification`
+- Debugging an error / failure → `debugging-and-error-recovery`
+- Security / hardening work → `security-and-hardening`
+- CI/CD, release, git workflow → `ci-cd-and-automation`, `git-workflow-and-versioning`, `shipping-and-launch`
+- Performance, observability, UI, API design, docs/ADRs → the correspondingly-named skill
+(full set lives in `.claude/skills/`; this list is not exhaustive — scan the skill list each task.)
 
 ## Build commands
 - ./gradlew :apps:finance:app:assembleDebug

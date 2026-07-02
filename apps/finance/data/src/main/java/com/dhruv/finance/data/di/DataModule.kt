@@ -9,11 +9,12 @@ import org.koin.dsl.module
 // platformModule instead of here: they need BuildConfig-sourced values, which this module
 // (:apps:finance:data) cannot read. Koin merges all modules into one container, so DAOs/
 // repositories below can still resolve them via get(). See PlatformModule.kt.
-val dataModule = module {
-    // DAOs
-    single { get<AppDatabase>().historyDao() }
-    single { get<AppDatabase>().currencyRateDao() }
+val dataModule =
+    module {
+        // DAOs
+        single { get<AppDatabase>().historyDao() }
+        single { get<AppDatabase>().currencyRateDao() }
 
-    // Repositories
-    single<ICurrencyRepository> { CurrencyRepository(get(), get()) }
-}
+        // Repositories
+        single<ICurrencyRepository> { CurrencyRepository(get(), get()) }
+    }

@@ -6,12 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HardcodedFeatureFlagResolverTest {
-
-    private val flags = mapOf(
-        "calculator" to FeatureFlag(enabled = true),
-        "date" to FeatureFlag(enabled = false),
-        "assistant" to FeatureFlag(enabled = true, minVersion = "1.2.0", requiresConsent = true),
-    )
+    private val flags =
+        mapOf(
+            "calculator" to FeatureFlag(enabled = true),
+            "date" to FeatureFlag(enabled = false),
+            "assistant" to FeatureFlag(enabled = true, minVersion = "1.2.0", requiresConsent = true),
+        )
 
     @Test
     fun `enabled flag with no minVersion is on at any version`() {

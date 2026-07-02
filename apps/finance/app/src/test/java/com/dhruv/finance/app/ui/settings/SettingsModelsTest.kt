@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsModelsTest {
-
     @Test
     fun testSettingsUiStateDefaults() {
         val defaultState = SettingsUiState()

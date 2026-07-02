@@ -18,8 +18,12 @@ sealed interface AssistantUiState {
     data object Loading : AssistantUiState
 
     /** Gemini returned a non-blank response. */
-    data class Success(val response: String) : AssistantUiState
+    data class Success(
+        val response: String,
+    ) : AssistantUiState
 
     /** The call failed or the API key is unconfigured. */
-    data class Error(val message: String) : AssistantUiState
+    data class Error(
+        val message: String,
+    ) : AssistantUiState
 }

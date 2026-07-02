@@ -1,0 +1,44 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:CalculatorEngine.kt$CalculatorEngine.Parser$(prevCh == 'e'.code || prevCh == 'E'.code) &amp;&amp; (ch == '+'.code || ch == '-'.code)</ID>
+    <ID>ComplexCondition:CalculatorEngine.kt$CalculatorEngine.Parser$ch &gt;= '0'.code &amp;&amp; ch &lt;= '9'.code || ch == '.'.code || ch == 'e'.code || ch == 'E'.code</ID>
+    <ID>ComplexCondition:CalculatorViewModel.kt$CalculatorViewModel$hasError &amp;&amp; ( key.firstOrNull()?.isDigit() == true || key == "." || key == "sin" || key == "cos" || key == "tan" || key == "asin" || key == "acos" || key == "atan" || key == "log" || key == "ln" || key == "sqrt" || key == "(" )</ID>
+    <ID>ComplexCondition:CalculatorViewModel.kt$CalculatorViewModel$numberStr.contains("E") || numberStr.contains("e") || numberStr.contains("Infinity") || numberStr.contains("NaN")</ID>
+    <ID>CyclomaticComplexMethod:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
+    <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$fun formatLocaleSeparator( numberStr: String, format: String, ): String</ID>
+    <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
+    <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
+    <ID>LargeClass:CalculatorViewModel.kt$CalculatorViewModel : ViewModel</ID>
+    <ID>LongMethod:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
+    <ID>LongMethod:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
+    <ID>LongMethod:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
+    <ID>MaxLineLength:CalculatorScreen.kt$"\"${it.id}\",\"${it.expression}\",\"${it.result}\",\"${it.timestamp}\",\"${it.isScientific}\",\"${it.tags}\",\"${it.note}\",\"${it.deviceSource}\"\n"</ID>
+    <ID>NestedBlockDepth:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
+    <ID>NestedBlockDepth:CalculatorViewModel.kt$CalculatorViewModel$fun formatLocaleSeparator( numberStr: String, format: String, ): String</ID>
+    <ID>NestedBlockDepth:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
+    <ID>NestedBlockDepth:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
+    <ID>NestedBlockDepth:CalculatorViewModel.kt$internal fun appendOperator( expr: String, op: String, ): String</ID>
+    <ID>ReturnCount:CalculatorEngine.kt$CalculatorEngine$override fun factorial(n: Double): Double</ID>
+    <ID>ReturnCount:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$CalculatorViewModel$fun formatLocaleSeparator( numberStr: String, format: String, ): String</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$CalculatorViewModel$private fun appendDecimal(expr: String): String</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$CalculatorViewModel$private fun formatResult( value: Double, precision: Int, ): String</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
+    <ID>ReturnCount:CalculatorViewModel.kt$internal fun appendOperator( expr: String, op: String, ): String</ID>
+    <ID>SwallowedException:CalculatorViewModel.kt$CalculatorViewModel$e: Exception</ID>
+    <ID>ThrowsCount:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
+    <ID>TooGenericExceptionCaught:CalculatorViewModel.kt$CalculatorViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Empty parentheses")</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Invalid number format: $token")</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Missing closing parenthesis")</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unexpected character at position $pos: " + ch.toChar())</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unexpected element: " + ch.toChar())</ID>
+    <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unknown function: $func")</ID>
+    <ID>UnusedParameter:CalculatorScreen.kt$isSelectionActive: Boolean</ID>
+    <ID>VariableNaming:CalculatorEngineDeepEdgeTest.kt$CalculatorEngineDeepEdgeTest$private val D = 1e-9</ID>
+    <ID>VariableNaming:CalculatorEngineEdgeCaseTest.kt$CalculatorEngineEdgeCaseTest$private val D = 1e-9</ID>
+  </CurrentIssues>
+</SmellBaseline>

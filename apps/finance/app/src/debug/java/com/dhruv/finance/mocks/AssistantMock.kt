@@ -53,7 +53,7 @@ fun AssistantMock() {
                             DhruvWordmark(
                                 appName = "finance",
                                 crestTint = DhruvGold,
-                                textColor = DhruvGold
+                                textColor = DhruvGold,
                             )
                         }
                     },
@@ -62,30 +62,32 @@ fun AssistantMock() {
                             Icon(Icons.Default.Info, contentDescription = "About AI", tint = Color(0xFF9E9E9E))
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A0A0A))
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A0A0A)),
                 )
             },
-            bottomBar = { MockBottomNav(selected = "Assistant") }
+            bottomBar = { MockBottomNav(selected = "Assistant") },
         ) { padding ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
             ) {
                 // Consent banner
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(DhruvGold.copy(alpha = 0.15f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(DhruvGold.copy(alpha = 0.15f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         "Using Gemini API · Tap for privacy info",
                         fontSize = 12.sp,
                         color = DhruvGold,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     TextButton(onClick = {}) {
                         Text("Details", fontSize = 12.sp, color = DhruvGold)
@@ -94,40 +96,43 @@ fun AssistantMock() {
 
                 // Chat area
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     // AI message bubble
                     Column(
-                        modifier = Modifier
-                            .widthIn(max = 280.dp)
-                            .background(DhruvNavy, RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
-                            .border(1.dp, DhruvGold.copy(alpha = 0.4f), RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
-                            .padding(12.dp)
+                        modifier =
+                            Modifier
+                                .widthIn(max = 280.dp)
+                                .background(DhruvNavy, RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
+                                .border(1.dp, DhruvGold.copy(alpha = 0.4f), RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
+                                .padding(12.dp),
                     ) {
                         Text("Dhruv", fontSize = 11.sp, color = DhruvGold, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "Hello! I'm your Dhruv Finance assistant. I can help you calculate EMIs, compare investment options, explain financial concepts, and more. What would you like to know?",
                             fontSize = 14.sp,
-                            color = Color(0xFFC0C0C0)
+                            color = Color(0xFFC0C0C0),
                         )
                     }
 
                     // User message bubble (right-aligned)
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         Box(
-                            modifier = Modifier
-                                .widthIn(max = 240.dp)
-                                .background(DhruvGold.copy(alpha = 0.2f), RoundedCornerShape(16.dp, 4.dp, 16.dp, 16.dp))
-                                .padding(12.dp)
+                            modifier =
+                                Modifier
+                                    .widthIn(max = 240.dp)
+                                    .background(DhruvGold.copy(alpha = 0.2f), RoundedCornerShape(16.dp, 4.dp, 16.dp, 16.dp))
+                                    .padding(12.dp),
                         ) {
                             Text(
                                 "What's a good SIP amount for ₹10L goal in 5 years?",
                                 fontSize = 14.sp,
-                                color = Color.White
+                                color = Color.White,
                             )
                         }
                     }
@@ -135,25 +140,27 @@ fun AssistantMock() {
 
                 // Input bar
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1A1A1A))
-                        .padding(8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF1A1A1A))
+                            .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedTextField(
                         value = "",
                         onValueChange = {},
                         placeholder = { Text("Ask about finance…", color = Color(0xFF666666)) },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
                     )
                     IconButton(
                         onClick = {},
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(DhruvGold, CircleShape)
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .background(DhruvGold, CircleShape),
                     ) {
                         Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
                     }

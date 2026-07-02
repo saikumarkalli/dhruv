@@ -14,11 +14,12 @@ import org.koin.dsl.module
  * }
  * ```
  */
-val settingsModule = module {
-    single<SettingsRepository> {
-        SettingsRepositoryImpl(
-            context = androidContext(),
-            crashReporter = get()
-        )
+val settingsModule =
+    module {
+        single<SettingsRepository> {
+            SettingsRepositoryImpl(
+                context = androidContext(),
+                crashReporter = get(),
+            )
+        }
     }
-}

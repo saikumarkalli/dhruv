@@ -62,6 +62,12 @@ import com.dhruv.core.ui.theme.AppTheme
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.SectionTheme
 import com.dhruv.core.ui.theme.getAccentColor
+import com.dhruv.finance.app.ui.dashboard.DashboardScreen
+import com.dhruv.finance.app.ui.hub.ConverterHub
+import com.dhruv.finance.app.ui.hub.FinanceHub
+import com.dhruv.finance.app.ui.settings.SettingsScreen
+import com.dhruv.finance.app.ui.settings.SettingsViewModel
+import com.dhruv.finance.app.ui.splash.SplashScreen
 import com.dhruv.finance.assistant.AssistantScreen
 import com.dhruv.finance.assistant.AssistantViewModel
 import com.dhruv.finance.calculator.CalculatorScreen
@@ -71,12 +77,6 @@ import com.dhruv.finance.date.DateViewModel
 import com.dhruv.finance.time.TimeScreen
 import com.dhruv.finance.time.TimeViewModel
 import com.dhruv.settings.SettingsRepository
-import com.dhruv.finance.app.ui.dashboard.DashboardScreen
-import com.dhruv.finance.app.ui.hub.ConverterHub
-import com.dhruv.finance.app.ui.hub.FinanceHub
-import com.dhruv.finance.app.ui.settings.SettingsScreen
-import com.dhruv.finance.app.ui.settings.SettingsViewModel
-import com.dhruv.finance.app.ui.splash.SplashScreen
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -94,7 +94,10 @@ private data class NavTab(
 )
 
 class MainActivity : ComponentActivity() {
+    // onCreate hosts the entire Compose tree via setContent; its length and branching live in the
+    // declarative UI graph, not in imperative logic.
     @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -121,192 +124,213 @@ class MainActivity : ComponentActivity() {
             DhruvTheme(
                 theme = appSettings.theme,
                 accentColorHex = appSettings.accentColorHex,
-                font = appSettings.fontFamily
+                font = appSettings.fontFamily,
             ) {
                 // The whole app UI is composed immediately and the branded splash is overlaid on
                 // top of it (see the Box below). Because the app renders underneath during the
                 // splash, it is fully ready the instant the splash hands off — no blank gap.
                 var showSplash by remember { mutableStateOf(true) }
                 Box(modifier = Modifier.fillMaxSize()) {
-
-                // Build the visible tabs. Feature flags gate Date / Time / Assistant; Converter and
-                // Finance are hubs shown when any of their sub-features is enabled.
-                val tabs = remember(resolver) {
-                    buildList {
-                        add(NavTab("dashboard", "Dashboard", Icons.Default.Home, "cyan") {
-                            DashboardScreen()
-                        })
-                        add(
-                            NavTab("calculator", "Calc", Icons.Default.Calculate, calculatorColor) {
-                                val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
-                                FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
-                                    CalculatorScreen(viewModel = calculatorViewModel)
-                                }
-                            }
-                        )
-                        if (resolver.isEnabled("currency") || resolver.isEnabled("unit")) {
-                            add(NavTab("converter", "Converter", Icons.Default.SwapHoriz, converterColor) {
-                                ConverterHub(resolver, crashReporter)
-                            })
-                        }
-                        if (resolver.isEnabled("date")) {
-                            add(NavTab("date", "Date", Icons.Default.DateRange, dateColor) {
-                                val vm: DateViewModel = koinViewModel()
-                                val error by vm.featureError.collectAsStateWithLifecycle()
-                                FeatureHost("date", true, error, crashReporter) { DateScreen(viewModel = vm) }
-                            })
-                        }
-                        if (listOf("loans", "investments", "tax", "everyday").any { resolver.isEnabled(it) }) {
-                            add(NavTab("finance", "Finance", Icons.AutoMirrored.Filled.TrendingUp, financeColor) {
-                                FinanceHub(resolver, crashReporter)
-                            })
-                        }
-                        if (resolver.isEnabled("time")) {
-                            add(NavTab("time", "Time", Icons.Default.AccessTime, timeColor) {
-                                val vm: TimeViewModel = koinViewModel()
-                                val error by vm.featureError.collectAsStateWithLifecycle()
-                                FeatureHost("time", true, error, crashReporter) { TimeScreen(viewModel = vm) }
-                            })
-                        }
-                        if (resolver.isEnabled("assistant")) {
-                            add(NavTab("assistant", "Assistant", Icons.Default.AutoAwesome, "cyan") {
-                                val vm: AssistantViewModel = koinViewModel()
-                                val error by vm.featureError.collectAsStateWithLifecycle()
-                                FeatureHost("assistant", true, error, crashReporter) { AssistantScreen(viewModel = vm) }
-                            })
-                        }
-                        add(NavTab("settings", "Settings", Icons.Default.Settings, "cyan") {
-                            SettingsScreen(
-                                settingsRepository = settingsRepository,
-                                onClearHistory = { calculatorViewModel.clearHistory() }
-                            )
-                        })
-                    }
-                }
-
-                val pagerState = rememberPagerState(pageCount = { tabs.size })
-                val coroutineScope = rememberCoroutineScope()
-                val settingsTabIndex = tabs.indexOfFirst { it.key == "settings" }
-
-                // Back-press: return to the first tab instead of closing the app.
-                DisposableEffect(pagerState.currentPage) {
-                    val callback = object : OnBackPressedCallback(pagerState.currentPage != 0) {
-                        override fun handleOnBackPressed() {
-                            coroutineScope.launch { pagerState.scrollToPage(0) }
-                        }
-                    }
-                    onBackPressedDispatcher.addCallback(this@MainActivity, callback)
-                    onDispose { callback.remove() }
-                }
-
-                val activeColorName = tabs.getOrNull(pagerState.currentPage)?.colorName ?: "cyan"
-                val isDarkTheme = when (appSettings.theme) {
-                    AppTheme.DARK -> true
-                    AppTheme.LIGHT -> false
-                    AppTheme.SYSTEM -> isSystemInDarkTheme()
-                }
-                val activeAccentColor by animateColorAsState(
-                    targetValue = getAccentColor(activeColorName, isDarkTheme),
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "accentColor"
-                )
-
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                DhruvWordmarkImage(height = 26.dp)
-                            },
-                            actions = {
-                                IconButton(
-                                    onClick = {
-                                        if (settingsTabIndex >= 0) {
-                                            coroutineScope.launch { pagerState.scrollToPage(settingsTabIndex) }
+                    // Build the visible tabs. Feature flags gate Date / Time / Assistant; Converter and
+                    // Finance are hubs shown when any of their sub-features is enabled.
+                    val tabs =
+                        remember(resolver) {
+                            buildList {
+                                add(
+                                    NavTab("dashboard", "Dashboard", Icons.Default.Home, "cyan") {
+                                        DashboardScreen()
+                                    },
+                                )
+                                add(
+                                    NavTab("calculator", "Calc", Icons.Default.Calculate, calculatorColor) {
+                                        val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
+                                        FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
+                                            CalculatorScreen(viewModel = calculatorViewModel)
                                         }
                                     },
-                                    modifier = Modifier.testTag("top_bar_settings_button")
-                                ) {
-                                    Icon(Icons.Default.Settings, contentDescription = "Open Settings")
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    },
-                    bottomBar = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                            NavigationBar(
-                                modifier = Modifier.testTag("app_navigation_bar"),
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 0.dp
-                            ) {
-                                tabs.forEachIndexed { index, tab ->
-                                    if (tab.key == "settings") return@forEachIndexed
-                                    val selected = pagerState.currentPage == index
-                                    NavigationBarItem(
-                                        selected = selected,
-                                        onClick = {
-                                            coroutineScope.launch { pagerState.scrollToPage(index) }
+                                )
+                                if (resolver.isEnabled("currency") || resolver.isEnabled("unit")) {
+                                    add(
+                                        NavTab("converter", "Converter", Icons.Default.SwapHoriz, converterColor) {
+                                            ConverterHub(resolver, crashReporter)
                                         },
-                                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                        label = {
-                                            Text(
-                                                text = tab.label,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                                maxLines = 1
-                                            )
-                                        },
-                                        alwaysShowLabel = true,
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = activeAccentColor,
-                                            selectedTextColor = activeAccentColor,
-                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                                            indicatorColor = activeAccentColor.copy(alpha = 0.14f)
-                                        ),
-                                        modifier = Modifier.testTag("nav_item_${tab.key}")
                                     )
                                 }
+                                if (resolver.isEnabled("date")) {
+                                    add(
+                                        NavTab("date", "Date", Icons.Default.DateRange, dateColor) {
+                                            val vm: DateViewModel = koinViewModel()
+                                            val error by vm.featureError.collectAsStateWithLifecycle()
+                                            FeatureHost("date", true, error, crashReporter) { DateScreen(viewModel = vm) }
+                                        },
+                                    )
+                                }
+                                if (listOf("loans", "investments", "tax", "everyday").any { resolver.isEnabled(it) }) {
+                                    add(
+                                        NavTab("finance", "Finance", Icons.AutoMirrored.Filled.TrendingUp, financeColor) {
+                                            FinanceHub(resolver, crashReporter)
+                                        },
+                                    )
+                                }
+                                if (resolver.isEnabled("time")) {
+                                    add(
+                                        NavTab("time", "Time", Icons.Default.AccessTime, timeColor) {
+                                            val vm: TimeViewModel = koinViewModel()
+                                            val error by vm.featureError.collectAsStateWithLifecycle()
+                                            FeatureHost("time", true, error, crashReporter) { TimeScreen(viewModel = vm) }
+                                        },
+                                    )
+                                }
+                                if (resolver.isEnabled("assistant")) {
+                                    add(
+                                        NavTab("assistant", "Assistant", Icons.Default.AutoAwesome, "cyan") {
+                                            val vm: AssistantViewModel = koinViewModel()
+                                            val error by vm.featureError.collectAsStateWithLifecycle()
+                                            FeatureHost("assistant", true, error, crashReporter) { AssistantScreen(viewModel = vm) }
+                                        },
+                                    )
+                                }
+                                add(
+                                    NavTab("settings", "Settings", Icons.Default.Settings, "cyan") {
+                                        SettingsScreen(
+                                            settingsRepository = settingsRepository,
+                                            onClearHistory = { calculatorViewModel.clearHistory() },
+                                        )
+                                    },
+                                )
                             }
                         }
-                    }
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag("app_horizontal_pager")
-                        ) { page ->
-                            val tab = tabs[page]
-                            SectionTheme(colorPreference = tab.colorName, darkModePreference = darkModePreference) {
-                                tab.content()
-                            }
-                        }
-                    }
-                }
 
-                // Branded splash overlaid on the already-composed app; it owns its timeline and
-                // fades out on hand-off (see SplashScreen), so the app is revealed with no blank gap.
-                if (showSplash) {
-                    SplashScreen(onFinished = { showSplash = false })
-                }
+                    val pagerState = rememberPagerState(pageCount = { tabs.size })
+                    val coroutineScope = rememberCoroutineScope()
+                    val settingsTabIndex = tabs.indexOfFirst { it.key == "settings" }
+
+                    // Back-press: return to the first tab instead of closing the app.
+                    DisposableEffect(pagerState.currentPage) {
+                        val callback =
+                            object : OnBackPressedCallback(pagerState.currentPage != 0) {
+                                override fun handleOnBackPressed() {
+                                    coroutineScope.launch { pagerState.scrollToPage(0) }
+                                }
+                            }
+                        onBackPressedDispatcher.addCallback(this@MainActivity, callback)
+                        onDispose { callback.remove() }
+                    }
+
+                    val activeColorName = tabs.getOrNull(pagerState.currentPage)?.colorName ?: "cyan"
+                    val isDarkTheme =
+                        when (appSettings.theme) {
+                            AppTheme.DARK -> true
+                            AppTheme.LIGHT -> false
+                            AppTheme.SYSTEM -> isSystemInDarkTheme()
+                        }
+                    val activeAccentColor by animateColorAsState(
+                        targetValue = getAccentColor(activeColorName, isDarkTheme),
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "accentColor",
+                    )
+
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            TopAppBar(
+                                title = {
+                                    DhruvWordmarkImage(height = 26.dp)
+                                },
+                                actions = {
+                                    IconButton(
+                                        onClick = {
+                                            if (settingsTabIndex >= 0) {
+                                                coroutineScope.launch { pagerState.scrollToPage(settingsTabIndex) }
+                                            }
+                                        },
+                                        modifier = Modifier.testTag("top_bar_settings_button"),
+                                    ) {
+                                        Icon(Icons.Default.Settings, contentDescription = "Open Settings")
+                                    }
+                                },
+                                colors =
+                                    TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
+                            )
+                        },
+                        bottomBar = {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surface),
+                            ) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                )
+                                NavigationBar(
+                                    modifier = Modifier.testTag("app_navigation_bar"),
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    tonalElevation = 0.dp,
+                                ) {
+                                    tabs.forEachIndexed { index, tab ->
+                                        if (tab.key == "settings") return@forEachIndexed
+                                        val selected = pagerState.currentPage == index
+                                        NavigationBarItem(
+                                            selected = selected,
+                                            onClick = {
+                                                coroutineScope.launch { pagerState.scrollToPage(index) }
+                                            },
+                                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                                            label = {
+                                                Text(
+                                                    text = tab.label,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                                    maxLines = 1,
+                                                )
+                                            },
+                                            alwaysShowLabel = true,
+                                            colors =
+                                                NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = activeAccentColor,
+                                                    selectedTextColor = activeAccentColor,
+                                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                                                    indicatorColor = activeAccentColor.copy(alpha = 0.14f),
+                                                ),
+                                            modifier = Modifier.testTag("nav_item_${tab.key}"),
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                    ) { innerPadding ->
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding),
+                        ) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .testTag("app_horizontal_pager"),
+                            ) { page ->
+                                val tab = tabs[page]
+                                SectionTheme(colorPreference = tab.colorName, darkModePreference = darkModePreference) {
+                                    tab.content()
+                                }
+                            }
+                        }
+                    }
+
+                    // Branded splash overlaid on the already-composed app; it owns its timeline and
+                    // fades out on hand-off (see SplashScreen), so the app is revealed with no blank gap.
+                    if (showSplash) {
+                        SplashScreen(onFinished = { showSplash = false })
+                    }
                 }
             }
         }

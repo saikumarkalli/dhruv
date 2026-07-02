@@ -39,9 +39,6 @@ jobs:
   # ── Gate 1: Static analysis ────────────────────────────────────────────────
   static-analysis:
     name: "Gate 1 · Static Analysis"
-    # TEMP: Gate 1 disabled — ktlint/detekt/lint remediation pending.
-    # Re-enable by deleting this `if` and restoring it to the build job's `needs`.
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,7 +66,7 @@ jobs:
           ./ktlint \
             --reporter=plain \
             --reporter=checkstyle,output=build/reports/ktlint/ktlint.xml \
-            "apps/**/*.kt" "libs/**/*.kt" "build-logic/**/*.kt"
+            "apps/**/*.kt" "libs/**/*.kt" "build-logic/src/**/*.kt" "!**/build/**"
 
       # No --continue: first detekt violation fails the step immediately.
       - name: Detekt
@@ -163,9 +160,16 @@ jobs:
 
   # ── Gate 3: Tests ─────────────────────────────────────────────────────────
   tests:
-    name: "Gate 3 · Tests + ArchUnit"
+    name: "Gate 3 · Tests + ArchUnit + Coverage"
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+    # Exposed to the pr-summary comment and the release notes (see Post-build jobs).
+    outputs:
+      tests_total: ${{ steps.summary.outputs.tests_total }}
+      tests_passed: ${{ steps.summary.outputs.tests_passed }}
+      tests_failed: ${{ steps.summary.outputs.tests_failed }}
+      tests_skipped: ${{ steps.summary.outputs.tests_skipped }}
+      coverage_pct: ${{ steps.summary.outputs.coverage_pct }}
     steps:
       - uses: actions/checkout@v4
 
@@ -183,13 +187,26 @@ jobs:
         with:
           cache-read-only: false
 
-      # testDebugUnitTest only — `test` also runs testReleaseUnitTest over the SAME
-      # source, doubling the run for no extra coverage. ArchUnit (DependencyRulesTest)
-      # lives in the debug variant, so it still runs.
-      # --continue: run all test tasks across all modules even if one fails,
-      # so we get a complete failure report. The job still fails (non-zero exit).
-      - name: Unit tests + ArchUnit
-        run: ./gradlew testDebugUnitTest --continue
+      # regressionCheck = every module's debug unit tests (ArchUnit + Robolectric live in the debug
+      # variant) + the merged JaCoCo report + the coverage-floor gate. Coverage is JaCoCo, not Kover
+      # (Kover's Android integration doesn't recognize AGP 9 variants — the same class of issue as
+      # Hilt, ADR-0010). --continue runs all test tasks even if one fails (complete report); the job
+      # still fails on any test failure OR a coverage-floor violation.
+      - name: Regression suite (tests + ArchUnit + coverage floor)
+        run: ./gradlew regressionCheck --continue
+
+      # Always (re)generate the merged coverage report so the summary has data even when a test or the
+      # coverage floor failed above (on failure, regressionCheck stops before the report task).
+      - name: Aggregate coverage report
+        if: always()
+        run: ./gradlew jacocoAggregatedReport --continue
+
+      # Parse JUnit + JaCoCo XML → GitHub Job Summary + regression-summary.md + job outputs
+      # (test counts, coverage %) reused by the PR comment and the Release notes.
+      - name: Build regression summary
+        id: summary
+        if: always()
+        run: python3 scripts/ci/regression_summary.py
 
       - name: Upload test reports
         # always() ensures reports are uploaded even on test failure
@@ -199,6 +216,20 @@ jobs:
           name: test-reports
           path: "**/build/reports/tests/"
 
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/jacocoAggregatedReport/
+
+      - name: Upload regression summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-summary
+          path: regression-summary.md
+
   # ── Gate 4: Build (debug) ─────────────────────────────────────────────────
   # Validates compile + KSP + Compose on every PR and push. The signed RELEASE
   # build is NOT here — it is built in the `release` job below AFTER the version is
@@ -207,7 +238,7 @@ jobs:
     name: "Gate 4 · Build (debug)"
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [ security, tests ]
+    needs: [ static-analysis, security, tests ]
     steps:
       - uses: actions/checkout@v4
 
@@ -243,16 +274,17 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [ security, owasp, tests, build ]
+    needs: [ static-analysis, security, owasp, tests, build ]
     permissions:
       pull-requests: write
     steps:
-      # Mints a short-lived token for the "Dhruv Bot" GitHub App, so the comment
+      # Mints a short-lived token for the "Dhruv CI Bot" GitHub App, so the comment
       # below is posted under that identity/avatar instead of github-actions[bot].
+      # (The App's display name is "Dhruv CI Bot"; the secrets keep their DHRUV_BOT_* names.)
       # Requires the DHRUV_BOT_APP_ID / DHRUV_BOT_PRIVATE_KEY secrets (App not yet
       # installed, or secrets missing) — continue-on-error lets the script step's
       # `|| github.token` fallback below take over so commenting still works.
-      - name: Mint Dhruv Bot token
+      - name: Mint Dhruv CI Bot token
         id: dhruv-bot
         uses: actions/create-github-app-token@v1
         continue-on-error: true
@@ -271,20 +303,34 @@ jobs:
             const marker = '<!-- ci-pr-summary-comment -->';
             const icons = { success: '✅', failure: '❌', cancelled: '⏹️', skipped: '⏭️' };
             const results = {
+              staticAnalysis: '${{ needs.static-analysis.result }}',
               security: '${{ needs.security.result }}',
               owasp: '${{ needs.owasp.result }}',
               tests: '${{ needs.tests.result }}',
               build: '${{ needs.build.result }}',
             };
             const rows = [
-              ['Gate 1 · Static Analysis', '⏭️', 'disabled (ktlint/detekt pending re-enable)'],
+              ['Gate 1 · Static Analysis', icons[results.staticAnalysis] ?? '❔', results.staticAnalysis],
               ['Gate 2 · Security (GitLeaks)', icons[results.security] ?? '❔', results.security],
               ['Gate 2b · OWASP (non-blocking)', icons[results.owasp] ?? '❔', `${results.owasp} (warn-only — continue-on-error masks scan findings)`],
-              ['Gate 3 · Tests + ArchUnit', icons[results.tests] ?? '❔', results.tests],
+              ['Gate 3 · Tests + ArchUnit + Coverage', icons[results.tests] ?? '❔', results.tests],
               ['Gate 4 · Build (debug)', icons[results.build] ?? '❔', results.build],
             ];
             const table = ['| Gate | Status | Result |', '|---|---|---|',
               ...rows.map(([n, i, r]) => `| ${n} | ${i} | ${r} |`)].join('\n');
+
+            // Regression detail from the tests job outputs (empty on early failure → '?').
+            const reg = {
+              passed: '${{ needs.tests.outputs.tests_passed }}' || '?',
+              failed: '${{ needs.tests.outputs.tests_failed }}' || '?',
+              total: '${{ needs.tests.outputs.tests_total }}' || '?',
+              skipped: '${{ needs.tests.outputs.tests_skipped }}' || '?',
+              coverage: '${{ needs.tests.outputs.coverage_pct }}' || '?',
+            };
+            const failNote = (reg.failed !== '0' && reg.failed !== '?') ? `, **${reg.failed} failed**` : '';
+            const regLine = `**Tests:** ${reg.passed}/${reg.total} passed${failNote}, ${reg.skipped} skipped · `
+              + `**Coverage (line):** ${reg.coverage}%`;
+
             const overall = Object.values(results).includes('failure') ? '❌ Failing' : '✅ Passing';
             const body = [
               marker,
@@ -292,7 +338,9 @@ jobs:
               '',
               table,
               '',
-              `_Commit: ${context.sha.substring(0, 7)} · Run: [#${context.runId}](${context.payload.repository.html_url}/actions/runs/${context.runId})_`,
+              regLine,
+              '',
+              `_Commit: ${context.sha.substring(0, 7)} · Run: [#${context.runId}](${context.payload.repository.html_url}/actions/runs/${context.runId}) · Posted by Dhruv CI Bot_`,
             ].join('\n');
 
             try {
@@ -501,16 +549,53 @@ jobs:
             echo "✅ Created and pushed ${TAG}."
           fi
 
-      # ── 4. Publish the GitHub Release with the APK attached ─────────────
-      # fail_on_unmatched_files guarantees we never publish a release without the APK.
+      # ── 4. Attach the regression summary + coverage to the Release ──────
+      # Every merge to develop/main is a push and produces a Release, so this is where the
+      # merge's test totals + coverage % become durably visible (PR comments don't fire on push).
+      # The artifacts were uploaded by the `tests` job earlier in THIS run; downloads are
+      # best-effort so a missing artifact never blocks the release.
+      - name: Download regression summary
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: regression-summary
+          path: .ci-summary
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-report
+          path: .ci-coverage
+
+      - name: Compose release notes + zip coverage
+        run: |
+          {
+            if [ -f .ci-summary/regression-summary.md ]; then
+              cat .ci-summary/regression-summary.md
+              echo ""
+            fi
+            echo "_APK: \`${{ steps.apk.outputs.path }}\`. Full HTML coverage report attached below._"
+          } > release-body.md
+          if [ -d .ci-coverage ]; then
+            (cd .ci-coverage && zip -qr ../coverage-report.zip .) || echo "coverage zip skipped"
+          fi
+
+      # ── 5. Publish the GitHub Release ───────────────────────────────────
+      # The APK's existence is already guaranteed by the verify step above, so
+      # fail_on_unmatched_files is off here only so that a best-effort coverage-report.zip
+      # (nice-to-have) can be absent without blocking the release.
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tagname.outputs.tag }}
           name: "Dhruv finance ${{ steps.version_json.outputs.version }}"
+          body_path: release-body.md
           generate_release_notes: true
-          files: ${{ steps.apk.outputs.path }}
-          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.apk.outputs.path }}
+            coverage-report.zip
+          fail_on_unmatched_files: false
           draft: false
           prerelease: false
         env:
