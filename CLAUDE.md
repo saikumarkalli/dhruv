@@ -33,10 +33,14 @@ Match by the skill's own `description` (each says "Use when…"). Common trigger
 (full set lives in `.claude/skills/`; this list is not exhaustive — scan the skill list each task.)
 
 ## Build commands
-- ./gradlew :apps:finance:app:assembleDebug
-- ./gradlew :apps:tools:app:assembleDebug
-- ./gradlew detekt
-- ./gradlew test
+Requires `JAVA_HOME` = Android Studio JBR (JDK 17+); AGP 9. Only `:apps:finance` exists today —
+`:apps:tools` / `:apps:vault` are planned/future (PLATFORM.md) and are NOT yet in settings.gradle.kts.
+- Build app:     `./gradlew :apps:finance:app:assembleDebug`
+- Build module:  `./gradlew :apps:finance:feature:<name>:assembleDebug`
+- Lint:          `./gradlew detekt`
+- Unit tests:    `./gradlew :apps:finance:app:testDebugUnitTest` (includes ArchUnit)
+- Single test:   `./gradlew :apps:finance:feature:<name>:testDebugUnitTest --tests "com.dhruv.finance.<name>.SomeTest"`
+- Pre-merge gate:`./gradlew regressionCheck` (all unit tests + ArchUnit + merged JaCoCo report + coverage floor) — this is what CI runs
 
 ## Hard rules
 - Do not redesign architecture. Decisions locked in DECISIONS.md. Propose an ADR instead.
