@@ -170,6 +170,93 @@
 
 ---
 
+## Second-pass findings (full-app security/bug sweep, 2026-07-03, branch `develop` v1.2.7)
+
+### 🟠 H5 — Migration chain starts at 2→3; no `MIGRATION_1_2`
+- [ ] **Fix / verify**
+- **What:** `AppDatabase` is at version 5 with migrations 2→3, 3→4, 4→5 only. Any install whose DB
+  is still at schema v1 (original dhruv-calc era) falls into `fallbackToDestructiveMigration` →
+  full history wipe. Compounds H2.
+- **Evidence:** `apps/finance/data/.../AppDatabase.kt:24-51,64-65`.
+- **Fix direction:** Verify whether a v1 schema ever shipped to users; if yes add `MIGRATION_1_2`,
+  if no document that and keep the chain complete from the earliest shipped version.
+
+### 🟠 H6 — Backup rules are untouched template stubs while `allowBackup="true"`
+- [ ] **Fix**
+- **What:** `backup_rules.xml` and `data_extraction_rules.xml` are the commented-out samples, so
+  **everything** is auto-backed-up: the history DB, plaintext settings (including the history PIN),
+  and the `secure_settings` encrypted DataStore. The Keystore key does not transfer, so a restored
+  `secure_settings` file is undecryptable — the serializer silently returns defaults, i.e. the
+  user's BYO Gemini key silently vanishes after a device migration. Supersedes/concretizes L2.
+- **Evidence:** `apps/finance/app/src/main/res/xml/backup_rules.xml`, `data_extraction_rules.xml`,
+  `AndroidManifest.xml:9-11`; silent-default path at `libs/core/.../EncryptedDataStoreFactory.kt:55-58`.
+- **Fix direction:** Write real rules: exclude `datastore/secure_settings.preferences_pb_enc` (and
+  decide DB/settings inclusion consciously) in **both** `cloud-backup` and `device-transfer`.
+
+### 🟠 H7 — History-lock PIN stored in plaintext with default `"1234"`, compared in the UI layer
+- [ ] **Fix**
+- **What:** `historyPinCode` lives in the **plaintext** `app_settings` DataStore (the encrypted
+  store exists but only holds the Gemini key), defaults to `"1234"`, is exposed through
+  ViewModel → Composable as a `StateFlow<String>`, and is checked by plain `==` inside
+  `CalculatorScreen`. The lock is decorative against anyone who can read app storage or a backup.
+- **Evidence:** `libs/settings/.../SettingsRepositoryImpl.kt:113-119,304`;
+  `apps/finance/feature/calculator/.../CalculatorScreen.kt:2211,2311`.
+- **Fix direction:** Store a salted hash (or move to the encrypted store), drop the `"1234"`
+  default, verify in the ViewModel/repository (`verifyPin(entered): Boolean`) so the real PIN
+  never reaches the UI.
+
+### 🟡 M6 — Assistant consent is in-memory only; no durable DPDP consent record
+- [ ] **Fix** (fold into C3)
+- **What:** `AssistantViewModel` starts at `ConsentNeeded` and `grantConsent()` just flips a
+  StateFlow — nothing is persisted. Consent is re-asked every process restart, is not shared with
+  the calculator AI path (C3), and there is **no timestamped consent record** to demonstrate DPDP
+  compliance.
+- **Evidence:** `apps/finance/feature/assistant/.../AssistantViewModel.kt:19,44-48`.
+- **Fix direction:** One persisted consent state (encrypted DataStore, with grant timestamp +
+  policy version) consumed by both AI entry points; revocable from Settings.
+
+### 🟡 M7 — Assistant sends user questions through the wrong prompt
+- [ ] **Fix**
+- **What:** `AssistantViewModel.ask()` calls `gemini.explainCalculation(prompt, "")` — the
+  "explain this calculation, Expression: X, Result: " template with an empty result — instead of a
+  purpose-built assistant/solve prompt. Answers are framed as explanations of a non-existent
+  calculation.
+- **Evidence:** `apps/finance/feature/assistant/.../AssistantViewModel.kt:72`.
+
+### 🟡 M8 — Prompt-injection surface unbounded as AI grows
+- [ ] **Fix direction, low risk today**
+- **What:** `GeminiRepository.solve()`/`explainCalculation()` interpolate raw user input into the
+  prompt. Today the blast radius is small (no tools, output rendered as plain Compose `Text`), but
+  the platform plan adds deeper AI integration — once model output can drive actions/tools, this
+  is the LLM01 boundary. Assistant input length is not capped (calculator input is, at 50 chars);
+  no client-side request rate/token bound exists (LLM10 — matters for the proxy quota in ADR-0002).
+- **Evidence:** `apps/finance/data/.../GeminiRepository.kt:50-60,84-100`.
+- **Fix direction:** Cap input length + request rate now; when tools/agents arrive, treat model
+  output as untrusted input (schema-validate, allowlist actions) and keep secrets out of prompts.
+
+### 🟡 M9 — `exportSchema = false`
+- [ ] **Fix**
+- **What:** No schema history is exported, so Room migration tests are impossible — compounds
+  H2/H5. **Evidence:** `AppDatabase.kt:13`.
+- **Fix direction:** Set `exportSchema = true` + check in `schemas/`; add `MigrationTestHelper`
+  tests for 2→3→4→5.
+
+### ⚪ L4 — `assistant_query` performance trace measures nothing
+- **What:** `performanceTracer.trace("assistant_query") { Unit }` brackets a no-op, not the Gemini
+  call. `AssistantViewModel.kt:70`.
+### ⚪ L5 — Browser User-Agent spoofing on the currency API
+- **What:** `CURRENCY_API_USER_AGENT` impersonates Chrome on Android — ToS/etiquette risk with the
+  free rate APIs; use an honest `DhruvFinance/<version>` UA. `apps/finance/app/build.gradle.kts:21-25`.
+### ⚪ L6 — Currency responses accepted without sanity checks
+- **What:** `rates: Map<String, Double>` is used as-is; a compromised/poisoned endpoint (no cert
+  pinning yet, H4) could feed absurd rates into user calculations. Validate plausibility
+  (positive, finite, base currency = requested).
+### ⚪ L7 — `runBlocking` DataStore read in `SettingsRepositoryImpl` init
+- **What:** Blocks first access (typically main thread during Koin graph construction) —
+  startup-jank/ANR risk. `SettingsRepositoryImpl.kt:65-73`.
+
+---
+
 ## What's already solid (do not regress)
 Module boundaries + ArchUnit `DependencyRulesTest` · `FeatureHost` fault isolation · feature-flag
 asset-as-single-source loader with safe fallback · release-in-one-run CI (bump → signed build →
@@ -178,12 +265,68 @@ edge-case tests · cleartext traffic disabled.
 
 ---
 
-## Suggested order of attack
-1. **C3 + H2** — smallest, self-contained, each carries live user/legal risk. Do first.
-2. **C1 / C2 / C4** — resolve the AI key-delivery model, then wire it end-to-end.
-3. **H1** — wire Firebase so production isn't blind.
-4. **H3** — adopt `DhruvEntity` while data volume is small.
-5. **M1–M5** — quality gates and standards.
+## Remediation plan (phased, replaces the earlier "order of attack")
+
+### Phase 0 — Decisions (blockers for later phases; need maintainer's call)
+- [ ] **D1 (→C1/C2/C4):** AI key delivery model. *Recommended:* ship **BYO-key-only** first (amend
+  ADR-0002 — assistant/solve show a "add your Gemini key in Settings" state when no key), build the
+  Cloudflare Worker proxy in Phase 6. Alternative: build the proxy now and hold AI until it ships.
+  Either way: **no shared key ever embedded in the APK.**
+- [ ] **D2 (→H4):** main-DB encryption stance — document "plaintext + device encryption is accepted
+  for calc history" (likely) or wire `SqlCipherPassphrase`. Record as ADR either way.
+- [ ] **D3 (→H5):** check release history for whether DB schema v1 ever shipped to users.
+
+### Phase 1 — Stop data loss & compliance holes (C3, H2, H5, H6, M6, M9)
+- [ ] T1: Persisted DPDP consent (encrypted DataStore: granted flag + timestamp + policy version),
+  consumed by **both** assistant and calculator-solve; revocable in Settings. (C3+M6)
+- [ ] T2: Remove `fallbackToDestructiveMigration` for release; `exportSchema = true` + `schemas/`
+  checked in; `MigrationTestHelper` tests for the full chain; add `MIGRATION_1_2` if D3 says v1
+  shipped. (H2+H5+M9)
+- [ ] T3: Real backup/data-extraction rules — exclude `secure_settings` (cloud **and**
+  device-transfer); conscious documented choice on DB/settings. (H6, closes L2)
+- **Checkpoint:** `regressionCheck` green; migration tests pass; consent flow manually verified on
+  both AI entry points.
+
+### Phase 2 — AI wired end-to-end per D1 (C1, C2, C4, M7, M8, L1)
+- [ ] T4: `GeminiKeyProvider` (suspend, call-time): user BYO key → default (proxy/CI secret per D1);
+  `GeminiRepository` stops capturing the key in its constructor. (C2)
+- [ ] T5: Localized user-facing "no key configured" copy (kill the ".env file" string);
+  `mapError` preserves cause/type for Crashlytics. (C1+L1)
+- [ ] T6: Dedicated assistant prompt for `ask()` (stop reusing `explainCalculation`); cap assistant
+  input length; light client-side rate limit on AI calls. (M7+M8)
+- **Checkpoint:** BYO key works on-device for both entry points; `strings`/apktool scan of release
+  APK shows no key.
+
+### Phase 3 — Observability on (H1, L4)
+- [ ] T7: `google-services` + Crashlytics Gradle plugins + `google-services.json`; verify a test
+  crash and a real trace land in the console.
+- [ ] T8: Trace actual Gemini latency (replace the `Unit` sentinel); then layer
+  `FirebaseFeatureFlagResolver` (remote → cached → hardcoded floor).
+
+### Phase 4 — Security hardening (H4, H7, M1, L5, L6)
+- [ ] T9: `CertificatePinner` for currency hosts (+ proxy host when it exists), with backup pins +
+  rotation plan.
+- [ ] T10: History PIN → salted hash in encrypted store, `verifyPin()` in repository, no `"1234"`
+  default, PIN value removed from UI-visible StateFlows. (H7)
+- [ ] T11: Wire `org.owasp.dependencycheck` in build-logic; flip Gate 2b `continue-on-error: false`. (M1)
+- [ ] T12: Play Integrity — wire the warn-only gate or delete `PlayIntegrityWrapper` until vault;
+  honest `DhruvFinance/<version>` UA; sanity-validate currency rates. (H4 remainder, L5, L6)
+
+### Phase 5 — Data model & quality (H3, M2–M5, L3, L7)
+- [ ] T13: Entities adopt `DhruvEntity` (UUID id, indexed `userId="local"`, sync fields) via real
+  migration + tests — prerequisite for Phase-2 sync. (H3)
+- [ ] T14: ViewModel/repository test wave; ratchet `globalLineFloor`; small instrumented smoke suite. (M2)
+- [ ] T15: String externalization + hardcoded-text lint gate (M3); decompose
+  `CalculatorScreen`/`CalculatorViewModel` (M4); `PRIVACY.md` + `LICENSE` (M5); drop the
+  `runBlocking` eager read (L7); L3 cleanup.
+
+### Phase 6 — AI platform build-out (future integration, per PLATFORM.md §6)
+- [ ] T16: Cloudflare Worker proxy — key custody, per-device quota (HMAC device token), abuse
+  caps; consent + Data Safety entry for the new flow. (completes ADR-0002 if D1 chose BYO-first)
+- [ ] T17: Gemini Nano progressive enhancement behind a capability check (never assumed present).
+- [ ] T18: LLM security baseline before any tool-use/agent features: model output = untrusted input
+  (schema-validate, allowlist actions), token/rate/loop bounds, secrets and cross-user data never
+  in prompts. (extends M8)
 
 ## Accepted / won't-fix
 _(none yet — move items here with rationale + ADR link if a locked decision changes.)_

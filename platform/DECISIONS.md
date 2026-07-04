@@ -215,3 +215,68 @@ shows its coverage + test results, which PR-only comments cannot.
 (`globalLineFloor` in the root `build.gradle.kts`) is CI-owned and bumped only at plan checkpoints,
 never ahead of landed tests. Instrumented (`connectedAndroidTest`) tests stay developer-local — the
 gate is JVM + Robolectric only. Re-enabling static analysis in the gate is tracked separately.
+
+---
+
+## ADR-0014 — Tracker-first pivot: Supabase-primary personal-finance tracker, Google sign-in
+**Context.** The Finance app was a calculator collection with a placeholder Dashboard. The
+maintainer's actual goal is tracking complete personal finances — assets, liabilities, net worth,
+then expenses, goals, insurance, retirement — with manual entry first and automation later. The
+platform's locked design assumed offline-first Room with future Supabase *sync* (§5), but the
+maintainer explicitly chose Supabase as the **primary store now** for tracker data, accepting the
+trade-offs (online-required tracking, user accounts in Phase 1, DPDP consent in Phase 1).
+**Decision.**
+1. **App identity**: tracker-first. Net Worth dashboard = Home tab; all calculators/converters move
+   behind a single "Tools" tab (launcher grid). Calculator internals are untouched (code-move rule).
+2. **Tracker data lives in Supabase (Postgres + RLS), not local Room.** This *narrowly overrides*
+   §5's offline-first rule for the tracker domain only. Room/`AppDatabase` continues to serve the
+   calculators (history, currency cache) unchanged. DhruvEntity/HLC sync fields are NOT used by
+   tracker entities — the server is the single source of truth and RLS (`user_id = auth.uid()`)
+   owns identity; there is no client-side conflict resolution to do.
+3. **Auth = Google sign-in via Supabase Auth** (Credential Manager → Google ID token →
+   `signInWithIdToken`). This supersedes the "Firebase Auth (Dhruv ID SSO)" plan for this app until
+   a cross-app Dhruv ID actually ships; revisit in a future ADR then.
+4. **Money = integer paise (`Long` / SQL `bigint`)** for all tracked amounts — exact, summable,
+   no floating point. `BigDecimal` remains for fractional *calculation* domains (existing
+   calculators, future retirement projection engine).
+5. **Valuations are append-only.** Every value update inserts a new timestamped row (enables trend
+   charts and month deltas). Corrections = soft-delete the bad row + append a corrected one; there
+   is deliberately no update path for valuation rows.
+6. **Supabase is consumed as plain REST on the existing network stack** — Retrofit + Moshi +
+   OkHttp against GoTrue (`/auth/v1/*`) and PostgREST (`/rest/v1/*`). supabase-kt/Ktor was
+   rejected: it is the same class of AGP-9 compatibility unknown that killed Hilt (ADR-0010) and
+   Kover (ADR-0013), while Supabase's REST surface needs nothing beyond the libraries already
+   proven in this build. Only genuinely new dependencies: androidx `credentials` + `googleid`
+   (Google sign-in UI, plain AndroidX). Certificate pinning attaches to OkHttp pinned at
+   **CA level (ISRG Root X1 + X2)** — leaf pinning would brick the app on Supabase's routine
+   certificate rotations.
+7. **DPDP applies from day one**: consent screen (naming Supabase + hosting region) gates sign-in
+   and any network call from the tracker; the flag entry `networth.requiresConsent = true` is
+   honored with **persisted, revocable consent** (a `SettingsRepository` DataStore flag +
+   "Withdraw consent" action — NOT the assistant's current in-memory pattern, which forgets
+   consent on restart; fixing the assistant is a tracked follow-up). Erasure is fully in-app:
+   "Delete my data" hard-deletes all tracker rows, and "Delete my account" calls a
+   `delete_my_account()` **security-definer SQL function** (deletes rows + the `auth.users` row,
+   executable by the signed-in user) — no Edge Function, no service-role key anywhere near the
+   device. This satisfies the 7-day erasure guarantee immediately. Category enums persisted as
+   TEXT are append-only: never rename a constant that has shipped.
+8. **UI is micro-frontend style with one design system**: every reusable visual component (bento
+   grid/cards, hero stat card, delta chip, trend chart, sheets, consent scaffold, state cards)
+   lives in `:libs:core` (`com.dhruv.core.ui.components.*`) themed only through
+   `DhruvTheme`/`SectionTheme` MaterialTheme roles. Feature modules own screens/flows only — zero
+   feature-local styling, so the entire application keeps one theme and style. Core stays
+   internally dependency-free; existing screens adopt the components in later phases, not P1.
+**Why.** Cloud-primary was the maintainer's informed choice (single account across future devices,
+no sync machinery in P1). Supabase free tier fits the cost-first driver (ADR-0001); RLS gives
+per-user isolation without server code; Google sign-in avoids password custody entirely; the
+REST-on-existing-stack decision removes the single biggest schedule risk (unproven Gradle-plugin
+dependencies on AGP 9).
+**Consequences.** Tracker screens require internet + session; signed-out/offline/not-configured
+states are first-class UI states. `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `GOOGLE_WEB_CLIENT_ID`
+ride the existing secrets-plugin `.env` mechanism (`.env` gitignored, `.env.example` committed with
+empty defaults so CI debug builds succeed; the release CI job writes `.env` from GitHub secrets).
+The anon key is publishable-by-design under RLS but stays out of the repo per the GitLeaks gate.
+Session tokens persist only in encrypted DataStore. The phased roadmap (P1 net worth → P2
+expenses/budgets → P3 goals/debt payoff → P4 insurance → P5 retirement → P6 automation) is specced
+in `docs/superpowers/specs/2026-07-03-*` with the engineering playbook and P1 gap analysis in
+`docs/superpowers/specs/2026-07-04-*`.
