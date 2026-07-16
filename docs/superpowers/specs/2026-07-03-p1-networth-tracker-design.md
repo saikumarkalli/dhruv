@@ -259,3 +259,9 @@ FeatureDisabledCard → all existing tools still work.
 | R4 | Cert pinning vs rotation | CA-level pins (ISRG Root X1+X2) |
 | R5 | Coverage floor | Pure-logic tests first; floor untouched (ADR-0013) |
 | R6 | DPDP full erasure | `delete_my_account()` security-definer RPC |
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+

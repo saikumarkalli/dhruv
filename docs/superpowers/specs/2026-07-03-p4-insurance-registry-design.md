@@ -88,3 +88,9 @@ minimal offline exception (P4 ADR note).
 - Renewal reminder needs renewal dates available offline → small non-sensitive local snapshot
   (dates + policy names only, no amounts) — deliberate, minimal exception to cloud-primary,
   recorded in the P4 PR's ADR note.
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+

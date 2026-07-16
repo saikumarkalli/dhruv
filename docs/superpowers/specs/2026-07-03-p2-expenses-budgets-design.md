@@ -100,3 +100,9 @@ PR; server data persists.
 - Quick-add friction kills the habit — UX review is a merge gate for `QuickAddSheet`.
 - Month boundary = IST calendar month; documented, not configurable in P2.
 - `account_ref` is optional in P2 (no balance reconciliation yet — that's automation territory, P6).
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+

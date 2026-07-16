@@ -14,14 +14,13 @@ modules — there is no multi-repo split and no GitHub Packages publishing.
 
 Apps (current + planned):
 
-| App            | Gradle path        | Status   | Purpose                                              |
-|----------------|--------------------|----------|------------------------------------------------------|
-| Finance        | `:apps:finance`    | active   | EMI, SIP, Loan, Currency, Unit/Scientific calc, AI assistant (migrated from dhruv-calc) |
-| Tools          | `:apps:tools`      | planned  | Notes, Clipboard, Timer, QR, Weather, AI assistant   |
-| Vault          | `:apps:vault`      | future   | Password manager, E2E-encrypted, biometric           |
-| Health         | `:apps:health`     | future   | —                                                    |
-| Relationship   | `:apps:relationship`| future  | —                                                    |
-| Web sync hub   | (separate, later)  | future   | Official site + cross-device sync                    |
+| App            | Gradle path        | Web Route      | Status   | Purpose                                              |
+|----------------|--------------------|----------------|----------|------------------------------------------------------|
+| Finance        | `:apps:finance`    | `/finance/*`   | active   | Tracker (net worth, expenses), calculators, converter|
+| Tools          | `:apps:tools`      | `/tools/*`     | planned  | Notes, Clipboard, Timer, QR, Weather, AI assistant   |
+| Vault          | `:apps:vault`      | `/vault/*`     | future   | Password manager, E2E-encrypted, biometric           |
+| Health         | `:apps:health`     | `/health/*`    | future   | —                                                    |
+| Relationship   | `:apps:relationship`| `/relationship/*`| future  | —                                                    |
 
 ---
 
@@ -57,6 +56,18 @@ dhruv/
     └── vault/
         ├── app/
         └── feature/ { ... }
+web/                             # Web SPA Monorepo
+├── src/
+│   ├── apps/                    # Route-based modules mapping to Android apps
+│   │   ├── finance/
+│   │   ├── tools/
+│   │   └── vault/
+│   └── shared/                  # Design system, auth, hooks, i18n
+├── package.json
+└── vite.config.ts
+supabase/                        # Shared Backend config
+├── migrations/                  # Schema definition (source of truth)
+└── config.toml
 ```
 
 Shared config (Android, Compose, Koin, detekt, test setup) is centralised in `build-logic/`
@@ -67,26 +78,25 @@ dependency — no Gradle composite-build dance, no published artifact.
 
 ## 3. Tech stack (all apps)
 
-| Concern         | Choice                                                                 |
-|-----------------|------------------------------------------------------------------------|
-| UI              | Jetpack Compose                                                        |
-| DI              | Koin (Hilt deferred — Gradle plugin incompatible with AGP 9; see ADR-0010) |
-| Navigation      | Single-activity NavHost                                                |
-| DB (main)       | Room + Jetpack Security (EncryptedSharedPreferences for the key)       |
-| DB (vault)      | SQLCipher — separate file, AES-256, separate key                       |
-| Preferences     | EncryptedDataStore                                                     |
-| Biometric       | BiometricPrompt Class 3 (Strong) — convenience unlock only (see §7)    |
-| Keystore        | Android Keystore (hardware-backed)                                     |
-| Network         | OkHttp + Retrofit + CertificatePinner                                  |
-| On-device AI    | Gemini Nano via ML Kit GenAI / `com.google.android.gms.ai` — **progressive enhancement, not baseline** |
-| Online AI       | Gemini API **through a proxy** (see §6), BYO-key override              |
-| Sync            | WorkManager, offline-first (Phase 2; contract designed now)            |
-| Feature flags   | Firebase Remote Config (free tier)                                     |
-| Crash / Perf    | Firebase Crashlytics + Performance (free tier)                         |
-| Future auth     | Firebase Auth (Dhruv ID SSO)                                           |
-| Future sync     | Supabase (RLS) + Cloudflare R2                                         |
-| CI/CD           | GitHub Actions: `develop` → signed APK + GitHub Release; `main` → signed AAB (Play-ready, deferred) |
-| minSdk / target | minSdk 26 · targetSdk = latest Play-required (bump yearly)             |
+| Concern         | Android Choice                                                         | Web Choice                                       |
+|-----------------|------------------------------------------------------------------------|--------------------------------------------------|
+| UI              | Jetpack Compose                                                        | React 19 + Vanilla CSS Variables                 |
+| DI / State      | Koin + StateFlow                                                       | React Context + React Query                      |
+| Navigation      | Single-activity NavHost                                                | React Router v7                                  |
+| DB (main)       | Room + Jetpack Security (EncryptedSharedPreferences for the key)       | In-memory + localStorage (session)               |
+| DB (vault)      | SQLCipher — separate file, AES-256, separate key                       | WebCrypto API (future)                           |
+| Preferences     | EncryptedDataStore                                                     | localStorage                                     |
+| Biometric       | BiometricPrompt Class 3 (Strong) — convenience unlock only (see §7)    | WebAuthn (future)                                |
+| Keystore        | Android Keystore (hardware-backed)                                     | —                                                |
+| Network         | OkHttp + Retrofit + CertificatePinner                                  | supabase-js                                      |
+| On-device AI    | Gemini Nano via ML Kit GenAI — progressive enhancement                 | —                                                |
+| Online AI       | Gemini API **through a proxy** (see §6), BYO-key override              | Same                                             |
+| Sync            | WorkManager, offline-first (Phase 2; contract designed now)            | Realtime (Supabase)                              |
+| Feature flags   | Firebase Remote Config (free tier)                                     | Static JSON asset (same dhruv-finance.json)      |
+| Crash / Perf    | Firebase Crashlytics + Performance (free tier)                         | errorReporter + Vercel Analytics                 |
+| Auth            | Google Sign-In via Credential Manager → GoTrue                         | Google Sign-In via OAuth PKCE → GoTrue           |
+| Primary DB      | Supabase (PostgreSQL) + RLS                                            | Supabase (PostgreSQL) + RLS                      |
+| CI/CD           | GitHub Actions (`ci.yml`) → signed APK + GitHub Release                | GitHub Actions (`web-ci.yml`) → Vercel           |
 
 ---
 

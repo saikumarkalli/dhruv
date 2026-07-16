@@ -79,3 +79,9 @@ Projection engine pure — no server compute.
 - Investable-asset classification is a heuristic → per-asset override toggle is required scope,
   not optional.
 - Two-scenario comparison may slip to a fast-follow if P5 runs long (cut line documented).
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+

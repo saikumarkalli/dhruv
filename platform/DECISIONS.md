@@ -280,3 +280,27 @@ Session tokens persist only in encrypted DataStore. The phased roadmap (P1 net w
 expenses/budgets → P3 goals/debt payoff → P4 insurance → P5 retirement → P6 automation) is specced
 in `docs/superpowers/specs/2026-07-03-*` with the engineering playbook and P1 gap analysis in
 `docs/superpowers/specs/2026-07-04-*`.
+
+---
+
+## ADR-0015 — Web Application: Vite + React SPA hosted on Vercel
+**Context.** The maintainer requires a web interface for the Finance app alongside Android. The
+web interface must be cost-free to host, simple to maintain for a solo developer, and integrate
+with the existing Supabase backend. Server-side rendering (SSR) frameworks like Next.js or Remix
+were considered but rejected due to hosting constraints (Vercel serverless limits/costs over time)
+and architectural mismatch (the Android app is already a "dumb client" over a REST API; the web
+app should be the same).
+**Decision.**
+1. **Framework:** Vite + React SPA (TypeScript).
+2. **Hosting:** Vercel (free tier).
+3. **Repository:** Integrated into the existing `dhruv` monorepo inside a `web/` directory.
+4. **Data fetching:** `@supabase/supabase-js` and `React Query`.
+5. **Styling:** Vanilla CSS with custom properties porting the Dhruv design system.
+**Why.** An SPA matches the Android app's architecture exactly — both are dumb clients talking to
+the shared Supabase PostgREST API. Vite produces static files that can be hosted anywhere for free.
+A monorepo setup ensures feature flags, Supabase schema migrations, and documentation are shared.
+React Query elegantly replicates Android's `StateFlow`/`Repository` layer for server state.
+**Consequences.** The `dhruv` repository now contains both Gradle and NPM projects. CI must use
+path-based triggers to avoid running Android tests on Web changes and vice versa. Supabase CORS
+must be configured to allow the Vercel domain. DPDP consent logic and feature flags must be
+re-implemented identically in TypeScript.
