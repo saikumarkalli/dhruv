@@ -28,3 +28,12 @@ release-body.md
 coverage-report.zip
 /.ci-summary/
 /.ci-coverage/
+
+# Web application
+web/node_modules/
+web/dist/
+web/.env.local
+web/.vercel/
+
+# Supabase CLI
+supabase/.temp/

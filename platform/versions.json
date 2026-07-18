@@ -22,5 +22,19 @@
       "requiresCore": ">=1.0.0"
     }
   },
-  "notes": "versionCode is auto-incremented by CI only. Update requiresCore when a breaking core change lands (see DECISIONS.md ADR semantics)."
+  "web": {
+    "finance": {
+      "version": "0.1.0",
+      "status": "in-development"
+    },
+    "tools": {
+      "version": "0.0.0",
+      "status": "future"
+    },
+    "vault": {
+      "version": "0.0.0",
+      "status": "future"
+    }
+  },
+  "notes": "versionCode is auto-incremented by CI only (Android). Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
 }

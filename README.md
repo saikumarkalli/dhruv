@@ -501,6 +501,5 @@ From [`platform/Implementation.md`](platform/Implementation.md) (Phase 0–7):
 
 ## License
 
-MIT (see project engineering guidelines). Brand assets in `Dhruv_Master_Brand_Kit/` are project-owned.
-</content>
-</invoke>
+[MIT](LICENSE) © 2026 Sai Kumar Kalli. Privacy policy: [PRIVACY.md](PRIVACY.md).
+Brand assets in `Dhruv_Master_Brand_Kit/` are project-owned and not covered by the MIT grant.

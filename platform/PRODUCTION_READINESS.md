@@ -153,9 +153,13 @@
 - **Fix direction:** Decompose into sub-components / state holders; extract pure logic.
 
 ### M5 — No privacy policy or LICENSE in the repo
-- [ ] **Fix**
-- **What:** Consent copy references a "data transfer," but there is no privacy policy document; no
-  LICENSE either. Both expected before distribution (privacy policy is DPDP-relevant).
+- [x] **Fixed 2026-07-12** — `LICENSE` (MIT) and `PRIVACY.md` (policy version 1.0, versioned
+  change table) added at repo root; README License section links both. Remaining follow-ups ride
+  later phases: hosted URL for the policy (needed only for a Play listing, deferred per ADR-0008)
+  and the v2.0 policy bump when the Supabase tracker ships (P1 — consent screens store the policy
+  version per the R3/M6 consent mechanism).
+- **What (original):** Consent copy references a "data transfer," but there is no privacy policy
+  document; no LICENSE either. Both expected before distribution (privacy policy is DPDP-relevant).
 - **Fix direction:** Add `PRIVACY.md` (+ hosted URL) and a `LICENSE`.
 
 ---

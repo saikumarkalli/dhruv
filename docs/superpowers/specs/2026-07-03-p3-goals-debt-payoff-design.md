@@ -92,3 +92,9 @@ identical or the refactor does not merge.
   ("linked to 2 goals") so it is a visible choice.
 - APR/min-payment are manual: P1 liabilities carry no rate data. Acceptable for a manual tracker;
   automation may enrich later.
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+

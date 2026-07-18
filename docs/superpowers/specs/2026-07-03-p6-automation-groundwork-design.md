@@ -61,3 +61,9 @@ transactions; items are otherwise independent and individually shippable.
   the user in the loop; never silent auto-save.
 - AA onboarding cost may fail the cost-first driver → evaluation is decision-doc-only by design.
 - Realtime free-tier limits → optional enhancement, manual refresh remains the baseline.
+
+## TDD Mandate
+
+> **Test-Driven Development (TDD) is strictly required for this phase.**
+> All pure logic, calculators, reducers, and state machines MUST be written with failing tests first, followed by implementation. UI components must be tested for accessibility and rendering states on both Android and Web platforms.
+
