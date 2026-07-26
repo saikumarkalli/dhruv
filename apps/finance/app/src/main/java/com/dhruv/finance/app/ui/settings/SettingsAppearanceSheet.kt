@@ -1,121 +1,70 @@
 package com.dhruv.finance.app.ui.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.dhruv.core.ui.theme.ColorOptions
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Appearance section row content (ADR-0024 / DhruvNext §6.9). Previously this file hosted a
+ * `ModalBottomSheet` ("Appearance & Colors") with a per-domain `SectionTheme` color picker per
+ * finance/converter/date/time section (ADR-0014 §8) — that whole model is retired. Appearance is
+ * now inline in the main Settings body: a Theme segmented row, ONE global 4-swatch accent picker
+ * (ADR-0024 decision 2), and a Material-You placeholder — each row below is composed directly into
+ * [com.dhruv.core.ui.components.ListGroup]'s `rows` list by [SettingsScreen].
+ */
+
+private val THEME_OPTIONS = listOf("system" to "System", "always_light" to "Light", "always_dark" to "Dark")
+
+/** Theme row — reuses the existing [com.dhruv.settings.SettingsRepository] dark-mode preference flow. */
 @Composable
-fun SettingsAppearanceSheet(
-    uiState: SettingsUiState,
+fun AppearanceThemeRow(
+    darkModePreference: String,
     onThemeChanged: (String) -> Unit,
-    onColorChanged: (String, String) -> Unit, // section, colorId
-    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-
-            // Theme Segmented Control
-            val themes = listOf("system" to "System", "always_light" to "Light", "always_dark" to "Dark")
-            val selectedIndex = themes.indexOfFirst { it.first == uiState.darkModePreference }.takeIf { it >= 0 } ?: 0
-
-            Text("Theme", fontWeight = FontWeight.Bold)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                themes.forEachIndexed { index, pair ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = themes.size),
-                        onClick = { onThemeChanged(pair.first) },
-                        selected = index == selectedIndex,
-                    ) {
-                        Text(pair.second)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Section colors", fontWeight = FontWeight.Bold)
-
-            val targets =
-                listOf(
-                    AccentTarget("calculator", "Calculator", uiState.calculatorColor),
-                    AccentTarget("converter", "Converter", uiState.converterColor),
-                    AccentTarget("date", "Date & Time", uiState.dateColor),
-                    AccentTarget("finance", "Finance", uiState.financeColor),
-                    AccentTarget("time", "Time Tools", uiState.timeColor),
-                )
-
-            targets.forEach { target ->
-                ColorPickerRow(
-                    label = target.label,
-                    selectedColorId = target.selectedColorId,
-                    onColorSelected = { colorId -> onColorChanged(target.id, colorId) },
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
+    val selectedIndex = THEME_OPTIONS.indexOfFirst { it.first == darkModePreference }.takeIf { it >= 0 } ?: 0
+    LabeledSegmentedRow(
+        label = "Theme",
+        options = THEME_OPTIONS.map { it.second },
+        selectedIndex = selectedIndex,
+        onSelected = { index -> onThemeChanged(THEME_OPTIONS[index].first) },
+        modifier = modifier,
+    )
 }
 
-@Composable
-fun ColorPickerRow(
-    label: String,
-    selectedColorId: String,
-    onColorSelected: (String) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(ColorOptions) { opt ->
-                    val isSelected = opt.id == selectedColorId
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(opt.darkPrimary)
-                                .clickable { onColorSelected(opt.id) },
-                    ) {
-                        if (isSelected) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(16.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .align(Alignment.Center),
-                            )
-                        }
-                    }
-                }
-            }
+/**
+ * The 4 global-accent swatches, sourced from [ColorOptions]' "orange"/"green"/"blue"/"purple"
+ * entries (their `lightPrimary` hex — the values that already ship in this codebase; note this is
+ * numerically distinct from [com.dhruv.settings.AppSettings.accentColorHex]'s own default
+ * "#F05A28", so the default accent won't show any swatch pre-selected until the user picks one).
+ */
+fun defaultAccentSwatches(): List<AccentSwatch> =
+    listOf("orange", "green", "blue", "purple").mapNotNull { id ->
+        ColorOptions.firstOrNull { it.id == id }?.let { option ->
+            AccentSwatch(
+                id = option.id,
+                label = option.name,
+                hex = option.lightPrimary.toHexString(),
+                color = option.lightPrimary,
+            )
         }
     }
+
+/**
+ * "#RRGGBB" formatting without [android.graphics.Color.parseColor]/`toArgb()` — deliberately
+ * hand-rolled from the [Color] channel floats (same reasoning as `DhruvNextTokens.parseHexColor`'s
+ * own doc comment: Android-framework color stubs return black under plain JVM unit tests, no
+ * Robolectric here).
+ */
+private fun Color.toHexString(): String {
+    val r = (red * MAX_CHANNEL_F + HALF_CHANNEL).toInt().coerceIn(0, MAX_CHANNEL_I)
+    val g = (green * MAX_CHANNEL_F + HALF_CHANNEL).toInt().coerceIn(0, MAX_CHANNEL_I)
+    val b = (blue * MAX_CHANNEL_F + HALF_CHANNEL).toInt().coerceIn(0, MAX_CHANNEL_I)
+    return String.format(Locale.US, "#%02X%02X%02X", r, g, b)
 }
+
+private const val MAX_CHANNEL_F = 255f
+private const val MAX_CHANNEL_I = 255
+private const val HALF_CHANNEL = 0.5f

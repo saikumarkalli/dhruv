@@ -1,32 +1,62 @@
 package com.dhruv.finance.app.ui.settings
 
-import androidx.compose.foundation.layout.*
+import android.os.Build
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dhruv.core.ui.components.DhruvLogoWordmarkVertical
-import com.dhruv.core.ui.theme.appGradientBackground
+import com.dhruv.core.ui.components.InitialsTile
+import com.dhruv.core.ui.components.ListGroup
+import com.dhruv.core.ui.components.ListGroupRow
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.components.SectionLabel
+import com.dhruv.core.ui.components.SwitchRow
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.settings.AppSettings
 import com.dhruv.settings.SettingsRepository
+import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
+/**
+ * Settings — DhruvNext §6.9 (ADR-0024): Account / Appearance / Money / Privacy & data / App.
+ * App-shell screen, not a feature module: no feature flag, no ViewModel, no `FeatureHost` — the
+ * caller ([com.dhruv.finance.app.ui.shell.SettingsDetailContent], a shell-level detail route under
+ * the DhruvNext 4-tab pager) renders the back-top-bar; this composable is the scrollable body only.
+ */
 @Composable
 fun SettingsScreen(
     settingsRepository: SettingsRepository,
     onClearHistory: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Collect State
+    val coroutineScope = rememberCoroutineScope()
+    val appSettings by settingsRepository.observe().collectAsState(initial = AppSettings())
+
     val uiState =
         SettingsUiState(
             isDegree = settingsRepository.isDegree.collectAsState(initial = true).value,
@@ -35,242 +65,226 @@ fun SettingsScreen(
             formatLocale = settingsRepository.formatLocale.collectAsState(initial = "international").value,
             isHistoryLocked = settingsRepository.isHistoryLocked.collectAsState(initial = false).value,
             historyPinCode = settingsRepository.historyPinCode.collectAsState(initial = "").value,
-            isConverterEnabled = settingsRepository.isConverterEnabled.collectAsState(initial = true).value,
-            isDateEnabled = settingsRepository.isDateEnabled.collectAsState(initial = true).value,
-            isFinanceEnabled = settingsRepository.isFinanceEnabled.collectAsState(initial = true).value,
-            calculatorColor = settingsRepository.calculatorColor.collectAsState(initial = "cyan").value,
-            converterColor = settingsRepository.converterColor.collectAsState(initial = "purple").value,
-            dateColor = settingsRepository.dateColor.collectAsState(initial = "coral").value,
-            financeColor = settingsRepository.financeColor.collectAsState(initial = "amber").value,
-            isTimeEnabled = settingsRepository.isTimeEnabled.collectAsState(initial = true).value,
-            timeColor = settingsRepository.timeColor.collectAsState(initial = "teal").value,
+            accentColorHex = appSettings.accentColorHex,
+            biometricEnabled = appSettings.biometricEnabled,
         )
 
-    // Dynamic Version Info
+    // Dynamic version info (unchanged).
     val context = LocalContext.current
     val packageInfo = remember { context.packageManager.getPackageInfo(context.packageName, 0) }
     val dynamicVersionName = packageInfo.versionName ?: "1.0"
     val dynamicVersionCode =
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             packageInfo.longVersionCode.toInt()
         } else {
             @Suppress("DEPRECATION")
             packageInfo.versionCode
         }
 
-    // Dialog & Sheet States
+    // Dialog & sheet states (unchanged; the old "Appearance & Colors" sheet trigger is gone —
+    // Appearance is inline in the body now).
     var showPrecisionSheet by remember { mutableStateOf(false) }
-    var showAppearanceSheet by remember { mutableStateOf(false) }
     var showLocaleDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
 
-    var activeSectionConfig by remember { mutableStateOf<SettingsSectionConfig?>(null) }
+    val colors = LocalDhruvNextColors.current
+    val accentSwatches = remember { defaultAccentSwatches() }
 
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .appGradientBackground()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        // Brand header
-        DhruvLogoWordmarkVertical(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
-            logoSize = 88.dp,
-            textColor = MaterialTheme.colorScheme.onSurface,
-        )
-
-        // Headers
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp),
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        }
-
-        // General
-        SettingsCategory(title = "General") {
-            SettingsClickableItem(
-                title = "Number format",
-                valueDisplay = if (uiState.formatLocale == "indian") "Indian" else "International",
-                onClick = { showLocaleDialog = true },
-                tag = "settings_locale_item",
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Decimal precision",
-                valueDisplay = "${uiState.decimalPrecision} places",
-                onClick = { showPrecisionSheet = true },
-                tag = "settings_precision_item",
-            )
-        }
-
-        // Calculator
-        SettingsCategory(title = "Calculator") {
-            SettingsSegmentedControlItem(
-                title = "Angle mode",
-                options = listOf("DEG", "RAD"),
-                selectedIndex = if (uiState.isDegree) 0 else 1,
-                onOptionSelected = { settingsRepository.setDegree(it == 0) },
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Preview", fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                val pattern = if (uiState.decimalPrecision > 0) "#." + "#".repeat(uiState.decimalPrecision) else "#"
-                val df = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
-                Text(df.format(12.3456789), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        // ── Account ───────────────────────────────────────────────────────────────────────────
+        // No auth/sync system exists yet (Supabase auth is a future phase) — an honest placeholder,
+        // not fabricated sync data.
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                InitialsTile(name = "Local device")
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(text = "Local device", color = colors.tx, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = "Local device only — no account yet", color = colors.tx3, fontSize = 12.5f.sp)
+                }
             }
         }
 
-        // Sections
-        SettingsCategory(title = "Sections") {
-            SettingsClickableItem(
-                title = "Calculator",
-                valueDisplay = "Always on",
-                showChevron = false,
-                onClick = { },
-                tag = "settings_section_calc",
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Converter",
-                valueDisplay = if (uiState.isConverterEnabled) "On" else "Off",
-                onClick = {
-                    activeSectionConfig =
-                        SettingsSectionConfig(
-                            "converter",
-                            "Converter",
-                            uiState.isConverterEnabled,
-                            true,
-                            SettingsConstants.CONVERTER_TOOLS,
-                        )
-                },
-                tag = "settings_section_conv",
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Date & Time",
-                valueDisplay = if (uiState.isDateEnabled) "On" else "Off",
-                onClick = {
-                    activeSectionConfig =
-                        SettingsSectionConfig(
-                            "date",
-                            "Date & Time",
-                            uiState.isDateEnabled,
-                            true,
-                            SettingsConstants.DATE_TOOLS,
-                        )
-                },
-                tag = "settings_section_date",
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Finance",
-                valueDisplay = if (uiState.isFinanceEnabled) "On" else "Off",
-                onClick = {
-                    activeSectionConfig =
-                        SettingsSectionConfig(
-                            "finance",
-                            "Finance",
-                            uiState.isFinanceEnabled,
-                            true,
-                            SettingsConstants.FINANCE_TOOLS,
-                        )
-                },
-                tag = "settings_section_fin",
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Time Tools",
-                valueDisplay = if (uiState.isTimeEnabled) "On" else "Off",
-                onClick = {
-                    activeSectionConfig =
-                        SettingsSectionConfig(
-                            "time",
-                            "Time Tools",
-                            uiState.isTimeEnabled,
-                            true,
-                            SettingsConstants.TIME_TOOLS,
-                        )
-                },
-                tag = "settings_section_time",
+        // ── Appearance ────────────────────────────────────────────────────────────────────────
+        SettingsGroup(title = "Appearance") {
+            ListGroup(
+                rows =
+                    listOf(
+                        {
+                            AppearanceThemeRow(
+                                darkModePreference = uiState.darkModePreference,
+                                onThemeChanged = { settingsRepository.setDarkModePreference(it) },
+                            )
+                        },
+                        {
+                            AccentColorPickerRow(
+                                swatches = accentSwatches,
+                                selectedHex = uiState.accentColorHex,
+                                onColorSelected = { hex ->
+                                    coroutineScope.launch {
+                                        settingsRepository.update { copy(accentColorHex = hex) }
+                                    }
+                                },
+                            )
+                        },
+                        {
+                            // No dynamic-color (Material You) infrastructure exists anywhere in this
+                            // codebase yet — future hookup once that plumbing lands.
+                            DisabledSwitchRow(
+                                label = "Use wallpaper colours",
+                                description = "Match your device's Material You palette — coming soon",
+                            )
+                        },
+                    ),
             )
         }
 
-        // Appearance
-        SettingsCategory(title = "Appearance") {
-            SettingsClickableItem(
-                title = "Appearance & Colors",
-                valueDisplay = "Theme & Accents",
-                onClick = { showAppearanceSheet = true },
-                tag = "settings_appearance_item",
+        // ── Money ─────────────────────────────────────────────────────────────────────────────
+        SettingsGroup(title = "Money") {
+            val precisionPattern = if (uiState.decimalPrecision > 0) "#." + "#".repeat(uiState.decimalPrecision) else "#"
+            val precisionPreview = DecimalFormat(precisionPattern, DecimalFormatSymbols(Locale.US)).format(12.3456789)
+            ListGroup(
+                rows =
+                    listOf(
+                        {
+                            ListGroupRow(
+                                title = "Number format",
+                                subtitle = null,
+                                onClick = { showLocaleDialog = true },
+                                trailing = {
+                                    Text(
+                                        text = if (uiState.formatLocale == "indian") "Indian" else "International",
+                                        color = colors.tx2,
+                                        fontSize = 14.sp,
+                                    )
+                                },
+                                modifier = Modifier.testTag("settings_locale_item"),
+                            )
+                        },
+                        {
+                            ListGroupRow(
+                                title = "Decimal precision",
+                                onClick = { showPrecisionSheet = true },
+                                trailing = { Text("${uiState.decimalPrecision} places", color = colors.tx2, fontSize = 14.sp) },
+                                modifier = Modifier.testTag("settings_precision_item"),
+                            )
+                        },
+                        {
+                            ListGroupRow(
+                                title = "Preview",
+                                showChevron = false,
+                                trailing = { Text(precisionPreview, color = colors.acc, fontWeight = FontWeight.Bold, fontSize = 15.sp) },
+                            )
+                        },
+                        {
+                            LabeledSegmentedRow(
+                                label = "Angle mode",
+                                options = listOf("DEG", "RAD"),
+                                selectedIndex = if (uiState.isDegree) 0 else 1,
+                                onSelected = { index -> settingsRepository.setDegree(index == 0) },
+                            )
+                        },
+                    ),
             )
         }
 
-        // Privacy & Data
-        SettingsCategory(title = "Privacy & Data") {
-            SettingsToggleItem(
-                title = "Lock history",
-                checked = uiState.isHistoryLocked,
-                onCheckedChange = { locked ->
-                    if (locked && uiState.historyPinCode.isEmpty()) {
-                        showPinDialog = true
-                    } else {
-                        settingsRepository.setHistoryLocked(locked)
-                    }
-                },
-                tag = "settings_history_lock",
-            )
-            if (uiState.isHistoryLocked) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                SettingsClickableItem(
-                    title = "Change PIN",
-                    valueDisplay = "****",
-                    onClick = { showPinDialog = true },
-                    tag = "settings_change_pin",
-                )
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SettingsClickableItem(
-                title = "Clear history",
-                valueDisplay = "Permanently wipe",
-                onClick = { showClearHistoryDialog = true },
-                tag = "settings_clear_history",
+        // ── Privacy & data ────────────────────────────────────────────────────────────────────
+        // No "Ask Dhruv" persisted consent flag exists (the assistant keeps its own in-memory
+        // consent, a known gap tracked separately) — omitted rather than fabricated here.
+        SettingsGroup(title = "Privacy & data") {
+            ListGroup(
+                rows =
+                    buildList<@Composable () -> Unit> {
+                        add {
+                            SwitchRow(
+                                label = "App lock",
+                                description = "Saves your preference now — biometric lock-screen enforcement is coming soon",
+                                checked = uiState.biometricEnabled,
+                                onCheckedChange = { enabled ->
+                                    coroutineScope.launch {
+                                        settingsRepository.update { copy(biometricEnabled = enabled) }
+                                    }
+                                },
+                            )
+                        }
+                        add {
+                            SwitchRow(
+                                label = "Lock history",
+                                description = "Require a PIN to view saved calculator results",
+                                checked = uiState.isHistoryLocked,
+                                onCheckedChange = { locked ->
+                                    if (locked && uiState.historyPinCode.isEmpty()) {
+                                        showPinDialog = true
+                                    } else {
+                                        settingsRepository.setHistoryLocked(locked)
+                                    }
+                                },
+                            )
+                        }
+                        if (uiState.isHistoryLocked) {
+                            add {
+                                ListGroupRow(
+                                    title = "Change PIN",
+                                    onClick = { showPinDialog = true },
+                                    trailing = { Text("••••", color = colors.tx2, fontSize = 14.sp) },
+                                )
+                            }
+                        }
+                        add {
+                            PlaceholderRow(
+                                title = "Export my data",
+                                subtitle = "Download a copy of everything stored on this device",
+                            )
+                        }
+                        add {
+                            DangerRow(
+                                title = "Delete everything",
+                                subtitle = "Erase all account data",
+                                trailingLabel = "Soon",
+                            )
+                        }
+                        add {
+                            DangerRow(
+                                title = "Clear history",
+                                subtitle = "Permanently wipe saved calculator results",
+                                onClick = { showClearHistoryDialog = true },
+                            )
+                        }
+                    },
             )
         }
 
-        // About
-        Text(
-            "About Dhruv Finance",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, top = 8.dp),
-        )
-        Text(
-            "Version $dynamicVersionName (build $dynamicVersionCode)",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp),
-        )
-        Spacer(modifier = Modifier.height(32.dp))
+        // ── App ───────────────────────────────────────────────────────────────────────────────
+        // No per-tool "hide from nav" rows here: DhruvNext's tabs (Home/Calc/Plan/Insights) are
+        // fixed system destinations, not user-toggleable — unlike the old app's optional
+        // Converter/Date/Finance/Time tabs, there is nothing left for such a toggle to control.
+        SettingsGroup(title = "App") {
+            ListGroup(
+                rows =
+                    listOf(
+                        {
+                            ListGroupRow(
+                                title = "About Dhruv Finance",
+                                subtitle = "Version $dynamicVersionName (build $dynamicVersionCode)",
+                                showChevron = false,
+                            )
+                        },
+                    ),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
     }
 
-    // --- Overlays ---
+    // --- Overlays (unchanged behaviour) ---
 
     if (showLocaleDialog) {
         LocaleFormatDialog(
@@ -294,40 +308,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showAppearanceSheet) {
-        SettingsAppearanceSheet(
-            uiState = uiState,
-            onThemeChanged = { settingsRepository.setDarkModePreference(it) },
-            onColorChanged = { section, colorId ->
-                when (section) {
-                    "calculator" -> settingsRepository.setCalculatorColor(colorId)
-                    "converter" -> settingsRepository.setConverterColor(colorId)
-                    "date" -> settingsRepository.setDateColor(colorId)
-                    "finance" -> settingsRepository.setFinanceColor(colorId)
-                    "time" -> settingsRepository.setTimeColor(colorId)
-                }
-            },
-            onDismiss = { showAppearanceSheet = false },
-        )
-    }
-
-    activeSectionConfig?.let { config ->
-        SettingsSectionDetailSheet(
-            config = config,
-            settingsRepository = settingsRepository,
-            onPageToggle = { enabled ->
-                when (config.id) {
-                    "converter" -> settingsRepository.setConverterEnabled(enabled)
-                    "date" -> settingsRepository.setDateEnabled(enabled)
-                    "finance" -> settingsRepository.setFinanceEnabled(enabled)
-                    "time" -> settingsRepository.setTimeEnabled(enabled)
-                }
-                activeSectionConfig = activeSectionConfig?.copy(enabled = enabled)
-            },
-            onDismiss = { activeSectionConfig = null },
-        )
-    }
-
     if (showPinDialog) {
         PinEntryDialog(
             onPinSaved = { pin ->
@@ -347,5 +327,18 @@ fun SettingsScreen(
             },
             onDismiss = { showClearHistoryDialog = false },
         )
+    }
+}
+
+/** A [SectionLabel] followed by its grouped content — the repeating shape of every section below. */
+@Composable
+private fun SettingsGroup(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(text = title, modifier = Modifier.padding(start = 4.dp))
+        content()
     }
 }

@@ -1,5 +1,6 @@
 package com.dhruv.finance.app.di
 
+import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.settings.SettingsViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -12,4 +13,5 @@ import org.koin.dsl.module
 val appModule =
     module {
         viewModel { SettingsViewModel(get(), get()) }
+        single { NavigationDispatcher() }
     }

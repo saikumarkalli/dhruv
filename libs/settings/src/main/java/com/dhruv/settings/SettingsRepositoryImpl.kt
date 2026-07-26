@@ -230,7 +230,7 @@ class SettingsRepositoryImpl(
             val font = runCatching { DhruvFont.valueOf(fontName) }.getOrDefault(DhruvFont.DEFAULT)
             AppSettings(
                 theme = theme,
-                accentColorHex = plain[SettingsKeys.ACCENT_COLOR_HEX] ?: "#D4AF37",
+                accentColorHex = plain[SettingsKeys.ACCENT_COLOR_HEX] ?: "#F05A28",
                 fontFamily = font,
                 biometricEnabled = plain[SettingsKeys.BIOMETRIC_ENABLED] ?: false,
                 syncEnabled = plain[SettingsKeys.SYNC_ENABLED] ?: false,

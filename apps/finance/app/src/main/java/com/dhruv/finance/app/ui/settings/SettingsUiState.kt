@@ -1,5 +1,10 @@
 package com.dhruv.finance.app.ui.settings
 
+/**
+ * [accentColorHex] / [biometricEnabled] are the Phase-3 [com.dhruv.settings.AppSettings] fields
+ * (ADR-0024 decision 2's global accent picker / the honest, real `biometricEnabled` preference)
+ * surfaced here. The rest are the pre-existing calculator/history preferences, unchanged.
+ */
 data class SettingsUiState(
     val isDegree: Boolean = true,
     val darkModePreference: String = "system",
@@ -7,13 +12,6 @@ data class SettingsUiState(
     val formatLocale: String = "international",
     val isHistoryLocked: Boolean = false,
     val historyPinCode: String = "",
-    val isConverterEnabled: Boolean = true,
-    val isDateEnabled: Boolean = true,
-    val isFinanceEnabled: Boolean = true,
-    val isTimeEnabled: Boolean = true,
-    val calculatorColor: String = "cyan",
-    val converterColor: String = "purple",
-    val dateColor: String = "coral",
-    val financeColor: String = "amber",
-    val timeColor: String = "teal",
+    val accentColorHex: String = "#F05A28",
+    val biometricEnabled: Boolean = false,
 )

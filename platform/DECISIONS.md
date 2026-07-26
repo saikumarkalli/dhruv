@@ -332,3 +332,63 @@ resolved by moving the reservation, never the register.
 ADR-0026 (not 0015/0016) into this register. Anyone reserving a new ADR number in a spec should
 first check this file's highest defined number, not just other specs' reservations — that is what
 let two specs claim 0015 independently.
+
+---
+
+## ADR-0024 — Navigation: DhruvNext 4-tab shell + single global accent (supersedes ADR-0014 §1, §8)
+**Context.** The Finance app's shell had drifted from ADR-0014 §1's 3-tab design into an
+undesigned 5-visible-tab pager (Dashboard/Calc/Converter/Finance/Assistant + a hidden Settings
+page), and `:libs:core`'s design-system component layer (bento/stat/chart/sheet components ADR-
+0014 §8 calls for) was never built — every feature screen hand-rolls Material3 widgets, four of
+them (Loans/Investments/Tax/Everyday) with hardcoded red/green hex and visibly machine-written
+copy. Separately, the maintainer had a complete Claude-designed system on file — **DhruvNext**
+(`docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`), imported as a
+reference-only document specifically *because* it conflicts with the binding standard: DhruvNext
+draws a **4-tab bottom nav (Home · Calc · Plan · Insights)** with Settings reached via a top-bar
+icon, a **single global accent** color, and a calculator-suite-first IA with a full "Ask Dhruv" AI
+chat — versus ADR-0014 §1's 3-tab (Home/Tools/Settings) with calculators demoted into a Tools
+launcher grid, and §8's per-domain `SectionTheme` accents (tracker always green, calculators their
+own color, etc.). The reference doc's own §3 recommendation was to either reconcile the two models
+with an ADR or explicitly supersede the binding standard's §3; this reserved ADR number (flagged
+for "navigation architecture" by the security-navigation-technical-review's NAV1 finding, and
+listed in the ADR-0017–0024 reservation block above) is that ADR. The maintainer reviewed both
+models side by side and chose to adopt DhruvNext as-drawn rather than merge them.
+**Decision.**
+1. **Nav = DhruvNext's 4-tab bottom bar: Home, Calc, Plan, Insights.** Settings is reached via a
+   top-bar icon, not a tab. The former calculator feature modules (loans/investments/tax/everyday)
+   become **Plan** drill-in sub-routes (`loan`/`invest`/`tax`/`everyday`) that keep the Plan tab
+   highlighted rather than being Tools-grid tiles or their own tabs. This supersedes ADR-0014 §1's
+   "Home + single Tools tab" model; Net Worth remains the Home tab's content, unchanged.
+2. **Accent = one global accent (`--acc`)**, defaulting to the existing `PrimaryLight`/`PrimaryDark`
+   orange already shipped in `Color.kt` — DhruvNext's `#F05A28`/`#FF6D3B` tokens are numerically
+   identical to those, so the default look is unchanged. The user may override it via a 4-swatch
+   global picker in Settings (orange/green/blue/purple), reusing the existing light-mode hex values
+   already present in `ThemeColorConfig.kt`'s `ColorOptions` as the swatch source. This supersedes
+   ADR-0014 §8's per-domain `SectionTheme` accent rule; `SectionTheme` is retired in favor of one
+   theme root applied app-wide.
+3. **Shell mechanics**: a pager for the 4 top-level tabs, each hosting a **nested NavHost** for
+   drill-in routes. Utility/detail routes (`history`, `currency`, `unit`, `date`, `stopwatch`,
+   `timer`, `addtxn`, `settings`, `profile`, `notif`, `shell`, `ask`) show a back top-bar and no tab
+   bar. `consent`, `shell`, and `addtxn` render as bottom sheets. `splash`/`onboard` are bare,
+   full-frame, no chrome. This is the shape NAV1 in the security-navigation-technical-review already
+   proposed for this ADR number.
+4. **"Ask Dhruv" becomes real surface area**: a `FeatureHost`-wrapped `ask` chat route + floating
+   pill (shown on Home/Plan/Insights) + a route-registry row + its own consent entry. The AI
+   key-delivery/consent plumbing this requires (deferred earlier as part of production-hardening
+   Phase 2) is tracked and lands alongside it — no shared Gemini key is ever embedded in the APK,
+   consistent with ADR-0002.
+**Why.** DhruvNext arrived as a complete, ready system — full token set, 23 screen states, and an
+accent that already matches the shipped default color exactly — while the binding standard's
+component layer remained entirely unbuilt eight months on. Rebuilding the shell once against a
+finished design was judged cheaper than partially building the 3-tab component layer and
+reconciling it with DhruvNext later. Per-domain `SectionTheme` accents were also producing visible
+inconsistency across tabs that a single brand accent removes.
+**Consequences.** `SectionTheme` (`Theme.kt`) and its call sites (`MainActivity`'s per-page
+wrapping) are retired during the shell rebuild as a working, tested commit — not deleted by this
+docs-only ADR. `ColorOptions`/`getAccentColor` (`ThemeColorConfig.kt`) are repurposed from a
+per-section picker to the new global picker's swatch source; same data, new consumer. Two open
+items DhruvNext's own §8 flagged remain open and block their respective screens: the Home
+financial-health "score out of 100" has no data spec, and `history` (calculator-result history)
+must stay disambiguated from any future transaction-history surface. The full module-by-module
+build order, component inventory, and gap register live in the DhruvNext overhaul plan (see
+`docs/superpowers/plans/`), not duplicated here.
