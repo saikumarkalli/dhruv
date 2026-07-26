@@ -116,7 +116,7 @@ Source: `platform/PRODUCTION_READINESS.md` phases 0–4 (already planned there; 
 - **Exit:** release APK with working crash reporting, no data-loss paths, no unconsented egress.
 
 ### R1 — CI cost optimization + commit-type versioning
-Source: approved spec `2026-07-04-ci-cost-optimization-commit-type-versioning-design.md` (ADR-0015/0016).
+Source: approved spec `2026-07-04-ci-cost-optimization-commit-type-versioning-design.md` (ADR-0025/0026 — renumbered from 0015/0016, which collided with the accepted ADR-0015 Web app decision).
 Separate branch; prerequisite: "require branches up to date" branch protection.
 Cheap, pays for itself on every subsequent merge — do before the feature avalanche. Can run
 parallel to R0 (different files).
