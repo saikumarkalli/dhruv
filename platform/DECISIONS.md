@@ -304,3 +304,31 @@ React Query elegantly replicates Android's `StateFlow`/`Repository` layer for se
 path-based triggers to avoid running Android tests on Web changes and vice versa. Supabase CORS
 must be configured to allow the Vercel domain. DPDP consent logic and feature flags must be
 re-implemented identically in TypeScript.
+
+---
+
+## Numbering-hygiene note — ADR-0015 collision (found 2026-07-25)
+**Context.** `2026-07-04-ci-cost-optimization-commit-type-versioning-design.md` was authored the
+same day as this register still ended at ADR-0014, and reserved ADR-0015 (commit-type-driven
+semver bump) and ADR-0016 (CI cost model) for its own not-yet-built decisions. By the time that
+spec's decisions are implemented, ADR-0015 above (Web application) had already been accepted into
+this register first, taking the number. The CI-cost spec's *content* was never wrong — only its
+self-assigned numbers were, since they were written before this register caught up. A same-day
+`master-roadmap-personal-app.md` reference and the CI-cost spec itself both perpetuated the stale
+0015/0016 pair.
+**Resolution.** The CI-cost-optimization spec and the roadmap reference to it are corrected to
+reserve **ADR-0025** (commit-type-driven semver bump) and **ADR-0026** (CI cost model:
+single-validation pipeline) instead — the two decisions are unchanged, only their future ADR
+numbers moved, chosen past the ADR-0017–0024 block already reserved (but not yet written) by the
+R3–R9 phase specs (accounts-are-assets, INR-only, app-lock, update-channel, XIRR, TRANSFER type,
+loan balance, navigation architecture) so no second collision is created. No entry for ADR-0025/
+0026 exists yet in this register — per the append-only rule, they get written here (as full ADRs,
+context/decision/why/consequences) only when that spec is actually implemented, same as every
+other ADR in this file.
+**Why.** This register is append-only and ADR-0015 above is ACCEPTED — it does not get renumbered
+or displaced. A collision between a *written* register entry and a *spec's forward reservation* is
+resolved by moving the reservation, never the register.
+**Consequences.** Any future PR implementing the CI-cost-optimization spec must write ADR-0025 and
+ADR-0026 (not 0015/0016) into this register. Anyone reserving a new ADR number in a spec should
+first check this file's highest defined number, not just other specs' reservations — that is what
+let two specs claim 0015 independently.

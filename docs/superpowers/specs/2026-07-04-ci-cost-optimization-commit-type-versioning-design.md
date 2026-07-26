@@ -3,7 +3,7 @@
 - **Date:** 2026-07-04
 - **Scope:** `.github/workflows/` (`ci.yml`, `fast-feedback.yml`, new `owasp-weekly.yml`), new `scripts/ci/bump_version.py`, `platform/` docs
 - **Status:** Approved design → ready for implementation (plan was approved in-session 2026-07-04; implementation deferred to a dedicated branch)
-- **Related:** PLATFORM.md §11/§12, DECISIONS.md ADR-0009/ADR-0011/ADR-0012/ADR-0013; will add **ADR-0015** and **ADR-0016**
+- **Related:** PLATFORM.md §11/§12, DECISIONS.md ADR-0009/ADR-0011/ADR-0012/ADR-0013; will add **ADR-0025** and **ADR-0026** (renumbered from ADR-0015/0016 — that range collided with the already-accepted ADR-0015 Web app decision; see DECISIONS.md numbering-hygiene note)
 - **Branch note:** implement on a fresh `chore/*` branch off `develop` — NOT on `feat/networth-tracker`.
 
 ---
@@ -202,7 +202,7 @@ Reference implementation (drop in as-is):
 
 ```python
 #!/usr/bin/env python3
-"""Bump app versions in platform/versions.json (commit-type-driven, see ADR-0015).
+"""Bump app versions in platform/versions.json (commit-type-driven, see ADR-0025).
 
 Called by ci.yml's `release` job after it derives the bump type from the commit
 messages in the push range (feat: -> minor, type!:/BREAKING CHANGE -> major,
@@ -338,11 +338,11 @@ Expected detection matrix (also the local test fixture, §8.2):
 ## 6. Docs to update in the same change
 
 1. **`platform/DECISIONS.md`**
-   - **ADR-0015 — Commit-type-driven semver bump.** Amends ADR-0011: CI owns all three segments;
+   - **ADR-0025 — Commit-type-driven semver bump.** Amends ADR-0011: CI owns all three segments;
      manual minor/major edits of `versions.json` are no longer needed and are discouraged (a
      manually raised version still works as a new baseline but risks a double bump if the same
      merge also contains `feat:` commits); `main` always patch (D6); detection rules per §5.H.
-   - **ADR-0016 — CI cost model: single-validation pipeline.** PR = the only full-gate validation
+   - **ADR-0026 — CI cost model: single-validation pipeline.** PR = the only full-gate validation
      pass; merge push = release build only, safe under required up-to-date branches (D3); OWASP
      weekly; docs-only skip via `changes` gate job; fast-feedback dedupe; cache-writer moves to
      the release job. Record the audit table from §2 as context.
@@ -404,7 +404,7 @@ On GitHub, after merge (in order):
 - [ ] **T3 — `owasp-weekly.yml`** (§4.B). Verify: `workflow_dispatch` run. Files: 1 new.
 - [ ] **T4 — `fast-feedback.yml` dedupe** (§4.E). Verify: push to branch with open PR → skipped.
   Files: 1.
-- [ ] **T5 — docs** (§6): ADR-0015, ADR-0016, PLATFORM.md §11/§12, versions.json notes. Files: 3.
+- [ ] **T5 — docs** (§6): ADR-0025, ADR-0026, PLATFORM.md §11/§12, versions.json notes. Files: 3.
 - [ ] **T6 — repo settings**: up-to-date-branches protection (§7.1); check required-check names
   (§7.3). Manual, GitHub UI.
 - [ ] **T7 — end-to-end verification** (§8.4–8.9) with one docs-only PR, one `fix:` PR, one

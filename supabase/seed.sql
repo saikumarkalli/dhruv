@@ -1,0 +1,3 @@
+-- Local dev seed data. Empty in the W0 scaffold — referenced by config.toml's
+-- [db.seed] sql_paths so `supabase db reset` has a file to load without erroring.
+-- Populate with fixture rows (test user, sample assets) once P1 tables exist (W1).
