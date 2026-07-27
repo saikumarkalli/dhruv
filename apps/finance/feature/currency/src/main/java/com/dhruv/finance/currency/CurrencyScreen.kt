@@ -369,11 +369,13 @@ private fun convertViaUsdBase(
     toCode: String,
     rates: Map<String, Double>,
 ): Double? {
-    if (amount == null) return null
-    val fromRate = rates[fromCode] ?: return null
-    val toRate = rates[toCode] ?: return null
-    if (fromRate == 0.0) return null
-    return (amount / fromRate) * toRate
+    val fromRate = rates[fromCode]?.takeIf { it != 0.0 }
+    val toRate = rates[toCode]
+    return if (amount != null && fromRate != null && toRate != null) {
+        (amount / fromRate) * toRate
+    } else {
+        null
+    }
 }
 
 private fun formatConvertedAmount(value: Double): String {

@@ -5,8 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,13 +32,11 @@ import com.dhruv.core.ui.components.SegmentedRow
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
-/**
- * Reusable DhruvNext-styled row primitives for the Settings screen (replaces the old
- * `SettingsCategory`/`SettingsClickableItem`/`SettingsToggleItem`/`SettingsSegmentedControlItem`
- * pre-DhruvNext composables — grouping/dividers/chrome now come from `:libs:core`'s
- * [com.dhruv.core.ui.components.ListGroup]/[com.dhruv.core.ui.components.ListGroupRow], and this
- * file only holds the row *content* this screen needs that core doesn't already provide).
- */
+// Reusable DhruvNext-styled row primitives for the Settings screen (replaces the old
+// SettingsCategory/SettingsClickableItem/SettingsToggleItem/SettingsSegmentedControlItem
+// pre-DhruvNext composables — grouping/dividers/chrome now come from :libs:core's
+// ListGroup/ListGroupRow, and this file only holds the row *content* this screen needs that
+// core doesn't already provide.
 
 /** Disabled/greyed alpha for not-yet-built rows — matches [com.dhruv.core.ui.components.QuickActionTile]'s convention. */
 internal const val SETTINGS_DISABLED_ALPHA = 0.55f

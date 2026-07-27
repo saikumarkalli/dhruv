@@ -234,10 +234,18 @@ val LocalDhruvNextKeypadScale =
  * consistency and in case that changes later.
  */
 object DhruvNextRadii {
-    val card: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.card
-    val listGroup: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.listGroup
-    val innerTile: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.innerTile
-    val pill: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.pill
+    val card: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextRadiiValues.current.card
+    val listGroup: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextRadiiValues.current.listGroup
+    val innerTile: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextRadiiValues.current.innerTile
+    val pill: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextRadiiValues.current.pill
 }
 
 /**
@@ -246,9 +254,15 @@ object DhruvNextRadii {
  * [LocalDhruvNextSpacingValues] — every existing call site becomes responsive automatically.
  */
 object DhruvNextSpacing {
-    val cardPadding: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.cardPadding
-    val screenGutter: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.screenGutter
-    val interCardGap: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.interCardGap
+    val cardPadding: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextSpacingValues.current.cardPadding
+    val screenGutter: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextSpacingValues.current.screenGutter
+    val interCardGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextSpacingValues.current.interCardGap
 }
 
 /**
@@ -258,12 +272,24 @@ object DhruvNextSpacing {
  * raw hex.
  */
 object DhruvNextType {
-    val hero: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.hero
-    val title: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.title
-    val cardTitle: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.cardTitle
-    val body: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.body
-    val meta: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.meta
-    val sectionLabel: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.sectionLabel
+    val hero: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.hero
+    val title: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.title
+    val cardTitle: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.cardTitle
+    val body: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.body
+    val meta: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.meta
+    val sectionLabel: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextTypeScale.current.sectionLabel
 }
 
 /**
@@ -273,10 +299,18 @@ object DhruvNextType {
  * `caption` = small toggle/badge text (DEG/RAD, key badges).
  */
 object DhruvNextKeypad {
-    val digit: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.digit
-    val operator: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.operator
-    val function: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.function
-    val caption: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.caption
+    val digit: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextKeypadScale.current.digit
+    val operator: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextKeypadScale.current.operator
+    val function: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextKeypadScale.current.function
+    val caption: TextUnit
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextKeypadScale.current.caption
 }
 
 /**
@@ -320,10 +354,9 @@ private fun parseHexColor(hex: String): Color? {
         when (cleaned.length) {
             HEX_RGB_LENGTH -> "FF$cleaned"
             HEX_ARGB_LENGTH -> cleaned
-            else -> return null
+            else -> null
         }
-    val argb = withAlpha.toLongOrNull(radix = 16) ?: return null
-    return Color(argb.toInt())
+    return withAlpha?.toLongOrNull(radix = 16)?.let { Color(it.toInt()) }
 }
 
 /** Perceived (not CIE-precise) luminance — enough to pick readable on-accent text/icon color. */

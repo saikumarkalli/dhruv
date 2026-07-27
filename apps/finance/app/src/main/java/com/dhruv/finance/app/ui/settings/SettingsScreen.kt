@@ -173,7 +173,13 @@ fun SettingsScreen(
                             ListGroupRow(
                                 title = "Decimal precision",
                                 onClick = { showPrecisionSheet = true },
-                                trailing = { Text("${uiState.decimalPrecision} places", color = colors.tx2, fontSize = DhruvNextType.body) },
+                                trailing = {
+                                    Text(
+                                        "${uiState.decimalPrecision} places",
+                                        color = colors.tx2,
+                                        fontSize = DhruvNextType.body,
+                                    )
+                                },
                                 modifier = Modifier.testTag("settings_precision_item"),
                             )
                         },
@@ -181,7 +187,14 @@ fun SettingsScreen(
                             ListGroupRow(
                                 title = "Preview",
                                 showChevron = false,
-                                trailing = { Text(precisionPreview, color = colors.acc, fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle) },
+                                trailing = {
+                                    Text(
+                                        precisionPreview,
+                                        color = colors.acc,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = DhruvNextType.cardTitle,
+                                    )
+                                },
                             )
                         },
                         {

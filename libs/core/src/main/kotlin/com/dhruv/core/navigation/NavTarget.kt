@@ -24,9 +24,13 @@ enum class PlanTool { LOAN, INVEST, TAX, EVERYDAY }
  * back stack, so they don't need cross-tab dispatch.
  */
 sealed interface NavTarget {
-    data class SelectTab(val tab: TabKey) : NavTarget
+    data class SelectTab(
+        val tab: TabKey,
+    ) : NavTarget
 
-    data class OpenPlanTool(val tool: PlanTool) : NavTarget
+    data class OpenPlanTool(
+        val tool: PlanTool,
+    ) : NavTarget
 }
 
 /** Which tab a [NavTarget] belongs to — every case names exactly one. */
