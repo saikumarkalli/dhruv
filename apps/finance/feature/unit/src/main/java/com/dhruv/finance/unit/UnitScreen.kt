@@ -1,5 +1,7 @@
 package com.dhruv.finance.unit
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,32 +12,49 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.dhruv.core.ui.components.ModeChipRow
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
- * Unit converter screen extracted from the monolithic ConverterScreen.
- * Hosts Length and Mass conversion using [UnitViewModel].
+ * Unit converter screen extracted from the monolithic ConverterScreen. Hosts Length and Mass
+ * conversion using [UnitViewModel]. Restyled onto the DhruvNext component library (ADR-0024,
+ * design spec §6.6: category chip row + From/To rows with unit pickers and a live result) — a
+ * reskin only, every ViewModel call and conversion path is unchanged.
  */
 @Composable
-fun UnitScreen(viewModel: UnitViewModel) {
+fun UnitScreen(
+    viewModel: UnitViewModel,
+    modifier: Modifier = Modifier,
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Length", "Mass")
+    val categories = listOf("Length", "Mass")
+    val colors = LocalDhruvNextColors.current
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title) },
-                )
-            }
-        }
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.bg),
+    ) {
+        ModeChipRow(
+            options = categories,
+            selectedIndex = selectedTab,
+            onSelected = { selectedTab = it },
+            modifier =
+                Modifier.padding(
+                    horizontal = DhruvNextSpacing.screenGutter,
+                    vertical = DhruvNextSpacing.interCardGap,
+                ),
+        )
         when (selectedTab) {
             0 -> LengthConverter(viewModel)
             1 -> MassConverter(viewModel)
@@ -110,88 +129,110 @@ private fun UnitConverterBody(
 ) {
     var showFromMenu by remember { mutableStateOf(false) }
     var showToMenu by remember { mutableStateOf(false) }
+    val colors = LocalDhruvNextColors.current
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = DhruvNextSpacing.screenGutter)
+                .padding(bottom = DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("From", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                UnitDropdown(label = fromLabel, expanded = showFromMenu, onExpand = { showFromMenu = true }, onDismiss = {
-                    showFromMenu =
-                        false
-                }, units = units, onSelected = {
-                    onFromSelected(it)
-                    showFromMenu = false
-                })
+        // From row
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "From",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.tx2,
+                )
+                UnitDropdownField(
+                    label = fromLabel,
+                    expanded = showFromMenu,
+                    onExpand = { showFromMenu = true },
+                    onDismiss = { showFromMenu = false },
+                    units = units,
+                    onSelected = {
+                        onFromSelected(it)
+                        showFromMenu = false
+                    },
+                )
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
-                    label = { Text("Enter Value") },
+                    label = { Text("Enter value") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(DhruvNextRadii.innerTile),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = colors.tx,
+                            unfocusedTextColor = colors.tx,
+                            cursorColor = colors.acc,
+                            focusedBorderColor = colors.acc,
+                            unfocusedBorderColor = colors.line,
+                            focusedLabelColor = colors.acc,
+                            unfocusedLabelColor = colors.tx2,
+                            focusedContainerColor = colors.surf2,
+                            unfocusedContainerColor = colors.surf2,
+                        ),
                 )
             }
         }
 
+        // Swap key — dedicated action between the From/To rows (design spec §6.6).
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            SmallFloatingActionButton(
+            FilledIconButton(
                 onClick = onSwap,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = colors.accSoft,
+                        contentColor = colors.acc,
+                    ),
             ) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Swap Units")
+                Icon(Icons.Default.SwapVert, contentDescription = "Swap from and to units")
             }
         }
 
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("To", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                UnitDropdown(label = toLabel, expanded = showToMenu, onExpand = {
-                    showToMenu = true
-                }, onDismiss = { showToMenu = false }, units = units, onSelected = {
-                    onToSelected(it)
-                    showToMenu =
-                        false
-                })
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Converted Value",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                        )
-                        Text(
-                            text = "$result $resultSymbol",
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                }
+        // To row + live result
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "To",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.tx2,
+                )
+                UnitDropdownField(
+                    label = toLabel,
+                    expanded = showToMenu,
+                    onExpand = { showToMenu = true },
+                    onDismiss = { showToMenu = false },
+                    units = units,
+                    onSelected = {
+                        onToSelected(it)
+                        showToMenu = false
+                    },
+                )
+                Text(
+                    text = "Converted value",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.tx3,
+                )
+                Text(
+                    text = if (result.isNotEmpty()) "$result $resultSymbol" else "—",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = colors.acc,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun UnitDropdown(
+private fun UnitDropdownField(
     label: String,
     expanded: Boolean,
     onExpand: () -> Unit,
@@ -199,25 +240,31 @@ private fun UnitDropdown(
     units: List<String>,
     onSelected: (Int) -> Unit,
 ) {
-    Box {
-        Button(
-            onClick = onExpand,
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            shape = RoundedCornerShape(12.dp),
+    val colors = LocalDhruvNextColors.current
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp)
+                    .clip(RoundedCornerShape(DhruvNextRadii.innerTile))
+                    .background(colors.surf2)
+                    .clickable(onClick = onExpand)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(label)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = colors.tx,
+            )
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = null,
+                tint = colors.tx2,
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
             units.forEachIndexed { idx, name ->

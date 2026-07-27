@@ -23,11 +23,3 @@ val ColorOptions =
         SectionColorTheme("coral", "Aurora Coral", Color(0xFFD32F2F), Color(0xFFFF8A80)),
         SectionColorTheme("amber", "Cosmic Amber", Color(0xFFE65100), Color(0xFFFFB300)),
     )
-
-fun getAccentColor(
-    themeId: String,
-    isDark: Boolean,
-): Color {
-    val theme = ColorOptions.firstOrNull { it.id == themeId } ?: ColorOptions[0]
-    return if (isDark) theme.darkPrimary else theme.lightPrimary
-}

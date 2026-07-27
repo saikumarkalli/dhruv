@@ -5,6 +5,44 @@ All notable changes to the **Dhruv Calculator & Conversions** application will b
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-26 - DhruvNext 4-tab shell rebuild
+
+Major/breaking architecture release — the navigation model itself changed. See ADR-0024
+(`platform/DECISIONS.md`).
+
+### Added
+- **DhruvNext 4-tab shell** (Home · Calc · Plan · Insights) replacing the old 3-tab pager. Plan's
+  loan/invest/tax/everyday drill-in now lives in its own nested `NavHost`, keeping the Plan tab
+  highlighted while sub-routes navigate.
+- **`NavTarget`/`TabKey`/`PlanTool` cross-tab navigation contract** (`:libs:core/navigation`) +
+  **`NavigationDispatcher`** (`:apps:finance:app/navigation`, Koin singleton) — the sole
+  cross-feature navigation mechanism (NAV1); resolves a target's tab by stable key, not pager
+  position, so a flag flip can't point navigation at the wrong page (NAV4).
+- Shell-level **detail-route overlay** (Settings/Ask/Currency/Units/Date/Time/Profile/
+  Notifications) rendered full-screen with a back top bar and no tab bar, per DhruvNext §5's
+  OWNER model, plus an app-switcher bottom sheet (Finance OPEN, Tools/Vault SOON).
+- **DhruvNext component library** (`:libs:core/ui/components`) and token set
+  (`DhruvNextColors`/`DhruvNextRadii`/`DhruvNextSpacing`) — `NxCard`, `ListGroup`, `BottomBar`,
+  `AskPill`, `EmptyStateCard`, `DhruvModalSheet`, and others, all theme-driven via
+  `LocalDhruvNextColors`.
+- Settings restyled to the new IA (Account / Appearance / Money / Privacy & data / App), including
+  a global 4-swatch accent picker (orange/green/blue/purple).
+
+### Changed
+- Default global accent color → DhruvNext orange `#F05A28` (was Dhruv gold `#D4AF37`, which was
+  already dead behind the old per-tab `SectionTheme` override and never actually rendered).
+
+### Removed
+- **`SectionTheme`/`getAccentColor`** (`:libs:core`) — the per-domain accent system (ADR-0014 §8),
+  retired in favor of one global theme accent (ADR-0024 decision 2). Zero remaining callers,
+  verified before deletion.
+- **`ui/hub/FeatureHubs.kt`** (`ConverterHub`/`FinanceHub`) — superseded by the new shell's Plan tab
+  and Calc-tab detail routes.
+- Four Settings toggles ("Show Converter/Date & Time/Finance/Time Tools in bottom navigation")
+  that no longer mapped to anything in the new nav model — DhruvNext's tabs are fixed system
+  destinations, not user-toggleable, so the controls were actively misleading rather than merely
+  unused.
+
 ## [Unreleased] - Phase 4: Finance feature split
 
 ### Added

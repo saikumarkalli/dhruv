@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Calc-tab mode chip row (DhruvNext §6.3) -->
+    <string name="calc_mode_basic">Basic</string>
+    <string name="calc_mode_scientific">Scientific</string>
+    <string name="calc_mode_currency">Currency</string>
+    <string name="calc_mode_units">Units</string>
+
+    <!-- Explain / Tag / Save pill row below the hero result (DhruvNext §6.3) -->
+    <string name="calc_pill_explain">Explain</string>
+    <string name="calc_pill_tag">Tag</string>
+    <string name="calc_pill_save">Save</string>
+    <string name="calc_pill_saved">Saved</string>
+</resources>

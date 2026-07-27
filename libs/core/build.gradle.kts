@@ -10,6 +10,9 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
 
+    // DhruvNext component library icons (auto_awesome, cloud_off, etc. — beyond material-icons-core)
+    implementation(libs.androidx.compose.material.icons.extended)
+
     // Security
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)

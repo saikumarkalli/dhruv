@@ -82,7 +82,9 @@ private val LightColorScheme =
  * Primary DhruvTheme overload used by the Finance app and driven by [AppSettings].
  * - [theme] maps to the global dark/light/system preference.
  * - [accentColorHex] optionally overrides [MaterialTheme.colorScheme.primary] with a custom hex
- *   string in "#RRGGBB" format (Dhruv-gold default "#D4AF37" when null).
+ *   string in "#RRGGBB" format (falls back to [MaterialTheme]'s own primary when null — in
+ *   practice [com.dhruv.settings.AppSettings.accentColorHex] always supplies a value, defaulting
+ *   to DhruvNext orange "#F05A28").
  * - [font] selects the global [FontFamily] (DEFAULT→Default, MONO→Monospace, ROUNDED→SansSerif).
  */
 @Composable
@@ -146,10 +148,21 @@ fun DhruvTheme(
             configuration.screenWidthDp,
             configuration.screenHeightDp,
         )
+    val nextColors = resolveDhruvNextColors(darkTheme, accentColorHex)
+    val nextTokens =
+        calculateDhruvNextResponsiveTokens(
+            configuration.screenWidthDp,
+            configuration.screenHeightDp,
+        )
 
     CompositionLocalProvider(
         LocalAppDimens provides dimens,
         LocalAppTypography provides responsiveType,
+        LocalDhruvNextColors provides nextColors,
+        LocalDhruvNextSpacingValues provides nextTokens.spacing,
+        LocalDhruvNextRadiiValues provides nextTokens.radii,
+        LocalDhruvNextTypeScale provides nextTokens.type,
+        LocalDhruvNextKeypadScale provides nextTokens.keypad,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -175,45 +188,4 @@ fun DhruvTheme(
             else -> AppTheme.SYSTEM
         }
     DhruvTheme(theme = theme, accentColorHex = null, font = DhruvFont.DEFAULT, content = content)
-}
-
-@Composable
-fun SectionTheme(
-    colorPreference: String,
-    darkModePreference: String,
-    content: @Composable () -> Unit,
-) {
-    val darkTheme =
-        when (darkModePreference) {
-            "always_dark" -> true
-            "always_light" -> false
-            else -> isSystemInDarkTheme()
-        }
-
-    val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val accentColor = getAccentColor(colorPreference, darkTheme)
-
-    val coloredScheme =
-        baseScheme.copy(
-            primary = accentColor,
-            secondary = if (darkTheme) accentColor else accentColor,
-        )
-
-    val configuration = LocalConfiguration.current
-    val (dimens, responsiveType) =
-        calculateResponsiveMetrics(
-            configuration.screenWidthDp,
-            configuration.screenHeightDp,
-        )
-
-    CompositionLocalProvider(
-        LocalAppDimens provides dimens,
-        LocalAppTypography provides responsiveType,
-    ) {
-        MaterialTheme(
-            colorScheme = coloredScheme,
-            typography = Typography,
-            content = content,
-        )
-    }
 }
