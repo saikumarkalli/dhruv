@@ -17,8 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One entry in a [ThreeUpStatRow]. */
@@ -52,11 +52,11 @@ fun ThreeUpStatRow(
                         .padding(horizontal = 10.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(text = item.label, color = colors.tx2, fontSize = 11.sp)
+                Text(text = item.label, color = colors.tx2, fontSize = DhruvNextType.meta)
                 Text(
                     text = item.value,
                     color = if (item.highlighted) colors.acc else colors.tx,
-                    fontSize = 15.sp,
+                    fontSize = DhruvNextType.cardTitle,
                     fontWeight = FontWeight.Bold,
                 )
             }

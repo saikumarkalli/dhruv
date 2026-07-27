@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** A small rounded-rectangle chip — filter/tag rows, category chips. */
@@ -40,7 +40,7 @@ fun Chip(
                 .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(text = label, color = textColor, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -87,6 +87,6 @@ fun Pill(
                 modifier = Modifier.padding(end = 6.dp),
             )
         }
-        Text(text = label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(text = label, color = textColor, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
     }
 }

@@ -13,16 +13,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.dhruv.core.format.Paise
+import com.dhruv.core.ui.theme.DhruvNextType
 
 /** Text weight/size preset for [MoneyText] — DhruvNext §4's hero/card-title/body type scale. */
 enum class MoneyTextVariant {
-    /** Hero amount (net worth, EMI, corpus, GST total): 36sp/700, tight tracking. */
+    /** Hero amount (net worth, EMI, corpus, GST total): [DhruvNextType.hero]/700, tight tracking. */
     Hero,
 
-    /** Card-row amount: 15sp/700. */
+    /** Card-row amount: [DhruvNextType.cardTitle]/700. */
     Row,
 
-    /** Inline amount within a sentence or meta line: 13.5sp/400. */
+    /** Inline amount within a sentence or meta line: [DhruvNextType.body]/400. */
     Inline,
 }
 
@@ -41,9 +42,9 @@ fun MoneyText(
     val text = if (compact) Paise.formatCompact(paise) else Paise.format(paise)
     val (fontSize, weight, tracking) =
         when (variant) {
-            MoneyTextVariant.Hero -> Triple(36.sp, FontWeight.Bold, (-1.5).sp)
-            MoneyTextVariant.Row -> Triple(15.sp, FontWeight.Bold, 0.sp)
-            MoneyTextVariant.Inline -> Triple(13.5.sp, FontWeight.Normal, 0.sp)
+            MoneyTextVariant.Hero -> Triple(DhruvNextType.hero, FontWeight.Bold, (-1.5).sp)
+            MoneyTextVariant.Row -> Triple(DhruvNextType.cardTitle, FontWeight.Bold, 0.sp)
+            MoneyTextVariant.Inline -> Triple(DhruvNextType.body, FontWeight.Normal, 0.sp)
         }
     Text(
         text = text,

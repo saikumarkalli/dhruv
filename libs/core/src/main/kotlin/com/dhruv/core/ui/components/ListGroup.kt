@@ -22,8 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
@@ -77,9 +77,9 @@ fun ListGroupRow(
             Box(modifier = Modifier.width(12.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = colors.tx, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+            Text(text = title, color = colors.tx, fontWeight = FontWeight.Medium, fontSize = DhruvNextType.cardTitle)
             if (subtitle != null) {
-                Text(text = subtitle, color = colors.tx2, fontSize = 12.5f.sp)
+                Text(text = subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
             }
         }
         trailing?.invoke()

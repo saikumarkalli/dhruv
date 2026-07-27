@@ -28,8 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.components.SegmentedRow
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
@@ -64,10 +64,10 @@ fun PlaceholderRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = colors.tx, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-            Text(text = subtitle, color = colors.tx2, fontSize = 12.5f.sp)
+            Text(text = title, color = colors.tx, fontWeight = FontWeight.Medium, fontSize = DhruvNextType.cardTitle)
+            Text(text = subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
         }
-        Text(text = "Soon", color = colors.tx3, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Soon", color = colors.tx3, fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -97,13 +97,13 @@ fun DangerRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = colors.neg, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+            Text(text = title, color = colors.neg, fontWeight = FontWeight.Medium, fontSize = DhruvNextType.cardTitle)
             if (subtitle != null) {
-                Text(text = subtitle, color = colors.tx2, fontSize = 12.5f.sp)
+                Text(text = subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
             }
         }
         if (trailingLabel != null) {
-            Text(text = trailingLabel, color = colors.tx3, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = trailingLabel, color = colors.tx3, fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -129,8 +129,8 @@ fun DisabledSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.tx, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(text = description, color = colors.tx2, fontSize = 12.5f.sp)
+            Text(text = label, color = colors.tx, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Medium)
+            Text(text = description, color = colors.tx2, fontSize = DhruvNextType.meta)
         }
         Switch(checked = false, onCheckedChange = null, enabled = false)
     }
@@ -147,7 +147,7 @@ fun LabeledSegmentedRow(
 ) {
     val colors = LocalDhruvNextColors.current
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Text(text = label, color = colors.tx, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(text = label, color = colors.tx, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Medium)
         SegmentedRow(
             options = options,
             selectedIndex = selectedIndex,
@@ -172,7 +172,7 @@ fun AccentColorPickerRow(
 ) {
     val colors = LocalDhruvNextColors.current
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Text(text = "Accent color", color = colors.tx, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(text = "Accent color", color = colors.tx, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Medium)
         Row(
             modifier = Modifier.padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),

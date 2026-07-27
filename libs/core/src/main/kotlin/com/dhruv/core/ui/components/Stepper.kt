@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** DhruvNext §6.4's people-count stepper: "−  N  +". */
@@ -32,7 +32,7 @@ fun Stepper(
         Text(
             text = "$value",
             color = colors.tx,
-            fontSize = 16.sp,
+            fontSize = DhruvNextType.cardTitle,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
@@ -56,6 +56,6 @@ private fun StepperButton(
                 .let { if (enabled) it.clickable(onClick = onClick) else it },
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = label, color = if (enabled) colors.tx else colors.tx3, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(text = label, color = if (enabled) colors.tx else colors.tx3, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold)
     }
 }

@@ -19,11 +19,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.components.DhruvModalSheet
 import com.dhruv.core.ui.components.ListGroup
 import com.dhruv.core.ui.components.ListGroupRow
 import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** Disabled-row opacity — MD disabled-state guidance (0.38–0.5 reduced emphasis). */
@@ -53,7 +53,7 @@ fun AppSwitcherSheet(onDismiss: () -> Unit) {
             Text(
                 text = "Your dhruv apps — one account, one sync, separate vaults.",
                 color = colors.tx2,
-                fontSize = 13.sp,
+                fontSize = DhruvNextType.body,
             )
             ListGroup(
                 rows =
@@ -114,7 +114,7 @@ private fun AppStatusBadge(
         Text(
             text = text,
             color = if (active) colors.acc else colors.tx3,
-            fontSize = 11.sp,
+            fontSize = DhruvNextType.meta,
             fontWeight = FontWeight.Bold,
         )
     }

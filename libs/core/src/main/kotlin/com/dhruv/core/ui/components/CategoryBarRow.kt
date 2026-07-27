@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
@@ -43,9 +43,9 @@ fun CategoryBarRow(
                 if (icon != null) {
                     Icon(imageVector = icon, contentDescription = null, tint = colors.tx2, modifier = Modifier.padding(end = 8.dp))
                 }
-                Text(text = label, color = colors.tx, fontSize = 13.5f.sp, fontWeight = FontWeight.Medium)
+                Text(text = label, color = colors.tx, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
             }
-            Text(text = amountText, color = colors.tx, fontSize = 13.5f.sp, fontWeight = FontWeight.Bold)
+            Text(text = amountText, color = colors.tx, fontSize = DhruvNextType.body, fontWeight = FontWeight.Bold)
         }
         Box(
             modifier =

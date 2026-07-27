@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 private const val BADGE_CAP = 99
@@ -35,6 +35,6 @@ fun CountBadge(
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = formatBadgeCount(count), color = colors.acc, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text = formatBadgeCount(count), color = colors.acc, fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold)
     }
 }

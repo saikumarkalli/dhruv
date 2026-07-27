@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 private const val DISABLED_ALPHA = 0.55f
@@ -57,7 +57,7 @@ fun QuickActionTile(
             text = label,
             modifier = Modifier.padding(top = 6.dp),
             color = colors.tx2,
-            fontSize = 11.sp,
+            fontSize = DhruvNextType.meta,
             fontWeight = FontWeight.Medium,
         )
     }

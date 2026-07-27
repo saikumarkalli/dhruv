@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One key on a [NumericKeypad]. [span] lets a key (e.g. a full-width "Save") take extra weight. */
@@ -60,7 +60,7 @@ fun NumericKeypad(
                                 .clickable { onKeyPress(key.label) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(text = key.label, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                        Text(text = key.label, color = textColor, fontSize = DhruvNextType.title, fontWeight = FontWeight.Medium)
                     }
                 }
             }

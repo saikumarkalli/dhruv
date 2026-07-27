@@ -12,7 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
@@ -36,7 +36,7 @@ fun StatDeltaChip(
                 .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "$glyph $text", color = tint, fontSize = 11.5.sp, fontWeight = FontWeight.Medium)
+        Text(text = "$glyph $text", color = tint, fontSize = DhruvNextType.meta, fontWeight = FontWeight.Medium)
     }
 }
 

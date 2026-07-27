@@ -16,7 +16,6 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -28,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,6 +51,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -61,30 +61,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.Chip
+import com.dhruv.core.ui.components.ModeChipRow
+import com.dhruv.core.ui.components.NxInsetSurface
+import com.dhruv.core.ui.components.PeriodChipRow
+import com.dhruv.core.ui.components.Pill
+import com.dhruv.core.ui.components.SearchField
+import com.dhruv.core.ui.components.SectionLabel
 import com.dhruv.core.ui.theme.*
 import com.dhruv.finance.data.HistoryEntity
 import java.text.SimpleDateFormat
 import java.util.*
-
-// Dynamic Premium Color Palette Values matching prompt
-val PremiumPrimaryAccent = Color(0xFFFF7433)
-val PremiumAccentHover = Color(0xFFF56F3B)
-val PremiumBackground = Color(0xFFFFFFFF)
-val PremiumPrimaryText = Color(0xFF222222)
-val PremiumSecondaryText = Color(0xFF666666)
-val PremiumDivider = Color(0xFFEEEEEE)
-
-// Dark Theme Adapters
-val PremiumBackgroundDark = Color(0xFF151515)
-val PremiumPrimaryTextDark = Color(0xFFFAFAFA)
-val PremiumSecondaryTextDark = Color(0xFFB0B0B0)
-val PremiumDividerDark = Color(0xFF2E2E2E)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CalculatorScreen(
     viewModel: CalculatorViewModel,
     modifier: Modifier = Modifier,
+    onOpenCurrency: () -> Unit = {},
+    onOpenUnit: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val inputState by viewModel.inputState.collectAsState()
@@ -135,11 +130,17 @@ fun CalculatorScreen(
             }
         }
 
-    val isDark = isSystemInDarkTheme()
-    val themeBgColor = MaterialTheme.colorScheme.background
-    val themeTextColor = if (isDark) Color.White else Color(0xFF222222)
-    val themeSecText = if (isDark) Color(0xFFB0B0B0) else Color(0xFF666666)
-    val themeDivider = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    val colors = LocalDhruvNextColors.current
+    val themeBgColor = colors.bg
+    val themeTextColor = colors.tx
+    val themeSecText = colors.tx2
+    val themeDivider = colors.line
+
+    // DhruvNext hero type-scale ceiling (screen-size responsive: 32/38/46sp on small/phone/tablet).
+    // The calculator's own content-length shrink-to-fit below (targetResultFontSize /
+    // targetInputFontSize) still animates on top of this unchanged — only the ceiling those
+    // animations shrink *from* now tracks screen size instead of a hardcoded 52f.
+    val heroFontSize = DhruvNextType.hero.value
 
     val clipboardManager = LocalClipboardManager.current
     val hapticFeedback = LocalHapticFeedback.current
@@ -184,6 +185,30 @@ fun CalculatorScreen(
             ) {
                 var dragAccumulatedX by remember { mutableStateOf(0f) }
 
+                // Mode chip row (DhruvNext §6.3): Basic/Scientific are true local modes; Currency/Units
+                // are pure navigation triggers (feature→feature is ArchUnit-forbidden, so this module
+                // cannot render currency/unit content inline).
+                val calcModeOptions =
+                    listOf(
+                        stringResource(R.string.calc_mode_basic),
+                        stringResource(R.string.calc_mode_scientific),
+                        stringResource(R.string.calc_mode_currency),
+                        stringResource(R.string.calc_mode_units),
+                    )
+                ModeChipRow(
+                    options = calcModeOptions,
+                    selectedIndex = if (isScientificMode) 1 else 0,
+                    onSelected = { index ->
+                        when (index) {
+                            0 -> isScientificMode = false
+                            1 -> isScientificMode = true
+                            2 -> onOpenCurrency()
+                            3 -> onOpenUnit()
+                        }
+                    },
+                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp).testTag("calc_mode_chip_row"),
+                )
+
                 Column(
                     modifier =
                         Modifier
@@ -191,8 +216,8 @@ fun CalculatorScreen(
                             .weight(1f)
                             .padding(vertical = 12.dp)
                             .offset(x = shakeOffsetX.value.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
+                            .clip(RoundedCornerShape(DhruvNextRadii.card))
+                            .background(colors.surf2)
                             .combinedClickable(
                                 onClick = { /* Do nothing */ },
                                 onLongClick = {
@@ -217,30 +242,14 @@ fun CalculatorScreen(
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.End,
                 ) {
-                    // Top row: AI button on left, History button on right
+                    // Top row: History icon button, top-right of display. The old inline "Solve with
+                    // AI" icon button now lives in the Explain/Tag/Save pill row below the result
+                    // (§6.3) instead of duplicating the affordance here.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // AI solve button (visible whenever there is something typed to solve)
-                        if (inputState.text.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.solveCurrentInput() },
-                                modifier = Modifier.size(36.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Solve with AI",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.size(36.dp))
-                        }
-
-                        // History icon button at top-right of display
                         IconButton(
                             onClick = { showHistoryScreen = true },
                             modifier = Modifier.size(36.dp).testTag("key_btn_history_toggle"),
@@ -373,7 +382,7 @@ fun CalculatorScreen(
                                         text = histEntry.expression,
                                         style =
                                             TextStyle(
-                                                fontSize = 14.sp,
+                                                fontSize = DhruvNextType.body,
                                                 fontWeight = FontWeight.Normal,
                                                 color = themeSecText.copy(alpha = 0.7f),
                                                 textAlign = TextAlign.End,
@@ -386,7 +395,7 @@ fun CalculatorScreen(
                                         text = "= ${histEntry.result}",
                                         style =
                                             TextStyle(
-                                                fontSize = 22.sp,
+                                                fontSize = DhruvNextType.title,
                                                 fontWeight = FontWeight.Medium,
                                                 color = themeSecText.copy(alpha = 0.85f),
                                                 textAlign = TextAlign.End,
@@ -413,7 +422,7 @@ fun CalculatorScreen(
                                 text = lastExpr,
                                 style =
                                     TextStyle(
-                                        fontSize = 18.sp,
+                                        fontSize = DhruvNextType.title,
                                         fontWeight = FontWeight.Normal,
                                         color = themeSecText,
                                         textAlign = TextAlign.End,
@@ -435,7 +444,8 @@ fun CalculatorScreen(
                                     "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
                                 }
 
-                            val targetResultFontSize = (52f * (7f / maxOf(7f, cleanRes.length.toFloat()))).coerceIn(22f, 52f)
+                            val targetResultFontSize =
+                                (heroFontSize * (7f / maxOf(7f, cleanRes.length.toFloat()))).coerceIn(22f, heroFontSize)
 
                             val animatedResultFontSize by animateFloatAsState(
                                 targetValue = targetResultFontSize,
@@ -468,7 +478,11 @@ fun CalculatorScreen(
                             )
                         } else {
                             // 1. BasicTextField showing inputState (large size)
-                            val targetInputFontSize = (44f * (11f / maxOf(11f, inputState.text.length.toFloat()))).coerceIn(18f, 44f)
+                            // Preserves the original 44/52 ratio between the live-input ceiling and the
+                            // finalized-result hero ceiling above — both now derive from heroFontSize.
+                            val inputHeroCeiling = heroFontSize * (44f / 52f)
+                            val targetInputFontSize =
+                                (inputHeroCeiling * (11f / maxOf(11f, inputState.text.length.toFloat()))).coerceIn(18f, inputHeroCeiling)
                             val animatedInputFontSize by animateFloatAsState(
                                 targetValue = targetInputFontSize,
                                 animationSpec = spring(stiffness = Spring.StiffnessMedium),
@@ -495,7 +509,7 @@ fun CalculatorScreen(
                                         lineHeight = (inputFontSize.value * 1.25f).sp,
                                     ),
                                 singleLine = true,
-                                cursorBrush = SolidColor(PremiumPrimaryAccent),
+                                cursorBrush = SolidColor(colors.acc),
                                 decorationBox = { innerTextField ->
                                     Box(
                                         modifier = Modifier.fillMaxWidth(),
@@ -530,7 +544,12 @@ fun CalculatorScreen(
                                         "= ${viewModel.formatLocaleSeparator(cleanRes, formatLocale)}"
                                     }
 
-                                val targetResultFontSize = (22f * (10f / maxOf(10f, cleanRes.length.toFloat()))).coerceIn(12f, 22f)
+                                // Preserves the original 22/52 ratio to the hero ceiling for this smaller
+                                // typing-preview result.
+                                val previewHeroCeiling = heroFontSize * (22f / 52f)
+                                val targetResultFontSize =
+                                    (previewHeroCeiling * (10f / maxOf(10f, cleanRes.length.toFloat())))
+                                        .coerceIn(12f, previewHeroCeiling)
 
                                 val animatedResultFontSize by animateFloatAsState(
                                     targetValue = targetResultFontSize,
@@ -557,6 +576,58 @@ fun CalculatorScreen(
                             }
                         }
                     }
+
+                    // ── EXPLAIN / TAG / SAVE PILL ROW (§6.3) ──
+                    // Explain = the existing "Solve with AI" affordance, restyled as a pill (same
+                    // viewModel.solveCurrentInput() call + AiExplanationState bottom sheet as before).
+                    // Tag has no backing ViewModel action on the live calculation yet, so it renders
+                    // as a real but disabled pill rather than faking persistence. Save is wired to the
+                    // closest honest existing action: starring the just-computed history entry via
+                    // viewModel.toggleFavorite (identical to the star toggle already in HistoryEntryCard).
+                    val latestHistoryEntry = activeHistory.firstOrNull()
+                    val canExplain = inputState.text.isNotEmpty()
+                    val canSave = isResultFinalised && latestHistoryEntry != null
+                    val isLatestSaved = latestHistoryEntry?.favorite == true
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Pill(
+                            label = stringResource(R.string.calc_pill_explain),
+                            leadingIcon = Icons.Default.AutoAwesome,
+                            onClick = if (canExplain) ({ viewModel.solveCurrentInput() }) else null,
+                            modifier =
+                                Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .alpha(if (canExplain) 1f else 0.45f)
+                                    .testTag("calc_pill_explain"),
+                        )
+                        Pill(
+                            label = stringResource(R.string.calc_pill_tag),
+                            leadingIcon = Icons.AutoMirrored.Filled.Label,
+                            onClick = null,
+                            modifier =
+                                Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .alpha(0.45f)
+                                    .testTag("calc_pill_tag"),
+                        )
+                        Pill(
+                            label =
+                                stringResource(
+                                    if (isLatestSaved) R.string.calc_pill_saved else R.string.calc_pill_save,
+                                ),
+                            leadingIcon = if (isLatestSaved) Icons.Default.Star else Icons.Default.StarBorder,
+                            selected = isLatestSaved,
+                            onClick = if (canSave) ({ viewModel.toggleFavorite(latestHistoryEntry!!) }) else null,
+                            modifier =
+                                Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .alpha(if (canSave) 1f else 0.45f)
+                                    .testTag("calc_pill_save"),
+                        )
+                    }
                 }
 
                 // Subtle visual horizontal separator
@@ -582,7 +653,7 @@ fun CalculatorScreen(
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background)
+                                .background(colors.bg)
                                 .padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(1.dp),
                     ) {
@@ -605,22 +676,22 @@ fun CalculatorScreen(
                                             Modifier
                                                 .weight(1f)
                                                 .height(sciKeyHeight)
-                                                .background(MaterialTheme.colorScheme.surface)
+                                                .background(colors.surf)
                                                 .clickable { viewModel.toggleAngleUnit() }
                                                 .testTag("key_btn_deg_rad"),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
                                             text = if (isDegree) "DEG" else "RAD",
-                                            fontSize = 11.sp,
+                                            fontSize = DhruvNextKeypad.caption,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = colors.acc,
                                         )
                                     }
                                     SimpleKey(
                                         text = "sin",
                                         tag = "key_btn_sin",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -634,7 +705,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "cos",
                                         tag = "key_btn_cos",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -648,7 +719,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "tan",
                                         tag = "key_btn_tan",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -662,7 +733,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "xʸ",
                                         tag = "key_btn_power",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -682,7 +753,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "(",
                                         tag = "key_btn_open_bracket",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -695,7 +766,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = ")",
                                         tag = "key_btn_close_bracket",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -708,7 +779,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "log",
                                         tag = "key_btn_log",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -722,7 +793,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "ln",
                                         tag = "key_btn_ln",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -736,7 +807,7 @@ fun CalculatorScreen(
                                     SimpleKey(
                                         text = "√",
                                         tag = "key_btn_sqrt",
-                                        fontSize = 13.sp,
+                                        fontSize = DhruvNextKeypad.function,
                                         modifier =
                                             Modifier.weight(
                                                 1f,
@@ -797,7 +868,7 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = 26.sp,
+                                fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
                                 onClick = {
                                     viewModel.onKeyPress("%")
@@ -811,7 +882,7 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = 26.sp,
+                                fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
                                 onClick = {
                                     viewModel.onKeyPress("÷")
@@ -852,7 +923,7 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = 26.sp,
+                                fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
                                 onClick = {
                                     viewModel.onKeyPress("×")
@@ -893,7 +964,7 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = 26.sp,
+                                fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
                                 onClick = {
                                     viewModel.onKeyPress("-")
@@ -934,55 +1005,24 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = 26.sp,
+                                fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
                                 onClick = {
                                     viewModel.onKeyPress("+")
                                 },
                             )
                         }
-                        // Row 5: Scientific toggle, 0, ., =
+                        // Row 5: 0 (double-width — replaces the old dedicated Scientific-toggle key,
+                        // now the mode chip row at the top of the screen), ., =
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             horizontalArrangement = Arrangement.spacedBy(1.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // Scientific mode toggle (replaces History icon in keypad)
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .background(
-                                            if (isScientificMode) {
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                            } else {
-                                                MaterialTheme.colorScheme.surface
-                                            },
-                                        ).clickable { isScientificMode = !isScientificMode }
-                                        .testTag("key_btn_scientific_toggle"),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.Calculate,
-                                        contentDescription = "Scientific Mode",
-                                        tint = if (isScientificMode) MaterialTheme.colorScheme.primary else themeSecText,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                    Text(
-                                        text = if (isScientificMode) "SCI ✓" else "SCI",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (isScientificMode) MaterialTheme.colorScheme.primary else themeSecText,
-                                    )
-                                }
-                            }
-
                             SimpleKey(
                                 text = "0",
                                 tag = "key_btn_0",
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(2f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("0") },
                                 onLongClick = {
@@ -1011,7 +1051,7 @@ fun CalculatorScreen(
                                     Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .background(MaterialTheme.colorScheme.surface),
+                                        .background(colors.surf),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Box(
@@ -1020,7 +1060,7 @@ fun CalculatorScreen(
                                             .fillMaxSize()
                                             .padding(4.dp)
                                             .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
+                                            .background(colors.acc)
                                             .combinedClickable(
                                                 interactionSource = equalInteractionSource,
                                                 indication = null,
@@ -1039,24 +1079,24 @@ fun CalculatorScreen(
                                             ).drawWithContent {
                                                 drawContent()
                                                 if (equalGlowAlpha > 0f) {
-                                                    val brush =
+                                                    val glowBrush =
                                                         Brush.radialGradient(
                                                             colors =
                                                                 listOf(
-                                                                    Color(0xFFF0B429).copy(alpha = equalGlowAlpha),
+                                                                    colors.acc.copy(alpha = equalGlowAlpha),
                                                                     Color.Transparent,
                                                                 ),
                                                             radius = size.minDimension * 0.8f,
                                                         )
-                                                    drawRect(brush = brush)
+                                                    drawRect(brush = glowBrush)
                                                 }
                                             }.testTag("key_btn_="),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
                                         text = "=",
-                                        color = Color.White,
-                                        fontSize = 24.sp,
+                                        color = colors.onAcc,
+                                        fontSize = DhruvNextKeypad.operator,
                                         fontWeight = FontWeight.Bold,
                                     )
                                 }
@@ -1126,8 +1166,8 @@ fun CalculatorScreen(
         if (aiExplanationState !is AiExplanationState.Idle) {
             ModalBottomSheet(
                 onDismissRequest = { viewModel.clearAiExplanation() },
-                containerColor = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                containerColor = colors.surf,
+                shape = RoundedCornerShape(topStart = DhruvNextRadii.card, topEnd = DhruvNextRadii.card),
             ) {
                 Column(
                     modifier =
@@ -1146,7 +1186,7 @@ fun CalculatorScreen(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = colors.acc,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1173,7 +1213,7 @@ fun CalculatorScreen(
                                         .height(120.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                CircularProgressIndicator(color = colors.acc)
                             }
                         }
                         is AiExplanationState.Success -> {
@@ -1209,7 +1249,7 @@ fun CalculatorScreen(
                             Text(
                                 text = state.message,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
+                                color = colors.neg,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -1233,14 +1273,13 @@ fun SimpleKey(
     modifier: Modifier = Modifier,
     tag: String? = null,
     keyHeight: androidx.compose.ui.unit.Dp = 72.dp,
-    fontSize: androidx.compose.ui.unit.TextUnit = 22.sp,
+    fontSize: androidx.compose.ui.unit.TextUnit = DhruvNextKeypad.digit,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    // Feature 6: In light mode, text should be black for keyboard keys
-    val isDark = isSystemInDarkTheme()
-    val themeTextColor = if (isDark) Color.White else Color(0xFF111111)
-    val operatorColor = MaterialTheme.colorScheme.primary
+    val colors = LocalDhruvNextColors.current
+    val themeTextColor = colors.tx
+    val operatorColor = colors.acc
     val hapticFeedback = LocalHapticFeedback.current
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -1256,21 +1295,14 @@ fun SimpleKey(
             ),
         label = "rippleProgress",
     )
-    // Pick the ripple colour: operator keys use warm gold, numeric keys use white/light glow
-    val rippleBaseColor =
-        if (isOperator) {
-            operatorColor
-        } else if (isDark) {
-            Color.White
-        } else {
-            Color(0xFF444444)
-        }
+    // Pick the ripple colour: operator keys glow with the accent, numeric keys with a neutral tx glow.
+    val rippleBaseColor = if (isOperator) operatorColor else themeTextColor
 
     Box(
         modifier =
             modifier
                 .then(if (keyHeight == androidx.compose.ui.unit.Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
-                .background(MaterialTheme.colorScheme.surface)
+                .background(colors.surf)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -1334,9 +1366,9 @@ fun SimpleKey(
         if (badgeText != null) {
             Text(
                 text = badgeText,
-                fontSize = 11.sp,
+                fontSize = DhruvNextKeypad.caption,
                 fontWeight = FontWeight.Bold,
-                color = PremiumPrimaryAccent,
+                color = colors.acc,
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
@@ -1367,11 +1399,11 @@ fun CalendarHistoryFullView(
     // Dropdowns and export formats
     var showExportMenu by remember { mutableStateOf(false) }
 
-    val isDark = isSystemInDarkTheme()
-    val textBg = if (isDark) PremiumBackgroundDark else PremiumBackground
-    val textCol = if (isDark) PremiumPrimaryTextDark else PremiumPrimaryText
-    val secCol = if (isDark) PremiumSecondaryTextDark else PremiumSecondaryText
-    val dividerCol = if (isDark) PremiumDividerDark else PremiumDivider
+    val colors = LocalDhruvNextColors.current
+    val textBg = colors.bg
+    val textCol = colors.tx
+    val secCol = colors.tx2
+    val dividerCol = colors.line
 
     // Filter computation logic
     val rawCalculations = if (selectedFilterTab == "Recycling Bin") recycleBinHistory else activeHistory
@@ -1477,8 +1509,8 @@ fun CalendarHistoryFullView(
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back back",
-                        tint = PremiumPrimaryAccent,
+                        contentDescription = "Back",
+                        tint = colors.acc,
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -1498,18 +1530,18 @@ fun CalendarHistoryFullView(
                 if (selectedFilterTab == "Recycling Bin") {
                     TextButton(
                         onClick = { viewModel.emptyRecycleBin() },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.textButtonColors(contentColor = colors.neg),
                     ) {
                         Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Empty Bin", fontSize = 12.sp)
+                        Text("Empty Bin", fontSize = DhruvNextType.meta)
                     }
                 } else {
                     IconButton(onClick = { showExportMenu = !showExportMenu }) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Share/Export Data",
-                            tint = PremiumPrimaryAccent,
+                            tint = colors.acc,
                         )
                     }
 
@@ -1517,7 +1549,7 @@ fun CalendarHistoryFullView(
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
                             contentDescription = "Move all active to trash bin",
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = colors.neg,
                         )
                     }
                 }
@@ -1551,101 +1583,42 @@ fun CalendarHistoryFullView(
         Spacer(modifier = Modifier.height(12.dp))
 
         // TAB NAVIGATION: All, Favorites, Recycling Bin, Stats Panel
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            listOf("All", "Favorites", "Recycling Bin", "Analytics").forEach { tab ->
-                val isSelected = selectedFilterTab == tab
-                Box(
-                    modifier =
-                        Modifier
-                            .scale(if (isSelected) 1.05f else 1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) PremiumPrimaryAccent else dividerCol)
-                            .clickable {
-                                selectedFilterTab = tab
-                                selectedIds.clear()
-                                isSelectionModeActive = false
-                            }.padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = tab,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.White else textCol,
-                    )
-                }
-            }
-        }
+        val historyTabs = listOf("All", "Favorites", "Recycling Bin", "Analytics")
+        ModeChipRow(
+            options = historyTabs,
+            selectedIndex = historyTabs.indexOf(selectedFilterTab).coerceAtLeast(0),
+            onSelected = { index ->
+                selectedFilterTab = historyTabs[index]
+                selectedIds.clear()
+                isSelectionModeActive = false
+            },
+            modifier = Modifier.testTag("history_tab_row"),
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // SEARCH INPUT BAR
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search logs, tags, or notes...", fontSize = 12.sp) },
-            prefix = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp).padding(end = 4.dp),
-                    tint = PremiumPrimaryAccent,
-                )
-            },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .testTag("history_search_input"),
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PremiumPrimaryAccent,
-                    unfocusedBorderColor = dividerCol,
-                    focusedContainerColor = dividerCol.copy(alpha = 0.3f),
-                    unfocusedContainerColor = dividerCol.copy(alpha = 0.2f),
-                    focusedTextColor = textCol,
-                    unfocusedTextColor = textCol,
-                ),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
+        SearchField(
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            placeholder = "Search logs, tags, or notes...",
+            modifier = Modifier.testTag("history_search_input"),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // STATS AND ANALYTICS SHEET DRAW PANEL
         if (selectedFilterTab == "Analytics") {
-            AnalyticsBoardPanel(analyticsStats, activeHistory.size, dividerCol, textCol)
+            AnalyticsBoardPanel(analyticsStats, activeHistory.size)
         } else {
-            // FILTER DAYS CHIPS ROW
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(listOf("Anytime", "Today", "Yesterday", "Last 7 Days", "This Month")) { item ->
-                    val isSelected = filterChipTime == item
-                    Box(
-                        modifier =
-                            Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isSelected) PremiumPrimaryAccent.copy(alpha = 0.15f) else dividerCol.copy(alpha = 0.5f))
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) PremiumPrimaryAccent else Color.Transparent,
-                                    shape = RoundedCornerShape(14.dp),
-                                ).clickable { filterChipTime = item }
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = item,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) PremiumPrimaryAccent else secCol,
-                        )
-                    }
-                }
-            }
+            // FILTER DAYS CHIPS ROW (reuses the same period-selector shape as Insights' month picker)
+            val timeFilters = listOf("Anytime", "Today", "Yesterday", "Last 7 Days", "This Month")
+            PeriodChipRow(
+                options = timeFilters,
+                selectedIndex = timeFilters.indexOf(filterChipTime).coerceAtLeast(0),
+                onSelected = { index -> filterChipTime = timeFilters[index] },
+                modifier = Modifier.testTag("history_time_filter_row"),
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -1656,16 +1629,16 @@ fun CalendarHistoryFullView(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(PremiumPrimaryAccent.copy(alpha = 0.08f))
+                            .background(colors.accSoft)
                             .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "${selectedIds.filterValues { it }.size} selected",
-                        fontSize = 12.sp,
+                        fontSize = DhruvNextType.meta,
                         fontWeight = FontWeight.Bold,
-                        color = PremiumPrimaryAccent,
+                        color = colors.acc,
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1683,7 +1656,7 @@ fun CalendarHistoryFullView(
                                 isSelectionModeActive = false
                             },
                         ) {
-                            Text("Delete Selected", fontSize = 11.sp, color = Color.Red)
+                            Text("Delete Selected", fontSize = DhruvNextType.meta, color = colors.neg)
                         }
 
                         TextButton(
@@ -1692,7 +1665,7 @@ fun CalendarHistoryFullView(
                                 selectedIds.clear()
                             },
                         ) {
-                            Text("Cancel", fontSize = 11.sp, color = textCol)
+                            Text("Cancel", fontSize = DhruvNextType.meta, color = textCol)
                         }
                     }
                 }
@@ -1734,11 +1707,8 @@ fun CalendarHistoryFullView(
                     groupedHistory.forEach { (categoryDay, itemsList) ->
                         // Day Category Divider Heading
                         item {
-                            Text(
+                            SectionLabel(
                                 text = categoryDay,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = PremiumPrimaryAccent,
                                 modifier = Modifier.padding(top = 8.dp),
                             )
                         }
@@ -1805,6 +1775,7 @@ fun HistoryEntryCard(
     onSaveNote: (String) -> Unit,
     onSaveTags: (String) -> Unit,
 ) {
+    val colors = LocalDhruvNextColors.current
     var isEditingDetails by remember { mutableStateOf(false) }
     var currentNoteText by remember { mutableStateOf(item.note) }
     var currentTagText by remember { mutableStateOf(item.tags) }
@@ -1818,19 +1789,19 @@ fun HistoryEntryCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) PremiumPrimaryAccent.copy(alpha = 0.08f) else dividerCol.copy(alpha = 0.25f))
+                .clip(RoundedCornerShape(DhruvNextRadii.card))
+                .background(if (isSelected) colors.accSoft else colors.surf)
                 .border(
                     width = 1.2.dp,
                     color =
                         if (isSelected) {
-                            PremiumPrimaryAccent
+                            colors.acc
                         } else if (item.favorite) {
-                            PremiumPrimaryAccent.copy(alpha = 0.4f)
+                            colors.accLine
                         } else {
                             Color.Transparent
                         },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(DhruvNextRadii.card),
                 ).combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
@@ -1853,7 +1824,7 @@ fun HistoryEntryCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "$formattedTime • ${item.deviceSource}",
-                        fontSize = 10.sp,
+                        fontSize = DhruvNextType.meta,
                         color = secCol,
                     )
                 }
@@ -1868,7 +1839,7 @@ fun HistoryEntryCard(
                             Icon(
                                 imageVector = Icons.Default.RestoreFromTrash,
                                 contentDescription = "Restore Calculation",
-                                tint = PremiumPrimaryAccent,
+                                tint = colors.acc,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -1878,7 +1849,7 @@ fun HistoryEntryCard(
                             Icon(
                                 imageVector = if (item.favorite) Icons.Default.Star else Icons.Default.StarBorder,
                                 contentDescription = "Favorite star",
-                                tint = if (item.favorite) PremiumPrimaryAccent else secCol.copy(alpha = 0.6f),
+                                tint = if (item.favorite) colors.acc else secCol.copy(alpha = 0.6f),
                                 modifier = Modifier.size(18.dp),
                             )
                         }
@@ -1897,7 +1868,7 @@ fun HistoryEntryCard(
                             Icon(
                                 imageVector = if (isEditingDetails) Icons.Default.CheckCircle else Icons.Default.Edit,
                                 contentDescription = "Edit calculation details",
-                                tint = if (isEditingDetails) Color.Green else secCol.copy(alpha = 0.6f),
+                                tint = if (isEditingDetails) colors.pos else secCol.copy(alpha = 0.6f),
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -1908,7 +1879,7 @@ fun HistoryEntryCard(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Delete item",
-                            tint = Color.Red.copy(alpha = 0.7f),
+                            tint = colors.neg.copy(alpha = 0.7f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -1923,7 +1894,7 @@ fun HistoryEntryCard(
                 style =
                     MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Medium,
-                        fontSize = 18.sp,
+                        fontSize = DhruvNextType.title,
                     ),
                 color = textCol,
                 modifier = Modifier.fillMaxWidth(),
@@ -1935,8 +1906,8 @@ fun HistoryEntryCard(
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = PremiumPrimaryAccent,
+                        fontSize = DhruvNextType.title,
+                        color = colors.acc,
                     ),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1955,24 +1926,24 @@ fun HistoryEntryCard(
                         OutlinedTextField(
                             value = currentNoteText,
                             onValueChange = { currentNoteText = it },
-                            placeholder = { Text("Write personal note...", fontSize = 11.sp) },
+                            placeholder = { Text("Write personal note...", fontSize = DhruvNextType.meta) },
                             modifier = Modifier.fillMaxWidth().height(42.dp),
-                            textStyle = TextStyle(fontSize = 12.sp),
+                            textStyle = TextStyle(fontSize = DhruvNextType.meta),
                         )
 
                         OutlinedTextField(
                             value = currentTagText,
                             onValueChange = { currentTagText = it },
-                            placeholder = { Text("Tags (e.g., shopping, work)", fontSize = 11.sp) },
+                            placeholder = { Text("Tags (e.g., shopping, work)", fontSize = DhruvNextType.meta) },
                             modifier = Modifier.fillMaxWidth().height(42.dp),
-                            textStyle = TextStyle(fontSize = 11.sp),
+                            textStyle = TextStyle(fontSize = DhruvNextType.meta),
                         )
                     }
                 } else {
                     if (item.note.isNotEmpty()) {
                         Text(
                             text = "Note: ${item.note}",
-                            fontSize = 11.sp,
+                            fontSize = DhruvNextType.meta,
                             color = secCol.copy(alpha = 0.85f),
                             fontWeight = FontWeight.Normal,
                         )
@@ -1984,20 +1955,7 @@ fun HistoryEntryCard(
                         ) {
                             item.tags.split(",").forEach { tag ->
                                 if (tag.trim().isNotEmpty()) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(PremiumPrimaryAccent.copy(alpha = 0.08f))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                                    ) {
-                                        Text(
-                                            text = "#${tag.trim()}",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = PremiumPrimaryAccent,
-                                        )
-                                    }
+                                    Chip(label = "#${tag.trim()}")
                                 }
                             }
                         }
@@ -2008,14 +1966,13 @@ fun HistoryEntryCard(
     }
 }
 
-// PREMIUM STATS ANALYTICS COMPOSER COMPONENT
+// STATS ANALYTICS PANEL — DhruvNext tokens, tonal NxInsetSurface tiles + SectionLabel headers.
 @Composable
 fun AnalyticsBoardPanel(
     stats: Triple<Map<String, Int>, Map<String, Int>, Int>,
     totalCount: Int,
-    cardBg: Color,
-    textColor: Color,
 ) {
+    val colors = LocalDhruvNextColors.current
     val (operatorUsage, dailyCounts, pinsCount) = stats
 
     Column(
@@ -2030,52 +1987,26 @@ fun AnalyticsBoardPanel(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Left Total Stats item
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(cardBg.copy(alpha = 0.4f))
-                        .padding(12.dp),
-            ) {
-                Column {
-                    Text("Total Cleared Logs", fontSize = 10.sp, color = PremiumPrimaryAccent)
-                    Text("$totalCount", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = textColor)
+            NxInsetSurface(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    SectionLabel(text = "Total Cleared Logs")
+                    Text("$totalCount", fontSize = DhruvNextType.hero, fontWeight = FontWeight.Bold, color = colors.tx)
                 }
             }
 
             // Right Pin Stats item
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(cardBg.copy(alpha = 0.4f))
-                        .padding(12.dp),
-            ) {
-                Column {
-                    Text("Starred Formulas", fontSize = 10.sp, color = PremiumPrimaryAccent)
-                    Text("$pinsCount", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = textColor)
+            NxInsetSurface(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    SectionLabel(text = "Starred Formulas")
+                    Text("$pinsCount", fontSize = DhruvNextType.hero, fontWeight = FontWeight.Bold, color = colors.tx)
                 }
             }
         }
 
         // BAR CHART: Most Used Operators
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cardBg.copy(alpha = 0.3f))
-                    .padding(14.dp),
-        ) {
-            Column {
-                Text(
-                    "Primary Operator Frequency Usage",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PremiumPrimaryAccent,
-                )
+        NxInsetSurface(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                SectionLabel(text = "Primary Operator Frequency Usage")
                 Spacer(modifier = Modifier.height(10.dp))
 
                 operatorUsage.forEach { (op, count) ->
@@ -2088,14 +2019,20 @@ fun AnalyticsBoardPanel(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(op, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textColor, modifier = Modifier.width(20.dp))
+                        Text(
+                            op,
+                            fontSize = DhruvNextType.meta,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.tx,
+                            modifier = Modifier.width(20.dp),
+                        )
                         Box(
                             modifier =
                                 Modifier
                                     .weight(1f)
                                     .height(8.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(cardBg),
+                                    .background(colors.line2),
                         ) {
                             Box(
                                 modifier =
@@ -2103,36 +2040,24 @@ fun AnalyticsBoardPanel(
                                         .fillMaxHeight()
                                         .fillMaxWidth(if (progress > 1f) 1f else progress)
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(PremiumPrimaryAccent),
+                                        .background(colors.acc),
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("$count times", fontSize = 11.sp, color = textColor)
+                        Text("$count times", fontSize = DhruvNextType.meta, color = colors.tx)
                     }
                 }
             }
         }
 
         // LINE GRAPH: Daily calculation metrics representation
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cardBg.copy(alpha = 0.3f))
-                    .padding(14.dp),
-        ) {
-            Column {
-                Text(
-                    "Temporal Daily Activities Map",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PremiumPrimaryAccent,
-                )
+        NxInsetSurface(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                SectionLabel(text = "Temporal Daily Activities Map")
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (dailyCounts.isEmpty()) {
-                    Text("No usage recorded yet.", fontSize = 11.sp, color = textColor.copy(alpha = 0.5f))
+                    Text("No usage recorded yet.", fontSize = DhruvNextType.meta, color = colors.tx.copy(alpha = 0.5f))
                 } else {
                     Row(
                         modifier =
@@ -2148,17 +2073,17 @@ fun AnalyticsBoardPanel(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Bottom,
                             ) {
-                                Text("$ops", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = PremiumPrimaryAccent)
+                                Text("$ops", fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold, color = colors.acc)
                                 Box(
                                     modifier =
                                         Modifier
                                             .width(16.dp)
                                             .fillMaxHeight(heightFraction)
                                             .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                            .background(PremiumPrimaryAccent),
+                                            .background(colors.acc),
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(day, fontSize = 9.sp, color = textColor)
+                                Text(day, fontSize = DhruvNextType.meta, color = colors.tx)
                             }
                         }
                     }
@@ -2214,6 +2139,7 @@ fun SecureHistoryLockGuard(
     fallbackContent: @Composable () -> Unit,
 ) {
     if (isLocked && !isUnlocked) {
+        val colors = LocalDhruvNextColors.current
         var enteredPin by remember { mutableStateOf("") }
         var pinError by remember { mutableStateOf(false) }
 
@@ -2228,7 +2154,7 @@ fun SecureHistoryLockGuard(
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = "PIN Lock Secured",
-                tint = PremiumPrimaryAccent,
+                tint = colors.acc,
                 modifier = Modifier.size(56.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -2236,12 +2162,12 @@ fun SecureHistoryLockGuard(
                 "Logs PIN Secured",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = PremiumPrimaryText,
+                color = colors.tx,
             )
             Text(
                 "Authentication is required to unlock calculation logs.",
                 style = MaterialTheme.typography.bodySmall,
-                color = PremiumSecondaryText,
+                color = colors.tx2,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
@@ -2260,9 +2186,9 @@ fun SecureHistoryLockGuard(
                                 .clip(CircleShape)
                                 .background(
                                     if (i < enteredPin.length) {
-                                        if (pinError) Color.Red else PremiumPrimaryAccent
+                                        if (pinError) colors.neg else colors.acc
                                     } else {
-                                        PremiumDivider
+                                        colors.line2
                                     },
                                 ),
                     )
@@ -2273,7 +2199,7 @@ fun SecureHistoryLockGuard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "Incorrect PIN. Please try again.",
-                    color = Color.Red,
+                    color = colors.neg,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -2298,7 +2224,7 @@ fun SecureHistoryLockGuard(
                                     Modifier
                                         .size(54.dp)
                                         .clip(CircleShape)
-                                        .background(PremiumDivider)
+                                        .background(colors.surf2)
                                         .clickable {
                                             pinError = false
                                             when (digit) {
@@ -2323,9 +2249,9 @@ fun SecureHistoryLockGuard(
                             ) {
                                 Text(
                                     text = digit,
-                                    fontSize = 18.sp,
+                                    fontSize = DhruvNextKeypad.digit,
                                     fontWeight = FontWeight.Bold,
-                                    color = PremiumPrimaryText,
+                                    color = colors.tx,
                                 )
                             }
                         }

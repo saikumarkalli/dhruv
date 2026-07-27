@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One slice of an [AllocationStackedBar] — e.g. "Equity" 45% in `--c1`. */
@@ -83,7 +83,7 @@ private fun LegendEntry(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
-        Text(text = " $label ${percent.toInt()}%", color = textColor, fontSize = 11.sp)
+        Text(text = " $label ${percent.toInt()}%", color = textColor, fontSize = DhruvNextType.meta)
     }
 }
 

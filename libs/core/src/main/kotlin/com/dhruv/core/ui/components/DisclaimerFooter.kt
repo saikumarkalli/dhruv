@@ -3,7 +3,7 @@ package com.dhruv.core.ui.components
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
@@ -16,5 +16,5 @@ fun DisclaimerFooter(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
-    Text(text = text, modifier = modifier, color = colors.tx3, fontSize = 11.sp)
+    Text(text = text, modifier = modifier, color = colors.tx3, fontSize = DhruvNextType.meta)
 }

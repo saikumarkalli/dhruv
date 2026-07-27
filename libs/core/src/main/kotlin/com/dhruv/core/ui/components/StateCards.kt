@@ -22,8 +22,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** Nothing-here-yet placeholder — used across Home/Insights until their backend data lands. */
@@ -48,7 +48,7 @@ fun EmptyStateCard(
             text = message,
             modifier = Modifier.padding(top = 8.dp),
             color = colors.tx2,
-            fontSize = 13.sp,
+            fontSize = DhruvNextType.body,
             textAlign = TextAlign.Center,
         )
     }
@@ -72,7 +72,7 @@ fun OfflineBanner(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(imageVector = Icons.Default.CloudOff, contentDescription = null, tint = colors.tx3)
-        Text(text = message, color = colors.tx2, fontSize = 12.sp)
+        Text(text = message, color = colors.tx2, fontSize = DhruvNextType.meta)
     }
 }
 
@@ -94,7 +94,7 @@ fun RetryErrorCard(
                 .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = message, color = colors.tx2, fontSize = 13.sp, textAlign = TextAlign.Center)
+        Text(text = message, color = colors.tx2, fontSize = DhruvNextType.body, textAlign = TextAlign.Center)
         TextButton(onClick = onRetry) {
             Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = colors.acc)
             Text(text = retryLabel, color = colors.acc, fontWeight = FontWeight.Medium)

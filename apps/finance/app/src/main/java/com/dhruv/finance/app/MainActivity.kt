@@ -19,12 +19,10 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DonutSmall
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -322,33 +320,30 @@ private fun CalcTab(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        // Temporary bridge row — replaced by D3's in-Calc mode-chip row (DhruvNext §6.3). Kept only
-        // so Currency/Units/Date/Time stay reachable while the shell is mid-rebuild.
-        Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-            if (resolver.isEnabled("currency")) {
-                IconButton(onClick = { onOpenDetail(DetailRoute.Currency) }) {
-                    Icon(Icons.Default.CurrencyExchange, contentDescription = "Currency")
+        // Date/Time have no restyled entry point yet (D8 scope) — temporary bridge row, same
+        // pattern D2 used for all four before D3 gave Currency/Units a real one (the mode chip
+        // row inside CalculatorScreen itself, below).
+        if (resolver.isEnabled("date") || resolver.isEnabled("time")) {
+            Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                if (resolver.isEnabled("date")) {
+                    IconButton(onClick = { onOpenDetail(DetailRoute.DateTool) }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Date")
+                    }
                 }
-            }
-            if (resolver.isEnabled("unit")) {
-                IconButton(onClick = { onOpenDetail(DetailRoute.UnitConverter) }) {
-                    Icon(Icons.Default.Straighten, contentDescription = "Units")
-                }
-            }
-            if (resolver.isEnabled("date")) {
-                IconButton(onClick = { onOpenDetail(DetailRoute.DateTool) }) {
-                    Icon(Icons.Default.DateRange, contentDescription = "Date")
-                }
-            }
-            if (resolver.isEnabled("time")) {
-                IconButton(onClick = { onOpenDetail(DetailRoute.TimeTool) }) {
-                    Icon(Icons.Default.AccessTime, contentDescription = "Time")
+                if (resolver.isEnabled("time")) {
+                    IconButton(onClick = { onOpenDetail(DetailRoute.TimeTool) }) {
+                        Icon(Icons.Default.AccessTime, contentDescription = "Time")
+                    }
                 }
             }
         }
         val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
         FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
-            CalculatorScreen(viewModel = calculatorViewModel)
+            CalculatorScreen(
+                viewModel = calculatorViewModel,
+                onOpenCurrency = { onOpenDetail(DetailRoute.Currency) },
+                onOpenUnit = { onOpenDetail(DetailRoute.UnitConverter) },
+            )
         }
     }
 }

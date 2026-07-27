@@ -99,7 +99,6 @@ fun UnitDetailContent(
         val vm: UnitViewModel = koinViewModel()
         val error by vm.featureError.collectAsStateWithLifecycle()
         FeatureHost("unit", resolver.isEnabled("unit"), error, crashReporter) {
-            // UnitScreen takes no modifier parameter.
             UnitScreen(viewModel = vm)
         }
     }

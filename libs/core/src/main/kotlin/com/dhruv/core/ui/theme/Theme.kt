@@ -149,11 +149,20 @@ fun DhruvTheme(
             configuration.screenHeightDp,
         )
     val nextColors = resolveDhruvNextColors(darkTheme, accentColorHex)
+    val nextTokens =
+        calculateDhruvNextResponsiveTokens(
+            configuration.screenWidthDp,
+            configuration.screenHeightDp,
+        )
 
     CompositionLocalProvider(
         LocalAppDimens provides dimens,
         LocalAppTypography provides responsiveType,
         LocalDhruvNextColors provides nextColors,
+        LocalDhruvNextSpacingValues provides nextTokens.spacing,
+        LocalDhruvNextRadiiValues provides nextTokens.radii,
+        LocalDhruvNextTypeScale provides nextTokens.type,
+        LocalDhruvNextKeypadScale provides nextTokens.keypad,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

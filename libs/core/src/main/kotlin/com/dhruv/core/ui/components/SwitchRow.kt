@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** Label + optional description + accent-colored [Switch] — settings toggles, "Step up" switches. */
@@ -30,9 +30,9 @@ fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.tx, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(text = label, color = colors.tx, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Medium)
             if (description != null) {
-                Text(text = description, color = colors.tx2, fontSize = 12.5f.sp)
+                Text(text = description, color = colors.tx2, fontSize = DhruvNextType.meta)
             }
         }
         Switch(

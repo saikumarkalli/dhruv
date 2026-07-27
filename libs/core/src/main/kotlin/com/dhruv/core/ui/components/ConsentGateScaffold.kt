@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One "what's sent / what's never sent" info row on a [ConsentGateScaffold]. */
@@ -69,7 +69,7 @@ fun ConsentGateScaffold(
             text = headline,
             modifier = Modifier.padding(top = 16.dp),
             color = colors.tx,
-            fontSize = 18.sp,
+            fontSize = DhruvNextType.title,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
@@ -77,7 +77,7 @@ fun ConsentGateScaffold(
             text = body,
             modifier = Modifier.padding(top = 8.dp),
             color = colors.tx2,
-            fontSize = 13.5f.sp,
+            fontSize = DhruvNextType.body,
             textAlign = TextAlign.Center,
         )
         if (infoRows.isNotEmpty()) {
@@ -93,8 +93,8 @@ fun ConsentGateScaffold(
             ) {
                 infoRows.forEach { row ->
                     Column {
-                        Text(text = row.label, color = colors.tx, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text(text = row.detail, color = colors.tx2, fontSize = 12.sp)
+                        Text(text = row.label, color = colors.tx, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
+                        Text(text = row.detail, color = colors.tx2, fontSize = DhruvNextType.meta)
                     }
                 }
             }
@@ -120,7 +120,7 @@ fun ConsentGateScaffold(
                 text = footer,
                 modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
                 color = colors.tx3,
-                fontSize = 11.sp,
+                fontSize = DhruvNextType.meta,
                 textAlign = TextAlign.Center,
             )
         }

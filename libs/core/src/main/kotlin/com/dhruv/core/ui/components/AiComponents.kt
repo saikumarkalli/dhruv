@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** DhruvNext §6.2's Home AI insight strip: accent-soft background, headline + pill actions. */
@@ -47,7 +47,7 @@ fun AiInsightStrip(
                 text = text,
                 modifier = Modifier.padding(start = 10.dp),
                 color = colors.tx,
-                fontSize = 13.5f.sp,
+                fontSize = DhruvNextType.body,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -92,8 +92,8 @@ fun SmartInsightCard(
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = tint)
         Column(modifier = Modifier.padding(start = 10.dp)) {
-            Text(text = headline, color = colors.tx, fontSize = 13.5f.sp, fontWeight = FontWeight.Bold)
-            Text(text = explanation, color = colors.tx2, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(text = headline, color = colors.tx, fontSize = DhruvNextType.body, fontWeight = FontWeight.Bold)
+            Text(text = explanation, color = colors.tx2, fontSize = DhruvNextType.meta, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -129,7 +129,7 @@ fun ChatBubble(
                     .background(background)
                     .padding(12.dp),
         ) {
-            Text(text = text, color = textColor, fontSize = 13.5f.sp)
+            Text(text = text, color = textColor, fontSize = DhruvNextType.body)
             trailingContent?.invoke()
         }
     }

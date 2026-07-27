@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.util.Locale
 
@@ -19,7 +20,7 @@ fun SectionLabel(
         text = text.uppercase(Locale.getDefault()),
         modifier = modifier,
         color = colors.tx3,
-        fontSize = 10.sp,
+        fontSize = DhruvNextType.sectionLabel,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.1.sp,
     )

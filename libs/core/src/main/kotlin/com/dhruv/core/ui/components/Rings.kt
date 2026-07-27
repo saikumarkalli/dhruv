@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 private fun sweepAngle(progress: Float): Float = progress.coerceIn(0f, 1f) * 360f
@@ -51,7 +51,7 @@ fun FinancialHealthRing(
         Text(
             text = "$score",
             color = colors.tx,
-            fontSize = 22.sp,
+            fontSize = DhruvNextType.title,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )

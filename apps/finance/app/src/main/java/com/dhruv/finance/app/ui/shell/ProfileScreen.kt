@@ -18,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.InitialsTile
 import com.dhruv.core.ui.components.NxCard
@@ -27,6 +26,7 @@ import com.dhruv.core.ui.components.SectionLabel
 import com.dhruv.core.ui.components.StatItem
 import com.dhruv.core.ui.components.ThreeUpStatRow
 import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
@@ -70,14 +70,14 @@ fun ProfileScreen(
                         text = "Not signed in",
                         modifier = Modifier.padding(top = 12.dp),
                         color = colors.tx,
-                        fontSize = 17.sp,
+                        fontSize = DhruvNextType.title,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = "Local device only — no account yet",
                         modifier = Modifier.padding(top = 4.dp),
                         color = colors.tx2,
-                        fontSize = 13.5f.sp,
+                        fontSize = DhruvNextType.body,
                         textAlign = TextAlign.Center,
                     )
                 }

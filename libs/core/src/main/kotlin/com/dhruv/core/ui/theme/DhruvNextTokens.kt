@@ -1,9 +1,13 @@
 package com.dhruv.core.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * DhruvNext design tokens — docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md
@@ -86,19 +90,193 @@ val DhruvNextDarkColors =
         chart6 = Color(0xFFCFD8DC),
     )
 
-/** Corner radii (dp) — DhruvNext §4. */
-object DhruvNextRadii {
-    val card: Dp = 20.dp
-    val listGroup: Dp = 18.dp
-    val innerTile: Dp = 14.dp
-    val pill: Dp = 26.dp
+/** One breakpoint's worth of spacing (dp) — DhruvNext §4: card padding, screen gutter, inter-card gap. */
+data class DhruvNextSpacingValues(
+    val cardPadding: Dp,
+    val screenGutter: Dp,
+    val interCardGap: Dp,
+)
+
+/** One breakpoint's worth of corner radii (dp) — DhruvNext §4. */
+data class DhruvNextRadiiValues(
+    val card: Dp,
+    val listGroup: Dp,
+    val innerTile: Dp,
+    val pill: Dp,
+)
+
+/**
+ * One breakpoint's worth of the named type scale — DhruvNext §4's roles (title 17/700, card
+ * 15/700, body 13.5, meta 11–12, section-label 10/700 uppercase, hero 30–46/700). [hero] is the
+ * screen-size-responsive tier only; content-length-adaptive sizing (e.g. the calculator result's
+ * shrink-to-fit) is a separate, complementary mechanism layered on top by the caller, not this.
+ */
+data class DhruvNextTypeScaleValues(
+    val hero: TextUnit,
+    val title: TextUnit,
+    val cardTitle: TextUnit,
+    val body: TextUnit,
+    val meta: TextUnit,
+    val sectionLabel: TextUnit,
+)
+
+/**
+ * One breakpoint's worth of calculator-keypad glyph sizes. Deliberately separate from
+ * [DhruvNextTypeScaleValues] — keypad digits/operators are interactive-button glyphs sized to fit
+ * a fixed-weight grid of keys, not content text; scaling them onto the content scale's `hero` tier
+ * (30–46sp) would look disproportionate against the keypad's own visual hierarchy. This tier still
+ * scales — modestly — so the keypad isn't the one part of the screen frozen at phone-portrait size.
+ */
+data class DhruvNextKeypadScaleValues(
+    val digit: TextUnit,
+    val operator: TextUnit,
+    val function: TextUnit,
+    val caption: TextUnit,
+)
+
+/** Bundles one breakpoint's worth of every DhruvNext responsive token together. */
+data class DhruvNextResponsiveTokens(
+    val spacing: DhruvNextSpacingValues,
+    val radii: DhruvNextRadiiValues,
+    val type: DhruvNextTypeScaleValues,
+    val keypad: DhruvNextKeypadScaleValues,
+)
+
+/**
+ * Resolves DhruvNext's spacing/radii/type-scale/keypad-scale tokens for a screen size. Three
+ * tiers: small (<360dp width or <600dp height — this also catches a phone rotated to landscape,
+ * since its portrait width becomes a <600dp landscape height), tablet (>=600dp width), and the
+ * phone-portrait default. Uses the same width/height thresholds as [calculateResponsiveMetrics] so
+ * both responsive systems in this app agree on what counts as "tablet"/"small". A fourth "wide but
+ * short" tier (`width > height` while `height >= 600`) was considered and dropped: given these
+ * thresholds it is mathematically unreachable (that combination always implies `width >= 600`,
+ * which the tablet check already claims first) — shipping an unreachable branch just to look
+ * symmetric isn't worth the dead code. Corner radii are deliberately constant across every tier —
+ * DhruvNext §4 gives fixed values with no size-tier variants, and radius scaling isn't a standard
+ * responsive pattern the way spacing/type/keypad are.
+ */
+@Suppress("LongMethod")
+fun calculateDhruvNextResponsiveTokens(
+    widthDp: Int,
+    heightDp: Int,
+): DhruvNextResponsiveTokens {
+    val isTablet = widthDp >= 600
+    val isExtremelySmall = widthDp < 360 || heightDp < 600
+
+    val spacing =
+        when {
+            isExtremelySmall -> DhruvNextSpacingValues(cardPadding = 14.dp, screenGutter = 12.dp, interCardGap = 10.dp)
+            isTablet -> DhruvNextSpacingValues(cardPadding = 24.dp, screenGutter = 20.dp, interCardGap = 16.dp)
+            else -> DhruvNextSpacingValues(cardPadding = 18.dp, screenGutter = 16.dp, interCardGap = 12.dp)
+        }
+
+    val radii = DhruvNextRadiiValues(card = 20.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp)
+
+    val type =
+        when {
+            isExtremelySmall ->
+                DhruvNextTypeScaleValues(
+                    hero = 32.sp,
+                    title = 15.sp,
+                    cardTitle = 13.5.sp,
+                    body = 12.sp,
+                    meta = 10.sp,
+                    sectionLabel = 9.sp,
+                )
+            isTablet ->
+                DhruvNextTypeScaleValues(
+                    hero = 46.sp,
+                    title = 20.sp,
+                    cardTitle = 17.sp,
+                    body = 15.sp,
+                    meta = 13.sp,
+                    sectionLabel = 11.sp,
+                )
+            else ->
+                DhruvNextTypeScaleValues(
+                    hero = 38.sp,
+                    title = 17.sp,
+                    cardTitle = 15.sp,
+                    body = 13.5.sp,
+                    meta = 11.5.sp,
+                    sectionLabel = 10.sp,
+                )
+        }
+
+    val keypad =
+        when {
+            isExtremelySmall -> DhruvNextKeypadScaleValues(digit = 18.sp, operator = 22.sp, function = 11.sp, caption = 9.sp)
+            isTablet -> DhruvNextKeypadScaleValues(digit = 26.sp, operator = 30.sp, function = 15.sp, caption = 13.sp)
+            else -> DhruvNextKeypadScaleValues(digit = 22.sp, operator = 26.sp, function = 13.sp, caption = 11.sp)
+        }
+
+    return DhruvNextResponsiveTokens(spacing, radii, type, keypad)
 }
 
-/** Spacing (dp) — DhruvNext §4: card padding, screen gutter, inter-card gap. */
+/** Defaults match the phone-portrait tier so a component previewed with no [DhruvTheme] ancestor
+ * (should not happen in production — see [LocalDhruvNextColors]) still renders sane sizes. */
+val LocalDhruvNextSpacingValues =
+    staticCompositionLocalOf { DhruvNextSpacingValues(cardPadding = 18.dp, screenGutter = 16.dp, interCardGap = 12.dp) }
+val LocalDhruvNextRadiiValues =
+    staticCompositionLocalOf { DhruvNextRadiiValues(card = 20.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp) }
+val LocalDhruvNextTypeScale =
+    staticCompositionLocalOf {
+        DhruvNextTypeScaleValues(hero = 38.sp, title = 17.sp, cardTitle = 15.sp, body = 13.5.sp, meta = 11.5.sp, sectionLabel = 10.sp)
+    }
+val LocalDhruvNextKeypadScale =
+    staticCompositionLocalOf { DhruvNextKeypadScaleValues(digit = 22.sp, operator = 26.sp, function = 13.sp, caption = 11.sp) }
+
+/**
+ * Corner radii (dp) — DhruvNext §4. Same call-site shape as before (`DhruvNextRadii.card`); now
+ * backed by [LocalDhruvNextRadiiValues] instead of a plain constant, so no call site needed to
+ * change for this to become theme-driven. Values are constant across breakpoints (see
+ * [calculateDhruvNextResponsiveTokens]) but still routed through the composition local for
+ * consistency and in case that changes later.
+ */
+object DhruvNextRadii {
+    val card: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.card
+    val listGroup: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.listGroup
+    val innerTile: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.innerTile
+    val pill: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextRadiiValues.current.pill
+}
+
+/**
+ * Spacing (dp) — DhruvNext §4: card padding, screen gutter, inter-card gap. Same call-site shape
+ * as before (`DhruvNextSpacing.screenGutter`); now screen-size responsive via
+ * [LocalDhruvNextSpacingValues] — every existing call site becomes responsive automatically.
+ */
 object DhruvNextSpacing {
-    val cardPadding: Dp = 18.dp
-    val screenGutter: Dp = 16.dp
-    val interCardGap: Dp = 12.dp
+    val cardPadding: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.cardPadding
+    val screenGutter: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.screenGutter
+    val interCardGap: Dp @Composable @ReadOnlyComposable get() = LocalDhruvNextSpacingValues.current.interCardGap
+}
+
+/**
+ * Named type scale — DhruvNext §4's roles, screen-size responsive. Use `DhruvNextType.title`/
+ * `.cardTitle`/`.body`/`.meta`/`.sectionLabel`/`.hero` instead of hardcoding a `.sp` literal in
+ * component or screen code, the same way colors go through [LocalDhruvNextColors] instead of a
+ * raw hex.
+ */
+object DhruvNextType {
+    val hero: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.hero
+    val title: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.title
+    val cardTitle: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.cardTitle
+    val body: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.body
+    val meta: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.meta
+    val sectionLabel: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextTypeScale.current.sectionLabel
+}
+
+/**
+ * Calculator-keypad glyph sizes — screen-size responsive, but on its own modest scale separate
+ * from [DhruvNextType] (see [DhruvNextKeypadScaleValues] for why). `digit` = numeral/`=` glyphs,
+ * `operator` = the larger `%÷×−+` symbols, `function` = scientific-row labels (sin/cos/log/√/…),
+ * `caption` = small toggle/badge text (DEG/RAD, key badges).
+ */
+object DhruvNextKeypad {
+    val digit: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.digit
+    val operator: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.operator
+    val function: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.function
+    val caption: TextUnit @Composable @ReadOnlyComposable get() = LocalDhruvNextKeypadScale.current.caption
 }
 
 /**

@@ -12,7 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.util.Locale
 
@@ -38,7 +38,7 @@ fun InitialsTile(
         Text(
             text = initialsFor(name),
             color = colors.tx2,
-            fontSize = 12.sp,
+            fontSize = DhruvNextType.meta,
             fontWeight = FontWeight.Bold,
         )
     }

@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One bar in a [BarChart] — a period label (month/year) and its value. */
@@ -67,7 +67,7 @@ fun BarChart(
                 Text(
                     text = entry.label,
                     color = colors.tx3,
-                    fontSize = 10.sp,
+                    fontSize = DhruvNextType.meta,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

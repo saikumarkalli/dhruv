@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One entry in the [BottomBar] — DhruvNext §5's `TABS` (home/calc/plan/insights). */
@@ -88,7 +88,7 @@ fun NxTopBar(
         Text(
             text = title,
             color = colors.tx,
-            fontSize = 17.sp,
+            fontSize = DhruvNextType.title,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp).weight(1f),
         )
@@ -112,8 +112,8 @@ fun NxHomeTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = greeting, color = colors.tx, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text(text = subtitle, color = colors.tx2, fontSize = 12.sp)
+            Text(text = greeting, color = colors.tx, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
+            Text(text = subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
         }
         IconButton(onClick = onNotificationsClick) {
             Icon(

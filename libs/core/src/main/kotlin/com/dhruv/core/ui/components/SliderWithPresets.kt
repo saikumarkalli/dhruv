@@ -16,7 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** One tappable preset on a [SliderWithPresets] — e.g. "10L" → 10_00_000f. */
@@ -42,8 +42,8 @@ fun SliderWithPresets(
     val colors = LocalDhruvNextColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = label, color = colors.tx2, fontSize = 13.sp)
-            Text(text = valueText, color = colors.tx, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(text = label, color = colors.tx2, fontSize = DhruvNextType.body)
+            Text(text = valueText, color = colors.tx, fontSize = DhruvNextType.body, fontWeight = FontWeight.Bold)
         }
         Slider(
             value = value,

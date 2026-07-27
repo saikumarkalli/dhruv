@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.components.InitialsTile
 import com.dhruv.core.ui.components.ListGroup
 import com.dhruv.core.ui.components.ListGroupRow
@@ -34,6 +33,7 @@ import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.SectionLabel
 import com.dhruv.core.ui.components.SwitchRow
 import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.settings.AppSettings
 import com.dhruv.settings.SettingsRepository
@@ -107,8 +107,8 @@ fun SettingsScreen(
                 InitialsTile(name = "Local device")
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = "Local device", color = colors.tx, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(text = "Local device only — no account yet", color = colors.tx3, fontSize = 12.5f.sp)
+                    Text(text = "Local device", color = colors.tx, fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title)
+                    Text(text = "Local device only — no account yet", color = colors.tx3, fontSize = DhruvNextType.meta)
                 }
             }
         }
@@ -163,7 +163,7 @@ fun SettingsScreen(
                                     Text(
                                         text = if (uiState.formatLocale == "indian") "Indian" else "International",
                                         color = colors.tx2,
-                                        fontSize = 14.sp,
+                                        fontSize = DhruvNextType.body,
                                     )
                                 },
                                 modifier = Modifier.testTag("settings_locale_item"),
@@ -173,7 +173,7 @@ fun SettingsScreen(
                             ListGroupRow(
                                 title = "Decimal precision",
                                 onClick = { showPrecisionSheet = true },
-                                trailing = { Text("${uiState.decimalPrecision} places", color = colors.tx2, fontSize = 14.sp) },
+                                trailing = { Text("${uiState.decimalPrecision} places", color = colors.tx2, fontSize = DhruvNextType.body) },
                                 modifier = Modifier.testTag("settings_precision_item"),
                             )
                         },
@@ -181,7 +181,7 @@ fun SettingsScreen(
                             ListGroupRow(
                                 title = "Preview",
                                 showChevron = false,
-                                trailing = { Text(precisionPreview, color = colors.acc, fontWeight = FontWeight.Bold, fontSize = 15.sp) },
+                                trailing = { Text(precisionPreview, color = colors.acc, fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle) },
                             )
                         },
                         {
@@ -234,7 +234,7 @@ fun SettingsScreen(
                                 ListGroupRow(
                                     title = "Change PIN",
                                     onClick = { showPinDialog = true },
-                                    trailing = { Text("••••", color = colors.tx2, fontSize = 14.sp) },
+                                    trailing = { Text("••••", color = colors.tx2, fontSize = DhruvNextType.body) },
                                 )
                             }
                         }
