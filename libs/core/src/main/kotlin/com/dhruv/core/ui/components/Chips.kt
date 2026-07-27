@@ -50,8 +50,9 @@ fun Chip(
  * [strong] switches the selected/unselected styling from the default accent-soft look (preset
  * amount/tip chips — `selected` = `accSoft` bg + `acc` text) to the segment/strong look DhruvNext
  * uses for mode/category selectors (`selected` = solid `tx` bg + `bg` text + 700 weight;
- * unselected = `surf` bg + a 1dp `line` border, instead of the soft variant's borderless `surf2`).
- * [filled] (the solid-accent CTA look, e.g. [AskPill]) takes precedence over both if combined.
+ * unselected = `surf` bg + a 1dp `line` border + 600 weight, instead of the soft variant's
+ * borderless `surf2` + 500 weight). [filled] (the solid-accent CTA look, e.g. [AskPill]) takes
+ * precedence over both if combined.
  */
 @Composable
 fun Pill(
@@ -80,7 +81,13 @@ fun Pill(
             selected -> colors.acc
             else -> colors.tx2
         }
-    val fontWeight = if (strong && selected) FontWeight.Bold else FontWeight.Medium
+    val fontWeight =
+        when {
+            filled -> FontWeight.Medium
+            strong && selected -> FontWeight.Bold
+            strong -> FontWeight.SemiBold
+            else -> FontWeight.Medium
+        }
     val border =
         when {
             strong && !selected -> BorderStroke(1.dp, colors.line)
