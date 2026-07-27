@@ -65,12 +65,23 @@ fun BottomBar(
     }
 }
 
-/** A back + title top bar for detail/utility routes — DhruvNext §5's non-tab screens. */
+/**
+ * A back + title top bar for detail/utility routes — DhruvNext §5's non-tab screens.
+ *
+ * [trailingIcon] renders a single icon button on the far right (e.g. Currency's `star_border`
+ * favourite action, DhruvNext §6.6) — pass [onTrailingClick] `null` to render it dimmed/disabled,
+ * the same "real control, no backing behaviour yet" convention [Pill] already expresses via a
+ * null `onClick`. [actions] remains a fuller escape hatch for a row of icon buttons when a single
+ * trailing icon isn't enough; the two slots are independent and may be combined.
+ */
 @Composable
 fun NxTopBar(
     title: String,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
+    trailingIcon: ImageVector? = null,
+    trailingIconContentDescription: String? = null,
+    onTrailingClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = LocalDhruvNextColors.current
@@ -93,6 +104,15 @@ fun NxTopBar(
             modifier = Modifier.padding(start = 4.dp).weight(1f),
         )
         Row(content = actions)
+        if (trailingIcon != null) {
+            IconButton(onClick = onTrailingClick ?: {}, enabled = onTrailingClick != null) {
+                Icon(
+                    imageVector = trailingIcon,
+                    contentDescription = trailingIconContentDescription,
+                    tint = if (onTrailingClick != null) colors.tx else colors.tx3,
+                )
+            }
+        }
     }
 }
 
