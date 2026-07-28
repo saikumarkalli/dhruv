@@ -5,22 +5,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DonutSmall
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -40,8 +47,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -59,7 +70,9 @@ import com.dhruv.core.ui.components.BottomBar
 import com.dhruv.core.ui.components.BottomBarTab
 import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.EmptyStateCard
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.DhruvTheme
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.plan.PlanLauncher
@@ -77,6 +90,7 @@ import com.dhruv.finance.app.ui.shell.UnitDetailContent
 import com.dhruv.finance.app.ui.splash.SplashScreen
 import com.dhruv.finance.calculator.CalculatorScreen
 import com.dhruv.finance.calculator.CalculatorViewModel
+import com.dhruv.finance.calculator.copyResultToClipboard
 import com.dhruv.finance.everyday.EverydayScreen
 import com.dhruv.finance.everyday.EverydayViewModel
 import com.dhruv.finance.investments.InvestmentsScreen
@@ -231,28 +245,46 @@ private fun TabsScaffold(
     val tabs = TabKey.entries
     val coroutineScope = rememberCoroutineScope()
 
+    // Hoisted here (not inside CalculatorScreen) so the Calc-tab title bar below — a sibling of
+    // the pager content in this same Scaffold, not a descendant of CalculatorScreen — can open
+    // the history screen (§6.3's "Title bar" delta).
+    var isCalcHistoryVisible by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { DhruvWordmarkImage(height = 26.dp) },
-                actions = {
-                    IconButton(onClick = onOpenAppSwitcher) {
-                        Icon(Icons.Default.Apps, contentDescription = "Switch app")
-                    }
-                    IconButton(
-                        onClick = { onOpenDetail(DetailRoute.Settings) },
-                        modifier = Modifier.testTag("top_bar_settings_button"),
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Open Settings")
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-            )
+            if (tabs[pagerState.currentPage] == TabKey.CALC) {
+                val calcResult by calculatorViewModel.result.collectAsStateWithLifecycle()
+                val calcInputText by calculatorViewModel.inputState.collectAsStateWithLifecycle()
+                val clipboardManager = LocalClipboardManager.current
+                val context = LocalContext.current
+                CalcTopBar(
+                    onOpenHistory = { isCalcHistoryVisible = true },
+                    onCopyResult = {
+                        copyResultToClipboard(calcResult, calcInputText.text, clipboardManager, context)
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = { DhruvWordmarkImage(height = 26.dp) },
+                    actions = {
+                        IconButton(onClick = onOpenAppSwitcher) {
+                            Icon(Icons.Default.Apps, contentDescription = "Switch app")
+                        }
+                        IconButton(
+                            onClick = { onOpenDetail(DetailRoute.Settings) },
+                            modifier = Modifier.testTag("top_bar_settings_button"),
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Open Settings")
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                )
+            }
         },
         bottomBar = {
             BottomBar(
@@ -278,6 +310,8 @@ private fun TabsScaffold(
                             resolver = resolver,
                             crashReporter = crashReporter,
                             onOpenDetail = onOpenDetail,
+                            isHistoryVisible = isCalcHistoryVisible,
+                            onHistoryVisibleChange = { isCalcHistoryVisible = it },
                         )
                     TabKey.PLAN ->
                         PlanTab(
@@ -311,38 +345,76 @@ private fun TabKey.toBottomBarTab(): BottomBarTab =
         TabKey.INSIGHTS -> BottomBarTab("insights", "Insights", Icons.Default.BarChart)
     }
 
+/**
+ * The Calc tab's bespoke DhruvNext title bar (§6.3): "Calculator" on the left, history + copy
+ * icon buttons (40dp touch target, 21dp glyph) on the right. [TabsScaffold] swaps this in for the
+ * shared wordmark [TopAppBar] only while the Calc tab is selected — a `Scaffold` has exactly one
+ * `topBar` slot, so the two bars can't render simultaneously; other tabs keep the wordmark bar
+ * this pass.
+ */
+@Composable
+private fun CalcTopBar(
+    onOpenHistory: () -> Unit,
+    onCopyResult: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalDhruvNextColors.current
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(colors.surf)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .height(52.dp)
+                .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Calculator",
+            color = colors.tx,
+            fontSize = DhruvNextType.title,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.3).sp,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onOpenHistory, modifier = Modifier.size(40.dp)) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = "History",
+                tint = colors.tx2,
+                modifier = Modifier.size(21.dp),
+            )
+        }
+        IconButton(onClick = onCopyResult, modifier = Modifier.size(40.dp)) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = "Copy result",
+                tint = colors.tx2,
+                modifier = Modifier.size(21.dp),
+            )
+        }
+    }
+}
+
 @Composable
 private fun CalcTab(
     calculatorViewModel: CalculatorViewModel,
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     onOpenDetail: (DetailRoute) -> Unit,
+    isHistoryVisible: Boolean,
+    onHistoryVisibleChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        // Date/Time have no restyled entry point yet (D8 scope) — temporary bridge row, same
-        // pattern D2 used for all four before D3 gave Currency/Units a real one (the mode chip
-        // row inside CalculatorScreen itself, below).
-        if (resolver.isEnabled("date") || resolver.isEnabled("time")) {
-            Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                if (resolver.isEnabled("date")) {
-                    IconButton(onClick = { onOpenDetail(DetailRoute.DateTool) }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Date")
-                    }
-                }
-                if (resolver.isEnabled("time")) {
-                    IconButton(onClick = { onOpenDetail(DetailRoute.TimeTool) }) {
-                        Icon(Icons.Default.AccessTime, contentDescription = "Time")
-                    }
-                }
-            }
-        }
         val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
         FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
             CalculatorScreen(
                 viewModel = calculatorViewModel,
                 onOpenCurrency = { onOpenDetail(DetailRoute.Currency) },
                 onOpenUnit = { onOpenDetail(DetailRoute.UnitConverter) },
+                isHistoryVisible = isHistoryVisible,
+                onHistoryVisibleChange = onHistoryVisibleChange,
             )
         }
     }
