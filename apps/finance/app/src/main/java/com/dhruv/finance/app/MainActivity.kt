@@ -7,20 +7,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DonutSmall
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +40,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,6 +79,7 @@ import com.dhruv.finance.app.ui.shell.UnitDetailContent
 import com.dhruv.finance.app.ui.splash.SplashScreen
 import com.dhruv.finance.calculator.CalculatorScreen
 import com.dhruv.finance.calculator.CalculatorViewModel
+import com.dhruv.finance.calculator.copyResultToClipboard
 import com.dhruv.finance.everyday.EverydayScreen
 import com.dhruv.finance.everyday.EverydayViewModel
 import com.dhruv.finance.investments.InvestmentsScreen
@@ -190,27 +193,19 @@ private fun AppShell(
         onDispose { callback.remove() }
     }
 
-    val route = detailRoute
-    if (route != null) {
-        DetailRouteContent(
-            route = route,
-            resolver = resolver,
-            crashReporter = crashReporter,
-            settingsRepository = settingsRepository,
-            onClearHistory = onClearHistory,
-            onBack = { detailRoute = null },
-        )
-    } else {
-        TabsScaffold(
-            pagerState = pagerState,
-            resolver = resolver,
-            crashReporter = crashReporter,
-            calculatorViewModel = calculatorViewModel,
-            planNavController = planNavController,
-            onOpenDetail = { detailRoute = it },
-            onOpenAppSwitcher = { showAppSwitcher = true },
-        )
-    }
+    TabsScaffold(
+        pagerState = pagerState,
+        resolver = resolver,
+        crashReporter = crashReporter,
+        calculatorViewModel = calculatorViewModel,
+        planNavController = planNavController,
+        detailRoute = detailRoute,
+        settingsRepository = settingsRepository,
+        onClearHistory = onClearHistory,
+        onOpenDetail = { detailRoute = it },
+        onDismissDetail = { detailRoute = null },
+        onOpenAppSwitcher = { showAppSwitcher = true },
+    )
 
     if (showAppSwitcher) {
         AppSwitcherSheet(onDismiss = { showAppSwitcher = false })
@@ -225,34 +220,60 @@ private fun TabsScaffold(
     crashReporter: CrashReporter,
     calculatorViewModel: CalculatorViewModel,
     planNavController: NavHostController,
+    detailRoute: DetailRoute?,
+    settingsRepository: SettingsRepository,
+    onClearHistory: () -> Unit,
     onOpenDetail: (DetailRoute) -> Unit,
+    onDismissDetail: () -> Unit,
     onOpenAppSwitcher: () -> Unit,
 ) {
     val tabs = TabKey.entries
     val coroutineScope = rememberCoroutineScope()
 
+    // Hoisted here (not inside CalculatorScreen) so the Calc-tab title bar below — a sibling of
+    // the pager content in this same Scaffold, not a descendant of CalculatorScreen — can open
+    // the history screen (§6.3's "Title bar" delta).
+    var isCalcHistoryVisible by remember { mutableStateOf(false) }
+
+    val calcResult by calculatorViewModel.result.collectAsStateWithLifecycle()
+    val calcInputText by calculatorViewModel.inputState.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { DhruvWordmarkImage(height = 26.dp) },
-                actions = {
-                    IconButton(onClick = onOpenAppSwitcher) {
-                        Icon(Icons.Default.Apps, contentDescription = "Switch app")
-                    }
-                    IconButton(
-                        onClick = { onOpenDetail(DetailRoute.Settings) },
-                        modifier = Modifier.testTag("top_bar_settings_button"),
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Open Settings")
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-            )
+            if (detailRoute == null) {
+                TopAppBar(
+                    title = { DhruvWordmarkImage(height = 26.dp) },
+                    actions = {
+                        if (tabs[pagerState.currentPage] == TabKey.CALC) {
+                            IconButton(onClick = { isCalcHistoryVisible = true }) {
+                                Icon(Icons.Default.History, contentDescription = "History")
+                            }
+                            IconButton(
+                                onClick = { copyResultToClipboard(calcResult, calcInputText.text, clipboardManager, context) },
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy result")
+                            }
+                        }
+                        IconButton(onClick = onOpenAppSwitcher) {
+                            Icon(Icons.Default.Apps, contentDescription = "Switch app")
+                        }
+                        IconButton(
+                            onClick = { onOpenDetail(DetailRoute.Settings) },
+                            modifier = Modifier.testTag("top_bar_settings_button"),
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Open Settings")
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                )
+            }
         },
         bottomBar = {
             BottomBar(
@@ -266,38 +287,52 @@ private fun TabsScaffold(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
-            ) { page ->
-                when (tabs[page]) {
-                    TabKey.HOME -> DashboardScreen()
-                    TabKey.CALC ->
-                        CalcTab(
-                            calculatorViewModel = calculatorViewModel,
-                            resolver = resolver,
-                            crashReporter = crashReporter,
-                            onOpenDetail = onOpenDetail,
-                        )
-                    TabKey.PLAN ->
-                        PlanTab(
-                            navController = planNavController,
-                            resolver = resolver,
-                            crashReporter = crashReporter,
-                        )
-                    TabKey.INSIGHTS ->
-                        EmptyStateCard(
-                            message = "Insights lands once expense tracking ships",
-                            modifier = Modifier.padding(24.dp),
-                        )
-                }
-            }
-
-            if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
-                AskPill(
-                    onClick = { onOpenDetail(DetailRoute.Ask) },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            if (detailRoute != null) {
+                DetailRouteContent(
+                    route = detailRoute,
+                    resolver = resolver,
+                    crashReporter = crashReporter,
+                    settingsRepository = settingsRepository,
+                    onClearHistory = onClearHistory,
+                    onBack = onDismissDetail,
                 )
+            } else {
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = false,
+                    modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
+                ) { page ->
+                    when (tabs[page]) {
+                        TabKey.HOME -> DashboardScreen()
+                        TabKey.CALC ->
+                            CalcTab(
+                                calculatorViewModel = calculatorViewModel,
+                                resolver = resolver,
+                                crashReporter = crashReporter,
+                                onOpenDetail = onOpenDetail,
+                                isHistoryVisible = isCalcHistoryVisible,
+                                onHistoryVisibleChange = { isCalcHistoryVisible = it },
+                            )
+                        TabKey.PLAN ->
+                            PlanTab(
+                                navController = planNavController,
+                                resolver = resolver,
+                                crashReporter = crashReporter,
+                            )
+                        TabKey.INSIGHTS ->
+                            EmptyStateCard(
+                                message = "Insights lands once expense tracking ships",
+                                modifier = Modifier.padding(24.dp),
+                            )
+                    }
+                }
+
+                if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
+                    AskPill(
+                        onClick = { onOpenDetail(DetailRoute.Ask) },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+                    )
+                }
             }
         }
     }
@@ -317,32 +352,19 @@ private fun CalcTab(
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     onOpenDetail: (DetailRoute) -> Unit,
+    isHistoryVisible: Boolean,
+    onHistoryVisibleChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        // Date/Time have no restyled entry point yet (D8 scope) — temporary bridge row, same
-        // pattern D2 used for all four before D3 gave Currency/Units a real one (the mode chip
-        // row inside CalculatorScreen itself, below).
-        if (resolver.isEnabled("date") || resolver.isEnabled("time")) {
-            Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                if (resolver.isEnabled("date")) {
-                    IconButton(onClick = { onOpenDetail(DetailRoute.DateTool) }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Date")
-                    }
-                }
-                if (resolver.isEnabled("time")) {
-                    IconButton(onClick = { onOpenDetail(DetailRoute.TimeTool) }) {
-                        Icon(Icons.Default.AccessTime, contentDescription = "Time")
-                    }
-                }
-            }
-        }
         val error by calculatorViewModel.featureError.collectAsStateWithLifecycle()
         FeatureHost("calculator", resolver.isEnabled("calculator"), error, crashReporter) {
             CalculatorScreen(
                 viewModel = calculatorViewModel,
                 onOpenCurrency = { onOpenDetail(DetailRoute.Currency) },
                 onOpenUnit = { onOpenDetail(DetailRoute.UnitConverter) },
+                isHistoryVisible = isHistoryVisible,
+                onHistoryVisibleChange = onHistoryVisibleChange,
             )
         }
     }

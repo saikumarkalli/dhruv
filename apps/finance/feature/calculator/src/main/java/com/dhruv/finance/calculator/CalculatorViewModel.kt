@@ -6,13 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
 import com.dhruv.finance.calculator.engine.CalculatorEngine
 import com.dhruv.finance.data.GeminiRepository
 import com.dhruv.finance.data.HistoryEntity
 import com.dhruv.finance.data.HistoryRepository
 import com.dhruv.settings.SettingsRepository
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -46,18 +46,10 @@ class CalculatorViewModel(
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
     private val geminiRepository: GeminiRepository,
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    // FeatureHost error surface
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val coroutineExceptionHandler =
-        CoroutineExceptionHandler { _, e ->
-            crashReporter.recordException(e)
-            _featureError.value = e
-        }
+) : FeatureViewModel(crashReporter, "calculator") {
+    private val coroutineExceptionHandler = exceptionHandler
 
     private val _input = MutableStateFlow("")
     val input: StateFlow<String> = _input.asStateFlow()
@@ -138,8 +130,6 @@ class CalculatorViewModel(
     private var isResultFresh = false
 
     init {
-        crashReporter.setModule("calculator")
-        // Auto remove items in recycle bin older than 30 days
         viewModelScope.launch(coroutineExceptionHandler) {
             historyRepository.pruneOldRecycleBin()
         }

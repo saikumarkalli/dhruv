@@ -3,12 +3,8 @@
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>NestedBlockDepth:DateViewModel.kt$DateViewModel$fun calculateBusinessDays( date1: Calendar, date2: Calendar, ): BusinessDaysResult</ID>
-    <ID>SwallowedException:DateViewModel.kt$DateViewModel$e: Exception</ID>
     <ID>SwallowedException:TimeZoneConverterView.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DateViewModel.kt$DateViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:TimeZoneConverterView.kt$e: Exception</ID>
-    <ID>UnusedPrivateProperty:DateScreen.kt$val context = LocalContext.current</ID>
-    <ID>UnusedPrivateProperty:DateViewModel.kt$DateViewModel$private val exceptionHandler = CoroutineExceptionHandler { _, throwable -&gt; crashReporter.recordException(throwable) _featureError.value = throwable }</ID>
-    <ID>UnusedPrivateProperty:DateViewModel.kt$DateViewModel$private val performanceTracer: PerformanceTracer</ID>
   </CurrentIssues>
 </SmellBaseline>

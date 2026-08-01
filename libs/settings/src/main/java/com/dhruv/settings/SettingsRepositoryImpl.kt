@@ -72,142 +72,59 @@ class SettingsRepositoryImpl(
             }
         }
 
+    // ── Shared helpers for the legacy get/set pairs ────────────────────────────────────────────
+    // Every legacy StateFlow property + setter below follows the exact same
+    // "read with default, write plain" shape; these two helpers collapse that duplication.
+
+    private fun <T> preferenceFlow(
+        key: Preferences.Key<T>,
+        default: T,
+    ): StateFlow<T> =
+        stateFlow(
+            flow =
+                context.appDataStore.data
+                    .catchAndLog()
+                    .map { it[key] ?: default },
+            initial = initialPrefs[key] ?: default,
+        )
+
+    private fun <T> setPreference(
+        key: Preferences.Key<T>,
+        value: T,
+    ) = editPlain { it[key] = value }
+
     // ── Legacy StateFlow properties ────────────────────────────────────────────────────────────
 
-    override val isDegree: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_DEGREE] ?: true },
-            initial = initialPrefs[SettingsKeys.IS_DEGREE] ?: true,
-        )
+    override val isDegree: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_DEGREE, true)
 
-    override val darkModePreference: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.DARK_MODE] ?: "system" },
-            initial = initialPrefs[SettingsKeys.DARK_MODE] ?: "system",
-        )
+    override val darkModePreference: StateFlow<String> = preferenceFlow(SettingsKeys.DARK_MODE, "system")
 
     override val decimalPrecision: StateFlow<Int> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.DECIMAL_PRECISION] ?: 4 },
-            initial = initialPrefs[SettingsKeys.DECIMAL_PRECISION] ?: 4,
-        )
+        preferenceFlow(SettingsKeys.DECIMAL_PRECISION, DEFAULT_DECIMAL_PRECISION)
 
-    override val isHistoryLocked: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_HISTORY_LOCKED] ?: false },
-            initial = initialPrefs[SettingsKeys.IS_HISTORY_LOCKED] ?: false,
-        )
+    override val isHistoryLocked: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_HISTORY_LOCKED, false)
 
-    override val historyPinCode: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.HISTORY_PIN_CODE] ?: "1234" },
-            initial = initialPrefs[SettingsKeys.HISTORY_PIN_CODE] ?: "1234",
-        )
+    override val historyPinCode: StateFlow<String> = preferenceFlow(SettingsKeys.HISTORY_PIN_CODE, DEFAULT_PIN_CODE)
 
-    override val calculatorColor: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.COLOR_CALCULATOR] ?: "cyan" },
-            initial = initialPrefs[SettingsKeys.COLOR_CALCULATOR] ?: "cyan",
-        )
+    override val calculatorColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_CALCULATOR, "cyan")
 
-    override val converterColor: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.COLOR_CONVERTER] ?: "purple" },
-            initial = initialPrefs[SettingsKeys.COLOR_CONVERTER] ?: "purple",
-        )
+    override val converterColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_CONVERTER, "purple")
 
-    override val dateColor: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.COLOR_DATE] ?: "coral" },
-            initial = initialPrefs[SettingsKeys.COLOR_DATE] ?: "coral",
-        )
+    override val dateColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_DATE, "coral")
 
-    override val financeColor: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.COLOR_FINANCE] ?: "amber" },
-            initial = initialPrefs[SettingsKeys.COLOR_FINANCE] ?: "amber",
-        )
+    override val financeColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_FINANCE, "amber")
 
-    override val formatLocale: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.FORMAT_LOCALE] ?: "international" },
-            initial = initialPrefs[SettingsKeys.FORMAT_LOCALE] ?: "international",
-        )
+    override val formatLocale: StateFlow<String> = preferenceFlow(SettingsKeys.FORMAT_LOCALE, "international")
 
-    override val isConverterEnabled: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_CONVERTER_ENABLED] ?: true },
-            initial = initialPrefs[SettingsKeys.IS_CONVERTER_ENABLED] ?: true,
-        )
+    override val isConverterEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_CONVERTER_ENABLED, true)
 
-    override val isDateEnabled: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_DATE_ENABLED] ?: true },
-            initial = initialPrefs[SettingsKeys.IS_DATE_ENABLED] ?: true,
-        )
+    override val isDateEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_DATE_ENABLED, true)
 
-    override val isFinanceEnabled: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_FINANCE_ENABLED] ?: true },
-            initial = initialPrefs[SettingsKeys.IS_FINANCE_ENABLED] ?: true,
-        )
+    override val isFinanceEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_FINANCE_ENABLED, true)
 
-    override val timeColor: StateFlow<String> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.COLOR_TIME] ?: "teal" },
-            initial = initialPrefs[SettingsKeys.COLOR_TIME] ?: "teal",
-        )
+    override val timeColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_TIME, "teal")
 
-    override val isTimeEnabled: StateFlow<Boolean> =
-        stateFlow(
-            flow =
-                context.appDataStore.data
-                    .catchAndLog()
-                    .map { it[SettingsKeys.IS_TIME_ENABLED] ?: true },
-            initial = initialPrefs[SettingsKeys.IS_TIME_ENABLED] ?: true,
-        )
+    override val isTimeEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_TIME_ENABLED, true)
 
     // ── New Phase-3 API ───────────────────────────────────────────────────────────────────────
 
@@ -293,35 +210,35 @@ class SettingsRepositoryImpl(
 
     // ── Legacy setters ────────────────────────────────────────────────────────────────────────
 
-    override fun setDegree(degree: Boolean) = editPlain { it[SettingsKeys.IS_DEGREE] = degree }
+    override fun setDegree(degree: Boolean) = setPreference(SettingsKeys.IS_DEGREE, degree)
 
-    override fun setDarkModePreference(preference: String) = editPlain { it[SettingsKeys.DARK_MODE] = preference }
+    override fun setDarkModePreference(preference: String) = setPreference(SettingsKeys.DARK_MODE, preference)
 
-    override fun setDecimalPrecision(precision: Int) = editPlain { it[SettingsKeys.DECIMAL_PRECISION] = precision }
+    override fun setDecimalPrecision(precision: Int) = setPreference(SettingsKeys.DECIMAL_PRECISION, precision)
 
-    override fun setHistoryLocked(locked: Boolean) = editPlain { it[SettingsKeys.IS_HISTORY_LOCKED] = locked }
+    override fun setHistoryLocked(locked: Boolean) = setPreference(SettingsKeys.IS_HISTORY_LOCKED, locked)
 
-    override fun setHistoryPinCode(pin: String) = editPlain { it[SettingsKeys.HISTORY_PIN_CODE] = pin }
+    override fun setHistoryPinCode(pin: String) = setPreference(SettingsKeys.HISTORY_PIN_CODE, pin)
 
-    override fun setCalculatorColor(color: String) = editPlain { it[SettingsKeys.COLOR_CALCULATOR] = color }
+    override fun setCalculatorColor(color: String) = setPreference(SettingsKeys.COLOR_CALCULATOR, color)
 
-    override fun setConverterColor(color: String) = editPlain { it[SettingsKeys.COLOR_CONVERTER] = color }
+    override fun setConverterColor(color: String) = setPreference(SettingsKeys.COLOR_CONVERTER, color)
 
-    override fun setDateColor(color: String) = editPlain { it[SettingsKeys.COLOR_DATE] = color }
+    override fun setDateColor(color: String) = setPreference(SettingsKeys.COLOR_DATE, color)
 
-    override fun setFinanceColor(color: String) = editPlain { it[SettingsKeys.COLOR_FINANCE] = color }
+    override fun setFinanceColor(color: String) = setPreference(SettingsKeys.COLOR_FINANCE, color)
 
-    override fun setFormatLocale(locale: String) = editPlain { it[SettingsKeys.FORMAT_LOCALE] = locale }
+    override fun setFormatLocale(locale: String) = setPreference(SettingsKeys.FORMAT_LOCALE, locale)
 
-    override fun setConverterEnabled(enabled: Boolean) = editPlain { it[SettingsKeys.IS_CONVERTER_ENABLED] = enabled }
+    override fun setConverterEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_CONVERTER_ENABLED, enabled)
 
-    override fun setDateEnabled(enabled: Boolean) = editPlain { it[SettingsKeys.IS_DATE_ENABLED] = enabled }
+    override fun setDateEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_DATE_ENABLED, enabled)
 
-    override fun setFinanceEnabled(enabled: Boolean) = editPlain { it[SettingsKeys.IS_FINANCE_ENABLED] = enabled }
+    override fun setFinanceEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_FINANCE_ENABLED, enabled)
 
-    override fun setTimeColor(color: String) = editPlain { it[SettingsKeys.COLOR_TIME] = color }
+    override fun setTimeColor(color: String) = setPreference(SettingsKeys.COLOR_TIME, color)
 
-    override fun setTimeEnabled(enabled: Boolean) = editPlain { it[SettingsKeys.IS_TIME_ENABLED] = enabled }
+    override fun setTimeEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_TIME_ENABLED, enabled)
 
     override fun isToolEnabled(
         key: String,
@@ -362,5 +279,10 @@ class SettingsRepositoryImpl(
             flow.collect { sf.value = it }
         }
         return sf
+    }
+
+    internal companion object Defaults {
+        const val DEFAULT_PIN_CODE = "1234"
+        const val DEFAULT_DECIMAL_PRECISION = 4
     }
 }

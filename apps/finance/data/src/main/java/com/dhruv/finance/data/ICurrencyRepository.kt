@@ -11,6 +11,8 @@ interface ICurrencyRepository {
      */
     suspend fun getRate(code: String): Double?
 
+    suspend fun getLastUpdateTimestamp(): Long?
+
     /**
      * Performs a network fetch to synchronize local rates.
      * Uses a self-healing fallback mechanism.

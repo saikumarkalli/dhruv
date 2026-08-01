@@ -10,7 +10,7 @@
     <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$fun formatLocaleSeparator( numberStr: String, format: String, ): String</ID>
     <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
     <ID>CyclomaticComplexMethod:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
-    <ID>LargeClass:CalculatorViewModel.kt$CalculatorViewModel : ViewModel</ID>
+    <ID>LargeClass:CalculatorViewModel.kt$CalculatorViewModel : FeatureViewModel</ID>
     <ID>LongMethod:CalculatorEngine.kt$CalculatorEngine.Parser$fun parseFactor( contextValue: Double? = null, isAdder: Boolean = false, ): Double</ID>
     <ID>LongMethod:CalculatorViewModel.kt$CalculatorViewModel$fun onKeyPress(key: String)</ID>
     <ID>LongMethod:CalculatorViewModel.kt$CalculatorViewModel$private fun toggleLastOperand(expr: String): String</ID>
@@ -37,7 +37,6 @@
     <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unexpected character at position $pos: " + ch.toChar())</ID>
     <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unexpected element: " + ch.toChar())</ID>
     <ID>TooGenericExceptionThrown:CalculatorEngine.kt$CalculatorEngine.Parser$throw RuntimeException("Unknown function: $func")</ID>
-    <ID>UnusedParameter:CalculatorScreen.kt$isSelectionActive: Boolean</ID>
     <ID>VariableNaming:CalculatorEngineDeepEdgeTest.kt$CalculatorEngineDeepEdgeTest$private val D = 1e-9</ID>
     <ID>VariableNaming:CalculatorEngineEdgeCaseTest.kt$CalculatorEngineEdgeCaseTest$private val D = 1e-9</ID>
   </CurrentIssues>

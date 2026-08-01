@@ -2,6 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>UnusedPrivateProperty:LoansViewModel.kt$LoansViewModel$private val exceptionHandler = CoroutineExceptionHandler { _, throwable -&gt; crashReporter.recordException(throwable) _featureError.value = throwable }</ID>
   </CurrentIssues>
 </SmellBaseline>

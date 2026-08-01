@@ -1,30 +1,18 @@
 package com.dhruv.finance.unit
 
-import androidx.lifecycle.ViewModel
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 class UnitViewModel(
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    @Suppress("unused") // consumed by FeatureHost in the app shell
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
-
+) : FeatureViewModel(crashReporter, "unit") {
     // --- Length Conversion State ---
     private val _lengthInput = MutableStateFlow("1")
     val lengthInput = _lengthInput.asStateFlow()
@@ -50,6 +38,32 @@ class UnitViewModel(
 
     private val _massResult = MutableStateFlow("2.20462")
     val massResult = _massResult.asStateFlow()
+
+    // --- Area Conversion State ---
+    private val _areaInput = MutableStateFlow("1")
+    val areaInput = _areaInput.asStateFlow()
+
+    private val _areaFromUnit = MutableStateFlow(AreaUnit.SQUARE_METERS)
+    val areaFromUnit = _areaFromUnit.asStateFlow()
+
+    private val _areaToUnit = MutableStateFlow(AreaUnit.SQUARE_FEET)
+    val areaToUnit = _areaToUnit.asStateFlow()
+
+    private val _areaResult = MutableStateFlow("10.76391")
+    val areaResult = _areaResult.asStateFlow()
+
+    // --- Temperature Conversion State ---
+    private val _tempInput = MutableStateFlow("1")
+    val tempInput = _tempInput.asStateFlow()
+
+    private val _tempFromUnit = MutableStateFlow(TemperatureUnit.CELSIUS)
+    val tempFromUnit = _tempFromUnit.asStateFlow()
+
+    private val _tempToUnit = MutableStateFlow(TemperatureUnit.FAHRENHEIT)
+    val tempToUnit = _tempToUnit.asStateFlow()
+
+    private val _tempResult = MutableStateFlow("33.8")
+    val tempResult = _tempResult.asStateFlow()
 
     init {
         crashReporter.setModule("unit")
@@ -108,6 +122,62 @@ class UnitViewModel(
             }
             val converted = MassUnit.convert(valDouble, _massFromUnit.value, _massToUnit.value)
             _massResult.value = formatValue(converted)
+        }
+    }
+
+    // --- Area Logic ---
+    fun setAreaInput(input: String) {
+        _areaInput.value = input
+        recalculateArea()
+    }
+
+    fun setAreaFromUnit(unit: AreaUnit) {
+        _areaFromUnit.value = unit
+        recalculateArea()
+    }
+
+    fun setAreaToUnit(unit: AreaUnit) {
+        _areaToUnit.value = unit
+        recalculateArea()
+    }
+
+    private fun recalculateArea() {
+        performanceTracer.trace("unit_convert") {
+            val valDouble = _areaInput.value.toDoubleOrNull()
+            if (valDouble == null) {
+                _areaResult.value = ""
+                return@trace
+            }
+            val converted = AreaUnit.convert(valDouble, _areaFromUnit.value, _areaToUnit.value)
+            _areaResult.value = formatValue(converted)
+        }
+    }
+
+    // --- Temperature Logic ---
+    fun setTempInput(input: String) {
+        _tempInput.value = input
+        recalculateTemp()
+    }
+
+    fun setTempFromUnit(unit: TemperatureUnit) {
+        _tempFromUnit.value = unit
+        recalculateTemp()
+    }
+
+    fun setTempToUnit(unit: TemperatureUnit) {
+        _tempToUnit.value = unit
+        recalculateTemp()
+    }
+
+    private fun recalculateTemp() {
+        performanceTracer.trace("unit_convert") {
+            val valDouble = _tempInput.value.toDoubleOrNull()
+            if (valDouble == null) {
+                _tempResult.value = ""
+                return@trace
+            }
+            val converted = TemperatureUnit.convert(valDouble, _tempFromUnit.value, _tempToUnit.value)
+            _tempResult.value = formatValue(converted)
         }
     }
 

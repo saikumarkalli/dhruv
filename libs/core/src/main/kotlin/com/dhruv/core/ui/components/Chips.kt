@@ -44,13 +44,23 @@ fun Chip(
     }
 }
 
-/** A fully-rounded pill — mode selectors, CTAs, preset amount/tip chips. */
+/**
+ * A fully-rounded pill — mode selectors, CTAs, preset amount/tip chips.
+ *
+ * [strong] switches the selected/unselected styling from the default accent-soft look (preset
+ * amount/tip chips — `selected` = `accSoft` bg + `acc` text) to the segment/strong look DhruvNext
+ * uses for mode/category selectors (`selected` = solid `tx` bg + `bg` text + 700 weight;
+ * unselected = `surf` bg + a 1dp `line` border + 600 weight, instead of the soft variant's
+ * borderless `surf2` + 500 weight). [filled] (the solid-accent CTA look, e.g. [AskPill]) takes
+ * precedence over both if combined.
+ */
 @Composable
 fun Pill(
     label: String,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     filled: Boolean = false,
+    strong: Boolean = false,
     leadingIcon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
 ) {
@@ -58,16 +68,32 @@ fun Pill(
     val background =
         when {
             filled -> colors.acc
+            strong && selected -> colors.tx
+            strong -> colors.surf
             selected -> colors.accSoft
             else -> colors.surf2
         }
     val textColor =
         when {
             filled -> colors.onAcc
+            strong && selected -> colors.bg
+            strong -> colors.tx2
             selected -> colors.acc
             else -> colors.tx2
         }
-    val border = if (selected && !filled) BorderStroke(1.dp, colors.accLine) else null
+    val fontWeight =
+        when {
+            filled -> FontWeight.Medium
+            strong && selected -> FontWeight.Bold
+            strong -> FontWeight.SemiBold
+            else -> FontWeight.Medium
+        }
+    val border =
+        when {
+            strong && !selected -> BorderStroke(1.dp, colors.line)
+            selected && !filled && !strong -> BorderStroke(1.dp, colors.accLine)
+            else -> null
+        }
 
     Row(
         modifier =
@@ -87,6 +113,6 @@ fun Pill(
                 modifier = Modifier.padding(end = 6.dp),
             )
         }
-        Text(text = label, color = textColor, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
+        Text(text = label, color = textColor, fontSize = DhruvNextType.body, fontWeight = fontWeight)
     }
 }

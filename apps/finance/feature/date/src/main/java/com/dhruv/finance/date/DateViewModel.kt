@@ -1,9 +1,8 @@
 package com.dhruv.finance.date
 
-import androidx.lifecycle.ViewModel
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,22 +20,9 @@ import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class DateViewModel(
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    init {
-        crashReporter.setModule("date")
-    }
-
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
-
+) : FeatureViewModel(crashReporter, "date") {
     private val _activeSubCalculator = MutableStateFlow<Int?>(null)
     val activeSubCalculator: StateFlow<Int?> = _activeSubCalculator.asStateFlow()
 
@@ -125,65 +111,66 @@ class DateViewModel(
     fun calculateAge(
         birthDate: Calendar,
         referenceDate: Calendar,
-    ): AgeResult {
-        if (birthDate.after(referenceDate)) {
-            return AgeResult(0, 0, 0, 0, 0, "Monday", 0L, 0, 0L, 0L, 0L)
+    ): AgeResult =
+        performanceTracer.trace("date_age_calc") {
+            if (birthDate.after(referenceDate)) {
+                return@trace AgeResult(0, 0, 0, 0, 0, "Monday", 0L, 0, 0L, 0L, 0L)
+            }
+
+            var yrs = referenceDate.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
+            var mths = referenceDate.get(Calendar.MONTH) - birthDate.get(Calendar.MONTH)
+            var dys = referenceDate.get(Calendar.DAY_OF_MONTH) - birthDate.get(Calendar.DAY_OF_MONTH)
+
+            if (dys < 0) {
+                mths -= 1
+                val tempCal = birthDate.clone() as Calendar
+                tempCal.add(Calendar.MONTH, yrs * 12 + mths)
+                val daysInBirthMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                dys += daysInBirthMonth
+            }
+            if (mths < 0) {
+                yrs -= 1
+                mths += 12
+            }
+
+            val nextBd = birthDate.clone() as Calendar
+            nextBd.set(Calendar.YEAR, referenceDate.get(Calendar.YEAR))
+            if (nextBd.before(referenceDate) || nextBd.equals(referenceDate)) {
+                nextBd.add(Calendar.YEAR, 1)
+            }
+
+            val dayOfWeekOfNextBirthday = SimpleDateFormat("EEEE", Locale.US).format(nextBd.time)
+
+            var nMonths = nextBd.get(Calendar.MONTH) - referenceDate.get(Calendar.MONTH)
+            var nDays = nextBd.get(Calendar.DAY_OF_MONTH) - referenceDate.get(Calendar.DAY_OF_MONTH)
+
+            if (nDays < 0) {
+                nMonths -= 1
+                val tempCal = referenceDate.clone() as Calendar
+                val daysInMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                nDays += daysInMonth
+            }
+            if (nMonths < 0) {
+                nMonths += 12
+            }
+
+            val totalMs = referenceDate.timeInMillis - birthDate.timeInMillis
+            val tDays = if (totalMs >= 0) TimeUnit.MILLISECONDS.toDays(totalMs) else 0L
+
+            AgeResult(
+                years = yrs,
+                months = mths,
+                days = dys,
+                nextMonths = nMonths,
+                nextDays = nDays,
+                dayOfWeekOfNextBirthday = dayOfWeekOfNextBirthday,
+                totalDays = tDays,
+                totalMonths = yrs * 12 + mths,
+                totalWeeks = tDays / 7,
+                totalHours = tDays * 24,
+                totalMinutes = tDays * 24 * 60,
+            )
         }
-
-        var yrs = referenceDate.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
-        var mths = referenceDate.get(Calendar.MONTH) - birthDate.get(Calendar.MONTH)
-        var dys = referenceDate.get(Calendar.DAY_OF_MONTH) - birthDate.get(Calendar.DAY_OF_MONTH)
-
-        if (dys < 0) {
-            mths -= 1
-            val tempCal = birthDate.clone() as Calendar
-            tempCal.add(Calendar.MONTH, yrs * 12 + mths)
-            val daysInBirthMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            dys += daysInBirthMonth
-        }
-        if (mths < 0) {
-            yrs -= 1
-            mths += 12
-        }
-
-        val nextBd = birthDate.clone() as Calendar
-        nextBd.set(Calendar.YEAR, referenceDate.get(Calendar.YEAR))
-        if (nextBd.before(referenceDate) || nextBd.equals(referenceDate)) {
-            nextBd.add(Calendar.YEAR, 1)
-        }
-
-        val dayOfWeekOfNextBirthday = SimpleDateFormat("EEEE", Locale.US).format(nextBd.time)
-
-        var nMonths = nextBd.get(Calendar.MONTH) - referenceDate.get(Calendar.MONTH)
-        var nDays = nextBd.get(Calendar.DAY_OF_MONTH) - referenceDate.get(Calendar.DAY_OF_MONTH)
-
-        if (nDays < 0) {
-            nMonths -= 1
-            val tempCal = referenceDate.clone() as Calendar
-            val daysInMonth = tempCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            nDays += daysInMonth
-        }
-        if (nMonths < 0) {
-            nMonths += 12
-        }
-
-        val totalMs = referenceDate.timeInMillis - birthDate.timeInMillis
-        val tDays = if (totalMs >= 0) TimeUnit.MILLISECONDS.toDays(totalMs) else 0L
-
-        return AgeResult(
-            years = yrs,
-            months = mths,
-            days = dys,
-            nextMonths = nMonths,
-            nextDays = nDays,
-            dayOfWeekOfNextBirthday = dayOfWeekOfNextBirthday,
-            totalDays = tDays,
-            totalMonths = yrs * 12 + mths,
-            totalWeeks = tDays / 7,
-            totalHours = tDays * 24,
-            totalMinutes = tDays * 24 * 60,
-        )
-    }
 
     // --- 4. Business Working Days ---
     data class BusinessDaysResult(
@@ -232,6 +219,7 @@ class DateViewModel(
                 totalDays = totalDays.toInt(),
             )
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             BusinessDaysResult(0, 0, 0)
         }
     }
@@ -260,6 +248,7 @@ class DateViewModel(
             val formatter = DateTimeFormatter.ofPattern("hh:mm a (EEEE)", Locale.US)
             convertedTime.format(formatter)
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             "---"
         }
 
@@ -274,6 +263,7 @@ class DateViewModel(
             val sdfUtc = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
             "Local: ${sdfLocal.format(date)}\nUTC: ${sdfUtc.format(date)}"
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             "Invalid Timestamp Number"
         }
 
@@ -297,6 +287,7 @@ class DateViewModel(
                 }
             cal.timeInMillis / 1000
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             0L
         }
 }

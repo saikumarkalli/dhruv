@@ -16,5 +16,5 @@ val dataModule =
         single { get<AppDatabase>().currencyRateDao() }
 
         // Repositories
-        single<ICurrencyRepository> { CurrencyRepository(get(), get()) }
+        single<ICurrencyRepository> { CurrencyRepository(get(), get(), get()) }
     }

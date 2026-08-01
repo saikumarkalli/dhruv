@@ -73,6 +73,113 @@ class ConverterAndFormatterTest {
 
     @Test fun massVeryLarge() = assertMass(1_000_000.0, MassUnit.KILOGRAMS, MassUnit.GRAMS, 1e9)
 
+    // ── TEMPERATURE ──
+    // Affine (offset) conversions — NOT a ratio table. Pivoted through Celsius.
+    @Test fun tempCelsiusToFahrenheitFreezing() = assertTemp(0.0, TemperatureUnit.CELSIUS, TemperatureUnit.FAHRENHEIT, 32.0)
+
+    @Test fun tempCelsiusToKelvinFreezing() = assertTemp(0.0, TemperatureUnit.CELSIUS, TemperatureUnit.KELVIN, 273.15)
+
+    @Test fun tempCelsiusToFahrenheitBoiling() = assertTemp(100.0, TemperatureUnit.CELSIUS, TemperatureUnit.FAHRENHEIT, 212.0)
+
+    @Test fun tempCelsiusToKelvinBoiling() = assertTemp(100.0, TemperatureUnit.CELSIUS, TemperatureUnit.KELVIN, 373.15)
+
+    @Test fun tempCelsiusToFahrenheitCrossover() = assertTemp(-40.0, TemperatureUnit.CELSIUS, TemperatureUnit.FAHRENHEIT, -40.0)
+
+    @Test fun tempFahrenheitToCelsiusCrossover() = assertTemp(-40.0, TemperatureUnit.FAHRENHEIT, TemperatureUnit.CELSIUS, -40.0)
+
+    @Test fun tempFahrenheitToCelsiusNegative() = assertTemp(-4.0, TemperatureUnit.FAHRENHEIT, TemperatureUnit.CELSIUS, -20.0)
+
+    @Test fun tempKelvinToCelsius() = assertTemp(300.0, TemperatureUnit.KELVIN, TemperatureUnit.CELSIUS, 26.85)
+
+    @Test fun tempKelvinToFahrenheit() = assertTemp(0.0, TemperatureUnit.KELVIN, TemperatureUnit.FAHRENHEIT, -459.67)
+
+    @Test fun tempFahrenheitToKelvin() = assertTemp(32.0, TemperatureUnit.FAHRENHEIT, TemperatureUnit.KELVIN, 273.15)
+
+    @Test fun tempCelsiusSameUnitNoOp() = assertTemp(25.0, TemperatureUnit.CELSIUS, TemperatureUnit.CELSIUS, 25.0, 0.0)
+
+    @Test fun tempFahrenheitSameUnitNoOp() = assertTemp(98.6, TemperatureUnit.FAHRENHEIT, TemperatureUnit.FAHRENHEIT, 98.6, 0.0)
+
+    @Test fun tempKelvinSameUnitNoOp() = assertTemp(273.15, TemperatureUnit.KELVIN, TemperatureUnit.KELVIN, 273.15, 0.0)
+
+    // Absolute-zero floor: NOT clamped (see class doc / task report) — matches lengthNegative /
+    // massNegative above, which also don't reject physically-nonsensical negative values. -300°C
+    // is below absolute zero (-273.15°C); this returns the mathematically "wrong" negative Kelvin
+    // value rather than clamping to 0K, for consistency with the rest of this converter.
+    @Test fun tempBelowAbsoluteZeroNotClamped() = assertTemp(-300.0, TemperatureUnit.CELSIUS, TemperatureUnit.KELVIN, -26.85)
+
+    // ── AREA ──
+    @Test fun areaSqmToSqm() = assertArea(5.0, AreaUnit.SQUARE_METERS, AreaUnit.SQUARE_METERS, 5.0)
+
+    @Test fun areaSqkmToSqkm() = assertArea(2.0, AreaUnit.SQUARE_KILOMETERS, AreaUnit.SQUARE_KILOMETERS, 2.0)
+
+    @Test fun areaSqmToSqft() = assertArea(1.0, AreaUnit.SQUARE_METERS, AreaUnit.SQUARE_FEET, 1.0 / 0.09290304)
+
+    @Test fun areaSqftToSqm() = assertArea(1.0, AreaUnit.SQUARE_FEET, AreaUnit.SQUARE_METERS, 0.09290304)
+
+    @Test fun areaHectareToSqm() = assertArea(1.0, AreaUnit.HECTARES, AreaUnit.SQUARE_METERS, 10_000.0)
+
+    @Test fun areaSqmToHectare() = assertArea(20_000.0, AreaUnit.SQUARE_METERS, AreaUnit.HECTARES, 2.0)
+
+    @Test fun areaAcreToSqm() = assertArea(1.0, AreaUnit.ACRES, AreaUnit.SQUARE_METERS, 4046.8564224)
+
+    @Test fun areaSqkmToHectare() = assertArea(1.0, AreaUnit.SQUARE_KILOMETERS, AreaUnit.HECTARES, 100.0)
+
+    @Test fun areaZero() = assertArea(0.0, AreaUnit.SQUARE_KILOMETERS, AreaUnit.SQUARE_METERS, 0.0)
+
+    @Test fun areaNegative() = assertArea(-1.0, AreaUnit.HECTARES, AreaUnit.SQUARE_METERS, -10_000.0)
+
+    @Test fun areaVeryLarge() = assertArea(1_000_000.0, AreaUnit.SQUARE_METERS, AreaUnit.SQUARE_KILOMETERS, 1.0)
+
+    // ── MULTI-UNIT HELPER (backs Task 5's "12.5 km is also …" list) ──
+    @Test
+    fun multiUnitLengthExcludesSourceUnitAndConvertsAllOthers() {
+        val results = UnitCategory.Length.convertToOtherUnits(1000.0, LengthUnit.METERS)
+        val map = results.toMap()
+        assertEquals(LengthUnit.entries.size - 1, results.size)
+        assertFalse(map.containsKey(LengthUnit.METERS))
+        assertEquals(1.0, map.getValue(LengthUnit.KILOMETERS), D)
+        assertEquals(1000.0 / 0.3048, map.getValue(LengthUnit.FEET), 1e-6)
+    }
+
+    @Test
+    fun multiUnitMassExcludesSourceUnitAndConvertsAllOthers() {
+        val results = UnitCategory.Mass.convertToOtherUnits(1.0, MassUnit.KILOGRAMS)
+        val map = results.toMap()
+        assertEquals(MassUnit.entries.size - 1, results.size)
+        assertFalse(map.containsKey(MassUnit.KILOGRAMS))
+        assertEquals(1000.0, map.getValue(MassUnit.GRAMS), D)
+        assertEquals(1.0 / 0.45359237, map.getValue(MassUnit.POUNDS), 1e-6)
+    }
+
+    @Test
+    fun multiUnitAreaExcludesSourceUnitAndConvertsAllOthers() {
+        val results = UnitCategory.Area.convertToOtherUnits(10_000.0, AreaUnit.SQUARE_METERS)
+        val map = results.toMap()
+        assertEquals(AreaUnit.entries.size - 1, results.size)
+        assertFalse(map.containsKey(AreaUnit.SQUARE_METERS))
+        assertEquals(1.0, map.getValue(AreaUnit.HECTARES), D)
+    }
+
+    @Test
+    fun multiUnitTemperatureExcludesSourceUnitAndConvertsAllOthers() {
+        val results = UnitCategory.Temperature.convertToOtherUnits(0.0, TemperatureUnit.CELSIUS)
+        val map = results.toMap()
+        assertEquals(TemperatureUnit.entries.size - 1, results.size)
+        assertFalse(map.containsKey(TemperatureUnit.CELSIUS))
+        assertEquals(32.0, map.getValue(TemperatureUnit.FAHRENHEIT), D)
+        assertEquals(273.15, map.getValue(TemperatureUnit.KELVIN), D)
+    }
+
+    @Test
+    fun multiUnitTemperatureSameUnitNoOpStillExcluded() {
+        // Regression guard: filtering "every other unit" must compare by the from-unit's identity,
+        // not by converted value — a same-valued coincidence elsewhere must not hide a real unit.
+        val results = UnitCategory.Temperature.convertToOtherUnits(-40.0, TemperatureUnit.CELSIUS)
+        assertEquals(2, results.size)
+        assertTrue(results.any { it.first == TemperatureUnit.FAHRENHEIT })
+        assertTrue(results.any { it.first == TemperatureUnit.KELVIN })
+    }
+
     // ── CURRENCY FORMATTER ──
     @Test
     fun formatWholeNumber() {
@@ -156,4 +263,20 @@ class ConverterAndFormatterTest {
         expected: Double,
         delta: Double = D,
     ) = assertEquals(expected, converter.convertMass(value, from, to), delta)
+
+    private fun assertTemp(
+        value: Double,
+        from: TemperatureUnit,
+        to: TemperatureUnit,
+        expected: Double,
+        delta: Double = D,
+    ) = assertEquals(expected, converter.convertTemperature(value, from, to), delta)
+
+    private fun assertArea(
+        value: Double,
+        from: AreaUnit,
+        to: AreaUnit,
+        expected: Double,
+        delta: Double = D,
+    ) = assertEquals(expected, converter.convertArea(value, from, to), delta)
 }

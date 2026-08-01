@@ -26,7 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -45,6 +46,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,7 +66,6 @@ import com.dhruv.core.ui.components.Chip
 import com.dhruv.core.ui.components.ModeChipRow
 import com.dhruv.core.ui.components.NxInsetSurface
 import com.dhruv.core.ui.components.PeriodChipRow
-import com.dhruv.core.ui.components.Pill
 import com.dhruv.core.ui.components.SearchField
 import com.dhruv.core.ui.components.SectionLabel
 import com.dhruv.core.ui.theme.*
@@ -79,6 +80,11 @@ fun CalculatorScreen(
     modifier: Modifier = Modifier,
     onOpenCurrency: () -> Unit = {},
     onOpenUnit: () -> Unit = {},
+    // Hoisted so the DhruvNext Calc-tab title bar (MainActivity, §6.3) can open the history
+    // screen from outside this composable — it renders in the shared Scaffold's topBar slot, a
+    // sibling of this content, not a descendant, so a plain internal callback can't reach it.
+    isHistoryVisible: Boolean = false,
+    onHistoryVisibleChange: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val inputState by viewModel.inputState.collectAsState()
@@ -93,7 +99,7 @@ fun CalculatorScreen(
     val formatLocale by viewModel.formatLocale.collectAsState()
     val isResultFinalised by viewModel.isResultFinalised.collectAsState()
 
-    var showHistoryScreen by remember { mutableStateOf(false) }
+    val showHistoryScreen = isHistoryVisible
     var isHistoryUnlocked by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
     var isScientificMode by remember { mutableStateOf(false) }
@@ -241,27 +247,10 @@ fun CalculatorScreen(
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.End,
                 ) {
-                    // Top row: History icon button, top-right of display. The old inline "Solve with
-                    // AI" icon button now lives in the Explain/Tag/Save pill row below the result
-                    // (§6.3) instead of duplicating the affordance here.
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(
-                            onClick = { showHistoryScreen = true },
-                            modifier = Modifier.size(36.dp).testTag("key_btn_history_toggle"),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = "History",
-                                tint = themeSecText,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-
+                    // The history icon now lives in the DhruvNext Calc-tab title bar
+                    // (MainActivity, §6.3) instead of floating inside this card; the "Solve with
+                    // AI" affordance already moved to the Explain/Tag/Save pill row below the
+                    // result. This card no longer needs its own top row.
                     DropdownMenu(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false },
@@ -278,14 +267,7 @@ fun CalculatorScreen(
                             text = { Text("Copy Result") },
                             onClick = {
                                 showContextMenu = false
-                                val rawInputText = inputState.text
-                                val cleanRes = if (result.isNotEmpty()) result.removePrefix("=").trim() else rawInputText
-                                if (cleanRes.isNotEmpty() && !cleanRes.startsWith("Error")) {
-                                    clipboardManager.setText(AnnotatedString(cleanRes))
-                                    Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "No result to copy", Toast.LENGTH_SHORT).show()
-                                }
+                                copyResultToClipboard(result, inputState.text, clipboardManager, context)
                             },
                         )
                         DropdownMenuItem(
@@ -577,12 +559,14 @@ fun CalculatorScreen(
                     }
 
                     // ── EXPLAIN / TAG / SAVE PILL ROW (§6.3) ──
-                    // Explain = the existing "Solve with AI" affordance, restyled as a pill (same
-                    // viewModel.solveCurrentInput() call + AiExplanationState bottom sheet as before).
-                    // Tag has no backing ViewModel action on the live calculation yet, so it renders
-                    // as a real but disabled pill rather than faking persistence. Save is wired to the
-                    // closest honest existing action: starring the just-computed history entry via
-                    // viewModel.toggleFavorite (identical to the star toggle already in HistoryEntryCard).
+                    // Explain = the existing "Solve with AI" affordance (same viewModel.solveCurrentInput()
+                    // call + AiExplanationState bottom sheet as before). Tag has no backing ViewModel
+                    // action on the live calculation yet, so it renders as a real but disabled pill
+                    // rather than faking persistence. Save is wired to the closest honest existing
+                    // action: starring the just-computed history entry via viewModel.toggleFavorite
+                    // (identical to the star toggle already in HistoryEntryCard). These three use the
+                    // bespoke CalcActionPill (not the shared Pill component) because the design's
+                    // 30dp/11.5sp mini-pill spec doesn't match Pill's fixed body-text sizing.
                     val latestHistoryEntry = activeHistory.firstOrNull()
                     val canExplain = inputState.text.isNotEmpty()
                     val canSave = isResultFinalised && latestHistoryEntry != null
@@ -592,37 +576,32 @@ fun CalculatorScreen(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Pill(
+                        // Explain always renders in its standing accent style — disabled state is
+                        // expressed purely by the null onClick (no alpha dimming), per the design.
+                        CalcActionPill(
                             label = stringResource(R.string.calc_pill_explain),
-                            leadingIcon = Icons.Default.AutoAwesome,
+                            icon = Icons.Default.AutoAwesome,
+                            accent = true,
                             onClick = if (canExplain) ({ viewModel.solveCurrentInput() }) else null,
-                            modifier =
-                                Modifier
-                                    .defaultMinSize(minHeight = 48.dp)
-                                    .alpha(if (canExplain) 1f else 0.45f)
-                                    .testTag("calc_pill_explain"),
+                            modifier = Modifier.testTag("calc_pill_explain"),
                         )
-                        Pill(
+                        CalcActionPill(
                             label = stringResource(R.string.calc_pill_tag),
-                            leadingIcon = Icons.AutoMirrored.Filled.Label,
+                            icon = Icons.AutoMirrored.Outlined.Label,
+                            accent = false,
                             onClick = null,
-                            modifier =
-                                Modifier
-                                    .defaultMinSize(minHeight = 48.dp)
-                                    .alpha(0.45f)
-                                    .testTag("calc_pill_tag"),
+                            modifier = Modifier.alpha(0.45f).testTag("calc_pill_tag"),
                         )
-                        Pill(
+                        CalcActionPill(
                             label =
                                 stringResource(
                                     if (isLatestSaved) R.string.calc_pill_saved else R.string.calc_pill_save,
                                 ),
-                            leadingIcon = if (isLatestSaved) Icons.Default.Star else Icons.Default.StarBorder,
-                            selected = isLatestSaved,
+                            icon = if (isLatestSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            accent = isLatestSaved,
                             onClick = if (canSave) ({ viewModel.toggleFavorite(latestHistoryEntry!!) }) else null,
                             modifier =
                                 Modifier
-                                    .defaultMinSize(minHeight = 48.dp)
                                     .alpha(if (canSave) 1f else 0.45f)
                                     .testTag("calc_pill_save"),
                         )
@@ -653,8 +632,8 @@ fun CalculatorScreen(
                             Modifier
                                 .fillMaxSize()
                                 .background(colors.bg)
-                                .padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(1.dp),
+                                .padding(top = 4.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // ── Scientific expansion rows ──────────────────────────
                         val sciKeyHeight = if (isScientificMode) 56.dp else 0.dp
@@ -663,11 +642,11 @@ fun CalculatorScreen(
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut(),
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 // Sci row A: DEG/RAD toggle, sin, cos, tan, ^
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     // DEG / RAD toggle
                                     Box(
@@ -675,7 +654,8 @@ fun CalculatorScreen(
                                             Modifier
                                                 .weight(1f)
                                                 .height(sciKeyHeight)
-                                                .background(colors.surf)
+                                                .clip(RoundedCornerShape(DhruvNextRadii.innerTile))
+                                                .background(colors.surf2)
                                                 .clickable { viewModel.toggleAngleUnit() }
                                                 .testTag("key_btn_deg_rad"),
                                         contentAlignment = Alignment.Center,
@@ -747,7 +727,7 @@ fun CalculatorScreen(
                                 // Sci row B: (, ), log, ln, √
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     SimpleKey(
                                         text = "(",
@@ -824,10 +804,17 @@ fun CalculatorScreen(
                         // ── Standard rows ──────────────────────────────────────
                         val stdH = androidx.compose.ui.unit.Dp.Unspecified // Use unspecified so keys expand to fill row weight
 
+                        // DhruvNext's "C"/"AC" label sizes below the digit glyphs (~19sp at phone
+                        // tier per the design spec) while still scaling with the responsive digit
+                        // token across breakpoints.
+                        val clearKeyFontSize = DhruvNextKeypad.digit * (19f / 22f)
+                        // "%" reads slightly smaller than the other three fill-style operators.
+                        val percentKeyFontSize = DhruvNextKeypad.operator * (22f / 24f)
+
                         // Row 1: C, ⌫, %, ÷  (Feature 3: C and ⌫ share operator accent colour)
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             val clearText = if (inputState.text.isNotEmpty()) "C" else "AC"
                             SimpleKey(
@@ -838,7 +825,9 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
+                                fontSize = clearKeyFontSize,
                                 isOperator = true,
+                                fontWeightOverride = FontWeight.Bold,
                                 onClick = {
                                     if (clearText == "AC") {
                                         viewModel.clearCalcScreenHistory()
@@ -867,8 +856,9 @@ fun CalculatorScreen(
                                         1f,
                                     ),
                                 keyHeight = stdH,
-                                fontSize = DhruvNextKeypad.operator,
+                                fontSize = percentKeyFontSize,
                                 isOperator = true,
+                                fillAccent = true,
                                 onClick = {
                                     viewModel.onKeyPress("%")
                                 },
@@ -883,6 +873,7 @@ fun CalculatorScreen(
                                 keyHeight = stdH,
                                 fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
+                                fillAccent = true,
                                 onClick = {
                                     viewModel.onKeyPress("÷")
                                 },
@@ -891,7 +882,7 @@ fun CalculatorScreen(
                         // Row 2: 7, 8, 9, ×
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             SimpleKey(
                                 text = "7",
@@ -924,6 +915,7 @@ fun CalculatorScreen(
                                 keyHeight = stdH,
                                 fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
+                                fillAccent = true,
                                 onClick = {
                                     viewModel.onKeyPress("×")
                                 },
@@ -932,7 +924,7 @@ fun CalculatorScreen(
                         // Row 3: 4, 5, 6, −
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             SimpleKey(
                                 text = "4",
@@ -965,6 +957,7 @@ fun CalculatorScreen(
                                 keyHeight = stdH,
                                 fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
+                                fillAccent = true,
                                 onClick = {
                                     viewModel.onKeyPress("-")
                                 },
@@ -973,7 +966,7 @@ fun CalculatorScreen(
                         // Row 4: 1, 2, 3, +
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             SimpleKey(
                                 text = "1",
@@ -1006,22 +999,38 @@ fun CalculatorScreen(
                                 keyHeight = stdH,
                                 fontSize = DhruvNextKeypad.operator,
                                 isOperator = true,
+                                fillAccent = true,
                                 onClick = {
                                     viewModel.onKeyPress("+")
                                 },
                             )
                         }
-                        // Row 5: 0 (double-width — replaces the old dedicated Scientific-toggle key,
-                        // now the mode chip row at the top of the screen), ., =
+                        // Row 5: ( ) · 0 · . · =  (the bracket-toggle key replaces the old
+                        // double-width 0 — 0 is now a single 1f cell like every other digit)
                         Row(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             SimpleKey(
+                                text = "( )",
+                                tag = "key_btn_bracket_toggle",
+                                modifier = Modifier.weight(1f),
+                                keyHeight = stdH,
+                                fontSize = clearKeyFontSize,
+                                contentColorOverride = colors.tx2,
+                                onClick = {
+                                    // Toggle open/close: once every "(" has a matching ")", the next
+                                    // tap starts a new group instead of closing one that isn't open.
+                                    val openCount = inputState.text.count { it == '(' }
+                                    val closeCount = inputState.text.count { it == ')' }
+                                    viewModel.onKeyPress(if (openCount > closeCount) ")" else "(")
+                                },
+                            )
+                            SimpleKey(
                                 text = "0",
                                 tag = "key_btn_0",
-                                modifier = Modifier.weight(2f),
+                                modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("0") },
                                 onLongClick = {
@@ -1037,7 +1046,10 @@ fun CalculatorScreen(
                                 onClick = { viewModel.onKeyPress(".") },
                             )
 
-                            // Equals button
+                            // Equals button — DhruvNext §6.3: a single flat accent tile (not a
+                            // circle nested in a box). The resting shape is always the full flat
+                            // tile; the radial press-glow is layered on top as a subtle
+                            // enhancement rather than a shape change.
                             val equalInteractionSource = remember { MutableInteractionSource() }
                             val equalIsPressed by equalInteractionSource.collectIsPressedAsState()
                             val equalGlowAlpha by animateFloatAsState(
@@ -1045,60 +1057,53 @@ fun CalculatorScreen(
                                 animationSpec = tween(durationMillis = if (equalIsPressed) 50 else 200),
                                 label = "equalGlowAlpha",
                             )
+                            val equalShape = RoundedCornerShape(DhruvNextRadii.listGroup)
                             Box(
                                 modifier =
                                     Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .background(colors.surf),
+                                        .shadow(elevation = 6.dp, shape = equalShape, ambientColor = colors.acc, spotColor = colors.acc)
+                                        .clip(equalShape)
+                                        .background(colors.acc)
+                                        .combinedClickable(
+                                            interactionSource = equalInteractionSource,
+                                            indication = null,
+                                            onClick = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewModel.onKeyPress("=")
+                                            },
+                                            onLongClick = {
+                                                val res = result.removePrefix("=").trim()
+                                                if (res.isNotEmpty() && !res.startsWith("Error")) {
+                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    clipboardManager.setText(AnnotatedString(res))
+                                                    Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                        ).drawWithContent {
+                                            drawContent()
+                                            if (equalGlowAlpha > 0f) {
+                                                val glowBrush =
+                                                    Brush.radialGradient(
+                                                        colors =
+                                                            listOf(
+                                                                colors.onAcc.copy(alpha = equalGlowAlpha),
+                                                                Color.Transparent,
+                                                            ),
+                                                        radius = size.minDimension * 0.8f,
+                                                    )
+                                                drawRect(brush = glowBrush)
+                                            }
+                                        }.testTag("key_btn_="),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .padding(4.dp)
-                                            .clip(CircleShape)
-                                            .background(colors.acc)
-                                            .combinedClickable(
-                                                interactionSource = equalInteractionSource,
-                                                indication = null,
-                                                onClick = {
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    viewModel.onKeyPress("=")
-                                                },
-                                                onLongClick = {
-                                                    val res = result.removePrefix("=").trim()
-                                                    if (res.isNotEmpty() && !res.startsWith("Error")) {
-                                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        clipboardManager.setText(AnnotatedString(res))
-                                                        Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                },
-                                            ).drawWithContent {
-                                                drawContent()
-                                                if (equalGlowAlpha > 0f) {
-                                                    val glowBrush =
-                                                        Brush.radialGradient(
-                                                            colors =
-                                                                listOf(
-                                                                    colors.acc.copy(alpha = equalGlowAlpha),
-                                                                    Color.Transparent,
-                                                                ),
-                                                            radius = size.minDimension * 0.8f,
-                                                        )
-                                                    drawRect(brush = glowBrush)
-                                                }
-                                            }.testTag("key_btn_="),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = "=",
-                                        color = colors.onAcc,
-                                        fontSize = DhruvNextKeypad.operator,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
+                                Text(
+                                    text = "=",
+                                    color = colors.onAcc,
+                                    fontSize = DhruvNextKeypad.operator,
+                                    fontWeight = FontWeight.Bold,
+                                )
                             }
                         }
                     }
@@ -1156,7 +1161,7 @@ fun CalculatorScreen(
                         activeHistory = activeHistory,
                         recycleBinHistory = recycleBinHistory,
                         viewModel = viewModel,
-                        onClose = { showHistoryScreen = false },
+                        onClose = { onHistoryVisibleChange(false) },
                     )
                 }
             }
@@ -1262,6 +1267,84 @@ fun CalculatorScreen(
     }
 }
 
+/**
+ * Copies the calculator's current result to the clipboard, falling back to the raw input text if
+ * nothing has been computed yet. Shared by the in-card "Copy Result" context-menu action and the
+ * DhruvNext title bar's copy icon (MainActivity's Calc-tab top bar, §6.3) so the two affordances
+ * can't drift out of sync — the latter lives outside this composable entirely (it renders in the
+ * shell's Scaffold topBar slot) but reads the same [CalculatorViewModel] instance.
+ */
+fun copyResultToClipboard(
+    result: String,
+    inputText: String,
+    clipboardManager: ClipboardManager,
+    context: Context,
+) {
+    val cleanRes = if (result.isNotEmpty()) result.removePrefix("=").trim() else inputText
+    if (cleanRes.isNotEmpty() && !cleanRes.startsWith("Error")) {
+        clipboardManager.setText(AnnotatedString(cleanRes))
+        Toast.makeText(context, "Result copied", Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(context, "No result to copy", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * The Explain/Tag/Save action row's pill (DhruvNext §6.3): 30dp tall, fully rounded (15dp radius
+ * at that height), 11.5sp/700 label. Deliberately not the shared [Pill][com.dhruv.core.ui.components.Pill]
+ * component — that one's text always renders at [DhruvNextType.body] with fixed padding, which
+ * doesn't hit this row's much smaller pixel spec. [accent] renders the standing `accSoft`/`accLine`/
+ * `acc` look (used by Explain always, and by Save once the entry is starred); the neutral
+ * `surf`/`line`/`tx2` look is the default otherwise.
+ */
+@Composable
+private fun CalcActionPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    accent: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
+    val colors = LocalDhruvNextColors.current
+    val contentColor = if (accent) colors.acc else colors.tx2
+    Row(
+        modifier =
+            modifier
+                .height(30.dp)
+                .clip(CircleShape)
+                .background(if (accent) colors.accSoft else colors.surf)
+                .border(1.dp, if (accent) colors.accLine else colors.line, CircleShape)
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            fontSize = DhruvNextType.meta,
+            fontWeight = FontWeight.Bold,
+            color = contentColor,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * A single keypad key (DhruvNext §6.3). Three visual roles, expressed via [isOperator] (content
+ * tint: `acc` vs `tx`) crossed with [fillAccent] (background: solid `accSoft` fill vs the default
+ * digit tile):
+ * - **digit** (`isOperator=false, fillAccent=false`): `surf` bg + 1dp `line` border, `tx` content.
+ * - **arithmetic operator** (`% ÷ × − +`, `isOperator=true, fillAccent=true`): solid `accSoft`
+ *   fill, `acc` content, no border.
+ * - **C/backspace** (`isOperator=true, fillAccent=false`): the digit tile's `surf`+border
+ *   background, but `acc`-tinted content — a key that reads as an accent action without the
+ *   heavier operator fill.
+ *
+ * [contentColorOverride]/[fontWeightOverride] escape-hatch the two derived-from-[isOperator]
+ * choices above for one-off labels (e.g. the `C`/`AC` glyph's bolder weight, the bracket-toggle
+ * key's muted `tx2`) without adding another boolean per special case.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SimpleKey(
@@ -1269,6 +1352,9 @@ fun SimpleKey(
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     badgeText: String? = null,
     isOperator: Boolean = false,
+    fillAccent: Boolean = false,
+    contentColorOverride: Color? = null,
+    fontWeightOverride: FontWeight? = null,
     modifier: Modifier = Modifier,
     tag: String? = null,
     keyHeight: androidx.compose.ui.unit.Dp = 72.dp,
@@ -1280,6 +1366,9 @@ fun SimpleKey(
     val themeTextColor = colors.tx
     val operatorColor = colors.acc
     val hapticFeedback = LocalHapticFeedback.current
+
+    val contentColor = contentColorOverride ?: if (isOperator) operatorColor else themeTextColor
+    val fontWeight = fontWeightOverride ?: if (isOperator) FontWeight.SemiBold else FontWeight.Medium
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -1294,14 +1383,18 @@ fun SimpleKey(
             ),
         label = "rippleProgress",
     )
-    // Pick the ripple colour: operator keys glow with the accent, numeric keys with a neutral tx glow.
-    val rippleBaseColor = if (isOperator) operatorColor else themeTextColor
+    // Pick the ripple colour off the same resolved content color as the glyph/label.
+    val rippleBaseColor = contentColor
+
+    val keyShape = RoundedCornerShape(DhruvNextRadii.listGroup)
 
     Box(
         modifier =
             modifier
                 .then(if (keyHeight == androidx.compose.ui.unit.Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
-                .background(colors.surf)
+                .clip(keyShape)
+                .background(if (fillAccent) colors.accSoft else colors.surf)
+                .then(if (fillAccent) Modifier else Modifier.border(1.dp, colors.line, keyShape))
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -1347,17 +1440,15 @@ fun SimpleKey(
             Text(
                 text = text,
                 fontSize = fontSize,
-                // Operators read as the primary "action" keys, so give them a touch more weight
-                // than the numerals for a clearer visual hierarchy.
-                fontWeight = if (isOperator) FontWeight.SemiBold else FontWeight.Medium,
-                color = if (isOperator) operatorColor else themeTextColor,
+                fontWeight = fontWeight,
+                color = contentColor,
                 style = MaterialTheme.typography.bodyLarge,
             )
         } else if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isOperator) operatorColor else themeTextColor.copy(alpha = 0.8f),
+                tint = contentColorOverride ?: if (isOperator) operatorColor else themeTextColor.copy(alpha = 0.8f),
                 modifier = Modifier.size(26.dp),
             )
         }
@@ -1718,7 +1809,6 @@ fun CalendarHistoryFullView(
                             HistoryEntryCard(
                                 item = item,
                                 isSelected = isSelected,
-                                isSelectionActive = isSelectionModeActive,
                                 isRecycleBin = selectedFilterTab == "Recycling Bin",
                                 textCol = textCol,
                                 secCol = secCol,
@@ -1761,7 +1851,6 @@ fun CalendarHistoryFullView(
 fun HistoryEntryCard(
     item: HistoryEntity,
     isSelected: Boolean,
-    isSelectionActive: Boolean,
     isRecycleBin: Boolean,
     textCol: Color,
     secCol: Color,

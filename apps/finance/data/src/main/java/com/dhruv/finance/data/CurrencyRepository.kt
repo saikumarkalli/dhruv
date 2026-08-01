@@ -1,6 +1,6 @@
 package com.dhruv.finance.data
 
-import android.util.Log
+import com.dhruv.core.observability.CrashReporter
 import com.dhruv.finance.data.api.CurrencyApiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,6 +9,7 @@ import java.io.IOException
 class CurrencyRepository(
     private val currencyRateDao: CurrencyRateDao,
     private val apiClient: CurrencyApiClient,
+    private val crashReporter: CrashReporter,
 ) : ICurrencyRepository {
     override suspend fun getAllRates(): List<CurrencyRateEntity> =
         withContext(Dispatchers.IO) {
@@ -18,6 +19,11 @@ class CurrencyRepository(
     override suspend fun getRate(code: String): Double? =
         withContext(Dispatchers.IO) {
             return@withContext currencyRateDao.getRateByCode(code)?.rate
+        }
+
+    override suspend fun getLastUpdateTimestamp(): Long? =
+        withContext(Dispatchers.IO) {
+            currencyRateDao.getAllRates().firstOrNull()?.timestamp
         }
 
     // Broad catches are intentional: any primary/fallback API failure must self-heal to the
@@ -45,7 +51,7 @@ class CurrencyRepository(
                     throw IOException("Primary API returned unsuccessful code")
                 }
             } catch (primaryException: Exception) {
-                Log.e("CurrencyRepository", "Primary API failed, trying fallback API...", primaryException)
+                crashReporter.recordException(primaryException)
                 try {
                     val responseFallback = apiClient.fallbackApi.getLatestRatesFallback(baseCurrency)
                     val entities =
@@ -56,7 +62,7 @@ class CurrencyRepository(
                     currencyRateDao.insertRates(entities)
                     return@withContext Result.success(responseFallback.rates)
                 } catch (fallbackException: Exception) {
-                    Log.e("CurrencyRepository", "Fallback API failed too, utilizing database cache representation", fallbackException)
+                    crashReporter.recordException(fallbackException)
                     val cached = currencyRateDao.getAllRates()
                     if (cached.isNotEmpty()) {
                         val map = cached.associate { it.currencyCode to it.rate }

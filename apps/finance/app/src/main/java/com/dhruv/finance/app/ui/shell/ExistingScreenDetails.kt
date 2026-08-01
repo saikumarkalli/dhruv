@@ -2,6 +2,8 @@ package com.dhruv.finance.app.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -78,7 +80,16 @@ fun CurrencyDetailContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        NxTopBar(title = "Currency", onBack = onBack)
+        // No "favourite this pair" behaviour exists yet, so the action renders disabled
+        // (onTrailingClick = null dims it via NxTopBar, per DhruvNext §6.6) rather than faking
+        // persistence that doesn't exist.
+        NxTopBar(
+            title = "Currency",
+            onBack = onBack,
+            trailingIcon = Icons.Default.StarBorder,
+            trailingIconContentDescription = "Favourite this currency pair",
+            onTrailingClick = null,
+        )
         val vm: CurrencyViewModel = koinViewModel()
         val error by vm.featureError.collectAsStateWithLifecycle()
         FeatureHost("currency", resolver.isEnabled("currency"), error, crashReporter) {
