@@ -17,7 +17,6 @@ class CurrencyViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "currency") {
-
     // --- Currency Conversion State ---
     private val _currencyInput = MutableStateFlow("1")
     val currencyInput = _currencyInput.asStateFlow()

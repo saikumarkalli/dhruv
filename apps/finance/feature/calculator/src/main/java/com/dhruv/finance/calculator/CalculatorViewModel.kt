@@ -13,7 +13,6 @@ import com.dhruv.finance.data.GeminiRepository
 import com.dhruv.finance.data.HistoryEntity
 import com.dhruv.finance.data.HistoryRepository
 import com.dhruv.settings.SettingsRepository
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -50,7 +49,6 @@ class CalculatorViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "calculator") {
-
     private val coroutineExceptionHandler = exceptionHandler
 
     private val _input = MutableStateFlow("")

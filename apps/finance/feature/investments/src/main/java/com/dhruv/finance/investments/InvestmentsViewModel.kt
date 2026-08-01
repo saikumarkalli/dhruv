@@ -10,7 +10,6 @@ class InvestmentsViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "investments") {
-
     // --- Data structures for results ---
 
     data class SipResult(

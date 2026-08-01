@@ -11,7 +11,6 @@ class LoansViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "loans") {
-
     // --- Data structures for results ---
 
     data class EmiResult(

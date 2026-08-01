@@ -10,7 +10,6 @@ class TaxViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "tax") {
-
     // --- Data structures for results ---
 
     data class GstResult(

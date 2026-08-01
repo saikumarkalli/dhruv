@@ -81,7 +81,10 @@ class SettingsRepositoryImpl(
         default: T,
     ): StateFlow<T> =
         stateFlow(
-            flow = context.appDataStore.data.catchAndLog().map { it[key] ?: default },
+            flow =
+                context.appDataStore.data
+                    .catchAndLog()
+                    .map { it[key] ?: default },
             initial = initialPrefs[key] ?: default,
         )
 

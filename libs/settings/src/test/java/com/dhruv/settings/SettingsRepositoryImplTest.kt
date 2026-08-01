@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SettingsRepositoryImplTest {
-
     @Test
     fun `default pin code is 1234`() {
         assertEquals("1234", SettingsRepositoryImpl.DEFAULT_PIN_CODE)

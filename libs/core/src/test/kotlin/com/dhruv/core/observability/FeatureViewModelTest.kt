@@ -8,12 +8,13 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeatureViewModelTest {
-
     private val recorder = RecordingCrashReporter()
 
-    private class TestViewModel(reporter: CrashReporter) :
-        FeatureViewModel(reporter, "test_module") {
+    private class TestViewModel(
+        reporter: CrashReporter,
+    ) : FeatureViewModel(reporter, "test_module") {
         fun doReportError(t: Throwable) = reportFeatureError(t)
+
         fun getHandler() = exceptionHandler
     }
 
@@ -22,9 +23,17 @@ class FeatureViewModelTest {
         var lastException: Throwable? = null
         var lastLog: String? = null
 
-        override fun setModule(name: String) { lastModule = name }
-        override fun recordException(t: Throwable) { lastException = t }
-        override fun log(message: String) { lastLog = message }
+        override fun setModule(name: String) {
+            lastModule = name
+        }
+
+        override fun recordException(t: Throwable) {
+            lastException = t
+        }
+
+        override fun log(message: String) {
+            lastLog = message
+        }
     }
 
     @Test
@@ -49,14 +58,15 @@ class FeatureViewModelTest {
     }
 
     @Test
-    fun `exceptionHandler records and publishes`() = runTest {
-        val vm = TestViewModel(recorder)
-        val error = RuntimeException("handler boom")
-        vm.getHandler().handleException(
-            coroutineContext,
-            error,
-        )
-        assertEquals(error, recorder.lastException)
-        assertEquals(error, vm.featureError.value)
-    }
+    fun `exceptionHandler records and publishes`() =
+        runTest {
+            val vm = TestViewModel(recorder)
+            val error = RuntimeException("handler boom")
+            vm.getHandler().handleException(
+                coroutineContext,
+                error,
+            )
+            assertEquals(error, recorder.lastException)
+            assertEquals(error, vm.featureError.value)
+        }
 }

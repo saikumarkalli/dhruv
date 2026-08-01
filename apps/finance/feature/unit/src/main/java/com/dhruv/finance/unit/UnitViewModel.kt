@@ -13,7 +13,6 @@ class UnitViewModel(
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "unit") {
-
     // --- Length Conversion State ---
     private val _lengthInput = MutableStateFlow("1")
     val lengthInput = _lengthInput.asStateFlow()

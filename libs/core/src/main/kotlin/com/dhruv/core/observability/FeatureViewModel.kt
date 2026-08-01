@@ -10,7 +10,6 @@ abstract class FeatureViewModel(
     protected val crashReporter: CrashReporter,
     moduleKey: String,
 ) : ViewModel() {
-
     private val _featureError = MutableStateFlow<Throwable?>(null)
     val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
 

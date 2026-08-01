@@ -1,6 +1,9 @@
 package com.dhruv.finance.unit
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +21,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.ContentCopy
@@ -34,12 +36,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
@@ -108,26 +108,29 @@ fun UnitScreen(
     val areaToUnit by viewModel.areaToUnit.collectAsState()
     val areaResult by viewModel.areaResult.collectAsState()
 
-    val activeInput = when (selectedTab) {
-        UnitTab.LENGTH -> lengthInput
-        UnitTab.MASS -> massInput
-        UnitTab.TEMP -> tempInput
-        UnitTab.AREA -> areaInput
-    }
-    val activeResult = when (selectedTab) {
-        UnitTab.LENGTH -> lengthResult
-        UnitTab.MASS -> massResult
-        UnitTab.TEMP -> tempResult
-        UnitTab.AREA -> areaResult
-    }
+    val activeInput =
+        when (selectedTab) {
+            UnitTab.LENGTH -> lengthInput
+            UnitTab.MASS -> massInput
+            UnitTab.TEMP -> tempInput
+            UnitTab.AREA -> areaInput
+        }
+    val activeResult =
+        when (selectedTab) {
+            UnitTab.LENGTH -> lengthResult
+            UnitTab.MASS -> massResult
+            UnitTab.TEMP -> tempResult
+            UnitTab.AREA -> areaResult
+        }
 
     fun appendDigit(d: String) {
         val cur = activeInput
-        val new = when {
-            d == "." && cur.contains(".") -> cur
-            (cur == "0" || cur.isEmpty()) && d != "." -> d
-            else -> cur + d
-        }
+        val new =
+            when {
+                d == "." && cur.contains(".") -> cur
+                (cur == "0" || cur.isEmpty()) && d != "." -> d
+                else -> cur + d
+            }
         when (selectedTab) {
             UnitTab.LENGTH -> viewModel.setLengthInput(new)
             UnitTab.MASS -> viewModel.setMassInput(new)
@@ -158,31 +161,40 @@ fun UnitScreen(
     fun swap() {
         when (selectedTab) {
             UnitTab.LENGTH -> {
-                val f = lengthFromUnit; val t = lengthToUnit
-                viewModel.setLengthFromUnit(t); viewModel.setLengthToUnit(f)
+                val f = lengthFromUnit
+                val t = lengthToUnit
+                viewModel.setLengthFromUnit(t)
+                viewModel.setLengthToUnit(f)
             }
             UnitTab.MASS -> {
-                val f = massFromUnit; val t = massToUnit
-                viewModel.setMassFromUnit(t); viewModel.setMassToUnit(f)
+                val f = massFromUnit
+                val t = massToUnit
+                viewModel.setMassFromUnit(t)
+                viewModel.setMassToUnit(f)
             }
             UnitTab.TEMP -> {
-                val f = tempFromUnit; val t = tempToUnit
-                viewModel.setTempFromUnit(t); viewModel.setTempToUnit(f)
+                val f = tempFromUnit
+                val t = tempToUnit
+                viewModel.setTempFromUnit(t)
+                viewModel.setTempToUnit(f)
             }
             UnitTab.AREA -> {
-                val f = areaFromUnit; val t = areaToUnit
-                viewModel.setAreaFromUnit(t); viewModel.setAreaToUnit(f)
+                val f = areaFromUnit
+                val t = areaToUnit
+                viewModel.setAreaFromUnit(t)
+                viewModel.setAreaToUnit(f)
             }
         }
     }
 
     val categoryOptions = listOf("Length", "Mass", "Temp", "Area")
-    val categoryIcons = listOf<ImageVector?>(
-        Icons.Default.Straighten,
-        Icons.Default.Scale,
-        Icons.Default.Thermostat,
-        Icons.Default.CropFree,
-    )
+    val categoryIcons =
+        listOf<ImageVector?>(
+            Icons.Default.Straighten,
+            Icons.Default.Scale,
+            Icons.Default.Thermostat,
+            Icons.Default.CropFree,
+        )
 
     val clipboardManager = LocalClipboardManager.current
 
@@ -195,21 +207,30 @@ fun UnitScreen(
                         icons = categoryIcons,
                         selectedIndex = selectedTab.ordinal,
                         onSelected = { selectedTab = UnitTab.entries[it] },
-                        modifier = Modifier.padding(
-                            horizontal = DhruvNextSpacing.screenGutter,
-                            vertical = DhruvNextSpacing.interCardGap,
-                        ),
+                        modifier =
+                            Modifier.padding(
+                                horizontal = DhruvNextSpacing.screenGutter,
+                                vertical = DhruvNextSpacing.interCardGap,
+                            ),
                     )
                     UnitDisplayArea(
                         tab = selectedTab,
-                        lengthInput = lengthInput, lengthFromUnit = lengthFromUnit,
-                        lengthToUnit = lengthToUnit, lengthResult = lengthResult,
-                        massInput = massInput, massFromUnit = massFromUnit,
-                        massToUnit = massToUnit, massResult = massResult,
-                        tempInput = tempInput, tempFromUnit = tempFromUnit,
-                        tempToUnit = tempToUnit, tempResult = tempResult,
-                        areaInput = areaInput, areaFromUnit = areaFromUnit,
-                        areaToUnit = areaToUnit, areaResult = areaResult,
+                        lengthInput = lengthInput,
+                        lengthFromUnit = lengthFromUnit,
+                        lengthToUnit = lengthToUnit,
+                        lengthResult = lengthResult,
+                        massInput = massInput,
+                        massFromUnit = massFromUnit,
+                        massToUnit = massToUnit,
+                        massResult = massResult,
+                        tempInput = tempInput,
+                        tempFromUnit = tempFromUnit,
+                        tempToUnit = tempToUnit,
+                        tempResult = tempResult,
+                        areaInput = areaInput,
+                        areaFromUnit = areaFromUnit,
+                        areaToUnit = areaToUnit,
+                        areaResult = areaResult,
                         onLengthFromUnit = viewModel::setLengthFromUnit,
                         onLengthToUnit = viewModel::setLengthToUnit,
                         onMassFromUnit = viewModel::setMassFromUnit,
@@ -229,14 +250,15 @@ fun UnitScreen(
                         onBackspace = ::backspace,
                         onSwap = ::swap,
                         onCopy = { clipboardManager.setText(AnnotatedString(activeResult)) },
-                        modifier = Modifier
-                            .weight(0.8f)
-                            .fillMaxHeight()
-                            .widthIn(max = 320.dp)
-                            .padding(
-                                end = DhruvNextSpacing.screenGutter,
-                                bottom = DhruvNextSpacing.screenGutter,
-                            ),
+                        modifier =
+                            Modifier
+                                .weight(0.8f)
+                                .fillMaxHeight()
+                                .widthIn(max = 320.dp)
+                                .padding(
+                                    end = DhruvNextSpacing.screenGutter,
+                                    bottom = DhruvNextSpacing.screenGutter,
+                                ),
                     )
                 }
             }
@@ -247,21 +269,30 @@ fun UnitScreen(
                     icons = categoryIcons,
                     selectedIndex = selectedTab.ordinal,
                     onSelected = { selectedTab = UnitTab.entries[it] },
-                    modifier = Modifier.padding(
-                        horizontal = DhruvNextSpacing.screenGutter,
-                        vertical = DhruvNextSpacing.interCardGap,
-                    ),
+                    modifier =
+                        Modifier.padding(
+                            horizontal = DhruvNextSpacing.screenGutter,
+                            vertical = DhruvNextSpacing.interCardGap,
+                        ),
                 )
                 UnitDisplayArea(
                     tab = selectedTab,
-                    lengthInput = lengthInput, lengthFromUnit = lengthFromUnit,
-                    lengthToUnit = lengthToUnit, lengthResult = lengthResult,
-                    massInput = massInput, massFromUnit = massFromUnit,
-                    massToUnit = massToUnit, massResult = massResult,
-                    tempInput = tempInput, tempFromUnit = tempFromUnit,
-                    tempToUnit = tempToUnit, tempResult = tempResult,
-                    areaInput = areaInput, areaFromUnit = areaFromUnit,
-                    areaToUnit = areaToUnit, areaResult = areaResult,
+                    lengthInput = lengthInput,
+                    lengthFromUnit = lengthFromUnit,
+                    lengthToUnit = lengthToUnit,
+                    lengthResult = lengthResult,
+                    massInput = massInput,
+                    massFromUnit = massFromUnit,
+                    massToUnit = massToUnit,
+                    massResult = massResult,
+                    tempInput = tempInput,
+                    tempFromUnit = tempFromUnit,
+                    tempToUnit = tempToUnit,
+                    tempResult = tempResult,
+                    areaInput = areaInput,
+                    areaFromUnit = areaFromUnit,
+                    areaToUnit = areaToUnit,
+                    areaResult = areaResult,
                     onLengthFromUnit = viewModel::setLengthFromUnit,
                     onLengthToUnit = viewModel::setLengthToUnit,
                     onMassFromUnit = viewModel::setMassFromUnit,
@@ -284,10 +315,11 @@ fun UnitScreen(
                         onBackspace = ::backspace,
                         onSwap = ::swap,
                         onCopy = { clipboardManager.setText(AnnotatedString(activeResult)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = DhruvNextSpacing.screenGutter)
-                            .padding(bottom = DhruvNextSpacing.screenGutter),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = DhruvNextSpacing.screenGutter)
+                                .padding(bottom = DhruvNextSpacing.screenGutter),
                     )
                 }
             }
@@ -299,14 +331,30 @@ fun UnitScreen(
 @Suppress("LongParameterList")
 private fun UnitDisplayArea(
     tab: UnitTab,
-    lengthInput: String, lengthFromUnit: LengthUnit, lengthToUnit: LengthUnit, lengthResult: String,
-    massInput: String, massFromUnit: MassUnit, massToUnit: MassUnit, massResult: String,
-    tempInput: String, tempFromUnit: TemperatureUnit, tempToUnit: TemperatureUnit, tempResult: String,
-    areaInput: String, areaFromUnit: AreaUnit, areaToUnit: AreaUnit, areaResult: String,
-    onLengthFromUnit: (LengthUnit) -> Unit, onLengthToUnit: (LengthUnit) -> Unit,
-    onMassFromUnit: (MassUnit) -> Unit, onMassToUnit: (MassUnit) -> Unit,
-    onTempFromUnit: (TemperatureUnit) -> Unit, onTempToUnit: (TemperatureUnit) -> Unit,
-    onAreaFromUnit: (AreaUnit) -> Unit, onAreaToUnit: (AreaUnit) -> Unit,
+    lengthInput: String,
+    lengthFromUnit: LengthUnit,
+    lengthToUnit: LengthUnit,
+    lengthResult: String,
+    massInput: String,
+    massFromUnit: MassUnit,
+    massToUnit: MassUnit,
+    massResult: String,
+    tempInput: String,
+    tempFromUnit: TemperatureUnit,
+    tempToUnit: TemperatureUnit,
+    tempResult: String,
+    areaInput: String,
+    areaFromUnit: AreaUnit,
+    areaToUnit: AreaUnit,
+    areaResult: String,
+    onLengthFromUnit: (LengthUnit) -> Unit,
+    onLengthToUnit: (LengthUnit) -> Unit,
+    onMassFromUnit: (MassUnit) -> Unit,
+    onMassToUnit: (MassUnit) -> Unit,
+    onTempFromUnit: (TemperatureUnit) -> Unit,
+    onTempToUnit: (TemperatureUnit) -> Unit,
+    onAreaFromUnit: (AreaUnit) -> Unit,
+    onAreaToUnit: (AreaUnit) -> Unit,
     onInputTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -314,19 +362,22 @@ private fun UnitDisplayArea(
 
     Box(modifier = modifier, contentAlignment = Alignment.TopCenter) {
         Column(
-            modifier = Modifier
-                .then(if (isTablet) Modifier.widthIn(max = 480.dp) else Modifier.fillMaxWidth())
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = DhruvNextSpacing.screenGutter)
-                .padding(bottom = DhruvNextSpacing.interCardGap),
+            modifier =
+                Modifier
+                    .then(if (isTablet) Modifier.widthIn(max = 480.dp) else Modifier.fillMaxWidth())
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = DhruvNextSpacing.screenGutter)
+                    .padding(bottom = DhruvNextSpacing.interCardGap),
             verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
         ) {
             when (tab) {
                 UnitTab.LENGTH -> {
                     val inputDouble = lengthInput.toDoubleOrNull() ?: 0.0
-                    val others = UnitCategory.Length.convertToOtherUnits(inputDouble, lengthFromUnit)
-                        .map { (unit, v) -> unit.label to formatResult(v) }
+                    val others =
+                        UnitCategory.Length
+                            .convertToOtherUnits(inputDouble, lengthFromUnit)
+                            .map { (unit, v) -> unit.label to formatResult(v) }
                     ConverterCard(
                         fromLabel = lengthFromUnit.label,
                         toLabel = lengthToUnit.label,
@@ -334,7 +385,6 @@ private fun UnitDisplayArea(
                         toAmount = if (lengthResult.isNotEmpty()) lengthResult else "—",
                         fromUnits = LengthUnit.entries.map { it.label },
                         toUnits = LengthUnit.entries.map { it.label },
-
                         onFromSelected = { onLengthFromUnit(LengthUnit.entries[it]) },
                         onToSelected = { onLengthToUnit(LengthUnit.entries[it]) },
                         onInputTap = onInputTap,
@@ -346,8 +396,10 @@ private fun UnitDisplayArea(
                 }
                 UnitTab.MASS -> {
                     val inputDouble = massInput.toDoubleOrNull() ?: 0.0
-                    val others = UnitCategory.Mass.convertToOtherUnits(inputDouble, massFromUnit)
-                        .map { (unit, v) -> unit.label to formatResult(v) }
+                    val others =
+                        UnitCategory.Mass
+                            .convertToOtherUnits(inputDouble, massFromUnit)
+                            .map { (unit, v) -> unit.label to formatResult(v) }
                     ConverterCard(
                         fromLabel = massFromUnit.label,
                         toLabel = massToUnit.label,
@@ -355,7 +407,6 @@ private fun UnitDisplayArea(
                         toAmount = if (massResult.isNotEmpty()) massResult else "—",
                         fromUnits = MassUnit.entries.map { it.label },
                         toUnits = MassUnit.entries.map { it.label },
-
                         onFromSelected = { onMassFromUnit(MassUnit.entries[it]) },
                         onToSelected = { onMassToUnit(MassUnit.entries[it]) },
                         onInputTap = onInputTap,
@@ -367,8 +418,10 @@ private fun UnitDisplayArea(
                 }
                 UnitTab.TEMP -> {
                     val inputDouble = tempInput.toDoubleOrNull() ?: 0.0
-                    val others = UnitCategory.Temperature.convertToOtherUnits(inputDouble, tempFromUnit)
-                        .map { (unit, v) -> unit.label to formatResult(v) }
+                    val others =
+                        UnitCategory.Temperature
+                            .convertToOtherUnits(inputDouble, tempFromUnit)
+                            .map { (unit, v) -> unit.label to formatResult(v) }
                     ConverterCard(
                         fromLabel = tempFromUnit.label,
                         toLabel = tempToUnit.label,
@@ -376,7 +429,6 @@ private fun UnitDisplayArea(
                         toAmount = if (tempResult.isNotEmpty()) tempResult else "—",
                         fromUnits = TemperatureUnit.entries.map { it.label },
                         toUnits = TemperatureUnit.entries.map { it.label },
-
                         onFromSelected = { onTempFromUnit(TemperatureUnit.entries[it]) },
                         onToSelected = { onTempToUnit(TemperatureUnit.entries[it]) },
                         onInputTap = onInputTap,
@@ -388,8 +440,10 @@ private fun UnitDisplayArea(
                 }
                 UnitTab.AREA -> {
                     val inputDouble = areaInput.toDoubleOrNull() ?: 0.0
-                    val others = UnitCategory.Area.convertToOtherUnits(inputDouble, areaFromUnit)
-                        .map { (unit, v) -> unit.label to formatResult(v) }
+                    val others =
+                        UnitCategory.Area
+                            .convertToOtherUnits(inputDouble, areaFromUnit)
+                            .map { (unit, v) -> unit.label to formatResult(v) }
                     ConverterCard(
                         fromLabel = areaFromUnit.label,
                         toLabel = areaToUnit.label,
@@ -397,7 +451,6 @@ private fun UnitDisplayArea(
                         toAmount = if (areaResult.isNotEmpty()) areaResult else "—",
                         fromUnits = AreaUnit.entries.map { it.label },
                         toUnits = AreaUnit.entries.map { it.label },
-
                         onFromSelected = { onAreaFromUnit(AreaUnit.entries[it]) },
                         onToSelected = { onAreaToUnit(AreaUnit.entries[it]) },
                         onInputTap = onInputTap,
@@ -429,13 +482,14 @@ private fun ConverterCard(
     val radius = DhruvNextRadii.card
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(elevation = 1.dp, shape = RoundedCornerShape(radius), clip = false)
-            .clip(RoundedCornerShape(radius))
-            .background(colors.surf)
-            .border(1.dp, colors.line, RoundedCornerShape(radius))
-            .padding(DhruvNextSpacing.cardPadding),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 1.dp, shape = RoundedCornerShape(radius), clip = false)
+                .clip(RoundedCornerShape(radius))
+                .background(colors.surf)
+                .border(1.dp, colors.line, RoundedCornerShape(radius))
+                .padding(DhruvNextSpacing.cardPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         UnitRow(
@@ -511,7 +565,10 @@ private fun UnitRow(
                     unitOptions.forEachIndexed { idx, name ->
                         DropdownMenuItem(
                             text = { Text(name) },
-                            onClick = { onSelected(idx); expanded = false },
+                            onClick = {
+                                onSelected(idx)
+                                expanded = false
+                            },
                         )
                     }
                 }
@@ -528,9 +585,10 @@ private fun UnitRow(
             maxLines = 1,
             overflow = TextOverflow.Clip,
             softWrap = false,
-            modifier = Modifier
-                .weight(1f)
-                .let { m -> if (onAmountClick != null) m.clickable(onClick = onAmountClick) else m },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .let { m -> if (onAmountClick != null) m.clickable(onClick = onAmountClick) else m },
         )
     }
 }
@@ -545,13 +603,14 @@ private fun AlsoList(
     val radius = DhruvNextRadii.card
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(elevation = 1.dp, shape = RoundedCornerShape(radius), clip = false)
-            .clip(RoundedCornerShape(radius))
-            .background(colors.surf)
-            .border(1.dp, colors.line, RoundedCornerShape(radius))
-            .padding(DhruvNextSpacing.cardPadding),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 1.dp, shape = RoundedCornerShape(radius), clip = false)
+                .clip(RoundedCornerShape(radius))
+                .background(colors.surf)
+                .border(1.dp, colors.line, RoundedCornerShape(radius))
+                .padding(DhruvNextSpacing.cardPadding),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
@@ -567,9 +626,10 @@ private fun AlsoList(
                     HorizontalDivider(color = colors.line2, thickness = 1.dp)
                 }
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
@@ -708,9 +768,10 @@ private fun UnitKeypad(
 
         // Right column: C (row 1), ⌫ (row 2), swap (rows 3+4 via weight 2f)
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .height(keyMinHeight * 4 + gap * 3),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(keyMinHeight * 4 + gap * 3),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) {
             // C key (clear)
@@ -772,11 +833,12 @@ private fun UnitKey(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .clip(shape)
-            .background(background)
-            .border(1.dp, borderColor, shape)
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .clip(shape)
+                .background(background)
+                .border(1.dp, borderColor, shape)
+                .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         content()

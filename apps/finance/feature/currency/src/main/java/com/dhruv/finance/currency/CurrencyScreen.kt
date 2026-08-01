@@ -15,8 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -294,8 +294,7 @@ fun CurrencyConverterContent(
                                         // of scope for DhruvNext §6.6 / Task 3) — rendered so the
                                         // action reads correctly, wired to a no-op rather than
                                         // faking a working edit flow.
-                                    }
-                                    .testTag("currency_others_edit_action"),
+                                    }.testTag("currency_others_edit_action"),
                         )
                     }
                     ListGroup(
