@@ -1809,7 +1809,6 @@ fun CalendarHistoryFullView(
                             HistoryEntryCard(
                                 item = item,
                                 isSelected = isSelected,
-                                isSelectionActive = isSelectionModeActive,
                                 isRecycleBin = selectedFilterTab == "Recycling Bin",
                                 textCol = textCol,
                                 secCol = secCol,
@@ -1852,7 +1851,6 @@ fun CalendarHistoryFullView(
 fun HistoryEntryCard(
     item: HistoryEntity,
     isSelected: Boolean,
-    isSelectionActive: Boolean,
     isRecycleBin: Boolean,
     textCol: Color,
     secCol: Color,

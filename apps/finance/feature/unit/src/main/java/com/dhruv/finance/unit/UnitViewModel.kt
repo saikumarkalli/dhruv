@@ -1,29 +1,18 @@
 package com.dhruv.finance.unit
 
-import androidx.lifecycle.ViewModel
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 class UnitViewModel(
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    @Suppress("unused") // consumed by FeatureHost in the app shell
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
+) : FeatureViewModel(crashReporter, "unit") {
 
     // --- Length Conversion State ---
     private val _lengthInput = MutableStateFlow("1")

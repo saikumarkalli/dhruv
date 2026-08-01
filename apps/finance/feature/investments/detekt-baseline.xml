@@ -3,6 +3,5 @@
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>UnusedPrivateProperty:InvestmentsViewModel.kt$InvestmentsViewModel$month</ID>
-    <ID>UnusedPrivateProperty:InvestmentsViewModel.kt$InvestmentsViewModel$private val exceptionHandler = CoroutineExceptionHandler { _, throwable -&gt; crashReporter.recordException(throwable) _featureError.value = throwable }</ID>
   </CurrentIssues>
 </SmellBaseline>

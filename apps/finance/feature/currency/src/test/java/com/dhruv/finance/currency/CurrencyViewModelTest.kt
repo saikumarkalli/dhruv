@@ -30,6 +30,8 @@ class CurrencyViewModelTest {
 
         override suspend fun getRate(code: String): Double? = rates[code]
 
+        override suspend fun getLastUpdateTimestamp(): Long? = 0L
+
         override suspend fun fetchAndCacheLatestRates(baseCurrency: String): Result<Map<String, Double>> = Result.success(rates)
     }
 

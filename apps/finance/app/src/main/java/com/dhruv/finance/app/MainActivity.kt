@@ -5,11 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
+
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -70,9 +70,9 @@ import com.dhruv.core.ui.components.BottomBar
 import com.dhruv.core.ui.components.BottomBarTab
 import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.EmptyStateCard
-import com.dhruv.core.ui.theme.DhruvNextType
+
 import com.dhruv.core.ui.theme.DhruvTheme
-import com.dhruv.core.ui.theme.LocalDhruvNextColors
+
 import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.plan.PlanLauncher
@@ -204,27 +204,19 @@ private fun AppShell(
         onDispose { callback.remove() }
     }
 
-    val route = detailRoute
-    if (route != null) {
-        DetailRouteContent(
-            route = route,
-            resolver = resolver,
-            crashReporter = crashReporter,
-            settingsRepository = settingsRepository,
-            onClearHistory = onClearHistory,
-            onBack = { detailRoute = null },
-        )
-    } else {
-        TabsScaffold(
-            pagerState = pagerState,
-            resolver = resolver,
-            crashReporter = crashReporter,
-            calculatorViewModel = calculatorViewModel,
-            planNavController = planNavController,
-            onOpenDetail = { detailRoute = it },
-            onOpenAppSwitcher = { showAppSwitcher = true },
-        )
-    }
+    TabsScaffold(
+        pagerState = pagerState,
+        resolver = resolver,
+        crashReporter = crashReporter,
+        calculatorViewModel = calculatorViewModel,
+        planNavController = planNavController,
+        detailRoute = detailRoute,
+        settingsRepository = settingsRepository,
+        onClearHistory = onClearHistory,
+        onOpenDetail = { detailRoute = it },
+        onDismissDetail = { detailRoute = null },
+        onOpenAppSwitcher = { showAppSwitcher = true },
+    )
 
     if (showAppSwitcher) {
         AppSwitcherSheet(onDismiss = { showAppSwitcher = false })
@@ -239,7 +231,11 @@ private fun TabsScaffold(
     crashReporter: CrashReporter,
     calculatorViewModel: CalculatorViewModel,
     planNavController: NavHostController,
+    detailRoute: DetailRoute?,
+    settingsRepository: SettingsRepository,
+    onClearHistory: () -> Unit,
     onOpenDetail: (DetailRoute) -> Unit,
+    onDismissDetail: () -> Unit,
     onOpenAppSwitcher: () -> Unit,
 ) {
     val tabs = TabKey.entries
@@ -250,24 +246,28 @@ private fun TabsScaffold(
     // the history screen (§6.3's "Title bar" delta).
     var isCalcHistoryVisible by remember { mutableStateOf(false) }
 
+    val calcResult by calculatorViewModel.result.collectAsStateWithLifecycle()
+    val calcInputText by calculatorViewModel.inputState.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (tabs[pagerState.currentPage] == TabKey.CALC) {
-                val calcResult by calculatorViewModel.result.collectAsStateWithLifecycle()
-                val calcInputText by calculatorViewModel.inputState.collectAsStateWithLifecycle()
-                val clipboardManager = LocalClipboardManager.current
-                val context = LocalContext.current
-                CalcTopBar(
-                    onOpenHistory = { isCalcHistoryVisible = true },
-                    onCopyResult = {
-                        copyResultToClipboard(calcResult, calcInputText.text, clipboardManager, context)
-                    },
-                )
-            } else {
+            if (detailRoute == null) {
                 TopAppBar(
                     title = { DhruvWordmarkImage(height = 26.dp) },
                     actions = {
+                        if (tabs[pagerState.currentPage] == TabKey.CALC) {
+                            IconButton(onClick = { isCalcHistoryVisible = true }) {
+                                Icon(Icons.Default.History, contentDescription = "History")
+                            }
+                            IconButton(
+                                onClick = { copyResultToClipboard(calcResult, calcInputText.text, clipboardManager, context) },
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy result")
+                            }
+                        }
                         IconButton(onClick = onOpenAppSwitcher) {
                             Icon(Icons.Default.Apps, contentDescription = "Switch app")
                         }
@@ -298,40 +298,52 @@ private fun TabsScaffold(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
-            ) { page ->
-                when (tabs[page]) {
-                    TabKey.HOME -> DashboardScreen()
-                    TabKey.CALC ->
-                        CalcTab(
-                            calculatorViewModel = calculatorViewModel,
-                            resolver = resolver,
-                            crashReporter = crashReporter,
-                            onOpenDetail = onOpenDetail,
-                            isHistoryVisible = isCalcHistoryVisible,
-                            onHistoryVisibleChange = { isCalcHistoryVisible = it },
-                        )
-                    TabKey.PLAN ->
-                        PlanTab(
-                            navController = planNavController,
-                            resolver = resolver,
-                            crashReporter = crashReporter,
-                        )
-                    TabKey.INSIGHTS ->
-                        EmptyStateCard(
-                            message = "Insights lands once expense tracking ships",
-                            modifier = Modifier.padding(24.dp),
-                        )
-                }
-            }
-
-            if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
-                AskPill(
-                    onClick = { onOpenDetail(DetailRoute.Ask) },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            if (detailRoute != null) {
+                DetailRouteContent(
+                    route = detailRoute,
+                    resolver = resolver,
+                    crashReporter = crashReporter,
+                    settingsRepository = settingsRepository,
+                    onClearHistory = onClearHistory,
+                    onBack = onDismissDetail,
                 )
+            } else {
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = false,
+                    modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
+                ) { page ->
+                    when (tabs[page]) {
+                        TabKey.HOME -> DashboardScreen()
+                        TabKey.CALC ->
+                            CalcTab(
+                                calculatorViewModel = calculatorViewModel,
+                                resolver = resolver,
+                                crashReporter = crashReporter,
+                                onOpenDetail = onOpenDetail,
+                                isHistoryVisible = isCalcHistoryVisible,
+                                onHistoryVisibleChange = { isCalcHistoryVisible = it },
+                            )
+                        TabKey.PLAN ->
+                            PlanTab(
+                                navController = planNavController,
+                                resolver = resolver,
+                                crashReporter = crashReporter,
+                            )
+                        TabKey.INSIGHTS ->
+                            EmptyStateCard(
+                                message = "Insights lands once expense tracking ships",
+                                modifier = Modifier.padding(24.dp),
+                            )
+                    }
+                }
+
+                if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
+                    AskPill(
+                        onClick = { onOpenDetail(DetailRoute.Ask) },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+                    )
+                }
             }
         }
     }
@@ -344,57 +356,6 @@ private fun TabKey.toBottomBarTab(): BottomBarTab =
         TabKey.PLAN -> BottomBarTab("plan", "Plan", Icons.Default.DonutSmall)
         TabKey.INSIGHTS -> BottomBarTab("insights", "Insights", Icons.Default.BarChart)
     }
-
-/**
- * The Calc tab's bespoke DhruvNext title bar (§6.3): "Calculator" on the left, history + copy
- * icon buttons (40dp touch target, 21dp glyph) on the right. [TabsScaffold] swaps this in for the
- * shared wordmark [TopAppBar] only while the Calc tab is selected — a `Scaffold` has exactly one
- * `topBar` slot, so the two bars can't render simultaneously; other tabs keep the wordmark bar
- * this pass.
- */
-@Composable
-private fun CalcTopBar(
-    onOpenHistory: () -> Unit,
-    onCopyResult: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalDhruvNextColors.current
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(colors.surf)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .height(52.dp)
-                .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "Calculator",
-            color = colors.tx,
-            fontSize = DhruvNextType.title,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.3).sp,
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onOpenHistory, modifier = Modifier.size(40.dp)) {
-            Icon(
-                imageVector = Icons.Default.History,
-                contentDescription = "History",
-                tint = colors.tx2,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-        IconButton(onClick = onCopyResult, modifier = Modifier.size(40.dp)) {
-            Icon(
-                imageVector = Icons.Default.ContentCopy,
-                contentDescription = "Copy result",
-                tint = colors.tx2,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-    }
-}
 
 @Composable
 private fun CalcTab(

@@ -1,13 +1,11 @@
 package com.dhruv.finance.currency
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
 import com.dhruv.finance.data.ICurrencyRepository
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
@@ -16,17 +14,9 @@ import java.util.Locale
 
 class CurrencyViewModel(
     private val currencyRepository: ICurrencyRepository,
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
+) : FeatureViewModel(crashReporter, "currency") {
 
     // --- Currency Conversion State ---
     private val _currencyInput = MutableStateFlow("1")
@@ -49,6 +39,11 @@ class CurrencyViewModel(
 
     private val _lastUpdatedTime = MutableStateFlow<Long?>(null)
     val lastUpdatedTime = _lastUpdatedTime.asStateFlow()
+
+    private val staleThresholdMs = 24 * 60 * 60 * 1000L
+
+    private val _isStale = MutableStateFlow(false)
+    val isStale = _isStale.asStateFlow()
 
     sealed interface CurrencyStatus {
         object Loading : CurrencyStatus
@@ -96,6 +91,7 @@ class CurrencyViewModel(
                     val cached = currencyRepository.getAllRates()
                     val ts = cached.firstOrNull()?.timestamp ?: System.currentTimeMillis()
                     _lastUpdatedTime.value = ts
+                    _isStale.value = false
                     _currencyStatus.value = CurrencyStatus.Success(isOffline = false)
                     recalculateCurrency()
                 }.onFailure { err ->
@@ -104,7 +100,9 @@ class CurrencyViewModel(
                     if (cached.isNotEmpty()) {
                         val map = cached.associate { it.currencyCode to it.rate }
                         _ratesMap.value = map
-                        _lastUpdatedTime.value = cached.firstOrNull()?.timestamp
+                        val ts = cached.firstOrNull()?.timestamp
+                        _lastUpdatedTime.value = ts
+                        _isStale.value = ts != null && (System.currentTimeMillis() - ts) > staleThresholdMs
                         _currencyStatus.value = CurrencyStatus.Success(isOffline = true)
                         recalculateCurrency()
                     } else {

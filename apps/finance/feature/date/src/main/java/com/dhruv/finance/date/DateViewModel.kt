@@ -1,9 +1,8 @@
 package com.dhruv.finance.date
 
-import androidx.lifecycle.ViewModel
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,21 +20,9 @@ import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class DateViewModel(
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
-    init {
-        crashReporter.setModule("date")
-    }
-
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
+) : FeatureViewModel(crashReporter, "date") {
 
     private val _activeSubCalculator = MutableStateFlow<Int?>(null)
     val activeSubCalculator: StateFlow<Int?> = _activeSubCalculator.asStateFlow()
@@ -125,9 +112,9 @@ class DateViewModel(
     fun calculateAge(
         birthDate: Calendar,
         referenceDate: Calendar,
-    ): AgeResult {
+    ): AgeResult = performanceTracer.trace("date_age_calc") {
         if (birthDate.after(referenceDate)) {
-            return AgeResult(0, 0, 0, 0, 0, "Monday", 0L, 0, 0L, 0L, 0L)
+            return@trace AgeResult(0, 0, 0, 0, 0, "Monday", 0L, 0, 0L, 0L, 0L)
         }
 
         var yrs = referenceDate.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
@@ -170,7 +157,7 @@ class DateViewModel(
         val totalMs = referenceDate.timeInMillis - birthDate.timeInMillis
         val tDays = if (totalMs >= 0) TimeUnit.MILLISECONDS.toDays(totalMs) else 0L
 
-        return AgeResult(
+        AgeResult(
             years = yrs,
             months = mths,
             days = dys,
@@ -232,6 +219,7 @@ class DateViewModel(
                 totalDays = totalDays.toInt(),
             )
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             BusinessDaysResult(0, 0, 0)
         }
     }
@@ -260,6 +248,7 @@ class DateViewModel(
             val formatter = DateTimeFormatter.ofPattern("hh:mm a (EEEE)", Locale.US)
             convertedTime.format(formatter)
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             "---"
         }
 
@@ -274,6 +263,7 @@ class DateViewModel(
             val sdfUtc = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
             "Local: ${sdfLocal.format(date)}\nUTC: ${sdfUtc.format(date)}"
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             "Invalid Timestamp Number"
         }
 
@@ -297,6 +287,7 @@ class DateViewModel(
                 }
             cal.timeInMillis / 1000
         } catch (e: Exception) {
+            crashReporter.recordException(e)
             0L
         }
 }

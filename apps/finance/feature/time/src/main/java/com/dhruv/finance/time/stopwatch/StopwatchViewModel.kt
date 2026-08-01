@@ -1,10 +1,9 @@
 package com.dhruv.finance.time.stopwatch
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,20 +25,11 @@ data class StopwatchState(
 )
 
 class StopwatchViewModel(
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
+) : FeatureViewModel(crashReporter, "stopwatch") {
     private val _state = MutableStateFlow(StopwatchState())
     val state: StateFlow<StopwatchState> = _state.asStateFlow()
-
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
 
     private var timerJob: Job? = null
     private var startTime = 0L

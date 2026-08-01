@@ -1,8 +1,8 @@
 package com.dhruv.finance.assistant
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
 import com.dhruv.finance.data.GeminiRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -13,29 +13,20 @@ import kotlinx.coroutines.launch
 
 class AssistantViewModel(
     private val gemini: GeminiRepository,
-    private val crashReporter: CrashReporter,
+    crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
+) : FeatureViewModel(crashReporter, "assistant") {
     private val _uiState = MutableStateFlow<AssistantUiState>(AssistantUiState.ConsentNeeded)
     val uiState: StateFlow<AssistantUiState> = _uiState.asStateFlow()
 
-    // Exposes uncaught coroutine errors so FeatureHost can render FeatureErrorCard.
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
     private val errorHandler =
         CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
+            reportFeatureError(throwable)
             _uiState.value =
                 AssistantUiState.Error(
                     throwable.localizedMessage ?: "An unexpected error occurred.",
                 )
         }
-
-    init {
-        crashReporter.setModule("assistant")
-    }
 
     /**
      * Records the user's DPDP consent and transitions from [AssistantUiState.ConsentNeeded]

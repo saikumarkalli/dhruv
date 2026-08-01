@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +93,11 @@ fun CurrencyConverterContent(
 
     var showFromPicker by remember { mutableStateOf(false) }
     var showToPicker by remember { mutableStateOf(false) }
+
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus()
+    }
 
     Column(
         modifier =
@@ -214,6 +221,8 @@ fun CurrencyConverterContent(
                 remember(lastUpdatedTime, currencyStatus) {
                     buildFreshnessText(lastUpdatedTime, currencyStatus)
                 }
+            val isStale by viewModel.isStale.collectAsState()
+            val isLoading = currencyStatus is CurrencyViewModel.CurrencyStatus.Loading
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -224,10 +233,33 @@ fun CurrencyConverterContent(
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
-                        tint = colors.tx3,
+                        tint = if (isStale) colors.acc else colors.tx3,
                         modifier = Modifier.size(14.dp),
                     )
-                    Text(text = freshnessText, color = colors.tx3, fontSize = FRESHNESS_CAPTION_FONT_SIZE)
+                    Text(
+                        text = freshnessText,
+                        color = if (isStale) colors.acc else colors.tx3,
+                        fontSize = FRESHNESS_CAPTION_FONT_SIZE,
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            color = colors.acc,
+                            strokeWidth = 1.5.dp,
+                        )
+                    } else {
+                        IconButton(
+                            onClick = { viewModel.syncCurrencyRates() },
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh rates",
+                                tint = colors.tx3,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
                 }
             }
 

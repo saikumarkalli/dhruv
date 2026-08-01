@@ -43,6 +43,9 @@ object CalculatorEngine : ICalculatorEngine {
         return result
     }
 
+    // Recursive-descent parser: parseExpression (± terms) → parseTerm (* / implicit-mul)
+    // → parseFactor (unary, parens, numbers, functions, constants) with trailing ^, !, %.
+    // Implicit multiplication (e.g. "2π", "3(4+1)") is handled in parseTerm via lookahead.
     private class Parser(
         val str: String,
         val isDegree: Boolean,

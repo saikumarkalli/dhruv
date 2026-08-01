@@ -1,5 +1,6 @@
 package com.dhruv.finance.data
 
+import com.dhruv.core.observability.NoOpCrashReporter
 import com.dhruv.finance.data.api.CurrencyApiClient
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -24,7 +25,7 @@ class CurrencyRepositoryTest {
         )
 
     private val dao = FakeCurrencyRateDao()
-    private val repo = CurrencyRepository(dao, offlineClient)
+    private val repo = CurrencyRepository(dao, offlineClient, NoOpCrashReporter)
 
     @Test
     fun fetchFallsBackToCacheWhenAllApisFail() =

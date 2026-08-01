@@ -1,32 +1,16 @@
 package com.dhruv.finance.time
 
-import androidx.lifecycle.ViewModel
 import com.dhruv.core.observability.CrashReporter
-import com.dhruv.core.observability.PerformanceTracer
-import kotlinx.coroutines.CoroutineExceptionHandler
+import com.dhruv.core.observability.FeatureViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class TimeViewModel(
-    private val crashReporter: CrashReporter,
-    private val performanceTracer: PerformanceTracer,
-) : ViewModel() {
+    crashReporter: CrashReporter,
+) : FeatureViewModel(crashReporter, "time") {
     private val _uiState = MutableStateFlow(TimeUiState())
     val uiState: StateFlow<TimeUiState> = _uiState.asStateFlow()
-
-    private val _featureError = MutableStateFlow<Throwable?>(null)
-    val featureError: StateFlow<Throwable?> = _featureError.asStateFlow()
-
-    private val exceptionHandler =
-        CoroutineExceptionHandler { _, throwable ->
-            crashReporter.recordException(throwable)
-            _featureError.value = throwable
-        }
-
-    init {
-        crashReporter.setModule("time")
-    }
 
     fun selectTab(index: Int) {
         _uiState.value = _uiState.value.copy(selectedTab = index)

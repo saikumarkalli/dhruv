@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.Dhruv" parent="android:Theme.DeviceDefault.NoActionBar" />
 
     <!-- Android 12+ SplashScreen API theme.
          Black background matches the Compose transition screen that follows, so there is no flash
@@ -12,7 +12,7 @@
     <style name="Theme.DhruvSplash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#000000</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_dhruv_crest_white</item>
-        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
+        <item name="postSplashScreenTheme">@style/Theme.Dhruv</item>
     </style>
 
 </resources>

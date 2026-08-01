@@ -28,6 +28,7 @@ class GeminiRepository(
          * from the v1beta surface this SDK targets, which produced a NOT_FOUND/404.)
          */
         const val MODEL_NAME = "gemini-flash-latest"
+        const val UNCONFIGURED_API_KEY_SENTINEL = "MY_GEMINI_API_KEY"
     }
 
     private val generativeModel by lazy {
@@ -43,7 +44,7 @@ class GeminiRepository(
     ): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
+                if (apiKey.isBlank() || apiKey == UNCONFIGURED_API_KEY_SENTINEL) {
                     return@withContext Result.failure(Exception("Gemini API key is not configured. Please add it to your .env file."))
                 }
 
@@ -74,7 +75,7 @@ class GeminiRepository(
     suspend fun solve(input: String): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
+                if (apiKey.isBlank() || apiKey == UNCONFIGURED_API_KEY_SENTINEL) {
                     return@withContext Result.failure(Exception("Gemini API key is not configured. Please add it to your .env file."))
                 }
                 if (input.isBlank()) {

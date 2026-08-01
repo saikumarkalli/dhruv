@@ -8,7 +8,7 @@ import org.koin.dsl.module
 
 val timeModule =
     module {
-        viewModel { TimeViewModel(get(), get()) }
+        viewModel { TimeViewModel(get()) }
         viewModel { StopwatchViewModel(get(), get()) }
         viewModel { TimerViewModel(get(), get()) }
     }
