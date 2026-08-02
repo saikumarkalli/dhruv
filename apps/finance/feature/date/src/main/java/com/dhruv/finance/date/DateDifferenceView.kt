@@ -17,12 +17,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun DateDifferenceView(viewModel: DateViewModel) {
+    val colors = LocalDhruvNextColors.current
     val context = LocalContext.current
     val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
@@ -46,7 +48,7 @@ fun DateDifferenceView(viewModel: DateViewModel) {
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Evaluate the distance between two dates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Evaluate the distance between two dates", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -54,8 +56,8 @@ fun DateDifferenceView(viewModel: DateViewModel) {
         ) {
             // Start Date Input
             Column(modifier = Modifier.weight(1f)) {
-                Text("Start Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                Card(
+                Text("Start Date", fontSize = DhruvNextType.meta, color = colors.tx3)
+                NxCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -68,11 +70,9 @@ fun DateDifferenceView(viewModel: DateViewModel) {
                                     date1.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Text(
                         text = sdf.format(date1.time),
-                        modifier = Modifier.padding(14.dp),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
@@ -81,8 +81,8 @@ fun DateDifferenceView(viewModel: DateViewModel) {
 
             // End Date Input
             Column(modifier = Modifier.weight(1f)) {
-                Text("End Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                Card(
+                Text("End Date", fontSize = DhruvNextType.meta, color = colors.tx3)
+                NxCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -95,11 +95,9 @@ fun DateDifferenceView(viewModel: DateViewModel) {
                                     date2.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Text(
                         text = sdf.format(date2.time),
-                        modifier = Modifier.padding(14.dp),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
@@ -108,54 +106,53 @@ fun DateDifferenceView(viewModel: DateViewModel) {
         }
 
         // Output Result card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.accSoft, RoundedCornerShape(DhruvNextRadii.card))
+                    .padding(DhruvNextSpacing.cardPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Text(
+                "Primary Duration Metric",
+                fontSize = DhruvNextType.meta,
+                color = colors.tx2,
+            )
+            Text(
+                "$totalDays Days",
+                fontSize = DhruvNextType.title,
+                fontWeight = FontWeight.Black,
+                color = colors.acc,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = colors.line,
+            )
+
+            Text(
+                "Equivalent Chronological Breakdown",
+                fontSize = DhruvNextType.meta,
+                color = colors.tx2,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    "Primary Duration Metric",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-                Text(
-                    "$totalDays Days",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                )
-
-                Text(
-                    "Equivalent Chronological Breakdown",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DateStatChip(valStr = "$yearsParts", denomStr = "Years")
-                    DateStatChip(valStr = "$monthsParts", denomStr = "Months")
-                    DateStatChip(valStr = "$remainingDaysParts", denomStr = "Days")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Weeks equivalent: ${(totalDays / 7)} Weeks, ${(totalDays % 7)} Days",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+                DateStatChip(valStr = "$yearsParts", denomStr = "Years")
+                DateStatChip(valStr = "$monthsParts", denomStr = "Months")
+                DateStatChip(valStr = "$remainingDaysParts", denomStr = "Days")
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Weeks equivalent: ${(totalDays / 7)} Weeks, ${(totalDays % 7)} Days",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.tx,
+            )
         }
     }
 }
@@ -165,14 +162,15 @@ fun DateStatChip(
     valStr: String,
     denomStr: String,
 ) {
+    val colors = LocalDhruvNextColors.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier =
             Modifier
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .background(colors.surf2, RoundedCornerShape(DhruvNextRadii.innerTile))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        Text(valStr, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(denomStr, fontSize = 10.sp, color = MaterialTheme.colorScheme.secondary)
+        Text(valStr, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
+        Text(denomStr, fontSize = DhruvNextType.sectionLabel, color = colors.tx3)
     }
 }

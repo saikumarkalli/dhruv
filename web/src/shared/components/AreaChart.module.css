@@ -1,0 +1,47 @@
+.container {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.container svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: drawLine 1.1s ease forwards;
+}
+
+.fill {
+  opacity: 0;
+  animation: fadeIn 0.6s ease 0.5s forwards;
+}
+
+.dot {
+  opacity: 0;
+  animation: fadeIn 0.3s ease 0.9s forwards;
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: var(--path-length);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

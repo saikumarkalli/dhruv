@@ -1,0 +1,86 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.chartContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.ring {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.segment {
+  fill: none;
+  stroke-width: 15;
+  stroke-linecap: butt;
+  animation: drawSegment 0.7s ease forwards;
+  stroke-dashoffset: var(--segment-length);
+}
+
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.centerValue {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--c-text);
+  line-height: 1.2;
+}
+
+.centerLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--c-text-3);
+  line-height: 1.4;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--c-text-2);
+  white-space: nowrap;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legendPct {
+  color: var(--c-text-3);
+  font-weight: 600;
+}
+
+@keyframes drawSegment {
+  from {
+    stroke-dashoffset: var(--segment-length);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

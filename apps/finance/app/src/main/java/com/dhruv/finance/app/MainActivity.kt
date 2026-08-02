@@ -62,6 +62,7 @@ import com.dhruv.core.ui.components.BottomBarTab
 import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.theme.DhruvTheme
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.plan.PlanLauncher
@@ -239,6 +240,7 @@ private fun TabsScaffold(
     val calcInputText by calculatorViewModel.inputState.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val colors = LocalDhruvNextColors.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -269,8 +271,8 @@ private fun TabsScaffold(
                     },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            containerColor = colors.surf,
+                            actionIconContentColor = colors.tx2,
                         ),
                 )
             }
@@ -339,12 +341,8 @@ private fun TabsScaffold(
 }
 
 private fun TabKey.toBottomBarTab(): BottomBarTab =
-    when (this) {
-        TabKey.HOME -> BottomBarTab("home", "Home", Icons.Default.Home)
-        TabKey.CALC -> BottomBarTab("calc", "Calc", Icons.Default.Calculate)
-        TabKey.PLAN -> BottomBarTab("plan", "Plan", Icons.Default.DonutSmall)
-        TabKey.INSIGHTS -> BottomBarTab("insights", "Insights", Icons.Default.BarChart)
-    }
+    com.dhruv.core.navigation.BottomNavItems[this]
+        ?: error("Unknown tab: $this")
 
 @Composable
 private fun CalcTab(

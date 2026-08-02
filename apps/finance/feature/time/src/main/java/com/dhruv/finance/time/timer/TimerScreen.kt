@@ -4,7 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,28 +16,34 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxButtonVariant
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.util.Locale
 
 @Composable
 fun TimerScreen(viewModel: TimerViewModel) {
+    val colors = LocalDhruvNextColors.current
     val state by viewModel.state.collectAsState()
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val responsiveFontSize = (screenWidth * 0.16).sp
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(DhruvNextSpacing.screenGutter),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (state.isInputMode) {
             // Input Mode
             Spacer(modifier = Modifier.weight(1f))
-            Text("Presets", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Presets", color = colors.tx2, fontSize = DhruvNextType.body)
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { viewModel.setPreset(1) }) { Text("1 Min") }
-                Button(onClick = { viewModel.setPreset(5) }) { Text("5 Min") }
-                Button(onClick = { viewModel.setPreset(10) }) { Text("10 Min") }
-                Button(onClick = { viewModel.setPreset(25) }) { Text("25 Min") }
+                NxButton(text = "1 Min", onClick = { viewModel.setPreset(1) }, variant = NxButtonVariant.Soft)
+                NxButton(text = "5 Min", onClick = { viewModel.setPreset(5) }, variant = NxButtonVariant.Soft)
+                NxButton(text = "10 Min", onClick = { viewModel.setPreset(10) }, variant = NxButtonVariant.Soft)
+                NxButton(text = "25 Min", onClick = { viewModel.setPreset(25) }, variant = NxButtonVariant.Soft)
             }
             Spacer(modifier = Modifier.weight(1f))
         } else {
@@ -50,8 +56,8 @@ fun TimerScreen(viewModel: TimerViewModel) {
                     animationSpec = tween(50),
                     label = "progressAnim",
                 )
-                val primaryColor = MaterialTheme.colorScheme.primary
-                val trackColor = MaterialTheme.colorScheme.surfaceVariant
+                val primaryColor = colors.acc
+                val trackColor = colors.surf2
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawArc(
@@ -74,44 +80,33 @@ fun TimerScreen(viewModel: TimerViewModel) {
                     text = formatCountdown(state.remainingTimeMs),
                     fontSize = responsiveFontSize,
                     fontWeight = FontWeight.Light,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = colors.tx,
                 )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
+                NxButton(
+                    text = "Reset",
                     onClick = { viewModel.resetTimer() },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
+                    variant = NxButtonVariant.Ghost,
                     modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
-                ) {
-                    Text("Reset")
-                }
+                )
                 if (state.isRunning) {
-                    Button(
+                    NxButton(
+                        text = "Pause",
                         onClick = { viewModel.pauseTimer() },
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            ),
+                        variant = NxButtonVariant.Destructive,
                         modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
-                    ) { Text("Pause") }
+                    )
                 } else {
-                    Button(
+                    NxButton(
+                        text = "Resume",
                         onClick = { viewModel.startTimer() },
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
+                        variant = NxButtonVariant.Primary,
                         modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
-                    ) { Text("Resume") }
+                    )
                 }
             }
             Spacer(modifier = Modifier.weight(1f))

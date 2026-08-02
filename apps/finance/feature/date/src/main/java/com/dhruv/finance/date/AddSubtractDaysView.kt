@@ -21,14 +21,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.dhruv.core.ui.theme.*
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun AddSubtractDaysView(viewModel: DateViewModel) {
     val context = LocalContext.current
+    val colors = LocalDhruvNextColors.current
     val sdf = SimpleDateFormat("EEEE, MMMM dd, yyyy", Locale.US)
 
     var calendarDate by remember { mutableStateOf(Calendar.getInstance()) }
@@ -46,17 +50,13 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Modify Date by custom offsets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Modify Date by custom offsets", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Select Base Date
-                Text("Select Key Base Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                Text("Select Key Base Date", fontSize = DhruvNextType.meta, color = colors.tx3)
                 Card(
                     modifier =
                         Modifier
@@ -70,28 +70,28 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
                                     calendarDate.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    colors = CardDefaults.cardColors(containerColor = colors.surf),
                 ) {
                     Row(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(DhruvNextSpacing.inputGroupGap),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, tint = colors.acc)
+                        Spacer(modifier = Modifier.width(DhruvNextSpacing.inputGroupGap))
                         Text(
                             text = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendarDate.time),
                             fontWeight = FontWeight.Bold,
+                            color = colors.tx,
                         )
                     }
                 }
 
-                // Add or Subtract toggle
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surface)
+                            .clip(RoundedCornerShape(DhruvNextRadii.innerTile))
+                            .background(colors.surf)
                             .padding(4.dp),
                 ) {
                     Box(
@@ -99,16 +99,16 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
                             Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (!isSubtract) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .background(if (!isSubtract) colors.acc else Color.Transparent)
                                 .clickable { isSubtract = false }
                                 .padding(8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             "Add Days (+)",
-                            color = if (!isSubtract) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            color = if (!isSubtract) colors.onAcc else colors.tx,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
+                            fontSize = DhruvNextType.meta,
                         )
                     }
                     Box(
@@ -116,21 +116,20 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
                             Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSubtract) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .background(if (isSubtract) colors.acc else Color.Transparent)
                                 .clickable { isSubtract = true }
                                 .padding(8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             "Subtract Days (-)",
-                            color = if (isSubtract) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            color = if (isSubtract) colors.onAcc else colors.tx,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
+                            fontSize = DhruvNextType.meta,
                         )
                     }
                 }
 
-                // Offset Value field
                 OutlinedTextField(
                     value = deltaDaysInput,
                     onValueChange = { deltaDaysInput = it },
@@ -138,16 +137,15 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(DhruvNextRadii.innerTile),
                 )
             }
         }
 
-        // Calculation Results Display
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.accSoft),
+            shape = RoundedCornerShape(DhruvNextRadii.card),
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
@@ -155,14 +153,14 @@ fun AddSubtractDaysView(viewModel: DateViewModel) {
             ) {
                 Text(
                     "Resulting Calendar coordinates",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    fontSize = DhruvNextType.meta,
+                    color = colors.tx2,
                 )
                 Text(
                     text = sdf.format(computedResult),
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = DhruvNextType.cardTitle,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = colors.acc,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp),
                 )

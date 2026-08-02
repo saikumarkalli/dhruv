@@ -1,9 +1,17 @@
 package com.dhruv.finance.time.stopwatch
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,16 +21,22 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxButtonVariant
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.util.Locale
 
 @Composable
 fun StopwatchScreen(viewModel: StopwatchViewModel) {
     val state by viewModel.state.collectAsState()
+    val colors = LocalDhruvNextColors.current
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val responsiveFontSize = (screenWidth * 0.18).sp
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(DhruvNextSpacing.screenGutter),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.weight(1f))
@@ -31,7 +45,7 @@ fun StopwatchScreen(viewModel: StopwatchViewModel) {
             text = formatTime(state.timeMs),
             fontSize = responsiveFontSize,
             fontWeight = FontWeight.Light,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = colors.tx,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -40,58 +54,36 @@ fun StopwatchScreen(viewModel: StopwatchViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Button(
+            NxButton(
+                text = if (state.isRunning) "Lap" else "Reset",
                 onClick = { viewModel.lapOrReset() },
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
-            ) {
-                Text(if (state.isRunning) "Lap" else "Reset")
-            }
+                variant = NxButtonVariant.Ghost,
+            )
 
-            Button(
+            NxButton(
+                text = if (state.isRunning) "Stop" else "Start",
                 onClick = { viewModel.toggleStartStop() },
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (state.isRunning) {
-                                MaterialTheme.colorScheme.errorContainer
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                        contentColor =
-                            if (state.isRunning) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onPrimary
-                            },
-                    ),
-                modifier = Modifier.defaultMinSize(minWidth = 100.dp, minHeight = 56.dp),
-            ) {
-                Text(if (state.isRunning) "Stop" else "Start")
-            }
+                variant = if (state.isRunning) NxButtonVariant.Destructive else NxButtonVariant.Primary,
+            )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
 
         LazyColumn(modifier = Modifier.weight(2f).fillMaxWidth()) {
             items(state.laps) { lap ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = DhruvNextSpacing.interCardGap),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Lap ${lap.lapNumber}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+                    Text("Lap ${lap.lapNumber}", color = colors.tx2, fontSize = DhruvNextType.body)
                     Text(
                         formatTime(lap.lapTimeMs),
                         fontWeight = FontWeight.Medium,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = DhruvNextType.body,
+                        color = colors.tx,
                     )
                 }
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                HorizontalDivider(thickness = 0.5.dp, color = colors.line.copy(alpha = 0.5f))
             }
         }
     }

@@ -25,9 +25,14 @@
 
   /* Radius */
   --radius-card: 16px;
+  --radius-list-group: 14px;
+  --radius-inner: 12px;
+  --radius-pill: 26px;
 
   /* Typography */
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
   --font-brand: Georgia, "Times New Roman", serif;
 }
 
@@ -46,6 +51,35 @@
   --color-on-background: #111827;
   --color-on-surface: #111827;
   --color-on-surface-variant: #374151;
+
+  /* DhruvNext design tokens — light */
+  --c-bg: #F9F9F9;
+  --c-surface: #FFFFFF;
+  --c-surface-2: #F3F4F6;
+  --c-line: #E5E7EB;
+  --c-line-strong: #D1D5DB;
+  --c-text: #111827;
+  --c-text-2: #374151;
+  --c-text-3: #6B7280;
+  --c-primary: #F05A28;
+  --c-primary-bright: #FF6D3B;
+  --c-primary-soft: #FFF1ED;
+  --c-primary-line: #F9CDBC;
+  --c-on-primary: #FFFFFF;
+  --c-pos: #00796B;
+  --c-pos-bright: #4DB6AC;
+  --c-pos-soft: #E0F2F0;
+  --c-neg: #B3261E;
+  --c-neg-soft: #FCECEB;
+  --c-neg-line: #F3C9C6;
+  --c-warn: #B45309;
+  --c-warn-soft: #FEF3E2;
+  --c-chart1: #F05A28;
+  --c-chart2: #00796B;
+  --c-chart3: #00B0FF;
+  --c-chart4: #4A148C;
+  --c-chart5: #B45309;
+  --c-chart6: #455A64;
 }
 
 /* Dark theme */
@@ -62,6 +96,35 @@
   --color-on-background: #f5f5f5;
   --color-on-surface: #f5f5f5;
   --color-on-surface-variant: #9e9e9e;
+
+  /* DhruvNext design tokens — dark */
+  --c-bg: #0A0A0A;
+  --c-surface: #1E1E1E;
+  --c-surface-2: #2C2C2C;
+  --c-line: #3A3A3A;
+  --c-line-strong: #4A4A4A;
+  --c-text: #F5F5F5;
+  --c-text-2: #CFD8DC;
+  --c-text-3: #9E9E9E;
+  --c-primary: #FF6D3B;
+  --c-primary-bright: #FF8A5C;
+  --c-primary-soft: rgba(255,109,59,.14);
+  --c-primary-line: rgba(255,109,59,.32);
+  --c-on-primary: #003258;
+  --c-pos: #4DB6AC;
+  --c-pos-bright: #80CBC4;
+  --c-pos-soft: rgba(77,182,172,.16);
+  --c-neg: #F2B8B5;
+  --c-neg-soft: rgba(242,184,181,.14);
+  --c-neg-line: rgba(242,184,181,.4);
+  --c-warn: #FFB300;
+  --c-warn-soft: rgba(255,179,0,.15);
+  --c-chart1: #FF6D3B;
+  --c-chart2: #4DB6AC;
+  --c-chart3: #80D8FF;
+  --c-chart4: #B388FF;
+  --c-chart5: #FFB300;
+  --c-chart6: #CFD8DC;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,5 +141,33 @@
     --color-on-background: #f5f5f5;
     --color-on-surface: #f5f5f5;
     --color-on-surface-variant: #9e9e9e;
+
+    /* DhruvNext design tokens — dark */
+    --c-bg: #0A0A0A;
+    --c-surface: #1E1E1E;
+    --c-surface-2: #2C2C2C;
+    --c-line: #3A3A3A;
+    --c-line-strong: #4A4A4A;
+    --c-text: #F5F5F5;
+    --c-text-2: #CFD8DC;
+    --c-text-3: #9E9E9E;
+    --c-primary: #FF6D3B;
+    --c-primary-bright: #FF8A5C;
+    --c-primary-soft: rgba(255,109,59,.14);
+    --c-primary-line: rgba(255,109,59,.32);
+    --c-on-primary: #003258;
+    --c-pos: #4DB6AC;
+    --c-pos-bright: #80CBC4;
+    --c-pos-soft: rgba(77,182,172,.16);
+    --c-neg: #F2B8B5;
+    --c-neg-soft: rgba(242,184,181,.14);
+    --c-warn: #FFB300;
+    --c-warn-soft: rgba(255,179,0,.15);
+    --c-chart1: #FF6D3B;
+    --c-chart2: #4DB6AC;
+    --c-chart3: #80D8FF;
+    --c-chart4: #B388FF;
+    --c-chart5: #FFB300;
+    --c-chart6: #CFD8DC;
   }
 }

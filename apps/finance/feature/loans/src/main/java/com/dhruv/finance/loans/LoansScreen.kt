@@ -2,39 +2,62 @@ package com.dhruv.finance.loans
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.components.NxTextField
+import com.dhruv.core.ui.components.SectionLabel
+import com.dhruv.core.ui.components.SegmentedRow
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.data.util.CurrencyFormatter
 import java.math.BigDecimal
 
 @Composable
 fun LoansScreen(viewModel: LoansViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Loan EMI", "Loan Comparison")
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title) },
-                )
-            }
-        }
+        SegmentedRow(
+            options = LoanTabs,
+            selectedIndex = selectedTab,
+            onSelected = { selectedTab = it },
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = DhruvNextSpacing.screenGutter,
+                vertical = DhruvNextSpacing.interCardGap,
+            ),
+        )
         when (selectedTab) {
             0 -> GorgeousLoanEmiCalculator(viewModel)
             1 -> LoanComparisonCalculator(viewModel)
@@ -42,16 +65,13 @@ fun LoansScreen(viewModel: LoansViewModel) {
     }
 }
 
-// -------------------------------------------------------------
-// REDESIGNED GORGEOUS LOAN EMI SCREEN
-// (moved verbatim from FinanceScreen.kt, param type updated)
-// -------------------------------------------------------------
 @Composable
 fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
     var principalInput by remember { mutableStateOf("1000000") }
     var interestInput by remember { mutableStateOf("8.5") }
-    var tenureInput by remember { mutableStateOf("15") } // years
+    var tenureInput by remember { mutableStateOf("15") }
 
+    val colors = LocalDhruvNextColors.current
     val principal = principalInput.toDoubleOrNull() ?: 0.0
     val annualRate = interestInput.toDoubleOrNull() ?: 0.0
     val tenureYears = tenureInput.toDoubleOrNull() ?: 0.0
@@ -61,37 +81,24 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
             viewModel.calculateEmi(principal, annualRate, tenureYears)
         }
 
-    val emi = emiResult.emi
-    val totalInterest = emiResult.totalInterest
-    val totalPayment = emiResult.totalPayment
-
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Interactive Loan Amortization Plans", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SectionLabel(text = "Loan EMI")
 
-        // Inputs Card
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text("Principal Loan Sum (₹)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                OutlinedTextField(
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                NxTextField(
                     value = principalInput,
                     onValueChange = { principalInput = it },
-                    prefix = { Text("₹ ") },
+                    label = "Principal (₹)",
+                    prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (principal.toFloat().coerceIn(10000f, 10000000f) - 10000f) / (10000000f - 10000f),
@@ -100,21 +107,20 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         principalInput = v.toInt().toString()
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = colors.acc,
+                        activeTrackColor = colors.acc,
+                        inactiveTrackColor = colors.surf2,
+                    ),
                 )
 
-                Text(
-                    "Interest Factor Rate (% p.a.)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedTextField(
+                NxTextField(
                     value = interestInput,
                     onValueChange = { interestInput = it },
-                    suffix = { Text("%") },
+                    label = "Interest Rate (% p.a.)",
+                    suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (annualRate.toFloat().coerceIn(1f, 25f) - 1f) / 24f,
@@ -123,17 +129,20 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         interestInput = "%.2f".format(java.util.Locale.US, r)
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = colors.acc,
+                        activeTrackColor = colors.acc,
+                        inactiveTrackColor = colors.surf2,
+                    ),
                 )
 
-                Text("Pay Back Tenure (Years)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                OutlinedTextField(
+                NxTextField(
                     value = tenureInput,
                     onValueChange = { tenureInput = it },
-                    suffix = { Text("Yrs") },
+                    label = "Tenure (Years)",
+                    suffix = "Yrs",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
                 Slider(
                     value = (tenureYears.toFloat().coerceIn(1f, 30f) - 1f) / 29f,
@@ -142,43 +151,39 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         tenureInput = y.toInt().toString()
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = colors.acc,
+                        activeTrackColor = colors.acc,
+                        inactiveTrackColor = colors.surf2,
+                    ),
                 )
             }
         }
 
-        // Output Result card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(20.dp),
-        ) {
+        NxCard {
             Column(
-                modifier = Modifier.padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                Text("Monthly EMI", fontSize = DhruvNextType.meta, color = colors.tx3)
                 Text(
-                    "Calculated Monthly Installment",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-                Text(
-                    text = formatCurrency(emi),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = formatCurrency(emiResult.emi),
+                    fontSize = DhruvNextType.hero,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.acc,
                 )
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(vertical = DhruvNextSpacing.interCardGap),
+                    thickness = 0.5.dp,
+                    color = colors.line,
                 )
 
-                // Beautiful hollow ring Canvas representation
-                EmiRatioPieRing(principal = principal, interest = totalInterest.toDouble())
+                EmiRatioPieRing(principal = principal, interest = emiResult.totalInterest.toDouble())
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(vertical = DhruvNextSpacing.interCardGap),
+                    thickness = 0.5.dp,
+                    color = colors.line,
                 )
 
                 Row(
@@ -186,24 +191,24 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
-                        Text("Borrowed Principal", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(formatCurrency(principal), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("Principal", fontSize = DhruvNextType.meta, color = colors.tx3)
+                        Text(formatCurrency(principal), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.tx)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Accrued Interest Loading", fontSize = 11.sp, color = Color(0xFFFF5252))
-                        Text(formatCurrency(totalInterest), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF5252))
+                        Text("Interest", fontSize = DhruvNextType.meta, color = colors.neg)
+                        Text(formatCurrency(emiResult.totalInterest), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.neg)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(DhruvNextSpacing.inputGroupGap))
 
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Total Outlay (Principal + Interest)", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                    Text("Total payment", fontSize = DhruvNextType.meta, color = colors.tx3)
                     Text(
-                        formatCurrency(totalPayment),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary,
+                        formatCurrency(emiResult.totalPayment),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = DhruvNextType.title,
+                        color = colors.acc,
                     )
                 }
             }
@@ -216,39 +221,28 @@ fun EmiRatioPieRing(
     principal: Double,
     interest: Double,
 ) {
+    val colors = LocalDhruvNextColors.current
     val total = principal + interest
     if (total <= 0) return
     val principalSweep = (principal / total * 360f).toFloat()
     val interestSweep = 360f - principalSweep
 
-    val principalColor = MaterialTheme.colorScheme.primary
-    val interestColor = Color(0xFFFF5252)
-
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = DhruvNextSpacing.inputGroupGap),
+        horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Hollow ring canvas
-        Canvas(
-            modifier =
-                Modifier
-                    .size(70.dp)
-                    .padding(4.dp),
-        ) {
+        Canvas(modifier = Modifier.size(70.dp).padding(4.dp)) {
             val strokeWidth = 16f
             drawArc(
-                color = interestColor,
+                color = colors.neg,
                 startAngle = -90f,
                 sweepAngle = interestSweep,
                 useCenter = false,
                 style = Stroke(width = strokeWidth),
             )
             drawArc(
-                color = principalColor,
+                color = colors.acc,
                 startAngle = -90f + interestSweep,
                 sweepAngle = principalSweep,
                 useCenter = false,
@@ -261,43 +255,40 @@ fun EmiRatioPieRing(
             modifier = Modifier.weight(1f),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(10.dp).background(principalColor, RoundedCornerShape(2.dp)))
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(modifier = Modifier.size(10.dp).background(colors.acc, RoundedCornerShape(DhruvNextRadii.innerTile / 4)))
+                Spacer(modifier = Modifier.width(DhruvNextSpacing.inputGroupGap))
                 Text(
-                    text = "Loan Principal: ${(principal / total * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Principal: ${(principal / total * 100).toInt()}%",
+                    fontSize = DhruvNextType.meta,
                     fontWeight = FontWeight.Bold,
+                    color = colors.tx,
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(10.dp).background(interestColor, RoundedCornerShape(2.dp)))
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(modifier = Modifier.size(10.dp).background(colors.neg, RoundedCornerShape(DhruvNextRadii.innerTile / 4)))
+                Spacer(modifier = Modifier.width(DhruvNextSpacing.inputGroupGap))
                 Text(
-                    text = "Interest Burden: ${(interest / total * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Interest: ${(interest / total * 100).toInt()}%",
+                    fontSize = DhruvNextType.meta,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF5252),
+                    color = colors.neg,
                 )
             }
         }
     }
 }
 
-// -------------------------------------------------------------
-// LOAN COMPARISON SCREEN (new — reuses calculateEmi engine)
-// -------------------------------------------------------------
 @Composable
 fun LoanComparisonCalculator(viewModel: LoansViewModel) {
-    // Loan A inputs
     var principalAInput by remember { mutableStateOf("1000000") }
     var rateAInput by remember { mutableStateOf("8.5") }
     var tenureAInput by remember { mutableStateOf("15") }
 
-    // Loan B inputs
     var principalBInput by remember { mutableStateOf("1000000") }
     var rateBInput by remember { mutableStateOf("9.5") }
     var tenureBInput by remember { mutableStateOf("20") }
 
+    val colors = LocalDhruvNextColors.current
     val principalA = principalAInput.toDoubleOrNull() ?: 0.0
     val rateA = rateAInput.toDoubleOrNull() ?: 0.0
     val tenureA = tenureAInput.toDoubleOrNull() ?: 0.0
@@ -306,164 +297,97 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
     val rateB = rateBInput.toDoubleOrNull() ?: 0.0
     val tenureB = tenureBInput.toDoubleOrNull() ?: 0.0
 
-    val resultA =
-        remember(principalA, rateA, tenureA) {
-            viewModel.calculateEmi(principalA, rateA, tenureA)
-        }
-    val resultB =
-        remember(principalB, rateB, tenureB) {
-            viewModel.calculateEmi(principalB, rateB, tenureB)
-        }
+    val resultA = remember(principalA, rateA, tenureA) { viewModel.calculateEmi(principalA, rateA, tenureA) }
+    val resultB = remember(principalB, rateB, tenureB) { viewModel.calculateEmi(principalB, rateB, tenureB) }
 
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Side-by-Side Loan Comparison", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SectionLabel(text = "Comparison")
 
-        // Loan A inputs
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Loan A",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                OutlinedTextField(
-                    value = principalAInput,
-                    onValueChange = { principalAInput = it },
-                    label = { Text("Principal (₹)") },
-                    prefix = { Text("₹ ") },
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                Text("Loan A", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.acc)
+                NxTextField(
+                    value = principalAInput, onValueChange = { principalAInput = it },
+                    label = "Principal (₹)", prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
-                OutlinedTextField(
-                    value = rateAInput,
-                    onValueChange = { rateAInput = it },
-                    label = { Text("Interest Rate (% p.a.)") },
-                    suffix = { Text("%") },
+                NxTextField(
+                    value = rateAInput, onValueChange = { rateAInput = it },
+                    label = "Interest Rate (% p.a.)", suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
-                OutlinedTextField(
-                    value = tenureAInput,
-                    onValueChange = { tenureAInput = it },
-                    label = { Text("Tenure (Years)") },
-                    suffix = { Text("Yrs") },
+                NxTextField(
+                    value = tenureAInput, onValueChange = { tenureAInput = it },
+                    label = "Tenure (Years)", suffix = "Yrs",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
-        // Loan B inputs
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Loan B",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedTextField(
-                    value = principalBInput,
-                    onValueChange = { principalBInput = it },
-                    label = { Text("Principal (₹)") },
-                    prefix = { Text("₹ ") },
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                Text("Loan B", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx3)
+                NxTextField(
+                    value = principalBInput, onValueChange = { principalBInput = it },
+                    label = "Principal (₹)", prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
-                OutlinedTextField(
-                    value = rateBInput,
-                    onValueChange = { rateBInput = it },
-                    label = { Text("Interest Rate (% p.a.)") },
-                    suffix = { Text("%") },
+                NxTextField(
+                    value = rateBInput, onValueChange = { rateBInput = it },
+                    label = "Interest Rate (% p.a.)", suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
-                OutlinedTextField(
-                    value = tenureBInput,
-                    onValueChange = { tenureBInput = it },
-                    label = { Text("Tenure (Years)") },
-                    suffix = { Text("Yrs") },
+                NxTextField(
+                    value = tenureBInput, onValueChange = { tenureBInput = it },
+                    label = "Tenure (Years)", suffix = "Yrs",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
                 )
             }
         }
 
-        // Comparison result
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(20.dp),
-        ) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Comparison Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                Text("Summary", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Loan A EMI", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(
-                            formatCurrency(resultA.emi),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text("Interest: ${formatCurrency(resultA.totalInterest)}", fontSize = 10.sp)
-                        Text("Total: ${formatCurrency(resultA.totalPayment)}", fontSize = 10.sp)
+                        Text("Loan A EMI", fontSize = DhruvNextType.meta, color = colors.tx3)
+                        Text(formatCurrency(resultA.emi), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.acc)
+                        Text("Interest: ${formatCurrency(resultA.totalInterest)}", fontSize = DhruvNextType.meta, color = colors.tx2)
+                        Text("Total: ${formatCurrency(resultA.totalPayment)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                     }
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        Text("Loan B EMI", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                        Text(
-                            formatCurrency(resultB.emi),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
-                        Text("Interest: ${formatCurrency(resultB.totalInterest)}", fontSize = 10.sp)
-                        Text("Total: ${formatCurrency(resultB.totalPayment)}", fontSize = 10.sp)
+                        Text("Loan B EMI", fontSize = DhruvNextType.meta, color = colors.tx3)
+                        Text(formatCurrency(resultB.emi), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.tx3)
+                        Text("Interest: ${formatCurrency(resultB.totalInterest)}", fontSize = DhruvNextType.meta, color = colors.tx2)
+                        Text("Total: ${formatCurrency(resultB.totalPayment)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(thickness = 0.5.dp, color = colors.line)
 
                 val interestDiff = resultA.totalInterest.subtract(resultB.totalInterest)
                 val cheaperLabel =
-                    if (interestDiff >
-                        BigDecimal.ZERO
-                    ) {
+                    if (interestDiff > BigDecimal.ZERO) {
                         "Loan B saves ${formatCurrency(interestDiff)} in interest"
-                    } else if (interestDiff <
-                        BigDecimal.ZERO
-                    ) {
+                    } else if (interestDiff < BigDecimal.ZERO) {
                         "Loan A saves ${formatCurrency(interestDiff.negate())} in interest"
                     } else {
                         "Both loans cost the same in interest"
                     }
-                Text(cheaperLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Text(cheaperLabel, fontSize = DhruvNextType.body, fontWeight = FontWeight.SemiBold, color = colors.acc)
             }
         }
     }

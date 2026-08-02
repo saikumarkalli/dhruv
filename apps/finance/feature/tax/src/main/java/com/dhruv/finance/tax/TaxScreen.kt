@@ -1,40 +1,50 @@
 package com.dhruv.finance.tax
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.components.NxTextField
+import com.dhruv.core.ui.components.SectionLabel
+import com.dhruv.core.ui.components.SegmentedRow
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.data.util.CurrencyFormatter
 import java.math.BigDecimal
 
 @Composable
 fun TaxScreen(viewModel: TaxViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("GST / Tax", "Salary Breakup")
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title) },
-                )
-            }
-        }
+        SegmentedRow(
+            options = TaxTabs,
+            selectedIndex = selectedTab,
+            onSelected = { selectedTab = it },
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = DhruvNextSpacing.screenGutter,
+                vertical = DhruvNextSpacing.interCardGap,
+            ),
+        )
         when (selectedTab) {
             0 -> GstTaxCalculator(viewModel)
             1 -> SalaryCtcCalculator(viewModel)
@@ -42,15 +52,14 @@ fun TaxScreen(viewModel: TaxViewModel) {
     }
 }
 
-// -------------------------------------------------------------
-// GST / TAX CALCULATOR (moved verbatim from FinanceScreen.kt)
-// -------------------------------------------------------------
 @Composable
 fun GstTaxCalculator(viewModel: TaxViewModel) {
     var amountInput by remember { mutableStateOf("1500") }
     var gstInput by remember { mutableStateOf("18") }
-    var isAddGst by remember { mutableStateOf(true) }
+    var gstModeIndex by remember { mutableIntStateOf(0) }
+    val isAddGst = gstModeIndex == 0
 
+    val colors = LocalDhruvNextColors.current
     val amount = amountInput.toDoubleOrNull() ?: 0.0
     val gstPercent = gstInput.toDoubleOrNull() ?: 0.0
 
@@ -59,124 +68,67 @@ fun GstTaxCalculator(viewModel: TaxViewModel) {
             viewModel.calculateGst(amount, gstPercent, isAddGst)
         }
 
-    val taxAmount = gstResult.taxAmount
-    val totalAmount = gstResult.totalAmount
-    val originalBase = gstResult.preTaxBase
-
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("GST / Tax Assessment Engine", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SectionLabel(text = "GST / Tax")
 
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                NxTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
-                    label = { Text("Financial Base Sum (₹)") },
-                    prefix = { Text("₹ ") },
+                    label = "Amount (₹)",
+                    prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                 )
-                OutlinedTextField(
+                NxTextField(
                     value = gstInput,
                     onValueChange = { gstInput = it },
-                    label = { Text("Tax Levy Speed (%)") },
-                    suffix = { Text("%") },
+                    label = "Tax Rate (%)",
+                    suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                 )
-
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(4.dp),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .clickable { isAddGst = true }
-                                .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "Add GST / tax",
-                            color = if (isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                        )
-                    }
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (!isAddGst) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .clickable { isAddGst = false }
-                                .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "Remove GST / tax",
-                            color = if (!isAddGst) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
+                SegmentedRow(
+                    options = GstModes,
+                    selectedIndex = gstModeIndex,
+                    onSelected = { gstModeIndex = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Pre-tax net sum base:", fontSize = 12.sp)
-                    Text(formatCurrency(originalBase), fontWeight = FontWeight.Bold)
+                    Text("Pre-tax base", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(formatCurrency(gstResult.preTaxBase), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.tx)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Calculated tax levy:", fontSize = 12.sp)
-                    Text(formatCurrency(taxAmount), fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                    Text("Tax amount", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(formatCurrency(gstResult.taxAmount), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.neg)
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(thickness = 0.5.dp, color = colors.line)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Final Gross Total:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(
-                        formatCurrency(totalAmount),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Text("Total", fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.tx)
+                    Text(formatCurrency(gstResult.totalAmount), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title, color = colors.acc)
                 }
             }
         }
     }
 }
 
-// -------------------------------------------------------------
-// SALARY / CTC BREAKUP CALCULATOR (moved verbatim from FinanceScreen.kt)
-// -------------------------------------------------------------
 @Composable
 fun SalaryCtcCalculator(viewModel: TaxViewModel) {
-    var ctcInput by remember { mutableStateOf("1200000") } // 12 LPA default
+    var ctcInput by remember { mutableStateOf("1200000") }
 
+    val colors = LocalDhruvNextColors.current
     val ctcPrice = ctcInput.toDoubleOrNull() ?: 0.0
 
     val salaryResult =
@@ -184,71 +136,48 @@ fun SalaryCtcCalculator(viewModel: TaxViewModel) {
             viewModel.calculateSalaryBreakup(ctcPrice)
         }
 
-    val grossMonthly = salaryResult.grossMonthly
-    val statePF = salaryResult.pfContribution
-    val estimatedTaxes = salaryResult.estimatedTax
-    val standardTakeHome = salaryResult.takeHome
-
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(DhruvNextSpacing.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Salary Bracket Breakdowns & PF Indicators", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SectionLabel(text = "Salary breakup")
 
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = ctcInput,
-                    onValueChange = { ctcInput = it },
-                    label = { Text("Annual Gross CTC (₹)") },
-                    prefix = { Text("₹ ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                )
-            }
+        NxCard {
+            NxTextField(
+                value = ctcInput,
+                onValueChange = { ctcInput = it },
+                label = "Annual CTC (₹)",
+                prefix = "₹",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Accurate Monthly Pro-Rata breakdowns",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+        NxCard {
+            Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+                Text("Monthly breakdown", fontSize = DhruvNextType.meta, fontWeight = FontWeight.Medium, color = colors.tx3)
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Pro-Rata gross monthly rate:", fontSize = 12.sp)
-                    Text(formatCurrency(grossMonthly), fontWeight = FontWeight.Bold)
+                    Text("Gross monthly", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(formatCurrency(salaryResult.grossMonthly), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.tx)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Employee PF contributions (12% approx):", fontSize = 12.sp)
-                    Text(formatCurrency(statePF), fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                    Text("PF contribution (12%)", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(formatCurrency(salaryResult.pfContribution), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.neg)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Estimated income bracket taxes deduction:", fontSize = 12.sp)
-                    Text(formatCurrency(estimatedTaxes), fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                    Text("Estimated tax", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(formatCurrency(salaryResult.estimatedTax), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.neg)
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                HorizontalDivider(thickness = 0.5.dp, color = colors.line)
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Net Monthly Take-Home (estimated):", fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    Text(
-                        formatCurrency(standardTakeHome),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Text("Net take-home", fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.tx)
+                    Text(formatCurrency(salaryResult.takeHome), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title, color = colors.acc)
                 }
             }
         }

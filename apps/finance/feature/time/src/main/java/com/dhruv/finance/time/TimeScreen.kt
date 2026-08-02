@@ -1,9 +1,16 @@
 package com.dhruv.finance.time
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.dhruv.core.ui.components.SegmentedRow
+import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.finance.time.stopwatch.StopwatchScreen
 import com.dhruv.finance.time.stopwatch.StopwatchViewModel
 import com.dhruv.finance.time.timer.TimerScreen
@@ -16,22 +23,17 @@ fun TimeScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val tabs = listOf("Stopwatch", "Timer")
 
     Column(modifier = modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = uiState.selectedTab,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary,
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = uiState.selectedTab == index,
-                    onClick = { viewModel.selectTab(index) },
-                    text = { Text(title) },
-                )
-            }
-        }
+        SegmentedRow(
+            options = TimeTabs,
+            selectedIndex = uiState.selectedTab,
+            onSelected = { viewModel.selectTab(it) },
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = DhruvNextSpacing.screenGutter,
+                vertical = DhruvNextSpacing.interCardGap,
+            ),
+        )
 
         Box(modifier = Modifier.fillMaxSize().weight(1f)) {
             when (uiState.selectedTab) {

@@ -24,12 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Scale
-import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -47,25 +43,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.KeypadButton
 import com.dhruv.core.ui.components.ModeChipRow
-import com.dhruv.core.ui.theme.DhruvNextKeypad
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
-private enum class UnitTab { LENGTH, MASS, TEMP, AREA }
+enum class UnitTab { LENGTH, MASS, TEMP, AREA }
 
 private fun formatResult(value: Double): String {
     if (value.isNaN() || value.isInfinite()) return "—"
@@ -187,14 +184,8 @@ fun UnitScreen(
         }
     }
 
-    val categoryOptions = listOf("Length", "Mass", "Temp", "Area")
-    val categoryIcons =
-        listOf<ImageVector?>(
-            Icons.Default.Straighten,
-            Icons.Default.Scale,
-            Icons.Default.Thermostat,
-            Icons.Default.CropFree,
-        )
+    val categoryOptions = UnitCategoryLabels
+    val categoryIcons = UnitCategoryIcons
 
     val clipboardManager = LocalClipboardManager.current
 
@@ -490,7 +481,7 @@ private fun ConverterCard(
                 .background(colors.surf)
                 .border(1.dp, colors.line, RoundedCornerShape(radius))
                 .padding(DhruvNextSpacing.cardPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
     ) {
         UnitRow(
             label = "FROM",
@@ -529,15 +520,14 @@ private fun UnitRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
     ) {
-        // Left: label + unit picker (intrinsic width; amount Text takes remaining via weight(1f))
         Column(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = label,
-                fontSize = 10.sp,
+                fontSize = DhruvNextType.sectionLabel,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp,
                 color = colors.tx3,
@@ -550,7 +540,7 @@ private fun UnitRow(
                 ) {
                     Text(
                         text = unitLabel,
-                        fontSize = 14.sp,
+                        fontSize = DhruvNextType.body,
                         fontWeight = FontWeight.Bold,
                         color = colors.tx,
                     )
@@ -577,7 +567,7 @@ private fun UnitRow(
         // Right: amount display
         Text(
             text = amount,
-            fontSize = 30.sp,
+            fontSize = DhruvNextType.hero,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-1.2).sp,
             color = amountColor,
@@ -611,11 +601,11 @@ private fun AlsoList(
                 .background(colors.surf)
                 .border(1.dp, colors.line, RoundedCornerShape(radius))
                 .padding(DhruvNextSpacing.cardPadding),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
     ) {
         Text(
             text = "$inputDisplay is also",
-            fontSize = 15.sp,
+            fontSize = DhruvNextType.cardTitle,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.2).sp,
             color = colors.tx,
@@ -634,12 +624,12 @@ private fun AlsoList(
                 ) {
                     Text(
                         text = label,
-                        fontSize = 13.5.sp,
+                        fontSize = DhruvNextType.body,
                         color = colors.tx2,
                     )
                     Text(
                         text = value,
-                        fontSize = 13.5.sp,
+                        fontSize = DhruvNextType.body,
                         fontWeight = FontWeight.Bold,
                         color = colors.tx,
                     )
@@ -659,188 +649,93 @@ private fun UnitKeypad(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
-    val keyRadius = RoundedCornerShape(DhruvNextRadii.listGroup)
-    val digitSize = DhruvNextKeypad.digit
     val gap = 8.dp
     val keyMinHeight = 54.dp
 
-    // Layout: Row { 3-col left grid | right column (C, ⌫, swap×2) }
-    // The right column's swap key spans the height of 2 key rows, achieved by weight(2f).
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(gap),
     ) {
-        // Left 3 columns — 4 rows of 3 keys each
         Column(
             modifier = Modifier.weight(3f),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) {
-            // Row 1: 7 8 9
-            Row(
-                modifier = Modifier.fillMaxWidth().height(keyMinHeight),
-                horizontalArrangement = Arrangement.spacedBy(gap),
-            ) {
-                listOf("7", "8", "9").forEach { d ->
-                    UnitKey(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        shape = keyRadius,
-                        background = colors.surf,
-                        borderColor = colors.line,
-                        onClick = { onDigit(d) },
-                    ) {
-                        Text(d, fontSize = digitSize, fontWeight = FontWeight.W500, color = colors.tx)
+            listOf(
+                listOf("7", "8", "9"),
+                listOf("4", "5", "6"),
+                listOf("1", "2", "3"),
+            ).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(keyMinHeight),
+                    horizontalArrangement = Arrangement.spacedBy(gap),
+                ) {
+                    row.forEach { d ->
+                        KeypadButton(
+                            modifier = Modifier.weight(1f),
+                            text = d,
+                            keyHeight = keyMinHeight,
+                            onClick = { onDigit(d) },
+                        )
                     }
                 }
             }
-            // Row 2: 4 5 6
             Row(
                 modifier = Modifier.fillMaxWidth().height(keyMinHeight),
                 horizontalArrangement = Arrangement.spacedBy(gap),
             ) {
-                listOf("4", "5", "6").forEach { d ->
-                    UnitKey(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        shape = keyRadius,
-                        background = colors.surf,
-                        borderColor = colors.line,
-                        onClick = { onDigit(d) },
-                    ) {
-                        Text(d, fontSize = digitSize, fontWeight = FontWeight.W500, color = colors.tx)
-                    }
-                }
-            }
-            // Row 3: 1 2 3
-            Row(
-                modifier = Modifier.fillMaxWidth().height(keyMinHeight),
-                horizontalArrangement = Arrangement.spacedBy(gap),
-            ) {
-                listOf("1", "2", "3").forEach { d ->
-                    UnitKey(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        shape = keyRadius,
-                        background = colors.surf,
-                        borderColor = colors.line,
-                        onClick = { onDigit(d) },
-                    ) {
-                        Text(d, fontSize = digitSize, fontWeight = FontWeight.W500, color = colors.tx)
-                    }
-                }
-            }
-            // Row 4: 0 . copy
-            Row(
-                modifier = Modifier.fillMaxWidth().height(keyMinHeight),
-                horizontalArrangement = Arrangement.spacedBy(gap),
-            ) {
-                UnitKey(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = keyRadius,
-                    background = colors.surf,
-                    borderColor = colors.line,
+                KeypadButton(
+                    modifier = Modifier.weight(1f),
+                    text = "0",
+                    keyHeight = keyMinHeight,
                     onClick = { onDigit("0") },
-                ) {
-                    Text("0", fontSize = digitSize, fontWeight = FontWeight.W500, color = colors.tx)
-                }
-                UnitKey(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = keyRadius,
-                    background = colors.surf,
-                    borderColor = colors.line,
+                )
+                KeypadButton(
+                    modifier = Modifier.weight(1f),
+                    text = ".",
+                    keyHeight = keyMinHeight,
                     onClick = { onDigit(".") },
-                ) {
-                    Text(".", fontSize = digitSize, fontWeight = FontWeight.W500, color = colors.tx)
-                }
-                UnitKey(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = keyRadius,
-                    background = colors.surf,
-                    borderColor = colors.line,
+                )
+                KeypadButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.ContentCopy,
+                    contentColorOverride = colors.tx2,
+                    keyHeight = keyMinHeight,
+                    iconSize = 20.dp,
                     onClick = onCopy,
-                ) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = "Copy result",
-                        modifier = Modifier.size(20.dp),
-                        tint = colors.tx2,
-                    )
-                }
+                )
             }
         }
 
-        // Right column: C (row 1), ⌫ (row 2), swap (rows 3+4 via weight 2f)
         Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .height(keyMinHeight * 4 + gap * 3),
+            modifier = Modifier
+                .weight(1f)
+                .height(keyMinHeight * 4 + gap * 3),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) {
-            // C key (clear)
-            UnitKey(
+            KeypadButton(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                shape = keyRadius,
-                background = colors.surf,
-                borderColor = colors.line,
+                text = "C",
+                isOperator = true,
+                fontWeightOverride = FontWeight.Bold,
+                keyHeight = Dp.Unspecified,
                 onClick = onClear,
-            ) {
-                Text(
-                    "C",
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.acc,
-                )
-            }
-            // Backspace key
-            UnitKey(
+            )
+            KeypadButton(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                shape = keyRadius,
-                background = colors.surf,
-                borderColor = colors.line,
+                icon = Icons.AutoMirrored.Filled.Backspace,
+                isOperator = true,
+                keyHeight = Dp.Unspecified,
+                iconSize = 21.dp,
                 onClick = onBackspace,
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Backspace,
-                    contentDescription = "Backspace",
-                    modifier = Modifier.size(21.dp),
-                    tint = colors.acc,
-                )
-            }
-            // Swap key — weight(2f) makes it span 2 key heights + 1 gap
-            UnitKey(
+            )
+            KeypadButton(
                 modifier = Modifier.fillMaxWidth().weight(2f),
-                shape = keyRadius,
-                background = colors.acc,
-                borderColor = colors.acc,
+                icon = Icons.Default.SwapVert,
+                solidAccent = true,
+                keyHeight = Dp.Unspecified,
+                iconSize = 22.dp,
                 onClick = onSwap,
-            ) {
-                Icon(
-                    Icons.Default.SwapVert,
-                    contentDescription = "Swap units",
-                    modifier = Modifier.size(22.dp),
-                    tint = colors.onAcc,
-                )
-            }
+            )
         }
-    }
-}
-
-@Composable
-private fun UnitKey(
-    modifier: Modifier = Modifier,
-    shape: RoundedCornerShape,
-    background: Color,
-    borderColor: Color,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier =
-            modifier
-                .clip(shape)
-                .background(background)
-                .border(1.dp, borderColor, shape)
-                .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
     }
 }

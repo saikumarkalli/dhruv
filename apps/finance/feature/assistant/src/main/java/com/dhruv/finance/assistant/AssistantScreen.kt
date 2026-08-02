@@ -9,18 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +23,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.components.NxTextField
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.DhruvTheme
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -57,11 +54,12 @@ private fun AssistantContent(
     onAsk: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalDhruvNextColors.current
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(DhruvNextSpacing.screenGutter),
     ) {
         when (state) {
             is AssistantUiState.ConsentNeeded -> ConsentGate(onGrantConsent = onGrantConsent)
@@ -78,8 +76,8 @@ private fun AssistantContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Thinking…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = DhruvNextType.body,
+                        color = colors.tx2,
                     )
                 }
 
@@ -89,21 +87,13 @@ private fun AssistantContent(
                         Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            ),
-                    ) {
+                    NxCard(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = state.response,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(16.dp),
+                            fontSize = DhruvNextType.body,
+                            color = colors.acc,
                         )
                     }
                     PromptInput(onAsk = onAsk, previousResponse = state.response)
@@ -115,21 +105,13 @@ private fun AssistantContent(
                         Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                            ),
-                    ) {
+                    NxCard(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = state.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp),
+                            fontSize = DhruvNextType.body,
+                            color = colors.neg,
                         )
                     }
                     PromptInput(onAsk = onAsk, previousResponse = null)
@@ -144,49 +126,40 @@ private fun ConsentGate(
     onGrantConsent: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalDhruvNextColors.current
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
-        ) {
+        NxCard(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
             ) {
                 Text(
                     text = "AI Assistant",
-                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = DhruvNextType.title,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = colors.tx,
                 )
                 Text(
                     text =
                         "Your prompt will be sent to Google Gemini (an online service). " +
                             "This means your text will leave this device and be processed by Google's servers.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = DhruvNextType.body,
+                    color = colors.tx2,
                 )
                 Text(
                     text = "By continuing you consent to this data transfer as required under DPDP Rules 2025.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = DhruvNextType.meta,
+                    color = colors.tx2,
                 )
-                Button(
+                NxButton(
+                    text = "I understand — Continue",
                     onClick = onGrantConsent,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("I understand — Continue")
-                }
+                )
             }
         }
     }
@@ -201,34 +174,28 @@ private fun PromptInput(
 ) {
     var text by rememberSaveable { mutableStateOf("") }
 
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
-        label = { Text("Ask Gemini…") },
+    Column(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    onAsk(text)
-                    text = ""
-                },
-                enabled = text.isNotBlank(),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "Send",
-                    tint =
-                        if (text.isNotBlank()) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        },
-                )
-            }
-        },
-        maxLines = 4,
-    )
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
+    ) {
+        NxTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = "Ask Gemini…",
+            placeholder = "Type your question",
+            singleLine = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        NxButton(
+            text = "Send",
+            onClick = {
+                onAsk(text)
+                text = ""
+            },
+            enabled = text.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +205,7 @@ private fun PromptInput(
 @Preview(name = "Consent gate — light", showBackground = true)
 @Composable
 private fun PreviewConsentLight() {
-    MaterialTheme {
+    DhruvTheme {
         AssistantContent(
             state = AssistantUiState.ConsentNeeded,
             onGrantConsent = {},
@@ -250,7 +217,7 @@ private fun PreviewConsentLight() {
 @Preview(name = "Consent gate — dark", showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PreviewConsentDark() {
-    MaterialTheme {
+    DhruvTheme {
         AssistantContent(
             state = AssistantUiState.ConsentNeeded,
             onGrantConsent = {},
@@ -262,7 +229,7 @@ private fun PreviewConsentDark() {
 @Preview(name = "Success — light", showBackground = true)
 @Composable
 private fun PreviewSuccessLight() {
-    MaterialTheme {
+    DhruvTheme {
         AssistantContent(
             state =
                 AssistantUiState.Success(
@@ -277,7 +244,7 @@ private fun PreviewSuccessLight() {
 @Preview(name = "Error — light", showBackground = true)
 @Composable
 private fun PreviewErrorLight() {
-    MaterialTheme {
+    DhruvTheme {
         AssistantContent(
             state = AssistantUiState.Error("Network error. Please check your internet connection and try again."),
             onGrantConsent = {},

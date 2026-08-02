@@ -1,0 +1,11 @@
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}

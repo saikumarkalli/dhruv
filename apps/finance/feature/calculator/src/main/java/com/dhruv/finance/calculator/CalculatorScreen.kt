@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dhruv.core.ui.components.Chip
+import com.dhruv.core.ui.components.KeypadButton
 import com.dhruv.core.ui.components.ModeChipRow
 import com.dhruv.core.ui.components.NxInsetSurface
 import com.dhruv.core.ui.components.PeriodChipRow
@@ -436,11 +437,8 @@ fun CalculatorScreen(
 
                             Text(
                                 text = displayResult,
-                                style =
-                                    MaterialTheme.typography.headlineLarge.copy(
-                                        fontSize = animatedResultFontSize.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                    ),
+                                fontSize = animatedResultFontSize.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = themeTextColor,
                                 textAlign = TextAlign.End,
                                 maxLines = 1,
@@ -539,11 +537,8 @@ fun CalculatorScreen(
 
                                 Text(
                                     text = displayResult,
-                                    style =
-                                        MaterialTheme.typography.headlineLarge.copy(
-                                            fontSize = animatedResultFontSize.sp,
-                                            fontWeight = FontWeight.Normal,
-                                        ),
+                                    fontSize = animatedResultFontSize.sp,
+                                    fontWeight = FontWeight.Normal,
                                     color = themeSecText.copy(alpha = 0.65f),
                                     textAlign = TextAlign.End,
                                     maxLines = 1,
@@ -667,7 +662,7 @@ fun CalculatorScreen(
                                             color = colors.acc,
                                         )
                                     }
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "sin",
                                         tag = "key_btn_sin",
                                         fontSize = DhruvNextKeypad.function,
@@ -681,7 +676,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("sin")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "cos",
                                         tag = "key_btn_cos",
                                         fontSize = DhruvNextKeypad.function,
@@ -695,7 +690,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("cos")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "tan",
                                         tag = "key_btn_tan",
                                         fontSize = DhruvNextKeypad.function,
@@ -709,7 +704,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("tan")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "xʸ",
                                         tag = "key_btn_power",
                                         fontSize = DhruvNextKeypad.function,
@@ -729,7 +724,7 @@ fun CalculatorScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "(",
                                         tag = "key_btn_open_bracket",
                                         fontSize = DhruvNextKeypad.function,
@@ -742,7 +737,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("(")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = ")",
                                         tag = "key_btn_close_bracket",
                                         fontSize = DhruvNextKeypad.function,
@@ -755,7 +750,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress(")")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "log",
                                         tag = "key_btn_log",
                                         fontSize = DhruvNextKeypad.function,
@@ -769,7 +764,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("log")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "ln",
                                         tag = "key_btn_ln",
                                         fontSize = DhruvNextKeypad.function,
@@ -783,7 +778,7 @@ fun CalculatorScreen(
                                             viewModel.onKeyPress("ln")
                                         },
                                     )
-                                    SimpleKey(
+                                    KeypadButton(
                                         text = "√",
                                         tag = "key_btn_sqrt",
                                         fontSize = DhruvNextKeypad.function,
@@ -817,7 +812,7 @@ fun CalculatorScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             val clearText = if (inputState.text.isNotEmpty()) "C" else "AC"
-                            SimpleKey(
+                            KeypadButton(
                                 text = clearText,
                                 tag = "key_btn_C",
                                 modifier =
@@ -835,7 +830,7 @@ fun CalculatorScreen(
                                     viewModel.onKeyPress(clearText)
                                 },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 icon = Icons.AutoMirrored.Filled.Backspace,
                                 tag = "key_btn_⌫",
                                 modifier =
@@ -848,7 +843,7 @@ fun CalculatorScreen(
                                     viewModel.onKeyPress("⌫")
                                 },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "%",
                                 tag = "key_btn_%",
                                 modifier =
@@ -863,7 +858,7 @@ fun CalculatorScreen(
                                     viewModel.onKeyPress("%")
                                 },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "÷",
                                 tag = "key_btn_÷",
                                 modifier =
@@ -884,28 +879,28 @@ fun CalculatorScreen(
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            SimpleKey(
+                            KeypadButton(
                                 text = "7",
                                 tag = "key_btn_7",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("7") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "8",
                                 tag = "key_btn_8",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("8") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "9",
                                 tag = "key_btn_9",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("9") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "×",
                                 tag = "key_btn_×",
                                 modifier =
@@ -926,28 +921,28 @@ fun CalculatorScreen(
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            SimpleKey(
+                            KeypadButton(
                                 text = "4",
                                 tag = "key_btn_4",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("4") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "5",
                                 tag = "key_btn_5",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("5") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "6",
                                 tag = "key_btn_6",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("6") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "−",
                                 tag = "key_btn_-",
                                 modifier =
@@ -968,28 +963,28 @@ fun CalculatorScreen(
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            SimpleKey(
+                            KeypadButton(
                                 text = "1",
                                 tag = "key_btn_1",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("1") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "2",
                                 tag = "key_btn_2",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("2") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "3",
                                 tag = "key_btn_3",
                                 modifier = Modifier.weight(1f),
                                 keyHeight = stdH,
                                 onClick = { viewModel.onKeyPress("3") },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "+",
                                 tag = "key_btn_+",
                                 modifier =
@@ -1012,7 +1007,7 @@ fun CalculatorScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            SimpleKey(
+                            KeypadButton(
                                 text = "( )",
                                 tag = "key_btn_bracket_toggle",
                                 modifier = Modifier.weight(1f),
@@ -1027,7 +1022,7 @@ fun CalculatorScreen(
                                     viewModel.onKeyPress(if (openCount > closeCount) ")" else "(")
                                 },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = "0",
                                 tag = "key_btn_0",
                                 modifier = Modifier.weight(1f),
@@ -1038,7 +1033,7 @@ fun CalculatorScreen(
                                     viewModel.onKeyPress("000")
                                 },
                             )
-                            SimpleKey(
+                            KeypadButton(
                                 text = ".",
                                 tag = "key_btn_.",
                                 modifier = Modifier.weight(1f),
@@ -1196,7 +1191,7 @@ fun CalculatorScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "AI Solver",
-                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = DhruvNextType.cardTitle,
                                 fontWeight = FontWeight.Bold,
                                 color = themeTextColor,
                             )
@@ -1232,7 +1227,7 @@ fun CalculatorScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = answer,
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontSize = DhruvNextType.title,
                                     fontWeight = FontWeight.Bold,
                                     color = themeTextColor,
                                     modifier = Modifier.fillMaxWidth(),
@@ -1241,7 +1236,7 @@ fun CalculatorScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = note,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontSize = DhruvNextType.body,
                                         color = themeSecText,
                                         modifier = Modifier.fillMaxWidth(),
                                         lineHeight = 20.sp,
@@ -1252,7 +1247,7 @@ fun CalculatorScreen(
                         is AiExplanationState.Error -> {
                             Text(
                                 text = state.message,
-                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = DhruvNextType.body,
                                 color = colors.neg,
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -1327,144 +1322,6 @@ private fun CalcActionPill(
             color = contentColor,
             maxLines = 1,
         )
-    }
-}
-
-/**
- * A single keypad key (DhruvNext §6.3). Three visual roles, expressed via [isOperator] (content
- * tint: `acc` vs `tx`) crossed with [fillAccent] (background: solid `accSoft` fill vs the default
- * digit tile):
- * - **digit** (`isOperator=false, fillAccent=false`): `surf` bg + 1dp `line` border, `tx` content.
- * - **arithmetic operator** (`% ÷ × − +`, `isOperator=true, fillAccent=true`): solid `accSoft`
- *   fill, `acc` content, no border.
- * - **C/backspace** (`isOperator=true, fillAccent=false`): the digit tile's `surf`+border
- *   background, but `acc`-tinted content — a key that reads as an accent action without the
- *   heavier operator fill.
- *
- * [contentColorOverride]/[fontWeightOverride] escape-hatch the two derived-from-[isOperator]
- * choices above for one-off labels (e.g. the `C`/`AC` glyph's bolder weight, the bracket-toggle
- * key's muted `tx2`) without adding another boolean per special case.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun SimpleKey(
-    text: String? = null,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    badgeText: String? = null,
-    isOperator: Boolean = false,
-    fillAccent: Boolean = false,
-    contentColorOverride: Color? = null,
-    fontWeightOverride: FontWeight? = null,
-    modifier: Modifier = Modifier,
-    tag: String? = null,
-    keyHeight: androidx.compose.ui.unit.Dp = 72.dp,
-    fontSize: androidx.compose.ui.unit.TextUnit = DhruvNextKeypad.digit,
-    onLongClick: (() -> Unit)? = null,
-    onClick: () -> Unit,
-) {
-    val colors = LocalDhruvNextColors.current
-    val themeTextColor = colors.tx
-    val operatorColor = colors.acc
-    val hapticFeedback = LocalHapticFeedback.current
-
-    val contentColor = contentColorOverride ?: if (isOperator) operatorColor else themeTextColor
-    val fontWeight = fontWeightOverride ?: if (isOperator) FontWeight.SemiBold else FontWeight.Medium
-
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    // Feature 4: Circular centered ripple effect (200 ms fade-in/out)
-    val rippleProgress by animateFloatAsState(
-        targetValue = if (isPressed) 1f else 0f,
-        animationSpec =
-            tween(
-                durationMillis = if (isPressed) 80 else 200,
-                easing = FastOutSlowInEasing,
-            ),
-        label = "rippleProgress",
-    )
-    // Pick the ripple colour off the same resolved content color as the glyph/label.
-    val rippleBaseColor = contentColor
-
-    val keyShape = RoundedCornerShape(DhruvNextRadii.listGroup)
-
-    Box(
-        modifier =
-            modifier
-                .then(if (keyHeight == androidx.compose.ui.unit.Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
-                .clip(keyShape)
-                .background(if (fillAccent) colors.accSoft else colors.surf)
-                .then(if (fillAccent) Modifier else Modifier.border(1.dp, colors.line, keyShape))
-                .combinedClickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onClick()
-                    },
-                    onLongClick =
-                        onLongClick?.let {
-                            {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                it()
-                            }
-                        },
-                ).drawWithContent {
-                    drawContent()
-                    // Circular light ripple centered on the key
-                    if (rippleProgress > 0f) {
-                        val maxRadius = size.minDimension * 0.9f
-                        val currentRadius = maxRadius * rippleProgress
-                        val alpha = (0.28f * (1f - rippleProgress * 0.5f)).coerceAtLeast(0f)
-                        val brush =
-                            Brush.radialGradient(
-                                colors =
-                                    listOf(
-                                        rippleBaseColor.copy(alpha = alpha),
-                                        rippleBaseColor.copy(alpha = alpha * 0.4f),
-                                        Color.Transparent,
-                                    ),
-                                center = Offset(size.width / 2f, size.height / 2f),
-                                radius = currentRadius,
-                            )
-                        drawCircle(
-                            brush = brush,
-                            radius = currentRadius,
-                            center = Offset(size.width / 2f, size.height / 2f),
-                        )
-                    }
-                }.testTag(tag ?: if (text != null) "key_btn_$text" else "key_btn_icon"),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (text != null) {
-            Text(
-                text = text,
-                fontSize = fontSize,
-                fontWeight = fontWeight,
-                color = contentColor,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        } else if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColorOverride ?: if (isOperator) operatorColor else themeTextColor.copy(alpha = 0.8f),
-                modifier = Modifier.size(26.dp),
-            )
-        }
-
-        if (badgeText != null) {
-            Text(
-                text = badgeText,
-                fontSize = DhruvNextKeypad.caption,
-                fontWeight = FontWeight.Bold,
-                color = colors.acc,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 16.dp, end = 24.dp),
-            )
-        }
     }
 }
 
@@ -1606,11 +1463,9 @@ fun CalendarHistoryFullView(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "History",
-                    style =
-                        MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textCol,
-                        ),
+                    fontSize = DhruvNextType.title,
+                    fontWeight = FontWeight.Bold,
+                    color = textCol,
                 )
             }
 
@@ -1781,7 +1636,7 @@ fun CalendarHistoryFullView(
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = "No calculations found matching filters.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = DhruvNextType.body,
                             color = secCol,
                         )
                     }
@@ -1979,24 +1834,17 @@ fun HistoryEntryCard(
             // Second Row: Formula Equation
             Text(
                 text = item.expression,
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = DhruvNextType.title,
-                    ),
+                fontSize = DhruvNextType.title,
+                fontWeight = FontWeight.Medium,
                 color = textCol,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Third Row: Evaluated Value Result matching exact formatting
             Text(
                 text = "= ${item.result}",
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = DhruvNextType.title,
-                        color = colors.acc,
-                    ),
+                fontSize = DhruvNextType.title,
+                fontWeight = FontWeight.Bold,
+                color = colors.acc,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -2248,13 +2096,13 @@ fun SecureHistoryLockGuard(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 "Logs PIN Secured",
-                style = MaterialTheme.typography.titleMedium,
+                fontSize = DhruvNextType.cardTitle,
                 fontWeight = FontWeight.Bold,
                 color = colors.tx,
             )
             Text(
                 "Authentication is required to unlock calculation logs.",
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = DhruvNextType.meta,
                 color = colors.tx2,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
@@ -2288,7 +2136,7 @@ fun SecureHistoryLockGuard(
                 Text(
                     "Incorrect PIN. Please try again.",
                     color = colors.neg,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = DhruvNextType.meta,
                     fontWeight = FontWeight.SemiBold,
                 )
             }

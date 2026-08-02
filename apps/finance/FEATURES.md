@@ -76,4 +76,26 @@ Standalone online AI assistant. Shows a DPDP consent gate before any Gemini call
 - **Screens:** `AssistantScreen` (+ `AssistantUiState`)
 - **ViewModels:** `AssistantViewModel`
 - **Data deps:** `GeminiRepository` (from `:data`; online Gemini API).
-- **Flag:** `assistant` — `enabled = true` but **gated to `minVersion 1.2.0`** (hidden until the app ships ≥ 1.2.0; current `versionName` is `1.0`) and `requiresConsent: true` (consent gate in `AssistantScreen` before any Gemini call).
+- **Flag:** `assistant` — `enabled = true` but **gated to `minVersion 1.2.0`** (current `versionName` is `2.0.2`, so already visible) and `requiresConsent: true` (consent gate in `AssistantScreen` before any Gemini call).
+
+### networth — `:apps:finance:feature:networth`
+Net worth tracker: assets, liabilities, valuations. Supabase-primary (ADR-0014). Google sign-in
+via Credential Manager. DPDP consent gate before any network call.
+- **Screens:** planned per P1 spec (`2026-07-03-p1-networth-tracker-design.md`)
+- **ViewModels:** planned
+- **Data deps:** Supabase REST (PostgREST + GoTrue via Retrofit/Moshi/OkHttp); no Room for tracker data.
+- **Flag:** `networth` — `enabled = true`, `requiresConsent: true`. Module scaffolded but screens not yet implemented (R2 in the master roadmap).
+
+---
+
+## Design system
+
+All feature screens use the **DhruvNext design system** (ADR-0024). Token usage:
+- Colors: `LocalDhruvNextColors.current` (`acc`, `surf`, `tx`, `tx2`, `tx3`, `line`, `neg`, `pos`, etc.)
+- Typography: `DhruvNextType.*` (`hero`, `title`, `cardTitle`, `body`, `meta`, `sectionLabel`)
+- Spacing: `DhruvNextSpacing.*` (`screenGutter`, `interCardGap`, `sectionGap`, `cardPadding`, `inputGroupGap`)
+- Radii: `DhruvNextRadii.*` (`card`, `listGroup`, `innerTile`, `pill`)
+- Components: `NxCard`, `NxButton`, `NxTextField`, `SegmentedRow`, `SectionLabel`, `ListGroup`, `StatDeltaChip`, etc.
+
+Zero `MaterialTheme.colorScheme` / `MaterialTheme.typography` refs remain in any screen file.
+`CardDefaults` usage in date sub-views is intentional (accent-tinted `accSoft` result cards).

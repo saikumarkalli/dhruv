@@ -18,11 +18,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dhruv.core.ui.theme.*
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.util.*
 
 @Composable
 fun UnixEpochConverterView(viewModel: DateViewModel) {
+    val colors = LocalDhruvNextColors.current
     var unixInput by remember { mutableStateOf("1779532800") } // May 23, 2026 default
     var customYear by remember { mutableStateOf("2026") }
     var customMonth by remember { mutableStateOf("05") }
@@ -56,14 +60,14 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Two-way Unix Epoch Translation", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Two-way Unix Epoch Translation", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .clip(RoundedCornerShape(DhruvNextRadii.innerTile))
+                    .background(colors.surf2)
                     .padding(4.dp),
         ) {
             Box(
@@ -71,14 +75,14 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (isTimestampToDateMode) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .background(if (isTimestampToDateMode) colors.acc else Color.Transparent)
                         .clickable { isTimestampToDateMode = true }
                         .padding(8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     "Timestamp to Date",
-                    color = if (isTimestampToDateMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    color = if (isTimestampToDateMode) colors.onAcc else colors.tx,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                 )
@@ -88,14 +92,14 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (!isTimestampToDateMode) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .background(if (!isTimestampToDateMode) colors.acc else Color.Transparent)
                         .clickable { isTimestampToDateMode = false }
                         .padding(8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     "Date to Timestamp",
-                    color = if (!isTimestampToDateMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    color = if (!isTimestampToDateMode) colors.onAcc else colors.tx,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                 )
@@ -103,15 +107,12 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
         }
 
         if (isTimestampToDateMode) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            ) {
+            NxCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         "Enter Epoch Timestamp (Seconds)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx3,
                     )
                     OutlinedTextField(
                         value = unixInput,
@@ -120,42 +121,39 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(DhruvNextRadii.innerTile),
                     )
                 }
             }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.accSoft),
+                shape = RoundedCornerShape(DhruvNextRadii.card),
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         "Human Readable date equivalent",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx2,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = formattedDateResult,
-                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = DhruvNextType.body,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = colors.acc,
                         lineHeight = 22.sp,
                     )
                 }
             }
         } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            ) {
+            NxCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         "Specify Date Parameters (UTC)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx3,
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -197,21 +195,21 @@ fun UnixEpochConverterView(viewModel: DateViewModel) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.accSoft),
+                shape = RoundedCornerShape(DhruvNextRadii.card),
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         "Resulting Unix Timestamp",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx2,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = computedUnixResult,
-                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = DhruvNextType.body,
                         fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = colors.acc,
                     )
                 }
             }

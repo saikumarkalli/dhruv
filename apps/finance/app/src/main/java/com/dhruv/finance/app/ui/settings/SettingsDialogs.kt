@@ -12,7 +12,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 @Composable
 fun LocaleFormatDialog(
@@ -44,7 +46,7 @@ fun LocaleFormatDialog(
                             onClick = { onLocaleSelected(key) },
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text(name, fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -54,7 +56,7 @@ fun LocaleFormatDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(DhruvNextRadii.card),
     )
 }
 
@@ -63,19 +65,20 @@ fun ClearHistoryDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = LocalDhruvNextColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Clear history?", fontWeight = FontWeight.Bold) },
         text = {
             Text(
                 "This permanently deletes saved calculation logs on this device.",
-                fontSize = 15.sp,
+                fontSize = DhruvNextType.cardTitle,
             )
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.neg),
             ) {
                 Text("Clear")
             }
@@ -85,7 +88,7 @@ fun ClearHistoryDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(DhruvNextRadii.card),
     )
 }
 
@@ -97,12 +100,13 @@ fun PinEntryDialog(
     var tempPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
 
+    val colors = LocalDhruvNextColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Set Log Security PIN", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose a 4-digit numeric code to unlock your private log records:", fontSize = 13.sp)
+                Text("Choose a 4-digit numeric code to unlock your private log records:", fontSize = DhruvNextType.body)
                 OutlinedTextField(
                     value = tempPin,
                     onValueChange = { newVal ->
@@ -115,7 +119,7 @@ fun PinEntryDialog(
                     isError = pinError != null,
                     supportingText = {
                         if (pinError != null) {
-                            Text(pinError!!, color = MaterialTheme.colorScheme.error)
+                            Text(pinError!!, color = colors.neg)
                         } else {
                             Text("Only numeric digits are permitted")
                         }
@@ -145,6 +149,6 @@ fun PinEntryDialog(
                 Text("Dismiss")
             }
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(DhruvNextRadii.card),
     )
 }

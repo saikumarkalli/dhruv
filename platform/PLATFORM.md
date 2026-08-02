@@ -91,7 +91,7 @@ dependency — no Gradle composite-build dance, no published artifact.
 | Network         | OkHttp + Retrofit + CertificatePinner                                  | supabase-js                                      |
 | On-device AI    | Gemini Nano via ML Kit GenAI — progressive enhancement                 | —                                                |
 | Online AI       | Gemini API **through a proxy** (see §6), BYO-key override              | Same                                             |
-| Sync            | WorkManager, offline-first (Phase 2; contract designed now)            | Realtime (Supabase)                              |
+| Sync            | Tracker: Supabase-primary (ADR-0014); Calc: WorkManager offline-first  | Realtime (Supabase)                              |
 | Feature flags   | Firebase Remote Config (free tier)                                     | Static JSON asset (same dhruv-finance.json)      |
 | Crash / Perf    | Firebase Crashlytics + Performance (free tier)                         | errorReporter + Vercel Analytics                 |
 | Auth            | Google Sign-In via Credential Manager → GoTrue                         | Google Sign-In via OAuth PKCE → GoTrue           |
@@ -125,9 +125,17 @@ Module dependency rules — enforced by **Gradle** + **ArchUnit** tests in CI:
 
 ## 5. Data, identity & sync
 
+> **ADR-0014 override (tracker domain).** The rules below (DhruvEntity, HLC, offline-first sync)
+> apply to **calculator/converter data and future cross-app sync**. Tracker data (net worth, assets,
+> liabilities, expenses) uses **Supabase as the primary store** — no local Room, no DhruvEntity, no
+> client-side conflict resolution. The server (PostgREST + RLS `user_id = auth.uid()`) is the single
+> source of truth for tracker entities. Auth is Google Sign-In via Credential Manager → Supabase
+> GoTrue. See ADR-0014 in `DECISIONS.md` for full rationale.
+
 ### DhruvEntity (contract in `contracts/DhruvEntity.kt`)
 `id` (UUID), `userId` (`"local"` until Dhruv ID ships), `createdAt`, `updatedAt`, `isSynced`,
-`isDeleted`. Vault entities do **not** implement DhruvEntity.
+`isDeleted`. Vault entities do **not** implement DhruvEntity. **Tracker entities do not implement
+DhruvEntity** — they live in Supabase, not Room (ADR-0014).
 
 `userId` is **indexed from day one**. When Dhruv ID ships, a one-time WorkManager migration
 rewrites every `"local"` row to the real user id — cheap because of the index.
@@ -137,20 +145,24 @@ rewrites every `"local"` row to the real user id — cheap because of the index.
   This removes the cross-device clock-skew bug. (The old "Client-Wins always / Server-Wins never"
   rule is dropped — it contradicted LWW.)
 - Notes additionally use field-level merge on top of HLC-LWW.
+- **Tracker domain**: no client-side conflict resolution — Supabase + RLS is the single source of
+  truth (ADR-0014).
 
 ### Sync state machine (per entity)
 `LOCAL_ONLY → PENDING_SYNC → SYNCED`, with `SYNC_FAILED → CONFLICT → RESOLVED`.
 WorkManager `PeriodicWorkRequest`, 15-min interval, exponential backoff, CONNECTED constraint.
+Applies to calculator/converter offline-first data only — tracker data is cloud-primary.
 
 ### Deletion & tombstones (also satisfies DPDP — §8)
 Soft-delete is a UX state, **not** a permanent rule. Server hard-purges tombstones 90 days after
 all known devices have synced past them. A user-requested erasure triggers a **guaranteed
-hard-delete within the DPDP 7-day window**.
+hard-delete within the DPDP 7-day window**. Tracker erasure is fully in-app: "Delete my data"
+hard-deletes all tracker rows via a `delete_my_account()` security-definer SQL function (ADR-0014).
 
 ### Backup honesty
-Android Auto Backup (≤25 MB, best-effort, fresh-install only) is **not** sync. Until Supabase
-ships, non-vault data is device-local and the app says so. Vault is never auto-backed-up
-(`allowBackup="false"`).
+Android Auto Backup (≤25 MB, best-effort, fresh-install only) is **not** sync. Calculator/converter
+data without Supabase sync is device-local and the app says so. Tracker data lives in Supabase and
+survives device changes by design. Vault is never auto-backed-up (`allowBackup="false"`).
 
 ---
 
@@ -293,7 +305,10 @@ Tags on `main` (future) → Play Store internal track.
 
 ## 13. Implementation order
 
-Platform design is done. **`IMPLEMENTATION.md` is the authoritative phased plan (Phase 0–7).**
-Summary order: skeleton + relocate Finance → `:libs:core` → `:libs:settings` → Tools app → Finance
-feature split + AI/consent → Vault → build & distribute signed APK. Distribution is a signed APK via
-GitHub Releases for now; Play is deferred.
+Platform design is done. The authoritative phased plan is the **master roadmap**
+(`docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md`), covering phases R0–R11 with
+per-phase specs in `docs/superpowers/specs/`. Summary order: production hardening (R0) → CI cost
+optimization (R1) → P1 net worth tracker (R2) → security layer (R3) → rates + notifications (R4)
+→ expenses & budgets (R5) → recurring (R5b) → goals & insurance (R6) → reports (R7) → polish (R8)
+→ retirement (R9) → automation (R10) → platform expansion (R11). Distribution is a signed APK via
+GitHub Releases for now; Play is deferred (ADR-0008).

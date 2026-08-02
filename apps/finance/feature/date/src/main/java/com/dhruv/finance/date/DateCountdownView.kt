@@ -16,8 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.dhruv.core.ui.theme.*
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -25,6 +28,7 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun DateCountdownView() {
     val context = LocalContext.current
+    val colors = LocalDhruvNextColors.current
     var targetDate by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 45) }) }
     var currentMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
@@ -52,16 +56,13 @@ fun DateCountdownView() {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Target Calendar Event Timeline", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Target Calendar Event Timeline", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text("Pick Target Goal Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text("Pick Target Goal Date", fontSize = DhruvNextType.meta, color = colors.tx3)
                 Card(
                     modifier =
                         Modifier
@@ -75,17 +76,18 @@ fun DateCountdownView() {
                                     targetDate.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    colors = CardDefaults.cardColors(containerColor = colors.surf),
                 ) {
                     Row(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(DhruvNextSpacing.inputGroupGap),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(imageVector = Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(imageVector = Icons.Default.Timer, contentDescription = null, tint = colors.acc)
+                        Spacer(modifier = Modifier.width(DhruvNextSpacing.inputGroupGap))
                         Text(
                             text = SimpleDateFormat("EEEE, MMMM dd, yyyy", Locale.US).format(targetDate.time),
                             fontWeight = FontWeight.Bold,
+                            color = colors.tx,
                         )
                     }
                 }
@@ -94,8 +96,8 @@ fun DateCountdownView() {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.accSoft),
+            shape = RoundedCornerShape(DhruvNextRadii.card),
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
@@ -103,21 +105,21 @@ fun DateCountdownView() {
             ) {
                 Text(
                     "Time Remaining To Event Indicator",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    fontSize = DhruvNextType.meta,
+                    color = colors.tx2,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(DhruvNextSpacing.inputGroupGap))
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CountdownBlock(value = "%02d".format(days), label = "Days")
-                    Text(":", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Text(":", fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title, color = colors.tx)
                     CountdownBlock(value = "%02d".format(hours), label = "Hrs")
-                    Text(":", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Text(":", fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title, color = colors.tx)
                     CountdownBlock(value = "%02d".format(minutes), label = "Mins")
-                    Text(":", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Text(":", fontWeight = FontWeight.Bold, fontSize = DhruvNextType.title, color = colors.tx)
                     CountdownBlock(value = "%02d".format(seconds), label = "Secs")
                 }
             }
@@ -130,20 +132,21 @@ fun CountdownBlock(
     value: String,
     label: String,
 ) {
+    val colors = LocalDhruvNextColors.current
     Column(
         modifier =
             Modifier
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-                .padding(12.dp)
+                .background(colors.surf, RoundedCornerShape(DhruvNextRadii.innerTile))
+                .padding(DhruvNextSpacing.inputGroupGap)
                 .width(50.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = value,
-            style = MaterialTheme.typography.headlineSmall,
+            fontSize = DhruvNextType.title,
             fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.primary,
+            color = colors.acc,
         )
-        Text(text = label, fontSize = 9.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+        Text(text = label, fontSize = DhruvNextType.sectionLabel, color = colors.tx3, fontWeight = FontWeight.Bold)
     }
 }

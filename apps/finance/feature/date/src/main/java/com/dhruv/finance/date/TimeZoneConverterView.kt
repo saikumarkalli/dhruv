@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,14 +16,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.dhruv.core.ui.theme.*
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.time.Instant
 import java.time.ZoneId
-import java.util.*
 
 @Composable
 fun TimeZoneConverterView(viewModel: DateViewModel) {
+    val colors = LocalDhruvNextColors.current
     var sourceHour by remember { mutableStateOf("12") }
     var sourceMinute by remember { mutableStateOf("00") }
 
@@ -38,23 +40,20 @@ fun TimeZoneConverterView(viewModel: DateViewModel) {
             ZoneId.of("Australia/Sydney"),
         )
 
-    var sourceZone by remember { mutableStateOf(timeZones[3]) } // default IST (Asia/Calcutta)
+    var sourceZone by remember { mutableStateOf(timeZones[3]) }
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
     ) {
-        Text("Convert World Time Coordinates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Convert World Time Coordinates", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Source Parameters", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        NxCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Source Parameters", fontSize = DhruvNextType.meta, color = colors.tx3)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -78,13 +77,12 @@ fun TimeZoneConverterView(viewModel: DateViewModel) {
                     )
                 }
 
-                Text("Select Source Timezone", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                // Dropdown mock for simplicity and fast compile (row buttons)
+                Text("Select Source Timezone", fontSize = DhruvNextType.meta, color = colors.tx3)
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                            .background(colors.surf, RoundedCornerShape(DhruvNextRadii.innerTile))
                             .padding(4.dp),
                 ) {
                     val quickZones = listOf(ZoneId.of("Asia/Calcutta"), ZoneId.of("UTC"), ZoneId.of("America/New_York"))
@@ -95,16 +93,16 @@ fun TimeZoneConverterView(viewModel: DateViewModel) {
                                 Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .background(if (isSelected) colors.acc else Color.Transparent)
                                     .clickable { sourceZone = zone }
                                     .padding(8.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = zone.id.substringAfter("/"),
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                color = if (isSelected) colors.onAcc else colors.tx,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
+                                fontSize = DhruvNextType.meta,
                             )
                         }
                     }
@@ -112,8 +110,7 @@ fun TimeZoneConverterView(viewModel: DateViewModel) {
             }
         }
 
-        // Result displays
-        Text("Calculated World Clocks", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        Text("Calculated World Clocks", fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold, color = colors.tx)
 
         timeZones.forEach { zone ->
             val isMain = zone.id == sourceZone.id
@@ -129,37 +126,29 @@ fun TimeZoneConverterView(viewModel: DateViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor =
-                            if (isMain) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                                    .copy(
-                                        alpha = 0.4f,
-                                    )
-                            },
+                        containerColor = if (isMain) colors.accSoft else colors.surf2,
                     ),
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(DhruvNextSpacing.inputGroupGap),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text(zone.id, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(zone.id, fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.tx)
                         val offsetStr =
                             try {
                                 zone.rules.getOffset(Instant.now()).toString()
                             } catch (e: Exception) {
                                 "UTC"
                             }
-                        Text("Offset: $offsetStr", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                        Text("Offset: $offsetStr", fontSize = DhruvNextType.meta, color = colors.tx3)
                     }
                     Text(
                         text = displayTime,
                         fontWeight = FontWeight.Black,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = DhruvNextType.body,
+                        color = colors.acc,
                     )
                 }
             }

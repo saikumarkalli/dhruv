@@ -6,7 +6,7 @@ Compose, Koin DI. Phase 4 split the former monolith into feature modules behind 
 ## Modules
 - `:apps:finance:app` — shell: `MainActivity` (pager + bottom nav), Settings UI, `platformModule`/`appModule` Koin wiring, Converter/Finance hubs.
 - `:apps:finance:data` — shared Room DB + entities + DAOs + repositories + `CurrencyApi` + `GeminiRepository` + `CurrencyFormatter`. Feature modules depend on this (Repository-only access).
-- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`.
+- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`, `networth` (scaffolded, screens pending).
 
 See [FEATURES.md](FEATURES.md) for per-module detail (screens, ViewModels, data deps, flag keys).
 
@@ -20,10 +20,9 @@ copy to drift — if the asset is missing or fails to parse, it falls back to a 
 safety map and reports the failure via `CrashReporter`. The resolver gates a flag on
 `enabled && appVersion >= minVersion`, and exposes `requiresConsent(key)`.
 - OFF: `date`, `time`.
-- `assistant`: `enabled = true` but **gated to `minVersion 1.2.0`** — current app `versionName` is
-  `1.2.5`, so it is already surfaced; `isEnabled("assistant")` flips to false again only if the app
-  ever ships below 1.2.0. Also `requiresConsent` (DPDP consent gate lives in `AssistantScreen`,
-  state `ConsentNeeded → Idle`).
+- `assistant`: `enabled = true`, **gated to `minVersion 1.2.0`** — current `versionName` is
+  `2.0.2`, so visible. Also `requiresConsent` (DPDP consent gate in `AssistantScreen`).
+- `networth`: `enabled = true`, `requiresConsent = true`. Module scaffolded; screens pending (R2).
 
 ## Conventions (coding standards)
 - **DI = Koin**, not Hilt. Each feature exposes `val <name>Module = module { viewModel { … } }` in its `di/` package; the app aggregates them all in `CalculatorApplication`.
@@ -38,5 +37,12 @@ safety map and reports the failure via `CrashReporter`. The resolver gates a fla
 - Tests: `./gradlew :apps:finance:app:testDebugUnitTest` (includes ArchUnit) and `:feature:<name>:testDebugUnitTest`
 - Requires `JAVA_HOME` = Android Studio JBR.
 
+## Design system
+All screens use the **DhruvNext design system** (ADR-0024): `LocalDhruvNextColors`, `DhruvNextType`,
+`DhruvNextSpacing`, `DhruvNextRadii` tokens + `NxCard`/`NxButton`/`NxTextField`/`SegmentedRow`/
+`SectionLabel`/`ListGroup` components from `:libs:core`. Zero `MaterialTheme.colorScheme`/
+`.typography` refs remain in screen files. See [FEATURES.md](FEATURES.md) design system section.
+
 ## Phase
-Phase 4 complete — feature split done. All modules + app build; unit tests + ArchUnit green.
+Phase 4 complete — feature split done. DhruvNext design system overhaul complete (all 17 production
+screen files migrated to tokens + components). All modules + app build; unit tests + ArchUnit green.

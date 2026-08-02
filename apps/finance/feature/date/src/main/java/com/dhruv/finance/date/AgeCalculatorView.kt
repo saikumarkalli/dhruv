@@ -1,7 +1,6 @@
 package com.dhruv.finance.date
 
 import android.app.DatePickerDialog
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,11 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,19 +50,15 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
     val totalHours = ageResult.totalHours
     val totalMinutes = ageResult.totalMinutes
 
-    val miuiOrange = Color(0xFFFF5C00) // Deep Premium MIUI-style Orange
-    val textDark = Color(0xFF212121) // Dark Grey/Black for values
-    val textGrey = Color(0xFF757575) // Muted Grey for labels
-    val dividerGrey = Color(0xFFE5E5E5) // Light line separation grey
+    val colors = LocalDhruvNextColors.current
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        // Date Selectors exactly like the screenshot
         Column(
             modifier =
                 Modifier
@@ -82,32 +77,33 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                                 birthDate.get(Calendar.MONTH),
                                 birthDate.get(Calendar.DAY_OF_MONTH),
                             ).show()
-                        }.padding(vertical = 12.dp, horizontal = 16.dp),
+                        }.padding(vertical = DhruvNextSpacing.interCardGap, horizontal = DhruvNextSpacing.screenGutter),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Date of birth",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = textDark,
+                    fontSize = DhruvNextType.body,
+                    color = colors.tx,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = sdfDisplay.format(birthDate.time),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = miuiOrange,
+                        fontSize = DhruvNextType.body,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.acc,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select birth date",
-                        tint = textGrey,
+                        tint = colors.tx2,
                         modifier = Modifier.size(20.dp),
                     )
                 }
             }
 
-            HorizontalDivider(color = dividerGrey.copy(alpha = 0.5f), thickness = 0.5.dp)
+            HorizontalDivider(color = colors.line.copy(alpha = 0.5f), thickness = 0.5.dp)
 
             Row(
                 modifier =
@@ -121,26 +117,27 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                                 referenceDate.get(Calendar.MONTH),
                                 referenceDate.get(Calendar.DAY_OF_MONTH),
                             ).show()
-                        }.padding(vertical = 12.dp, horizontal = 16.dp),
+                        }.padding(vertical = DhruvNextSpacing.interCardGap, horizontal = DhruvNextSpacing.screenGutter),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Today",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = textDark,
+                    fontSize = DhruvNextType.body,
+                    color = colors.tx,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = sdfDisplay.format(referenceDate.time),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = textGrey,
+                        fontSize = DhruvNextType.body,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.tx2,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select reference date",
-                        tint = textGrey,
+                        tint = colors.tx2,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -148,21 +145,18 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
         }
 
         // Output Result card
-        Card(
+        NxCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, dividerGrey),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+                    .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = 8.dp),
+            padding = 0.dp,
         ) {
-            Column {
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 24.dp, horizontal = 16.dp),
+                            .padding(vertical = DhruvNextSpacing.sectionGap, horizontal = DhruvNextSpacing.screenGutter),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Left block - Age
@@ -174,12 +168,9 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                     ) {
                         Text(
                             text = "Age",
-                            style =
-                                MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Normal,
-                                    fontSize = 32.sp,
-                                ),
-                            color = textGrey,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = colors.tx2,
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -189,18 +180,15 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                         ) {
                             Text(
                                 text = "$ageYears",
-                                style =
-                                    MaterialTheme.typography.displayLarge.copy(
-                                        fontWeight = FontWeight.Normal,
-                                        fontSize = 72.sp,
-                                    ),
-                                color = miuiOrange,
+                                fontSize = 72.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = colors.acc,
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "years",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = textGrey,
+                                fontSize = DhruvNextType.body,
+                                color = colors.tx2,
                                 modifier = Modifier.padding(bottom = 14.dp),
                             )
                         }
@@ -209,8 +197,8 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
 
                         Text(
                             text = "$ageMonths months | $ageDays days",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = textGrey,
+                            fontSize = DhruvNextType.body,
+                            color = colors.tx2,
                         )
                     }
 
@@ -220,7 +208,7 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                             Modifier
                                 .width(1.dp)
                                 .height(130.dp)
-                                .background(dividerGrey),
+                                .background(colors.line),
                     )
 
                     // Right block - Next Birthday
@@ -228,13 +216,14 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                         modifier =
                             Modifier
                                 .weight(1f)
-                                .padding(start = 16.dp),
+                                .padding(start = DhruvNextSpacing.screenGutter),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             text = "Next birthday",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = miuiOrange,
+                            fontSize = DhruvNextType.cardTitle,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.acc,
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -244,13 +233,13 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                                 Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
-                                    .background(miuiOrange),
+                                    .background(colors.acc),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Cake,
                                 contentDescription = "Cake icon",
-                                tint = Color.White,
+                                tint = colors.onAcc,
                                 modifier = Modifier.size(22.dp),
                             )
                         }
@@ -259,37 +248,38 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
 
                         Text(
                             text = dayOfWeekOfNextBirthday,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = textGrey,
+                            fontSize = DhruvNextType.cardTitle,
+                            color = colors.tx2,
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = "$nextMonths months | $nextDays days",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = textGrey,
+                            fontSize = DhruvNextType.body,
+                            color = colors.tx2,
                         )
                     }
                 }
 
-                HorizontalDivider(color = dividerGrey)
+                HorizontalDivider(color = colors.line)
 
                 // Summary heading and Grid
                 Column(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 20.dp, horizontal = 16.dp),
+                            .padding(vertical = 20.dp, horizontal = DhruvNextSpacing.screenGutter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = "Summary",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = miuiOrange,
+                        fontSize = DhruvNextType.title,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.acc,
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
 
                     // Row 1: Years, Months, Weeks
                     Row(
@@ -300,22 +290,16 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                             label = "Years",
                             value = "$ageYears",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                         SummaryGridItem(
                             label = "Months",
                             value = "$totalMonths",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                         SummaryGridItem(
                             label = "Weeks",
                             value = "$totalWeeks",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                     }
 
@@ -330,34 +314,27 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                             label = "Days",
                             value = "$totalDays",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                         SummaryGridItem(
                             label = "Hours",
                             value = "$totalHours",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                         SummaryGridItem(
                             label = "Minutes",
                             value = "$totalMinutes",
                             modifier = Modifier.weight(1f),
-                            textGrey = textGrey,
-                            textDark = textDark,
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
 
                     Text(
                         text = "powered by Calculator",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = textGrey.copy(alpha = 0.6f),
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx3,
                     )
                 }
-            }
         }
 
         // Bottom Actions Button Bar
@@ -365,8 +342,8 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
         ) {
             Button(
                 onClick = { },
@@ -374,13 +351,14 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                     Modifier
                         .weight(1f)
                         .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5F5F5)),
-                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.surf2),
+                shape = RoundedCornerShape(DhruvNextRadii.pill),
             ) {
                 Text(
                     text = "Add to Calendar",
-                    color = textGrey,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = colors.tx2,
+                    fontSize = DhruvNextType.body,
+                    fontWeight = FontWeight.Medium,
                 )
             }
 
@@ -390,13 +368,14 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                     Modifier
                         .weight(1f)
                         .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = miuiOrange),
-                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.acc),
+                shape = RoundedCornerShape(DhruvNextRadii.pill),
             ) {
                 Text(
                     text = "Share",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = colors.onAcc,
+                    fontSize = DhruvNextType.body,
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
@@ -408,27 +387,23 @@ fun SummaryGridItem(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    textGrey: Color,
-    textDark: Color,
 ) {
+    val colors = LocalDhruvNextColors.current
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = textGrey,
+            fontSize = DhruvNextType.meta,
+            color = colors.tx2,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                ),
-            color = textDark,
+            fontSize = DhruvNextType.cardTitle,
+            fontWeight = FontWeight.Bold,
+            color = colors.tx,
         )
     }
 }

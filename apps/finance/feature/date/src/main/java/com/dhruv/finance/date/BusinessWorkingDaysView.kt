@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,13 +14,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.dhruv.core.ui.theme.*
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextRadii
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun BusinessWorkingDaysView(viewModel: DateViewModel) {
     val context = LocalContext.current
+    val colors = LocalDhruvNextColors.current
     var date1 by remember { mutableStateOf(Calendar.getInstance()) }
     var date2 by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 30) }) }
 
@@ -39,18 +43,17 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        Text("Evaluate Business Work Week Targets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Evaluate Business Work Week Targets", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
         ) {
-            // Start Date Input
             Column(modifier = Modifier.weight(1f)) {
-                Text("Start Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                Card(
+                Text("Start Date", fontSize = DhruvNextType.meta, color = colors.tx3)
+                NxCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -63,21 +66,19 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
                                     date1.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Text(
                         text = sdf.format(date1.time),
-                        modifier = Modifier.padding(14.dp),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
+                        color = colors.tx,
                     )
                 }
             }
 
-            // End Date Input
             Column(modifier = Modifier.weight(1f)) {
-                Text("End Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                Card(
+                Text("End Date", fontSize = DhruvNextType.meta, color = colors.tx3)
+                NxCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -90,13 +91,12 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
                                     date2.get(Calendar.DAY_OF_MONTH),
                                 ).show()
                             },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 ) {
                     Text(
                         text = sdf.format(date2.time),
-                        modifier = Modifier.padding(14.dp),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
+                        color = colors.tx,
                     )
                 }
             }
@@ -104,8 +104,8 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.accSoft),
+            shape = RoundedCornerShape(DhruvNextRadii.card),
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
@@ -113,20 +113,20 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
             ) {
                 Text(
                     "Net Workdays (Excluding Saturdays/Sundays)",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    fontSize = DhruvNextType.meta,
+                    color = colors.tx2,
                 )
                 Text(
                     "$netWorkingDays Working Days",
-                    style = MaterialTheme.typography.headlineSmall,
+                    fontSize = DhruvNextType.title,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = colors.acc,
                     modifier = Modifier.padding(vertical = 4.dp),
                 )
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(vertical = DhruvNextSpacing.inputGroupGap),
+                    color = colors.line,
                 )
 
                 Row(
@@ -134,17 +134,13 @@ fun BusinessWorkingDaysView(viewModel: DateViewModel) {
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Weekend Rest Days", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                        Text("$weekendDays Days", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text("Weekend Rest Days", fontSize = DhruvNextType.meta, color = colors.tx3)
+                        Text("$weekendDays Days", fontSize = DhruvNextType.body, fontWeight = FontWeight.Bold, color = colors.tx)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val total = netWorkingDays + weekendDays
-                        Text(
-                            "Total Project Timeline",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
-                        Text("$total Days", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text("Total Project Timeline", fontSize = DhruvNextType.meta, color = colors.tx3)
+                        Text("$total Days", fontSize = DhruvNextType.body, fontWeight = FontWeight.Bold, color = colors.tx)
                     }
                 }
             }
