@@ -1,0 +1,41 @@
+# Dependabot itself costs no Actions minutes — only the PRs it opens do, which is why the
+# limits below are deliberately low and the cadence monthly. Gradle and npm are grouped so
+# a routine bump is one PR through the pipeline, not eight (ADR-0026's cost model).
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      # `chore:` keeps ADR-0025's bump detection at patch — a dependency bump is not a feature.
+      prefix: chore
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+      kotlin-and-compose:
+        patterns: ["org.jetbrains.kotlin*", "androidx.compose*"]
+      test-libraries:
+        patterns: ["*junit*", "*mockk*", "*turbine*", "*robolectric*"]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+    groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      tooling:
+        patterns: ["vite", "vitest", "typescript", "eslint*", "@vitest/*", "typescript-eslint"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
