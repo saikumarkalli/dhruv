@@ -7,9 +7,9 @@ on:
   #
   # NOTE: no `paths-ignore`. With branch protection + required status checks, a push
   # that touches only ignored paths leaves the required checks permanently "pending"
-  # and blocks the merge. A production pipeline must run reliably on every push/PR.
-  # (To skip docs-only builds safely later, use a path-filter gate job that still
-  #  reports the required status — not trigger-level paths-ignore.)
+  # and blocks the merge. Docs-only skipping is instead done by the `changes` gate job
+  # below — a job skipped via `if:` reports as "skipped" (counts as passing), whereas
+  # `paths-ignore` never creates the check run at all (ADR-0026).
   push:
     branches: [ main, develop ]
   pull_request:
@@ -17,9 +17,9 @@ on:
 
 # Concurrency: cancel superseded PR runs (saves minutes during iteration), but NEVER
 # cancel a push to a protected branch — each merge to develop/main must run to
-# completion so it produces its build artifact, version bump, and release tag.
-# A cancelled run marks its downstream jobs (build, version-bump) as skipped, which
-# is the "cancelled + build skipped after merge" failure mode this guards against.
+# completion so it produces its version bump and release tag. A cancelled run marks
+# the `release` job as skipped, which is the "cancelled + release skipped after
+# merge" failure mode this guards against.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -385,10 +385,13 @@ jobs:
             }
 
   # ── Post-build: Release (bump → build → tag → publish) ────────────────────
-  # Runs only on push (not PRs) to develop/main after all 4 gates pass. Does the
-  # whole release IN THIS RUN so it cannot silently half-complete:
-  #   1. Bump patch version (MAJOR.MINOR.PATCH+1) in platform/versions.json +
-  #      VERSION_CODE/VERSION_NAME in gradle.properties.
+  # Runs only on push (not PRs) to develop/main, gated on `changes` only — the PR
+  # that preceded this push is the full-validation pass (ADR-0026); required
+  # up-to-date branches guarantee the merged tree is the tree the PR validated, so
+  # this job does not re-run static-analysis/security/tests. Does the whole release
+  # IN THIS RUN so it cannot silently half-complete:
+  #   1. Derive the bump segment from commit types (ADR-0025) and bump
+  #      platform/versions.json + VERSION_CODE/VERSION_NAME in gradle.properties.
   #   2. Build the SIGNED release APK *at the bumped version* (gradle reads the just-
   #      written gradle.properties), and verify it is signed and within the size budget.
   #   3. Commit the bump back with [skip ci]; create + push the dhruv-<app>-v<version> tag.
