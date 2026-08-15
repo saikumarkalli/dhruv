@@ -1,7 +1,15 @@
 package com.dhruv.finance.data
 
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.ConsentState
+import com.dhruv.finance.data.tracker.auth.SessionState
+import com.dhruv.finance.data.tracker.auth.SessionStore
+import com.dhruv.finance.data.tracker.auth.SessionTokens
+import com.dhruv.finance.data.tracker.dto.GoTrueSessionDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -93,4 +101,56 @@ class FakeCurrencyRateDao : CurrencyRateDao {
     override suspend fun getRateByCode(code: String): CurrencyRateEntity? = store[code]
 
     override suspend fun clearAllRates() = store.clear()
+}
+
+/**
+ * In-memory [SessionStore] fake for tracker auth tests (Task 2's OnboardingViewModelTest and
+ * this task's AuthInterceptorTest both consume it). Mirrors [SessionStoreImpl]'s save/clear/derive
+ * shape without any DataStore/encryption involved.
+ */
+class FakeSessionStore : SessionStore {
+    private val _state = MutableStateFlow<SessionState>(SessionState.SignedOut)
+    override val state: StateFlow<SessionState> = _state.asStateFlow()
+
+    private var tokens: SessionTokens? = null
+
+    override suspend fun save(session: GoTrueSessionDto) {
+        tokens = SessionTokens(session.accessToken, session.refreshToken, session.expiresAt)
+        _state.value =
+            SessionState.Active(
+                session.user.id,
+                session.user.email,
+                session.user.userMetadata?.displayName,
+                session.user.userMetadata?.resolvedAvatarUrl,
+            )
+    }
+
+    override suspend fun clear() {
+        tokens = null
+        _state.value = SessionState.SignedOut
+    }
+
+    override fun currentTokens(): SessionTokens? = tokens
+}
+
+/** In-memory [ConsentRepository] fake — Task 2's OnboardingViewModelTest consumes it. */
+class FakeConsentRepository : ConsentRepository {
+    private val _state = MutableStateFlow(ConsentState())
+    override val state: StateFlow<ConsentState> = _state.asStateFlow()
+
+    override suspend fun setSyncFinancialRecords(enabled: Boolean) {
+        _state.value = _state.value.copy(syncFinancialRecords = enabled)
+    }
+
+    override suspend fun setReadTransactionSms(enabled: Boolean) {
+        _state.value = _state.value.copy(readTransactionSms = enabled)
+    }
+
+    override suspend fun setAskDhruvAboutMoney(enabled: Boolean) {
+        _state.value = _state.value.copy(askDhruvAboutMoney = enabled)
+    }
+
+    override suspend fun setHasCompletedOnboarding(completed: Boolean) {
+        _state.value = _state.value.copy(hasCompletedOnboarding = completed)
+    }
 }

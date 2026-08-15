@@ -49,6 +49,8 @@ biometric = "1.1.0"
 coreSplashscreen = "1.0.1"
 jacoco = "0.8.12"
 turbine = "1.2.1"
+androidxCredentials = "1.6.0"
+googleid = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -121,6 +123,13 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 # Test-only libraries (regression suite)
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "roomRuntime" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+
+# Google Sign-In via Credential Manager (ADR-0014 §6's three pre-approved "only genuinely new
+# dependencies"; Task 3 of the Phase 1 onboarding build).
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "androidxCredentials" }
+androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "androidxCredentials" }
+googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

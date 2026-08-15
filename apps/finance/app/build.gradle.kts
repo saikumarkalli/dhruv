@@ -66,6 +66,7 @@ dependencies {
     implementation(project(":apps:finance:feature:date"))
     implementation(project(":apps:finance:feature:time"))
     implementation(project(":apps:finance:feature:assistant"))
+    implementation(project(":apps:finance:feature:onboarding"))
 
     // Firebase BOM (Compose BOM comes from dhruv.android.compose convention plugin)
     implementation(platform(libs.firebase.bom))
@@ -74,6 +75,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
+    // Settings' Account card renders the signed-in user's real Google profile photo
+    // (SessionState.Active.avatarUrl) — first real consumer of this already-catalogued dependency.
+    implementation(libs.coil.compose)
 
     // Core
     implementation(libs.androidx.core.ktx)

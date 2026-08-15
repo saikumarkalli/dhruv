@@ -306,8 +306,8 @@ Tags on `main` (future) → Play Store internal track.
 ## 13. Implementation order
 
 Platform design is done. The authoritative phased plan is the **master roadmap**
-(`docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md`), covering phases R0–R11 with
-per-phase specs in `docs/superpowers/specs/`. Summary order: production hardening (R0) → CI cost
+(`apps/finance/docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md`), covering phases R0–R11 with
+per-phase specs in `apps/finance/docs/superpowers/specs/`. Summary order: production hardening (R0) → CI cost
 optimization (R1) → P1 net worth tracker (R2) → security layer (R3) → rates + notifications (R4)
 → expenses & budgets (R5) → recurring (R5b) → goals & insurance (R6) → reports (R7) → polish (R8)
 → retirement (R9) → automation (R10) → platform expansion (R11). Distribution is a signed APK via

@@ -13,6 +13,9 @@ import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
 import com.dhruv.core.ui.components.NxTopBar
 import com.dhruv.finance.app.ui.settings.SettingsScreen
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.SessionStore
+import com.dhruv.finance.data.tracker.auth.TrackerAccountRepository
 import com.dhruv.finance.assistant.AssistantScreen
 import com.dhruv.finance.assistant.AssistantViewModel
 import com.dhruv.finance.currency.CurrencyScreen
@@ -36,6 +39,9 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SettingsDetailContent(
     settingsRepository: SettingsRepository,
+    consentRepository: ConsentRepository,
+    trackerAccountRepository: TrackerAccountRepository,
+    sessionStore: SessionStore,
     onClearHistory: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -47,6 +53,9 @@ fun SettingsDetailContent(
         SettingsScreen(
             settingsRepository = settingsRepository,
             onClearHistory = onClearHistory,
+            consentRepository = consentRepository,
+            trackerAccountRepository = trackerAccountRepository,
+            sessionStore = sessionStore,
         )
     }
 }

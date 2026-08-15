@@ -92,6 +92,78 @@ fun ClearHistoryDialog(
     )
 }
 
+/** Confirmation for "Delete my data" (ONB-BR-008) — same shape as [ClearHistoryDialog], scoped to
+ * the tracker's server-side rows rather than on-device calculator history. The account/session
+ * stays signed in; only [DeleteMyAccountDialog] forces sign-out. */
+@Composable
+fun DeleteMyDataDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalDhruvNextColors.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete my data?", fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "This permanently erases your net worth holdings and valuations from the server. " +
+                    "Your account stays signed in and calculators keep working offline.",
+                fontSize = DhruvNextType.cardTitle,
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = colors.neg),
+            ) {
+                Text("Delete data")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(DhruvNextRadii.card),
+    )
+}
+
+/** Confirmation for "Delete my account" (ONB-BR-009) — unlike [DeleteMyDataDialog], this also
+ * forces sign-out and sends the user back through onboarding on next launch, so the copy says so
+ * explicitly rather than only describing the data that's erased. */
+@Composable
+fun DeleteMyAccountDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalDhruvNextColors.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete my account?", fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "This permanently erases all your tracker data and your account, then signs you out. " +
+                    "You'll go through setup again the next time you open the app.",
+                fontSize = DhruvNextType.cardTitle,
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = colors.neg),
+            ) {
+                Text("Delete account")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(DhruvNextRadii.card),
+    )
+}
+
 @Composable
 fun PinEntryDialog(
     onPinSaved: (String) -> Unit,

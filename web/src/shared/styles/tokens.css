@@ -1,5 +1,7 @@
 /*
- * Dhruv design tokens — ported from /DESIGN.md (brand + Material 3 theme values).
+ * Dhruv design tokens — the web half of `platform/DESIGN-SYSTEM.md` §1–§3 (the single global
+ * design contract). Values MUST stay numerically identical to `:libs:core`'s DhruvNextTokens.kt /
+ * DhruvBrandColors.kt — nothing catches drift automatically, so change both sides together.
  * Consumed as CSS custom properties; dark/light switched via [data-theme] on <html>.
  * SDD-04 §5: zero CSS-framework dependency, vanilla custom properties only.
  */

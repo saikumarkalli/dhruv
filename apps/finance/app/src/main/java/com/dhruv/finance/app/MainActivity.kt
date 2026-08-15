@@ -50,21 +50,24 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dhruv.core.flags.FeatureFlagResolver
+import com.dhruv.core.navigation.BackAction
 import com.dhruv.core.navigation.NavTarget
 import com.dhruv.core.navigation.PlanTool
 import com.dhruv.core.navigation.TabKey
 import com.dhruv.core.navigation.pageIndexFor
+import com.dhruv.core.navigation.resolveBackAction
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
 import com.dhruv.core.ui.components.AskPill
 import com.dhruv.core.ui.components.BottomBar
 import com.dhruv.core.ui.components.BottomBarTab
 import com.dhruv.core.ui.components.DhruvWordmarkImage
-import com.dhruv.core.ui.components.EmptyStateCard
+import com.dhruv.core.ui.components.NotConfiguredCard
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
+import com.dhruv.finance.app.ui.onboarding.OnboardingHost
 import com.dhruv.finance.app.ui.plan.PlanLauncher
 import com.dhruv.finance.app.ui.settings.SettingsViewModel
 import com.dhruv.finance.app.ui.shell.AppSwitcherSheet
@@ -81,12 +84,16 @@ import com.dhruv.finance.app.ui.splash.SplashScreen
 import com.dhruv.finance.calculator.CalculatorScreen
 import com.dhruv.finance.calculator.CalculatorViewModel
 import com.dhruv.finance.calculator.copyResultToClipboard
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.SessionStore
+import com.dhruv.finance.data.tracker.auth.TrackerAccountRepository
 import com.dhruv.finance.everyday.EverydayScreen
 import com.dhruv.finance.everyday.EverydayViewModel
 import com.dhruv.finance.investments.InvestmentsScreen
 import com.dhruv.finance.investments.InvestmentsViewModel
 import com.dhruv.finance.loans.LoansScreen
 import com.dhruv.finance.loans.LoansViewModel
+import com.dhruv.finance.onboarding.OnboardingViewModel
 import com.dhruv.finance.tax.TaxScreen
 import com.dhruv.finance.tax.TaxViewModel
 import com.dhruv.settings.SettingsRepository
@@ -95,13 +102,37 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 /**
- * The DhruvNext 4-tab shell (ADR-0024): Home · Calc · Plan · Insights, a nested `NavController`
- * for Plan's loan/invest/tax/everyday drill-in (NAV1), and a `detailRoute` overlay for the
- * shell-level "no tab" routes (Settings/Ask/Currency/Units/Date/Time/Profile/Notifications —
- * DhruvNext §5's OWNER=null set) that render full-screen with a back top bar instead of the tab
- * bar. `SectionTheme` (ADR-0014 §8, per-tab accent) is retired here in favour of one global
- * `DhruvTheme` accent (ADR-0024 decision 2) — every tab now renders under the same theme instance.
+ * The DhruvNext 5-tab shell (ADR-0024, tab set revised by ADR-0027): Home · Money · Calc · Plan ·
+ * Insights, a nested `NavController` for Plan's loan/invest/tax/everyday drill-in (NAV1), and a
+ * `detailRoute` overlay for the shell-level "no tab" routes (Settings/Ask/Currency/Units/Date/
+ * Time/Profile/Notifications — DhruvNext §5's OWNER=null set) that render full-screen with a back
+ * top bar instead of the tab bar. `SectionTheme` (ADR-0014 §8, per-tab accent) is retired here in
+ * favour of one global `DhruvTheme` accent (ADR-0024 decision 2) — every tab now renders under the
+ * same theme instance. Money renders `NotConfiguredCard` until its ledger screens land (Phase 3,
+ * `docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`) — same placeholder
+ * pattern already used for Insights, not a second "coming soon" treatment.
+ *
+ * [onCreate]'s `setContent` gates this shell behind onboarding (A2 sign-in -> A3 consent -> A4
+ * empty start, functional spec §5 Group A, Phase 1 onboarding build Task 3): a returning user who
+ * has completed or explicitly skipped onboarding (`ConsentRepository.state.hasCompletedOnboarding`)
+ * goes straight to [AppShell] exactly as before this change; everyone else sees
+ * `com.dhruv.finance.app.ui.onboarding.OnboardingHost` instead — full-frame, no tab bar, no top
+ * bar, same as the branded splash overlay already renders bare on top of either one.
  */
+/**
+ * Cold-launch / post-account-deletion onboarding gate (Task 3 decision 2; Fix 4, final
+ * whole-branch review). Extracted as a pure function — no Android/Compose dependency — so it's
+ * unit-testable without an Activity host: a returning user who has completed or explicitly
+ * skipped onboarding this session ([exitToShell] — [OnboardingViewModel.onUseOfflineSelected] /
+ * [OnboardingViewModel.onSkipEmptyStart]) sees the shell; everyone else, including a user
+ * freshly routed back here by [OnboardingViewModel.resetForNewOnboardingSession] after deleting
+ * their account, sees [OnboardingHost].
+ */
+internal fun shouldShowOnboarding(
+    hasCompletedOnboarding: Boolean,
+    exitToShell: Boolean,
+): Boolean = !hasCompletedOnboarding && !exitToShell
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,8 +143,12 @@ class MainActivity : ComponentActivity() {
             val resolver: FeatureFlagResolver = koinInject()
             val crashReporter: CrashReporter = koinInject()
             val navigationDispatcher: NavigationDispatcher = koinInject()
+            val consentRepository: ConsentRepository = koinInject()
+            val trackerAccountRepository: TrackerAccountRepository = koinInject()
+            val sessionStore: SessionStore = koinInject()
             val settingsViewModel: SettingsViewModel = koinViewModel()
             val calculatorViewModel: CalculatorViewModel = koinViewModel()
+            val onboardingViewModel: OnboardingViewModel = koinViewModel()
 
             val appSettings by settingsViewModel.settings.collectAsStateWithLifecycle()
 
@@ -125,16 +160,56 @@ class MainActivity : ComponentActivity() {
                 // The whole app UI is composed immediately and the branded splash is overlaid on
                 // top of it, so the app is fully ready the instant the splash hands off.
                 var showSplash by remember { mutableStateOf(true) }
+
+                // Cold-launch gate (onboarding Task 3, decision 2): show onboarding (Splash -> A2
+                // -> A3 -> A4) instead of the 5-tab shell until the user has completed or
+                // explicitly skipped it. `exitToShell` is read alongside the persisted
+                // `hasCompletedOnboarding` flag — the flag alone would lag by one frame behind a
+                // user finishing onboarding within this same process session, since the DataStore
+                // write and this recomposition aren't on the same StateFlow.
+                val consentState by consentRepository.state.collectAsStateWithLifecycle()
+                val onboardingExitToShell by onboardingViewModel.exitToShell.collectAsStateWithLifecycle()
+
+                // Fix 4 (final whole-branch review, Important): `onboardingViewModel` is a single
+                // Activity-scoped instance (koinViewModel() resolved once above, reused for the
+                // whole process), so `exitToShell` does not reset itself when a later Settings >
+                // Privacy "Delete my account" flips `hasCompletedOnboarding` back to false
+                // (TrackerAccountRepositoryImpl.deleteMyAccount). Without this, the gate below
+                // would stay latched on the stale `exitToShell == true` from the earlier
+                // onboarding pass and keep showing the now-deleted-account's shell. Re-running on
+                // every `hasCompletedOnboarding` flip (including the harmless cold-launch case,
+                // where exitToShell is already false) keeps the reset unconditional on this one
+                // signal rather than requiring a second, error-prone "was this a deletion" flag.
+                LaunchedEffect(consentState.hasCompletedOnboarding) {
+                    if (!consentState.hasCompletedOnboarding) {
+                        onboardingViewModel.resetForNewOnboardingSession()
+                    }
+                }
+
+                val showOnboarding = shouldShowOnboarding(consentState.hasCompletedOnboarding, onboardingExitToShell)
+
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AppShell(
-                        activity = this@MainActivity,
-                        settingsRepository = settingsRepository,
-                        resolver = resolver,
-                        crashReporter = crashReporter,
-                        navigationDispatcher = navigationDispatcher,
-                        calculatorViewModel = calculatorViewModel,
-                        onClearHistory = { calculatorViewModel.clearHistory() },
-                    )
+                    if (showOnboarding) {
+                        // Pre-tab, bare, full-frame (registry §1) — never the pager/bottom-nav.
+                        OnboardingHost(
+                            onboardingViewModel = onboardingViewModel,
+                            crashReporter = crashReporter,
+                            navigationDispatcher = navigationDispatcher,
+                        )
+                    } else {
+                        AppShell(
+                            activity = this@MainActivity,
+                            settingsRepository = settingsRepository,
+                            consentRepository = consentRepository,
+                            trackerAccountRepository = trackerAccountRepository,
+                            sessionStore = sessionStore,
+                            resolver = resolver,
+                            crashReporter = crashReporter,
+                            navigationDispatcher = navigationDispatcher,
+                            calculatorViewModel = calculatorViewModel,
+                            onClearHistory = { calculatorViewModel.clearHistory() },
+                        )
+                    }
 
                     if (showSplash) {
                         SplashScreen(onFinished = { showSplash = false })
@@ -149,6 +224,9 @@ class MainActivity : ComponentActivity() {
 private fun AppShell(
     activity: ComponentActivity,
     settingsRepository: SettingsRepository,
+    consentRepository: ConsentRepository,
+    trackerAccountRepository: TrackerAccountRepository,
+    sessionStore: SessionStore,
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     navigationDispatcher: NavigationDispatcher,
@@ -182,11 +260,17 @@ private fun AppShell(
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     val onPlanTab = tabs[pagerState.currentPage] == TabKey.PLAN
-                    when {
-                        detailRoute != null -> detailRoute = null
-                        onPlanTab && planNavController.previousBackStackEntry != null -> planNavController.popBackStack()
-                        pagerState.currentPage != 0 -> coroutineScope.launch { pagerState.scrollToPage(0) }
-                        else -> activity.finish()
+                    when (
+                        resolveBackAction(
+                            hasDetailRoute = detailRoute != null,
+                            activeTabHasNestedBackStack = onPlanTab && planNavController.previousBackStackEntry != null,
+                            currentTabIndex = pagerState.currentPage,
+                        )
+                    ) {
+                        BackAction.CLOSE_DETAIL -> detailRoute = null
+                        BackAction.POP_NESTED -> planNavController.popBackStack()
+                        BackAction.RETURN_TO_FIRST_TAB -> coroutineScope.launch { pagerState.scrollToPage(0) }
+                        BackAction.EXIT_APP -> activity.finish()
                     }
                 }
             }
@@ -202,6 +286,9 @@ private fun AppShell(
         planNavController = planNavController,
         detailRoute = detailRoute,
         settingsRepository = settingsRepository,
+        consentRepository = consentRepository,
+        trackerAccountRepository = trackerAccountRepository,
+        sessionStore = sessionStore,
         onClearHistory = onClearHistory,
         onOpenDetail = { detailRoute = it },
         onDismissDetail = { detailRoute = null },
@@ -223,6 +310,9 @@ private fun TabsScaffold(
     planNavController: NavHostController,
     detailRoute: DetailRoute?,
     settingsRepository: SettingsRepository,
+    consentRepository: ConsentRepository,
+    trackerAccountRepository: TrackerAccountRepository,
+    sessionStore: SessionStore,
     onClearHistory: () -> Unit,
     onOpenDetail: (DetailRoute) -> Unit,
     onDismissDetail: () -> Unit,
@@ -295,6 +385,9 @@ private fun TabsScaffold(
                     resolver = resolver,
                     crashReporter = crashReporter,
                     settingsRepository = settingsRepository,
+                    consentRepository = consentRepository,
+                    trackerAccountRepository = trackerAccountRepository,
+                    sessionStore = sessionStore,
                     onClearHistory = onClearHistory,
                     onBack = onDismissDetail,
                 )
@@ -306,6 +399,11 @@ private fun TabsScaffold(
                 ) { page ->
                     when (tabs[page]) {
                         TabKey.HOME -> DashboardScreen()
+                        TabKey.MONEY ->
+                            NotConfiguredCard(
+                                message = "Money lands once the ledger ships",
+                                modifier = Modifier.padding(24.dp),
+                            )
                         TabKey.CALC ->
                             CalcTab(
                                 calculatorViewModel = calculatorViewModel,
@@ -322,7 +420,7 @@ private fun TabsScaffold(
                                 crashReporter = crashReporter,
                             )
                         TabKey.INSIGHTS ->
-                            EmptyStateCard(
+                            NotConfiguredCard(
                                 message = "Insights lands once expense tracking ships",
                                 modifier = Modifier.padding(24.dp),
                             )
@@ -422,12 +520,22 @@ private fun DetailRouteContent(
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     settingsRepository: SettingsRepository,
+    consentRepository: ConsentRepository,
+    trackerAccountRepository: TrackerAccountRepository,
+    sessionStore: SessionStore,
     onClearHistory: () -> Unit,
     onBack: () -> Unit,
 ) {
     when (route) {
         DetailRoute.Settings ->
-            SettingsDetailContent(settingsRepository = settingsRepository, onClearHistory = onClearHistory, onBack = onBack)
+            SettingsDetailContent(
+                settingsRepository = settingsRepository,
+                consentRepository = consentRepository,
+                trackerAccountRepository = trackerAccountRepository,
+                sessionStore = sessionStore,
+                onClearHistory = onClearHistory,
+                onBack = onBack,
+            )
         DetailRoute.Ask -> AskDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
         DetailRoute.Currency -> CurrencyDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
         DetailRoute.UnitConverter -> UnitDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)

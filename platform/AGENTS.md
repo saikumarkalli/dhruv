@@ -5,10 +5,12 @@ Read this first in every AI/agent session, before touching code.
 ## Session bootstrap (read in order)
 1. `platform/PLATFORM.md` — architecture, source of truth
 2. `platform/DECISIONS.md` — why things are the way they are
-3. `platform/versions.json` — module compatibility
-4. `platform/contracts/` — the contracts you must not break
-5. `<module>/AGENTS.md` — module-local rules (if present)
-6. The task/handoff prompt
+3. `platform/DESIGN-SYSTEM.md` — the design contract (tokens, components, nav law, states) —
+   binding for **every** app; read before touching any UI
+4. `platform/versions.json` — module compatibility
+5. `platform/contracts/` — the contracts you must not break
+6. `<module>/AGENTS.md` — module-local rules (if present)
+7. The task/handoff prompt
 
 ## Hard rules (do not violate)
 - **No code in `platform/`.** Docs and contracts only.

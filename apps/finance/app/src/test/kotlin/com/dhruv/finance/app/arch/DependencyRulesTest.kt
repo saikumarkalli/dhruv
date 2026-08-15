@@ -79,16 +79,20 @@ class DependencyRulesTest {
     }
 
     /**
-     * Feature modules must not import DAOs directly — must go through Repository.
+     * Feature modules must not import DAOs or DTOs directly — must go through Repository.
      * Real feature packages are `com.dhruv.finance.<feature>` (Phase 4 layout), not the
      * `feature.*.ui.*` shape this rule originally targeted — that pattern never matched and the
-     * rule passed vacuously. `com.dhruv.finance.data` legitimately owns the DAOs and is excluded;
-     * `com.dhruv.finance.app` (Koin composition root, `PlatformModule.kt`) legitimately wires
-     * `HistoryDao` into `HistoryRepository` at startup — same composition-root exception as the
-     * sibling rule above — and is excluded too.
+     * rule passed vacuously. `com.dhruv.finance.data` legitimately owns the DAOs/DTOs and is
+     * excluded; `com.dhruv.finance.app` (Koin composition root, `PlatformModule.kt`) legitimately
+     * wires `HistoryDao` into `HistoryRepository` at startup — same composition-root exception as
+     * the sibling rule above — and is excluded too.
+     *
+     * The `.*Dto` half (module-standard doc §1.1) was previously vacuous — no DTO existed under
+     * `com.dhruv.finance..` until `tracker/dto/GoTrueSessionDto.kt` (ADR-0029), which is what
+     * makes this half of the rule non-vacuous for the first time.
      */
     @Test
-    fun `feature modules must not import DAOs directly`() {
+    fun `feature modules must not import DAOs or DTOs directly`() {
         noClasses()
             .that()
             .resideInAPackage("com.dhruv.finance..")
@@ -98,7 +102,7 @@ class DependencyRulesTest {
             .resideOutsideOfPackage("com.dhruv.finance.app..")
             .should()
             .dependOnClassesThat()
-            .haveNameMatching(".*Dao")
+            .haveNameMatching(".*Dao|.*Dto")
             .because("feature code must access data only through Repository classes")
             .allowEmptyShould(true)
             .check(classes)

@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * DhruvNext design tokens — docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md
+ * DhruvNext design tokens — platform/DESIGN-SYSTEM.md
  * §4, landed per ADR-0024. Raw token data only; not yet wired into [DhruvTheme] or consumed by any
  * component (that lands with the shell rebuild and the `:libs:core` component library).
  */

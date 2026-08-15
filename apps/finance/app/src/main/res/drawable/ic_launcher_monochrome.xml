@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon monochrome layer (Android 13+ themed icons), direction 1a (monoline) — design
+     v1.0 FINAL §3 D-3: single-color star silhouette, no orbit ring (a stroked ring reads muddy at
+     the small themed-icon size). OS re-tints this to the user's wallpaper palette, so fill color
+     here is arbitrary opaque — white matches the existing crest-white convention. Same 0.62
+     safe-zone scale as ic_launcher_foreground.xml; this is a launcher-only asset distinct from
+     the general-purpose ic_dhruv_crest (which stays unpadded for normal UI-icon use). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:name="safe_zone"
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,16 L62,46 L92,54 L62,62 L54,92 L46,62 L16,54 L46,46 Z" />
+    </group>
+</vector>

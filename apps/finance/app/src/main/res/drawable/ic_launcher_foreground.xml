@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon foreground, direction 1c (orbit tile) — design v1.0 FINAL,
+     docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md §3 D-3.
+     Content is scaled 0.62 about the canvas center (54,54) to sit inside the adaptive-icon
+     66dp safe zone within this 108dp canvas — a 0.38 star tip would otherwise clip under a
+     circular/squircle mask. Silver star + orange orbit on the transparent layer; background
+     navy comes from ic_launcher_background (@color, unchanged). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:name="safe_zone"
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+
+        <group
+            android:name="orbit"
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="-24">
+            <path
+                android:strokeColor="#F05A28"
+                android:strokeWidth="3"
+                android:fillColor="@android:color/transparent"
+                android:pathData="M12,54 A42,18 0 1 1 96,54 A42,18 0 1 1 12,54" />
+        </group>
+
+        <path
+            android:fillColor="#E6E9EF"
+            android:pathData="M54,16 L62,46 L92,54 L62,62 L54,92 L46,62 L16,54 L46,46 Z" />
+        <path
+            android:fillColor="#C0C6D1"
+            android:pathData="M54,16 L62,46 L54,54 L46,46 Z" />
+    </group>
+</vector>

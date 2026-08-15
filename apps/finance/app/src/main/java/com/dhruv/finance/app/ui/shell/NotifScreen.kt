@@ -21,7 +21,7 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
  * `notif` ("Notifications") — DhruvNext §6.9
- * (`docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`). The design spec shows
+ * (`platform/DESIGN-SYSTEM.md`). The design spec shows
  * date-grouped notification cards (an EMI-due reminder, a budget breach, a health-score change, a
  * backup confirmation) — but nothing in this app produces a notification yet; bill/budget
  * reminders and backup jobs are future phases (R4/R6), not built. Fabricating sample notification

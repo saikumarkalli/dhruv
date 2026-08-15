@@ -40,4 +40,6 @@ dependencies {
     // Real-SQL DAO coverage is a developer-local instrumented concern (see ADR-0013).
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // MockWebServer — the true HTTP boundary for tracker/net interceptor tests (ADR-0029).
+    testImplementation(libs.okhttp.mockwebserver)
 }

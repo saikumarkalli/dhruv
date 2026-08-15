@@ -3,12 +3,28 @@
 Finance app (`applicationId = com.dhruv.finance`, app namespace `com.dhruv.finance.app`). Single-activity,
 Compose, Koin DI. Phase 4 split the former monolith into feature modules behind `FeatureHost`.
 
+## Docs (read before app-specific work, same spirit as root `CLAUDE.md`'s `platform/` list)
+Everything specific to this app's own build — tracker specs, phase plans, the design-v1
+functional spec/implementation plan/module standard/QA catalog, this app's own SDD — lives under
+`apps/finance/docs/` (`sdd/`, `superpowers/specs/`, `superpowers/plans/`), not the repo-global
+`docs/`. Start with `apps/finance/docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md`
+(current design source of truth) and `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`
+(current build order). `docs/PRD.md` §2 is still the full cross-app index if you need something else.
+
 ## Modules
 - `:apps:finance:app` — shell: `MainActivity` (pager + bottom nav), Settings UI, `platformModule`/`appModule` Koin wiring, Converter/Finance hubs.
 - `:apps:finance:data` — shared Room DB + entities + DAOs + repositories + `CurrencyApi` + `GeminiRepository` + `CurrencyFormatter`. Feature modules depend on this (Repository-only access).
-- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`, `networth` (scaffolded, screens pending).
+- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`. `networth` and the other design-v1 tracker modules (`money`, `planning`, `insurance`, `retirement`, `insights`, `automation`, `onboarding`) are **not yet created** — none is in `settings.gradle.kts`. Planned module topology + build order: `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §6–§7.
 
-See [FEATURES.md](FEATURES.md) for per-module detail (screens, ViewModels, data deps, flag keys).
+**Folder layout (2026-08-09):** feature modules are grouped by owning tab under
+`apps/finance/feature/<home|money|calc|plan|insights|onboarding|shell>/<name>/` — e.g. `loans` now
+lives at `apps/finance/feature/plan/loans/`. **Gradle coordinates are unchanged**
+(`:apps:finance:feature:loans` is still `:apps:finance:feature:loans`, remapped via `projectDir` in
+`settings.gradle.kts`) — every command below still works exactly as written. See
+[apps/finance/feature/README.md](feature/README.md) for the full bucket scheme and rationale.
+
+[FEATURES.md](FEATURES.md) is the module index; each module's own `README.md` (linked from there)
+is where the actual detail lives (screens, ViewModels, data deps, flag keys) — one source, not two.
 
 ## Feature flags
 `platform/feature-flags/dhruv-finance.json` is the single source of truth — it's packaged as an
@@ -22,7 +38,7 @@ safety map and reports the failure via `CrashReporter`. The resolver gates a fla
 - OFF: `date`, `time`.
 - `assistant`: `enabled = true`, **gated to `minVersion 1.2.0`** — current `versionName` is
   `2.0.2`, so visible. Also `requiresConsent` (DPDP consent gate in `AssistantScreen`).
-- `networth`: `enabled = true`, `requiresConsent = true`. Module scaffolded; screens pending (R2).
+- `networth`: `enabled = true`, `requiresConsent = true`. **Not yet built** — flag exists, module does not (see the "Modules" note above). Design-v1 Phase 2 builds it.
 
 ## Conventions (coding standards)
 - **DI = Koin**, not Hilt. Each feature exposes `val <name>Module = module { viewModel { … } }` in its `di/` package; the app aggregates them all in `CalculatorApplication`.
@@ -38,10 +54,16 @@ safety map and reports the failure via `CrashReporter`. The resolver gates a fla
 - Requires `JAVA_HOME` = Android Studio JBR.
 
 ## Design system
-All screens use the **DhruvNext design system** (ADR-0024): `LocalDhruvNextColors`, `DhruvNextType`,
-`DhruvNextSpacing`, `DhruvNextRadii` tokens + `NxCard`/`NxButton`/`NxTextField`/`SegmentedRow`/
-`SectionLabel`/`ListGroup` components from `:libs:core`. Zero `MaterialTheme.colorScheme`/
-`.typography` refs remain in screen files. See [FEATURES.md](FEATURES.md) design system section.
+**`platform/DESIGN-SYSTEM.md` is the binding contract** — global for every Dhruv app (ADR-0030).
+Read it before touching any UI. In short: `LocalDhruvNextColors` / `DhruvNextType` /
+`DhruvNextSpacing` / `DhruvNextRadii` tokens + the `:libs:core` component library (`NxCard`,
+`NxButton`, `NxTextField`, `SegmentedRow`, `SectionLabel`, `ListGroup`, …); `DhruvBrand` for
+theme-invariant brand chrome. Zero `MaterialTheme.colorScheme`/`.typography` refs and zero raw
+hex/dp/sp literals in screen files.
+
+Finance's own product spec (screens, business rules, flows) is
+`docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md`; its route/notification/
+intent/settings registries are `docs/superpowers/specs/2026-08-09-finance-surface-registries.md`.
 
 ## Phase
 Phase 4 complete — feature split done. DhruvNext design system overhaul complete (all 17 production

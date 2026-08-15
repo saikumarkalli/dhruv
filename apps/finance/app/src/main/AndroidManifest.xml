@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ACCESS_NETWORK_STATE: normal permission, no runtime prompt. Lets SignInScreen distinguish
+         "you're offline" from "sign-in was cancelled" before attempting Google sign-in, rather
+         than surfacing every network failure as the same generic retry copy. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".CalculatorApplication"

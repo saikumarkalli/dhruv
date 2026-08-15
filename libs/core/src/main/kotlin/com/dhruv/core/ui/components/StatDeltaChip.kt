@@ -17,7 +17,7 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
  * A delta pill — up/down amount or percent, e.g. "+4 points this month" or "12%". Never color
- * alone (tracker-design-system rule): always paired with a ▲/▼ glyph.
+ * alone (`platform/DESIGN-SYSTEM.md` §1 rule): always paired with a ▲/▼ glyph.
  */
 @Composable
 fun StatDeltaChip(

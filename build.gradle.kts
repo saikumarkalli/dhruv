@@ -33,6 +33,7 @@ val coveredModules =
     ":apps:finance:feature:date",
     ":apps:finance:feature:time",
     ":apps:finance:feature:assistant",
+    ":apps:finance:feature:onboarding",
     ":libs:core",
     ":libs:settings",
   )
@@ -52,8 +53,11 @@ val coverageExcludes =
     "**/di/*Module*.*",
   )
 
-fun moduleDir(path: String) =
-  rootProject.layout.projectDirectory.dir(path.removePrefix(":").replace(":", "/"))
+// Resolves via Gradle's own project graph, not by string-munging the path into a directory guess —
+// correct regardless of a module's physical location (feature modules are grouped into tab
+// buckets under apps/finance/feature/<bucket>/, remapped in settings.gradle.kts's `projectDir`
+// lines; naive path-to-directory munging broke silently the moment that remap landed).
+fun moduleDir(path: String) = project(path).layout.projectDirectory
 
 // AGP 9 compiles Kotlin to `built_in_kotlinc/...`; older AGP/KGP and Java paths are included too so
 // this survives layout changes. Non-existent dirs in a fileTree simply contribute nothing.
@@ -118,6 +122,59 @@ val jacocoCoverageVerification =
     }
   }
 
+// ── Tracker money-precision guard (DAT-BR-008) ────────────────────────────────
+// tracker/** must use Long paise everywhere for money — zero Double/Float (PLATFORM.md §5,
+// ADR-0014 §4, ADR-0029). A plain regex scan (not a compiler plugin) keeps this cheap and
+// dependency-free; it is not a type-system guarantee, just a fast, obvious tripwire.
+//
+// Implemented as a real Task subclass, not a `doLast { ... }` lambda — any lambda literal written
+// directly in this script (even a "top-level" one assigned to a val) captures the build script
+// instance as a synthetic `this$0` field, which the configuration-cache serializer rejects
+// ("cannot serialize Gradle script object references", config_cache:requirements:disallowed_types).
+// A task class's @TaskAction is a plain method with no such capture, and its only state is the
+// two Gradle-managed properties below (ConfigurableFileCollection / DirectoryProperty), both of
+// which are natively configuration-cache-safe.
+abstract class CheckTrackerMoneyPrecisionTask : DefaultTask() {
+  @get:InputFiles
+  @get:PathSensitive(PathSensitivity.RELATIVE)
+  abstract val trackerSources: ConfigurableFileCollection
+
+  @get:Internal
+  abstract val scanRootDir: DirectoryProperty
+
+  @TaskAction
+  fun check() {
+    val moneyTypePattern = Regex("\\b(Double|Float)\\b")
+    val root = scanRootDir.get().asFile
+    val offenders = mutableListOf<String>()
+    trackerSources.files.sortedBy { it.path }.forEach { f ->
+      f.readLines().forEachIndexed { index, line ->
+        if (moneyTypePattern.containsMatchIn(line)) {
+          offenders += "${f.relativeTo(root)}:${index + 1}: ${line.trim()}"
+        }
+      }
+    }
+    if (offenders.isNotEmpty()) {
+      throw GradleException(
+        "DAT-BR-008 violation — Double/Float found under tracker/** (money must be Long paise):\n" +
+          offenders.joinToString("\n"),
+      )
+    }
+  }
+}
+
+val checkTrackerMoneyPrecision =
+  tasks.register<CheckTrackerMoneyPrecisionTask>("checkTrackerMoneyPrecision") {
+    group = "verification"
+    description = "DAT-BR-008: fails if Double/Float appears under apps/finance/data/**/tracker/**/*.kt."
+    trackerSources.from(
+      fileTree("apps/finance/data/src/main") {
+        include("**/tracker/**/*.kt")
+      },
+    )
+    scanRootDir.set(layout.projectDirectory)
+  }
+
 // ── Pre-merge regression suite ────────────────────────────────────────────────
 // Single entry point the CI test gate (and developers) run: every module's debug unit tests
 // (which include ArchUnit + Robolectric), the merged coverage report, and the coverage floor gate.
@@ -127,4 +184,5 @@ tasks.register("regressionCheck") {
   dependsOn(testTaskPaths)
   dependsOn(jacocoAggregatedReport)
   dependsOn(jacocoCoverageVerification)
+  dependsOn(checkTrackerMoneyPrecision)
 }

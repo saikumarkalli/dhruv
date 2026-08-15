@@ -11,6 +11,7 @@ import com.dhruv.finance.date.di.dateModule
 import com.dhruv.finance.everyday.di.everydayModule
 import com.dhruv.finance.investments.di.investmentsModule
 import com.dhruv.finance.loans.di.loansModule
+import com.dhruv.finance.onboarding.di.onboardingModule
 import com.dhruv.finance.tax.di.taxModule
 import com.dhruv.finance.time.di.timeModule
 import com.dhruv.finance.unit.di.unitModule
@@ -43,6 +44,7 @@ class CalculatorApplication : Application() {
                 dateModule,
                 timeModule,
                 assistantModule,
+                onboardingModule,
             )
         }
     }
