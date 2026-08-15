@@ -36,5 +36,5 @@
       "status": "future"
     }
   },
-  "notes": "versionCode is auto-incremented by CI only (Android). Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
+  "notes": "All three version segments (major.minor.patch) and versionCode are CI-owned (ADR-0025) — do not edit by hand. Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
 }

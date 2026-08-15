@@ -259,32 +259,50 @@ or tombstone-GC timer.*
 | `main` | Play Store only (future) | Signed AAB | PR from `develop` only |
 | `feat/*` `fix/*` `chore/*` | Feature work | — | Branch from `develop`, PR back to `develop` |
 
-Four unattended gates per PR — run on both `develop` and `main` (branch protection, you self-merge):
+**PR is the single full-validation pass (ADR-0026).** A `changes` gate job resolves first on every
+PR and push (docs-only changes skip everything below it); the four gates then run **only on the
+PR** — the merge push re-runs nothing, because required up-to-date branches (below) guarantee the
+merged tree is the tree the PR validated:
 
-1. **Static analysis** — ktlint, detekt (per-module ruleset), Android lint
-2. **Security scan** — OWASP dependency-check, GitLeaks, permission audit
-3. **Tests** — unit (per module), integration (Room, DataStore), **ArchUnit** (dependency rules)
-4. **Build** — debug + signed release artifact, size delta check
+1. **Static analysis** (`pull_request` only) — ktlint, detekt (per-module ruleset), Android lint
+2. **Security scan** (`pull_request` only, incl. docs-only PRs) — GitLeaks. OWASP dependency-check
+   runs on a **schedule**, not per-PR — see below.
+3. **Tests + Build** (`pull_request` only) — unit (per module), integration (Room, DataStore),
+   **ArchUnit** (dependency rules), and the debug APK assembled on the same warm daemon
+4. **Release** (push to `develop`/`main` only, after the PR's gates passed) — bumps the version,
+   builds the **signed** release artifact, verifies it, tags and publishes
    - `develop`: signed **APK** → attached to GitHub Release on version tag
    - `main`: signed **AAB** → Play Store ready (deployment deferred)
 
+**OWASP dependency-check** runs in its own `owasp-scheduled.yml` (monthly cron +
+`workflow_dispatch`), off the merge path entirely — it was warn-only with findings masked and cost
+real runner minutes on every merge for zero gate value.
+
 **PR feedback** — a `pr-summary` job (`pull_request`-only, `if: always()`) posts a single sticky
-comment per PR summarizing all 4 gate results, updating it in place on every push instead of
+comment per PR summarizing gate results, updating it in place on every push instead of
 spamming new comments. It posts under a dedicated **"Dhruv Bot"** GitHub App identity (custom
 avatar, `Issues: Read & write` only, installed solely on this repo), minting a short-lived token via
 `actions/create-github-app-token@v1`; if that fails (secrets missing, App not installed), it falls
 back to the default `GITHUB_TOKEN` (`github-actions[bot]`) so commenting never blocks merge. It is
 informational only — never added to branch-protection required checks. See ADR-0012.
 
-**Post-build jobs** (push to `develop`/`main` only, after all 4 gates pass):
+**Release job** (push to `develop`/`main` only, docs-only pushes skipped by the `changes` gate):
 
-- **`version-bump`** — atomically increments `MAJOR.MINOR.PATCH+1` for every active app in
-  `platform/versions.json`, increments `VERSION_CODE`, and writes `VERSION_NAME` to
-  `gradle.properties`. Commits all three changes back with `[skip ci]`.
-- **`auto-tag`** — reads the new version from `platform/versions.json` and pushes
-  `dhruv-<app>-v<version>` tag (idempotent: skips if the tag already exists). Tag push triggers
-  the Release workflow. Requires a `RELEASE_TOKEN` PAT; falls back to `GITHUB_TOKEN` (tag is
-  still created, but Release workflow must be started manually due to GitHub's anti-recursion rule).
+- Derives the semver segment from the commit types in the push range (`feat:` → minor,
+  `type!:`/`BREAKING CHANGE` → major, else patch; `main` always patch) via
+  `scripts/ci/detect_bump.sh`, then bumps every active app in `platform/versions.json` and
+  `VERSION_CODE`/`VERSION_NAME` in `gradle.properties` via `scripts/ci/bump_version.py`
+  (ADR-0025). Commits the bump back with `[skip ci]`.
+- Builds the signed release APK at the bumped version, verifies it is signed, within the size
+  budget, contains no `.env.example` placeholder secrets, and within a 20% size-delta budget of
+  the previous release.
+- Creates/pushes the `dhruv-<app>-v<version>` tag (idempotent: skips if it already exists) and
+  publishes the GitHub Release with the APK attached — done in the same run, no separate
+  tag-triggered workflow to coordinate.
+
+**Required repo setting:** *"Require branches to be up to date before merging"* on `develop` and
+`main` is load-bearing, not optional — it is what makes skipping the merge-push re-run safe
+(ADR-0026).
 
 Tags on `develop` → GitHub Release with APK(s).
 Tags on `main` (future) → Play Store internal track.
@@ -295,8 +313,9 @@ Tags on `main` (future) → Play Store internal track.
 
 `dhruv-{app}-vMAJOR.MINOR.PATCH` (MAJOR = breaking/arch, MINOR = new feature module, PATCH = fix/merge).
 
-- **Patch** is auto-incremented by CI on every merge to `develop`/`main` — no manual action needed.
-- **Minor/Major** are bumped manually in `platform/versions.json` before merging when the change warrants it; CI will then auto-increment patch from the new baseline on the next merge.
+- The **segment is chosen by CI from the commit types** in the merge range: `feat:` → MINOR,
+  `type!:` / `BREAKING CHANGE:` → MAJOR, anything else → PATCH. Pushes to `main` are always PATCH.
+  See ADR-0025. No manual version edits are needed — or wanted.
 - `versionCode` (Android build number) is also auto-incremented by CI on every merge.
 - `VERSION_NAME` in `gradle.properties` is kept in sync automatically by the `version-bump` job.
 - Cross-module compatibility tracked in `versions.json`.
