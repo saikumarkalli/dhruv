@@ -87,9 +87,8 @@ jobs:
             build/reports/ktlint/ktlint.xml
 
   # ── Gate 2: Security scan (GitLeaks) ──────────────────────────────────────
-  # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP (slow NVD
-  # download, warn-only) lives in its own non-blocking job below so it never sits
-  # on the build's critical path.
+  # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP now runs
+  # on a schedule in owasp-scheduled.yml, off the merge path entirely (ADR-0026).
   security:
     name: "Gate 2 · Security"
     runs-on: ubuntu-latest
@@ -109,54 +108,6 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Gate 2b: OWASP dependency check (non-blocking, off critical path) ──────
-  # Runs in parallel with everything; NOT in build's `needs`. The NVD database
-  # (~700 MB) is cached month-by-month so each run is an incremental update
-  # instead of a full download.
-  owasp:
-    name: "Gate 2b · OWASP (non-blocking)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: true
-
-      - name: Compute NVD cache key (year-month)
-        id: nvd
-        run: echo "ym=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      # Persist the OWASP NVD database across runs → incremental update only.
-      - name: Cache NVD database
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/dependency-check-data
-          key: nvd-${{ steps.nvd.outputs.ym }}
-          restore-keys: |
-            nvd-
-
-      # OWASP: warn-only until the dependency-check plugin is wired in build-logic.
-      # Flip continue-on-error to false once the plugin is configured.
-      - name: OWASP Dependency Check
-        run: ./gradlew dependencyCheckAnalyze
-        continue-on-error: true
-
-      - name: Upload OWASP report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: owasp-report
-          path: "**/build/reports/dependency-check-report.html"
 
   # ── Gate 3: Tests ─────────────────────────────────────────────────────────
   tests:
@@ -274,7 +225,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [ static-analysis, security, owasp, tests, build ]
+    needs: [ static-analysis, security, tests, build ]
     permissions:
       pull-requests: write
     steps:
@@ -305,14 +256,13 @@ jobs:
             const results = {
               staticAnalysis: '${{ needs.static-analysis.result }}',
               security: '${{ needs.security.result }}',
-              owasp: '${{ needs.owasp.result }}',
               tests: '${{ needs.tests.result }}',
               build: '${{ needs.build.result }}',
             };
             const rows = [
               ['Gate 1 · Static Analysis', icons[results.staticAnalysis] ?? '❔', results.staticAnalysis],
               ['Gate 2 · Security (GitLeaks)', icons[results.security] ?? '❔', results.security],
-              ['Gate 2b · OWASP (non-blocking)', icons[results.owasp] ?? '❔', `${results.owasp} (warn-only — continue-on-error masks scan findings)`],
+              ['Gate 2b · OWASP', 'ℹ️', 'scheduled scan (owasp-scheduled.yml)'],
               ['Gate 3 · Tests + ArchUnit + Coverage', icons[results.tests] ?? '❔', results.tests],
               ['Gate 4 · Build (debug)', icons[results.build] ?? '❔', results.build],
             ];
