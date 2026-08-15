@@ -397,14 +397,16 @@ jobs:
     name: "Post-build · Release (bump + build + publish)"
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [ build ]
-    # Skip on PRs and on commits that were themselves made by this job
+    needs: [ changes ]
+    # Skip on PRs, on docs-only pushes, and on commits made by this job itself.
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
+      needs.changes.outputs.code == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     permissions:
       contents: write  # push bump commit + tag, create GitHub Release
+      actions: read    # download artifacts from the PR's CI run (cross-run fetch below)
 
     steps:
       - uses: actions/checkout@v4
@@ -413,6 +415,24 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 0. Derive the semver segment from the commit types in this push ──
+      # feat: -> minor, type!:/BREAKING CHANGE -> major, else patch; main = always
+      # patch (D6). Checkout above already used fetch-depth: 0, so the full range
+      # is available. Logic lives in a script so it is testable locally (ADR-0025).
+      - name: Determine bump type
+        id: bumptype
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            RANGE="${GITHUB_SHA}~1..${GITHUB_SHA}"
+          else
+            RANGE="${BASE}..${GITHUB_SHA}"
+          fi
+          BUMP=$(git log --format='%s%n%b' "$RANGE" | bash scripts/ci/detect_bump.sh "$GITHUB_REF_NAME")
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Range $RANGE → bump=$BUMP"
 
       # ── 1. Bump version files ──────────────────────────────────────────
       - name: Increment VERSION_CODE in gradle.properties
@@ -432,38 +452,12 @@ jobs:
           echo "new=$NEW"     >> "$GITHUB_OUTPUT"
           echo "VERSION_CODE bumped: $CURRENT → $NEW"
 
-      - name: Bump patch version and buildNumber in platform/versions.json
+      - name: Bump version and buildNumber in platform/versions.json
         id: version_json
         run: |
-          NEW_CODE="${{ steps.bump.outputs.new }}"
-          python3 - <<PYEOF
-          import json
-
-          with open("platform/versions.json") as f:
-              data = json.load(f)
-
-          first_version = None
-          for app, meta in data.get("apps", {}).items():
-              if meta.get("status") in ("planned", "future"):
-                  continue
-              # Auto-increment patch: MAJOR.MINOR.PATCH → MAJOR.MINOR.PATCH+1
-              parts = meta["version"].split(".")
-              parts[2] = str(int(parts[2]) + 1)
-              meta["version"] = ".".join(parts)
-              meta["buildNumber"] = int("$NEW_CODE")
-              if first_version is None:
-                  first_version = meta["version"]
-
-          with open("platform/versions.json", "w") as f:
-              json.dump(data, f, indent=2)
-              f.write("\n")
-
-          with open("/tmp/new_version.txt", "w") as f:
-              f.write(first_version or "")
-          PYEOF
-          NEW_VERSION=$(cat /tmp/new_version.txt)
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "platform/versions.json updated (version=$NEW_VERSION, buildNumber=$NEW_CODE)"
+          python3 scripts/ci/bump_version.py \
+            --bump "${{ steps.bumptype.outputs.bump }}" \
+            --build-number "${{ steps.bump.outputs.new }}"
 
       - name: Update VERSION_NAME in gradle.properties
         run: |
@@ -486,16 +480,47 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
+      # Cache WRITER: tests no longer runs on push, so this is the only job on the
+      # default branch that can populate the shared Gradle cache PRs read from.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-read-only: true
+          cache-read-only: false
 
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      # The secrets plugin reads .env and silently falls back to .env.example, so a missing
+      # .env does not fail the build — it produces a signed APK full of MY_* placeholders.
+      # Written here, never committed (.env is gitignored), and the runner is ephemeral.
+      # No value is echoed: writing them into a file keeps them out of the step log.
+      - name: Write .env from secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          MISSING=""
+          for name in GEMINI_API_KEY SUPABASE_URL SUPABASE_ANON_KEY GOOGLE_WEB_CLIENT_ID; do
+            eval "value=\${$name}"
+            [ -z "$value" ] && MISSING="$MISSING $name"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "❌ Release secrets missing:$MISSING" >&2
+            echo "Set them in Settings → Secrets and variables → Actions." >&2
+            exit 1
+          fi
+          {
+            printf 'GEMINI_API_KEY=%s\n'       "$GEMINI_API_KEY"
+            printf 'SUPABASE_URL=%s\n'         "$SUPABASE_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n'    "$SUPABASE_ANON_KEY"
+            printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID"
+          } > .env
+          echo "✅ .env written ($(wc -l < .env) keys)"
 
       - name: Assemble signed release APK
         run: ./gradlew :apps:finance:app:assembleRelease
@@ -510,6 +535,8 @@ jobs:
       # we never publish a release with a missing or unsigned APK.
       - name: Locate and verify signed APK
         id: apk
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           DIR="apps/finance/app/build/outputs/apk/release"
           APK=$(find "$DIR" -name "*.apk" ! -name "*unsigned*" | head -1)
@@ -527,6 +554,35 @@ jobs:
             echo "❌ APK exceeds 50 MB limit (${SIZE_MB} MB)" >&2
             exit 1
           fi
+
+          # The secrets-plugin fallback is silent, so verify the artifact itself rather than
+          # trusting the build. `strings` over the APK finds the baked BuildConfig constants.
+          if strings "$DEST" | grep -qE 'MY_(SUPABASE_URL|SUPABASE_ANON_KEY|GEMINI_API_KEY|GOOGLE_WEB_CLIENT_ID)'; then
+            echo "❌ APK contains .env.example placeholders — real secrets were not applied." >&2
+            exit 1
+          fi
+          echo "✅ No placeholder secrets in the APK"
+
+          # Compare against the previous release's APK. Informational on the first release
+          # (no prior asset) and never fatal on a lookup failure — a GitHub API hiccup must
+          # not block a release — but a >20% jump fails, because that is a real regression.
+          PREV_BYTES=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName \
+                         --jq '.[0].tagName // empty' 2>/dev/null \
+                       | xargs -r -I{} gh release view {} --repo "$GITHUB_REPOSITORY" \
+                         --json assets --jq '[.assets[] | select(.name|endswith(".apk")) | .size][0] // empty' \
+                         2>/dev/null || echo "")
+          NEW_BYTES=$(stat -c %s "$DEST")
+          if [ -n "$PREV_BYTES" ] && [ "$PREV_BYTES" -gt 0 ]; then
+            DELTA=$(( (NEW_BYTES - PREV_BYTES) * 100 / PREV_BYTES ))
+            echo "APK size: $((NEW_BYTES/1048576)) MB (previous $((PREV_BYTES/1048576)) MB, ${DELTA}%)"
+            if [ "$DELTA" -gt 20 ]; then
+              echo "❌ APK grew ${DELTA}% over the previous release (budget: 20%)." >&2
+              exit 1
+            fi
+          else
+            echo "No previous release asset — size delta baseline established at $((NEW_BYTES/1048576)) MB"
+          fi
+
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
           echo "✅ Signed APK verified within size budget"
 
@@ -543,7 +599,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: auto-bump to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
+          git commit -m "chore: auto-bump (${{ steps.bumptype.outputs.bump }}) to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
           # --force-with-lease: safe push — aborts if the remote moved ahead of us
           git push --force-with-lease origin HEAD:${{ github.ref_name }}
 
@@ -572,19 +628,48 @@ jobs:
       # merge's test totals + coverage % become durably visible (PR comments don't fire on push).
       # The artifacts were uploaded by the `tests` job earlier in THIS run; downloads are
       # best-effort so a missing artifact never blocks the release.
-      - name: Download regression summary
+      # The tests job no longer runs on push (ADR-0026), so the regression summary
+      # and coverage report live in the PR's CI run. Find it and pull them across.
+      # Entirely best-effort: release notes degrade to the APK line if anything fails.
+      - name: Locate the PR's CI run
+        id: prrun
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+                 --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR" ]; then
+            echo "No PR associated with $GITHUB_SHA — skipping artifact fetch."
+            exit 0
+          fi
+          HEAD_SHA=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)
+          RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+                  --event pull_request --status success --limit 50 \
+                  --json databaseId,headSha \
+                  --jq "[.[] | select(.headSha==\"$HEAD_SHA\")][0].databaseId // empty")
+          echo "run_id=$RUN" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR head=$HEAD_SHA run=$RUN"
+
+      - name: Download regression summary (from PR run)
+        if: steps.prrun.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: regression-summary
           path: .ci-summary
+          run-id: ${{ steps.prrun.outputs.run_id }}
+          github-token: ${{ github.token }}
 
-      - name: Download coverage report
+      - name: Download coverage report (from PR run)
+        if: steps.prrun.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: coverage-report
           path: .ci-coverage
+          run-id: ${{ steps.prrun.outputs.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Compose release notes + zip coverage
         run: |
