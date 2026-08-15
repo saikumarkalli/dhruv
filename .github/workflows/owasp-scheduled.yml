@@ -1,0 +1,72 @@
+name: OWASP Weekly
+
+# Moved out of ci.yml (ADR-0026). It was warn-only with findings masked by
+# continue-on-error, ran twice per merge (PR + push), and pulled a ~700 MB NVD
+# update each time — pure cost on the merge path for zero gate value.
+#
+# Cadence is MONTHLY, not weekly, and that is deliberate: while
+# `continue-on-error: true` masks every finding (the dependency-check plugin is
+# still unwired — PRODUCTION_READINESS T11/M1), this scan produces no signal
+# anyone acts on. A weekly masked scan is 52 × 30 min/year of pure cost. Monthly
+# keeps the artifact available for manual review at ~1/4 the spend. Move it back
+# to weekly in the same change that flips continue-on-error to false.
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # 1st of the month, 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "21"
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+
+jobs:
+  owasp:
+    name: "OWASP dependency check (scheduled)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+
+      - name: Compute NVD cache key (year-month)
+        id: nvd
+        run: echo "ym=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      # Persist the OWASP NVD database across runs → incremental update only.
+      # The NVD DB is ~700 MB and shares the repo's 10 GB Actions cache with the Gradle
+      # build cache that every PR depends on. If `gh cache list` ever totals >8 GB, delete
+      # stale nvd-* entries first — losing the Gradle cache costs far more than one slow scan.
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: nvd-${{ steps.nvd.outputs.ym }}
+          restore-keys: |
+            nvd-
+
+      # Still warn-only until the dependency-check plugin is wired in build-logic
+      # (PRODUCTION_READINESS.md M1 / T11). Flip continue-on-error to false then.
+      - name: OWASP Dependency Check
+        run: ./gradlew dependencyCheckAnalyze
+        continue-on-error: true
+
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-report
+          path: "**/build/reports/dependency-check-report.html"
+          retention-days: 30

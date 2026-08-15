@@ -7,9 +7,9 @@ on:
   #
   # NOTE: no `paths-ignore`. With branch protection + required status checks, a push
   # that touches only ignored paths leaves the required checks permanently "pending"
-  # and blocks the merge. A production pipeline must run reliably on every push/PR.
-  # (To skip docs-only builds safely later, use a path-filter gate job that still
-  #  reports the required status — not trigger-level paths-ignore.)
+  # and blocks the merge. Docs-only skipping is instead done by the `changes` gate job
+  # below — a job skipped via `if:` reports as "skipped" (counts as passing), whereas
+  # `paths-ignore` never creates the check run at all (ADR-0026).
   push:
     branches: [ main, develop ]
   pull_request:
@@ -17,9 +17,9 @@ on:
 
 # Concurrency: cancel superseded PR runs (saves minutes during iteration), but NEVER
 # cancel a push to a protected branch — each merge to develop/main must run to
-# completion so it produces its build artifact, version bump, and release tag.
-# A cancelled run marks its downstream jobs (build, version-bump) as skipped, which
-# is the "cancelled + build skipped after merge" failure mode this guards against.
+# completion so it produces its version bump and release tag. A cancelled run marks
+# the `release` job as skipped, which is the "cancelled + release skipped after
+# merge" failure mode this guards against.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,16 +30,89 @@ permissions:
 
 env:
   JAVA_VERSION: "21"
-  # Let gradle.properties drive parallel/caching/workers (parallel=true, caching=true,
-  # workers.max=4, configuration-cache=true). Only set memory here. The daemon stays ON:
-  # on a one-shot runner it keeps a warm JVM across the multiple tasks in a job.
-  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+  # gradle.properties keeps workers.max=4 for dev machines. GitHub-hosted standard
+  # runners on a private repo are 2-core/7 GB, so four workers just thrash. Overridden
+  # here (CI only) — the daemon and configuration cache settings stay as configured.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
 
 jobs:
+  # ── Gate 0: Changed-path filter ───────────────────────────────────────────
+  # Docs-only changes skip the build gates AND the release (ADR-0026). This is a
+  # JOB, not trigger-level `paths-ignore`: a job skipped via `if:` reports as
+  # "skipped", which branch protection counts as passing, whereas `paths-ignore`
+  # never creates the check run at all and leaves required checks pending forever.
+  #
+  # Only `docs/**`, any nested `*/docs/**`, and `**/*.md` count as docs.
+  # `platform/versions.json` and the feature-flag JSON are CODE — they feed the build.
+  changes:
+    name: "Gate 0 · Changed paths"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # NO CHECKOUT on purpose. This job runs on EVERY event — including the docs-only
+      # ones it exists to make cheap — so a clone here would eat the saving it creates.
+      # The compare API returns the changed-file list directly, in ~2s.
+      - name: Detect non-docs changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"; HEAD="$PR_HEAD"
+          else
+            BASE="$PUSH_BASE"; HEAD="$GITHUB_SHA"
+          fi
+
+          FILES=""
+          COUNT=0
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            FILES=$(gh api "repos/$GITHUB_REPOSITORY/compare/${BASE}...${HEAD}" \
+                      --jq '.files[].filename' 2>/dev/null || echo "")
+            COUNT=$(printf '%s\n' "$FILES" | grep -c . || true)
+          fi
+
+          # Fail safe 1: unresolvable range (new branch, force push, API error) → run everything.
+          if [ -z "$FILES" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "No resolvable file list — treating as code."
+            exit 0
+          fi
+
+          # Fail safe 2: the compare API caps `.files` at 300 entries. At the cap the list may be
+          # truncated and a code file could sit past the boundary — never skip on a list we
+          # cannot trust.
+          if [ "$COUNT" -ge 300 ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "File list hit the 300-entry API cap — treating as code."
+            exit 0
+          fi
+
+          CODE=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              docs/*|*/docs/*|*.md) ;;
+              *) CODE=true; echo "code change: $f"; break ;;
+            esac
+          done <<< "$FILES"
+
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $(printf '%s\n' "$FILES" | wc -l) · code=$CODE"
+
   # ── Gate 1: Static analysis ────────────────────────────────────────────────
   static-analysis:
     name: "Gate 1 · Static Analysis"
     runs-on: ubuntu-latest
+    needs: [ changes ]
+    # PR is the ONLY full-validation pass (ADR-0026). The merge push re-runs nothing:
+    # required up-to-date branches guarantee the merged tree is the tree the PR validated.
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -54,11 +127,23 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
 
-      # Download ktlint binary directly — no third-party action dependency.
+      # ktlint binary is downloaded directly (no third-party action dependency) and
+      # cached by version so it is fetched once, not on every run.
+      - name: Cache ktlint
+        id: ktlint-cache
+        uses: actions/cache@v4
+        with:
+          path: ktlint
+          key: ktlint-1.5.0
+
       - name: Download ktlint
+        if: steps.ktlint-cache.outputs.cache-hit != 'true'
         run: |
           curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
           chmod +x ktlint
+
+      - name: Ensure ktlint is executable
+        run: chmod +x ktlint
 
       # Fails the job (non-zero exit) on any style violation.
       - name: ktlint check
@@ -81,19 +166,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports
+          retention-days: 7
           path: |
             **/build/reports/lint-results*.html
             **/build/reports/detekt/*.html
             build/reports/ktlint/ktlint.xml
 
   # ── Gate 2: Security scan (GitLeaks) ──────────────────────────────────────
-  # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP (slow NVD
-  # download, warn-only) lives in its own non-blocking job below so it never sits
-  # on the build's critical path.
+  # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP now runs
+  # on a schedule in owasp-scheduled.yml, off the merge path entirely (ADR-0026).
   security:
     name: "Gate 2 · Security"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [ changes ]
+    # No changes-gate here on purpose: secrets hide in markdown too, so GitLeaks
+    # runs on docs-only PRs as well.
+    if: github.event_name == 'pull_request'
     # gitleaks-action posts a PR summary comment; without these it fails on PR
     # events with "Resource not accessible by integration".
     permissions:
@@ -110,59 +199,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Gate 2b: OWASP dependency check (non-blocking, off critical path) ──────
-  # Runs in parallel with everything; NOT in build's `needs`. The NVD database
-  # (~700 MB) is cached month-by-month so each run is an incremental update
-  # instead of a full download.
-  owasp:
-    name: "Gate 2b · OWASP (non-blocking)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: true
-
-      - name: Compute NVD cache key (year-month)
-        id: nvd
-        run: echo "ym=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
-
-      # Persist the OWASP NVD database across runs → incremental update only.
-      - name: Cache NVD database
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/dependency-check-data
-          key: nvd-${{ steps.nvd.outputs.ym }}
-          restore-keys: |
-            nvd-
-
-      # OWASP: warn-only until the dependency-check plugin is wired in build-logic.
-      # Flip continue-on-error to false once the plugin is configured.
-      - name: OWASP Dependency Check
-        run: ./gradlew dependencyCheckAnalyze
-        continue-on-error: true
-
-      - name: Upload OWASP report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: owasp-report
-          path: "**/build/reports/dependency-check-report.html"
-
   # ── Gate 3: Tests ─────────────────────────────────────────────────────────
   tests:
-    name: "Gate 3 · Tests + ArchUnit + Coverage"
+    name: "Gate 3+4 · Tests + ArchUnit + Coverage + Build"
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: [ changes ]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     # Exposed to the pr-summary comment and the release notes (see Post-build jobs).
     outputs:
       tests_total: ${{ steps.summary.outputs.tests_total }}
@@ -179,9 +222,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
-      # tests is the cache WRITER (runs early on the critical path): it compiles the
-      # whole project once and populates the Gradle build cache so the build job
-      # reuses those compile/KSP outputs instead of recompiling cold.
+      # Warm the Gradle build cache for subsequent pushes to this same PR: this job
+      # compiles the whole project once (regressionCheck) and assembles the debug
+      # APK below on the same warm daemon.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -214,6 +257,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
+          retention-days: 7
           path: "**/build/reports/tests/"
 
       - name: Upload coverage report
@@ -221,6 +265,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
+          retention-days: 14
           path: build/reports/jacoco/jacocoAggregatedReport/
 
       - name: Upload regression summary
@@ -228,33 +273,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: regression-summary
+          retention-days: 7
           path: regression-summary.md
 
-  # ── Gate 4: Build (debug) ─────────────────────────────────────────────────
-  # Validates compile + KSP + Compose on every PR and push. The signed RELEASE
-  # build is NOT here — it is built in the `release` job below AFTER the version is
-  # bumped, so the published APK carries the correct (bumped) versionName/versionCode.
-  build:
-    name: "Gate 4 · Build (debug)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [ static-analysis, security, tests ]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      # Reads the warm build cache populated by the tests job (read-only here).
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: true
-
-      - name: Assemble debug APK
+      # Gate 4, folded in (ADR-0026): regressionCheck above already compiled every
+      # module, so this reuses the warm daemon + build cache instead of paying for a
+      # fresh runner with a cold cache restore. The signed RELEASE build is NOT here —
+      # it is built in the `release` job after the version bump.
+      - name: Assemble debug APK (Gate 4)
         run: ./gradlew :apps:finance:app:assembleDebug
 
       - name: Upload debug APK
@@ -274,7 +300,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [ static-analysis, security, owasp, tests, build ]
+    needs: [ static-analysis, security, tests ]
     permissions:
       pull-requests: write
     steps:
@@ -305,16 +331,13 @@ jobs:
             const results = {
               staticAnalysis: '${{ needs.static-analysis.result }}',
               security: '${{ needs.security.result }}',
-              owasp: '${{ needs.owasp.result }}',
               tests: '${{ needs.tests.result }}',
-              build: '${{ needs.build.result }}',
             };
             const rows = [
               ['Gate 1 · Static Analysis', icons[results.staticAnalysis] ?? '❔', results.staticAnalysis],
               ['Gate 2 · Security (GitLeaks)', icons[results.security] ?? '❔', results.security],
-              ['Gate 2b · OWASP (non-blocking)', icons[results.owasp] ?? '❔', `${results.owasp} (warn-only — continue-on-error masks scan findings)`],
-              ['Gate 3 · Tests + ArchUnit + Coverage', icons[results.tests] ?? '❔', results.tests],
-              ['Gate 4 · Build (debug)', icons[results.build] ?? '❔', results.build],
+              ['Gate 2b · OWASP', 'ℹ️', 'scheduled scan (owasp-scheduled.yml)'],
+              ['Gate 3+4 · Tests + ArchUnit + Coverage + Build', icons[results.tests] ?? '❔', results.tests],
             ];
             const table = ['| Gate | Status | Result |', '|---|---|---|',
               ...rows.map(([n, i, r]) => `| ${n} | ${i} | ${r} |`)].join('\n');
@@ -362,10 +385,13 @@ jobs:
             }
 
   # ── Post-build: Release (bump → build → tag → publish) ────────────────────
-  # Runs only on push (not PRs) to develop/main after all 4 gates pass. Does the
-  # whole release IN THIS RUN so it cannot silently half-complete:
-  #   1. Bump patch version (MAJOR.MINOR.PATCH+1) in platform/versions.json +
-  #      VERSION_CODE/VERSION_NAME in gradle.properties.
+  # Runs only on push (not PRs) to develop/main, gated on `changes` only — the PR
+  # that preceded this push is the full-validation pass (ADR-0026); required
+  # up-to-date branches guarantee the merged tree is the tree the PR validated, so
+  # this job does not re-run static-analysis/security/tests. Does the whole release
+  # IN THIS RUN so it cannot silently half-complete:
+  #   1. Derive the bump segment from commit types (ADR-0025) and bump
+  #      platform/versions.json + VERSION_CODE/VERSION_NAME in gradle.properties.
   #   2. Build the SIGNED release APK *at the bumped version* (gradle reads the just-
   #      written gradle.properties), and verify it is signed and within the size budget.
   #   3. Commit the bump back with [skip ci]; create + push the dhruv-<app>-v<version> tag.
@@ -379,14 +405,16 @@ jobs:
     name: "Post-build · Release (bump + build + publish)"
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [ build ]
-    # Skip on PRs and on commits that were themselves made by this job
+    needs: [ changes ]
+    # Skip on PRs, on docs-only pushes, and on commits made by this job itself.
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
+      needs.changes.outputs.code == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     permissions:
       contents: write  # push bump commit + tag, create GitHub Release
+      actions: read    # download artifacts from the PR's CI run (cross-run fetch below)
 
     steps:
       - uses: actions/checkout@v4
@@ -394,7 +422,26 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
           fetch-tags: true
+          filter: blob:none
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 0. Derive the semver segment from the commit types in this push ──
+      # feat: -> minor, type!:/BREAKING CHANGE -> major, else patch; main = always
+      # patch (D6). Checkout above already used fetch-depth: 0, so the full range
+      # is available. Logic lives in a script so it is testable locally (ADR-0025).
+      - name: Determine bump type
+        id: bumptype
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            RANGE="${GITHUB_SHA}~1..${GITHUB_SHA}"
+          else
+            RANGE="${BASE}..${GITHUB_SHA}"
+          fi
+          BUMP=$(git log --format='%s%n%b' "$RANGE" | bash scripts/ci/detect_bump.sh "$GITHUB_REF_NAME")
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Range $RANGE → bump=$BUMP"
 
       # ── 1. Bump version files ──────────────────────────────────────────
       - name: Increment VERSION_CODE in gradle.properties
@@ -414,38 +461,12 @@ jobs:
           echo "new=$NEW"     >> "$GITHUB_OUTPUT"
           echo "VERSION_CODE bumped: $CURRENT → $NEW"
 
-      - name: Bump patch version and buildNumber in platform/versions.json
+      - name: Bump version and buildNumber in platform/versions.json
         id: version_json
         run: |
-          NEW_CODE="${{ steps.bump.outputs.new }}"
-          python3 - <<PYEOF
-          import json
-
-          with open("platform/versions.json") as f:
-              data = json.load(f)
-
-          first_version = None
-          for app, meta in data.get("apps", {}).items():
-              if meta.get("status") in ("planned", "future"):
-                  continue
-              # Auto-increment patch: MAJOR.MINOR.PATCH → MAJOR.MINOR.PATCH+1
-              parts = meta["version"].split(".")
-              parts[2] = str(int(parts[2]) + 1)
-              meta["version"] = ".".join(parts)
-              meta["buildNumber"] = int("$NEW_CODE")
-              if first_version is None:
-                  first_version = meta["version"]
-
-          with open("platform/versions.json", "w") as f:
-              json.dump(data, f, indent=2)
-              f.write("\n")
-
-          with open("/tmp/new_version.txt", "w") as f:
-              f.write(first_version or "")
-          PYEOF
-          NEW_VERSION=$(cat /tmp/new_version.txt)
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "platform/versions.json updated (version=$NEW_VERSION, buildNumber=$NEW_CODE)"
+          python3 scripts/ci/bump_version.py \
+            --bump "${{ steps.bumptype.outputs.bump }}" \
+            --build-number "${{ steps.bump.outputs.new }}"
 
       - name: Update VERSION_NAME in gradle.properties
         run: |
@@ -468,16 +489,47 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
+      # Cache WRITER: tests no longer runs on push, so this is the only job on the
+      # default branch that can populate the shared Gradle cache PRs read from.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-read-only: true
+          cache-read-only: false
 
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/upload-key.jks"
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      # The secrets plugin reads .env and silently falls back to .env.example, so a missing
+      # .env does not fail the build — it produces a signed APK full of MY_* placeholders.
+      # Written here, never committed (.env is gitignored), and the runner is ephemeral.
+      # No value is echoed: writing them into a file keeps them out of the step log.
+      - name: Write .env from secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          MISSING=""
+          for name in GEMINI_API_KEY SUPABASE_URL SUPABASE_ANON_KEY GOOGLE_WEB_CLIENT_ID; do
+            eval "value=\${$name}"
+            [ -z "$value" ] && MISSING="$MISSING $name"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "❌ Release secrets missing:$MISSING" >&2
+            echo "Set them in Settings → Secrets and variables → Actions." >&2
+            exit 1
+          fi
+          {
+            printf 'GEMINI_API_KEY=%s\n'       "$GEMINI_API_KEY"
+            printf 'SUPABASE_URL=%s\n'         "$SUPABASE_URL"
+            printf 'SUPABASE_ANON_KEY=%s\n'    "$SUPABASE_ANON_KEY"
+            printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID"
+          } > .env
+          echo "✅ .env written ($(wc -l < .env) keys)"
 
       - name: Assemble signed release APK
         run: ./gradlew :apps:finance:app:assembleRelease
@@ -492,6 +544,8 @@ jobs:
       # we never publish a release with a missing or unsigned APK.
       - name: Locate and verify signed APK
         id: apk
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           DIR="apps/finance/app/build/outputs/apk/release"
           APK=$(find "$DIR" -name "*.apk" ! -name "*unsigned*" | head -1)
@@ -509,6 +563,35 @@ jobs:
             echo "❌ APK exceeds 50 MB limit (${SIZE_MB} MB)" >&2
             exit 1
           fi
+
+          # The secrets-plugin fallback is silent, so verify the artifact itself rather than
+          # trusting the build. `strings` over the APK finds the baked BuildConfig constants.
+          if strings "$DEST" | grep -qE 'MY_(SUPABASE_URL|SUPABASE_ANON_KEY|GEMINI_API_KEY|GOOGLE_WEB_CLIENT_ID)'; then
+            echo "❌ APK contains .env.example placeholders — real secrets were not applied." >&2
+            exit 1
+          fi
+          echo "✅ No placeholder secrets in the APK"
+
+          # Compare against the previous release's APK. Informational on the first release
+          # (no prior asset) and never fatal on a lookup failure — a GitHub API hiccup must
+          # not block a release — but a >20% jump fails, because that is a real regression.
+          PREV_BYTES=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName \
+                         --jq '.[0].tagName // empty' 2>/dev/null \
+                       | xargs -r -I{} gh release view {} --repo "$GITHUB_REPOSITORY" \
+                         --json assets --jq '[.assets[] | select(.name|endswith(".apk")) | .size][0] // empty' \
+                         2>/dev/null || echo "")
+          NEW_BYTES=$(stat -c %s "$DEST")
+          if [ -n "$PREV_BYTES" ] && [ "$PREV_BYTES" -gt 0 ]; then
+            DELTA=$(( (NEW_BYTES - PREV_BYTES) * 100 / PREV_BYTES ))
+            echo "APK size: $((NEW_BYTES/1048576)) MB (previous $((PREV_BYTES/1048576)) MB, ${DELTA}%)"
+            if [ "$DELTA" -gt 20 ]; then
+              echo "❌ APK grew ${DELTA}% over the previous release (budget: 20%)." >&2
+              exit 1
+            fi
+          else
+            echo "No previous release asset — size delta baseline established at $((NEW_BYTES/1048576)) MB"
+          fi
+
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
           echo "✅ Signed APK verified within size budget"
 
@@ -525,7 +608,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: auto-bump to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
+          git commit -m "chore: auto-bump (${{ steps.bumptype.outputs.bump }}) to v${{ steps.version_json.outputs.version }} (versionCode=${{ steps.bump.outputs.new }}) [skip ci]"
           # --force-with-lease: safe push — aborts if the remote moved ahead of us
           git push --force-with-lease origin HEAD:${{ github.ref_name }}
 
@@ -554,19 +637,48 @@ jobs:
       # merge's test totals + coverage % become durably visible (PR comments don't fire on push).
       # The artifacts were uploaded by the `tests` job earlier in THIS run; downloads are
       # best-effort so a missing artifact never blocks the release.
-      - name: Download regression summary
+      # The tests job no longer runs on push (ADR-0026), so the regression summary
+      # and coverage report live in the PR's CI run. Find it and pull them across.
+      # Entirely best-effort: release notes degrade to the APK line if anything fails.
+      - name: Locate the PR's CI run
+        id: prrun
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+                 --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR" ]; then
+            echo "No PR associated with $GITHUB_SHA — skipping artifact fetch."
+            exit 0
+          fi
+          HEAD_SHA=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)
+          RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+                  --event pull_request --status success --limit 50 \
+                  --json databaseId,headSha \
+                  --jq "[.[] | select(.headSha==\"$HEAD_SHA\")][0].databaseId // empty")
+          echo "run_id=$RUN" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR head=$HEAD_SHA run=$RUN"
+
+      - name: Download regression summary (from PR run)
+        if: steps.prrun.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: regression-summary
           path: .ci-summary
+          run-id: ${{ steps.prrun.outputs.run_id }}
+          github-token: ${{ github.token }}
 
-      - name: Download coverage report
+      - name: Download coverage report (from PR run)
+        if: steps.prrun.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: coverage-report
           path: .ci-coverage
+          run-id: ${{ steps.prrun.outputs.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Compose release notes + zip coverage
         run: |

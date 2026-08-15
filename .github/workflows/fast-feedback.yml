@@ -25,17 +25,41 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   JAVA_VERSION: "21"
-  # Daemon stays ON; gradle.properties drives parallel/caching/workers/config-cache.
-  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+  # gradle.properties keeps workers.max=4 for dev machines. GitHub-hosted standard
+  # runners on a private repo are 2-core/7 GB, so four workers just thrash. Overridden
+  # here (CI only) — the daemon and configuration cache settings stay as configured.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
 
 jobs:
+  # Once a PR is open for this branch, ci.yml's pull_request run is the authoritative
+  # build — running fast-feedback too would compile and test the same commit twice
+  # (ADR-0026). This job costs seconds and gates the expensive one below.
+  pr-check:
+    name: "Open PR check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      open: ${{ steps.pr.outputs.open }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COUNT=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" \
+                  --state open --json number --jq 'length' 2>/dev/null || echo "0")
+          echo "open=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Open PRs for $GITHUB_REF_NAME: $COUNT"
+
   compile-and-test:
     name: "Compile + unit tests (debug)"
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: pr-check
+    if: needs.pr-check.outputs.open == '0'
     steps:
       - uses: actions/checkout@v4
 

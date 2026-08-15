@@ -402,6 +402,79 @@ build order, component inventory, and gap register live in the DhruvNext overhau
 
 ---
 
+## ADR-0025 — Commit-type-driven semver bump (amends ADR-0011)
+**Context.** ADR-0011 made CI auto-increment the PATCH segment on every merge, leaving MINOR and
+MAJOR as manual edits to `platform/versions.json`. In practice that meant hand-editing the file
+before merging a feature branch (e.g. 1.2.x → 1.3.0 for the networth work) — a step that is easy
+to forget and produces a wrong version silently when forgotten.
+**Decision.** CI derives the segment from the commit types in the push range:
+`feat:` / `feat(scope):` → **minor**; any `type!:` or a `BREAKING CHANGE:` / `BREAKING-CHANGE:`
+trailer → **major**; everything else (including bare merge commits) → **patch**. Highest wins
+across the range. Pushes to `main` are **always patch** — a `develop → main` promotion replays
+develop's already-bumped `feat:` commits, and re-detecting them would double-bump.
+Detection lives in `scripts/ci/detect_bump.sh` (stdin → segment) and the file rewrite in
+`scripts/ci/bump_version.py`, both with local tests, rather than in an inline YAML heredoc.
+**Why.** Removes the whole class of "forgot to bump minor" errors, matches the conventional-commit
+messages the repo already writes, and keeps ADR-0011's semantics (PATCH = fix/merge) intact.
+Scripts over inline YAML follows the `scripts/ci/regression_summary.py` precedent — testable
+locally with `--dry-run` instead of only observable after a merge.
+**Consequences.** Manual minor/major edits to `versions.json` are no longer needed and are
+**discouraged**: a manually raised version still works as a new baseline, but if the same merge
+also carries `feat:` commits the result is a double bump. Any branch holding such a manual edit
+must revert it before merging. `VERSION_CODE` increment, `VERSION_NAME` sync, APK verification,
+idempotent tagging and Release publishing are unchanged.
+
+---
+
+## ADR-0026 — CI cost model: single-validation pipeline
+**Context.** An audit of the three workflows found no trigger loops but heavy duplicate work —
+roughly 2–3 GitHub-hosted runner-hours per merged PR on a private repo with a 2000 min/month floor,
+i.e. ~11–16 merges before exhaustion. Five distinct duplications: (1) a full 4-gate run on the PR
+and an identical re-run on the merge push over the same tree; (2) `fast-feedback` compiling the
+same commit `ci.yml`'s PR run already compiles, once a PR is open; (3) the `build` job re-compiling
+`assembleDebug` on a fresh cold runner after `tests` had already compiled everything via
+`regressionCheck`; (4) OWASP running twice per merge with a ~700 MB NVD update, up to 30 min, and
+`continue-on-error` masking every finding — paying full price for zero gate value; (5) docs-only
+commits triggering full builds plus a version bump, APK and Release.
+**Decision.** The PR is the **only** full-validation pass. `static-analysis` and `tests` run on
+`pull_request` only; `security` (GitLeaks) runs on every PR including docs-only ones, because
+secrets hide in markdown too. The merge push runs the `release` job only. `build` is deleted and
+its `assembleDebug` folded into `tests` on the warm daemon. OWASP moves to `owasp-scheduled.yml`
+(monthly cron + `workflow_dispatch`). A `changes` gate job short-circuits docs-only work. The
+Gradle cache **writer** moves from `tests` to `release`, since `tests` no longer runs on the
+default branch. Release notes fetch the regression summary and coverage artifacts **cross-run**
+from the PR's successful CI run, best-effort.
+**Why.** Safe because branch protection now requires up-to-date branches (see Consequences): the
+merged tree is byte-identical to the tree the PR validated, so re-running the gates on push
+verifies nothing new. The `release` job's own `assembleRelease` still catches compile-level
+breakage. Docs-only skipping uses a job-level `if:` rather than trigger-level `paths-ignore`
+because a skipped job reports as skipped — which branch protection counts as passing — whereas
+`paths-ignore` never creates the check run and leaves required checks permanently pending.
+**Consequences.** *"Require branches to be up to date before merging"* on `develop` and `main` is
+now a **load-bearing repo setting**, not a preference — disabling it silently removes the only
+thing validating merged code. Required-status-check names changed: `Gate 4 · Build (debug)` and
+`Gate 2b · OWASP (non-blocking)` no longer exist, and Gate 3 is renamed
+`Gate 3+4 · Tests + ArchUnit + Coverage + Build`. The `release` job needs `actions: read` to pull
+artifacts across runs; if the lookup fails, release notes degrade to the APK line and the release
+still publishes. ADR-0013's "coverage visible on every merge" promise is kept via the PR run's
+artifacts rather than a re-run. `pr-summary` remains informational-only (ADR-0012); its OWASP row
+becomes a static pointer to the scheduled workflow. Cost is now **measured, not assumed**:
+`scripts/ci/actions_usage.py` reports billed minutes per pipeline from the Actions timing API, a
+monthly `ci-usage-report.yml` posts it to a Job Summary, and four standing budgets bound future
+growth — **≤ 90 billed min per merged PR**, **≤ 70 %** of that in the commit pipeline, **≤ 1600 min**
+projected monthly (80 % of the Free-tier cap), and **≤ +4 min** on `regressionCheck` per new module.
+Exceeding one is a decision to take deliberately, with the remedy named in the plan's cost-budget
+table; test sharding is the first lever and is deliberately unbuilt until the measurement calls for
+it. The cadence of the OWASP scan is monthly **only while its findings are masked** — restore weekly
+in the same change that flips `continue-on-error` to false.
+
+**Implementation note (2026-08-15):** the cost-telemetry script (`scripts/ci/actions_usage.py`,
+`ci-usage-report.yml`) and the standing budgets referenced above are specified in the implementation
+plan but were not part of this change's initial scope — this ADR records the full intended design;
+the telemetry itself lands in a follow-up commit before it can be relied upon.
+
+---
+
 ## ADR-0027 — Navigation: 5 tab roots (Home · Money · Calc · Plan · Insights); Plan root leads with
 ## live modules, calculators demoted to a strip (supersedes ADR-0024 §1)
 **Context.** A finalized Claude Design project (`Dhruv brand & UI/UX finalization`, imported

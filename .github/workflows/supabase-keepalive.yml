@@ -1,0 +1,40 @@
+name: Supabase Keep-Alive
+
+# Supabase free-tier projects pause after ~7 days without API activity, and a paused
+# project fails every tracker request with no dedicated UI state. One cheap request
+# every 5 days keeps it awake for ~9 runner-minutes a year.
+#
+# Uses the anon key against PostgREST's root endpoint: no table access, no RLS surface,
+# nothing that could read or write user data even if the key leaked (it is publishable
+# by design under RLS — ADR-0014).
+on:
+  schedule:
+    - cron: "0 6 */5 * *"   # every 5 days, 06:00 UTC — comfortably inside the 7-day window
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    name: "Ping Supabase"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping PostgREST root
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL/SUPABASE_ANON_KEY not set — skipping keep-alive."
+            exit 0
+          fi
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+                   --max-time 30 \
+                   -H "apikey: $SUPABASE_ANON_KEY" \
+                   "${SUPABASE_URL%/}/rest/v1/")
+          echo "PostgREST responded: $CODE"
+          case "$CODE" in
+            2*|3*|401|404) echo "Project is awake." ;;
+            *) echo "::error::Unexpected status $CODE — project may be paused or misconfigured."; exit 1 ;;
+          esac
