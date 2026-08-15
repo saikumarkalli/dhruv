@@ -59,7 +59,10 @@ class SupabaseClientFactoryTest {
                 hasSyncConsent = { true },
             )
 
-        val pattern = otherHostFactory.certificatePinner.pins.first().pattern
+        val pattern =
+            otherHostFactory.certificatePinner.pins
+                .first()
+                .pattern
 
         assertEquals("some-other-project.supabase.co", pattern)
     }

@@ -42,10 +42,11 @@ fun EverydayScreen(viewModel: EverydayViewModel) {
             options = EverydayTabs,
             selectedIndex = selectedTab,
             onSelected = { selectedTab = it },
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = DhruvNextSpacing.screenGutter,
-                vertical = DhruvNextSpacing.interCardGap,
-            ),
+            modifier =
+                Modifier.fillMaxWidth().padding(
+                    horizontal = DhruvNextSpacing.screenGutter,
+                    vertical = DhruvNextSpacing.interCardGap,
+                ),
         )
         when (selectedTab) {
             0 -> SimpleCompoundInterestCalculator(viewModel)
@@ -151,7 +152,12 @@ fun SimpleCompoundInterestCalculator(viewModel: EverydayViewModel) {
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Compounded Interest", fontSize = DhruvNextType.meta, color = colors.pos)
-                        Text(formatCurrency(compoundInterest), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.pos)
+                        Text(
+                            formatCurrency(compoundInterest),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.body,
+                            color = colors.pos,
+                        )
                         Text("Total: " + formatCurrency(compoundTotal), fontSize = DhruvNextType.meta, color = colors.tx2)
                     }
                 }
@@ -430,7 +436,11 @@ fun InflationAdjustedCalculator(viewModel: EverydayViewModel) {
                         fontSize = DhruvNextType.hero,
                         color = colors.acc,
                     )
-                    Text("Value of " + formatCurrency(amount) + " today in ${years.toInt()} years", fontSize = DhruvNextType.meta, color = colors.tx2)
+                    Text(
+                        "Value of " + formatCurrency(amount) + " today in ${years.toInt()} years",
+                        fontSize = DhruvNextType.meta,
+                        color = colors.tx2,
+                    )
                 }
 
                 HorizontalDivider(thickness = 0.5.dp, color = colors.line)

@@ -31,7 +31,8 @@ class ConsentInterceptorTest {
     }
 
     private fun clientWith(hasSyncConsent: () -> Boolean) =
-        OkHttpClient.Builder()
+        OkHttpClient
+            .Builder()
             .addInterceptor(ConsentInterceptor(hasSyncConsent))
             .build()
 

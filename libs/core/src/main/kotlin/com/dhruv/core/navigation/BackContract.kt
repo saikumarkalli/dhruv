@@ -1,6 +1,6 @@
 // Named for the back-navigation contract it implements (BackAction + resolveBackAction together),
 // not just the first declaration — same convention as NavBars.kt/ConsentGateScaffold.kt.
-@file:Suppress("MatchingDeclarationName")
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
 
 package com.dhruv.core.navigation
 

@@ -185,9 +185,30 @@ fun calculateDhruvNextResponsiveTokens(
 
     val spacing =
         when {
-            isExtremelySmall -> DhruvNextSpacingValues(cardPadding = 14.dp, screenGutter = 12.dp, interCardGap = 10.dp, sectionGap = 20.dp, inputGroupGap = 10.dp)
-            isTablet -> DhruvNextSpacingValues(cardPadding = 24.dp, screenGutter = 20.dp, interCardGap = 16.dp, sectionGap = 28.dp, inputGroupGap = 16.dp)
-            else -> DhruvNextSpacingValues(cardPadding = 22.dp, screenGutter = 16.dp, interCardGap = 12.dp, sectionGap = 24.dp, inputGroupGap = 12.dp)
+            isExtremelySmall ->
+                DhruvNextSpacingValues(
+                    cardPadding = 14.dp,
+                    screenGutter = 12.dp,
+                    interCardGap = 10.dp,
+                    sectionGap = 20.dp,
+                    inputGroupGap = 10.dp,
+                )
+            isTablet ->
+                DhruvNextSpacingValues(
+                    cardPadding = 24.dp,
+                    screenGutter = 20.dp,
+                    interCardGap = 16.dp,
+                    sectionGap = 28.dp,
+                    inputGroupGap = 16.dp,
+                )
+            else ->
+                DhruvNextSpacingValues(
+                    cardPadding = 22.dp,
+                    screenGutter = 16.dp,
+                    interCardGap = 12.dp,
+                    sectionGap = 24.dp,
+                    inputGroupGap = 12.dp,
+                )
         }
 
     val radii = DhruvNextRadiiValues(card = 16.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp)
@@ -236,7 +257,9 @@ fun calculateDhruvNextResponsiveTokens(
 /** Defaults match the phone-portrait tier so a component previewed with no [DhruvTheme] ancestor
  * (should not happen in production — see [LocalDhruvNextColors]) still renders sane sizes. */
 val LocalDhruvNextSpacingValues =
-    staticCompositionLocalOf { DhruvNextSpacingValues(cardPadding = 22.dp, screenGutter = 16.dp, interCardGap = 12.dp, sectionGap = 24.dp, inputGroupGap = 12.dp) }
+    staticCompositionLocalOf {
+        DhruvNextSpacingValues(cardPadding = 22.dp, screenGutter = 16.dp, interCardGap = 12.dp, sectionGap = 24.dp, inputGroupGap = 12.dp)
+    }
 val LocalDhruvNextRadiiValues =
     staticCompositionLocalOf { DhruvNextRadiiValues(card = 16.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp) }
 val LocalDhruvNextTypeScale =

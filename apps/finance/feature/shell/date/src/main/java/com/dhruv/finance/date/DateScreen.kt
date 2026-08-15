@@ -68,10 +68,11 @@ fun DateScreen(
     ) {
         if (activeSubCalculator == null) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(DhruvNextSpacing.screenGutter),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(DhruvNextSpacing.screenGutter),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 SectionLabel(text = "Date & time")
@@ -114,10 +115,11 @@ fun DateScreen(
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.surf)
-                        .padding(horizontal = DhruvNextSpacing.interCardGap, vertical = DhruvNextSpacing.interCardGap),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.surf)
+                            .padding(horizontal = DhruvNextSpacing.interCardGap, vertical = DhruvNextSpacing.interCardGap),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     NxIconButton(
@@ -161,19 +163,23 @@ fun GridDateItemCard(
 ) {
     val colors = LocalDhruvNextColors.current
     Column(
-        modifier = modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(DhruvNextRadii.card))
-            .clickable(onClick = onClick)
-            .padding(vertical = DhruvNextSpacing.interCardGap, horizontal = DhruvNextSpacing.inputGroupGap)
-            .testTag("grid_item_${item.name.lowercase().replace(" ", "_").replace("/", "and")}"),
+        modifier =
+            modifier
+                .clip(
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(DhruvNextRadii.card),
+                ).clickable(onClick = onClick)
+                .padding(vertical = DhruvNextSpacing.interCardGap, horizontal = DhruvNextSpacing.inputGroupGap)
+                .testTag("grid_item_${item.name.lowercase().replace(" ", "_").replace("/", "and")}"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(colors.accSoft),
+            modifier =
+                Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .background(colors.accSoft),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

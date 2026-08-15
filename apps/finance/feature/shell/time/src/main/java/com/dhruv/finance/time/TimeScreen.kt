@@ -29,10 +29,11 @@ fun TimeScreen(
             options = TimeTabs,
             selectedIndex = uiState.selectedTab,
             onSelected = { viewModel.selectTab(it) },
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = DhruvNextSpacing.screenGutter,
-                vertical = DhruvNextSpacing.interCardGap,
-            ),
+            modifier =
+                Modifier.fillMaxWidth().padding(
+                    horizontal = DhruvNextSpacing.screenGutter,
+                    vertical = DhruvNextSpacing.interCardGap,
+                ),
         )
 
         Box(modifier = Modifier.fillMaxSize().weight(1f)) {

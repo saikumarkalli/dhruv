@@ -152,189 +152,189 @@ fun AgeCalculatorView(viewModel: DateViewModel) {
                     .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = 8.dp),
             padding = 0.dp,
         ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = DhruvNextSpacing.sectionGap, horizontal = DhruvNextSpacing.screenGutter),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Left block - Age
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1.2f)
-                                .padding(end = 8.dp),
-                    ) {
-                        Text(
-                            text = "Age",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = colors.tx2,
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            Text(
-                                text = "$ageYears",
-                                fontSize = 72.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = colors.acc,
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "years",
-                                fontSize = DhruvNextType.body,
-                                color = colors.tx2,
-                                modifier = Modifier.padding(bottom = 14.dp),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "$ageMonths months | $ageDays days",
-                            fontSize = DhruvNextType.body,
-                            color = colors.tx2,
-                        )
-                    }
-
-                    // Vertical Divider
-                    Box(
-                        modifier =
-                            Modifier
-                                .width(1.dp)
-                                .height(130.dp)
-                                .background(colors.line),
-                    )
-
-                    // Right block - Next Birthday
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .padding(start = DhruvNextSpacing.screenGutter),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "Next birthday",
-                            fontSize = DhruvNextType.cardTitle,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.acc,
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(colors.acc),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cake,
-                                contentDescription = "Cake icon",
-                                tint = colors.onAcc,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = dayOfWeekOfNextBirthday,
-                            fontSize = DhruvNextType.cardTitle,
-                            color = colors.tx2,
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "$nextMonths months | $nextDays days",
-                            fontSize = DhruvNextType.body,
-                            color = colors.tx2,
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = colors.line)
-
-                // Summary heading and Grid
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = DhruvNextSpacing.sectionGap, horizontal = DhruvNextSpacing.screenGutter),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Left block - Age
                 Column(
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 20.dp, horizontal = DhruvNextSpacing.screenGutter),
+                            .weight(1.2f)
+                            .padding(end = 8.dp),
+                ) {
+                    Text(
+                        text = "Age",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = colors.tx2,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Text(
+                            text = "$ageYears",
+                            fontSize = 72.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = colors.acc,
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "years",
+                            fontSize = DhruvNextType.body,
+                            color = colors.tx2,
+                            modifier = Modifier.padding(bottom = 14.dp),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "$ageMonths months | $ageDays days",
+                        fontSize = DhruvNextType.body,
+                        color = colors.tx2,
+                    )
+                }
+
+                // Vertical Divider
+                Box(
+                    modifier =
+                        Modifier
+                            .width(1.dp)
+                            .height(130.dp)
+                            .background(colors.line),
+                )
+
+                // Right block - Next Birthday
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .padding(start = DhruvNextSpacing.screenGutter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Summary",
-                        fontSize = DhruvNextType.title,
+                        text = "Next birthday",
+                        fontSize = DhruvNextType.cardTitle,
                         fontWeight = FontWeight.Bold,
                         color = colors.acc,
                     )
 
-                    Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Row 1: Years, Months, Weeks
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(colors.acc),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        SummaryGridItem(
-                            label = "Years",
-                            value = "$ageYears",
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryGridItem(
-                            label = "Months",
-                            value = "$totalMonths",
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryGridItem(
-                            label = "Weeks",
-                            value = "$totalWeeks",
-                            modifier = Modifier.weight(1f),
+                        Icon(
+                            imageVector = Icons.Default.Cake,
+                            contentDescription = "Cake icon",
+                            tint = colors.onAcc,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Row 2: Days, Hours, Minutes
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        SummaryGridItem(
-                            label = "Days",
-                            value = "$totalDays",
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryGridItem(
-                            label = "Hours",
-                            value = "$totalHours",
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryGridItem(
-                            label = "Minutes",
-                            value = "$totalMinutes",
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "powered by Calculator",
-                        fontSize = DhruvNextType.meta,
-                        color = colors.tx3,
+                        text = dayOfWeekOfNextBirthday,
+                        fontSize = DhruvNextType.cardTitle,
+                        color = colors.tx2,
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "$nextMonths months | $nextDays days",
+                        fontSize = DhruvNextType.body,
+                        color = colors.tx2,
                     )
                 }
+            }
+
+            HorizontalDivider(color = colors.line)
+
+            // Summary heading and Grid
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp, horizontal = DhruvNextSpacing.screenGutter),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Summary",
+                    fontSize = DhruvNextType.title,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.acc,
+                )
+
+                Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
+
+                // Row 1: Years, Months, Weeks
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    SummaryGridItem(
+                        label = "Years",
+                        value = "$ageYears",
+                        modifier = Modifier.weight(1f),
+                    )
+                    SummaryGridItem(
+                        label = "Months",
+                        value = "$totalMonths",
+                        modifier = Modifier.weight(1f),
+                    )
+                    SummaryGridItem(
+                        label = "Weeks",
+                        value = "$totalWeeks",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Row 2: Days, Hours, Minutes
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    SummaryGridItem(
+                        label = "Days",
+                        value = "$totalDays",
+                        modifier = Modifier.weight(1f),
+                    )
+                    SummaryGridItem(
+                        label = "Hours",
+                        value = "$totalHours",
+                        modifier = Modifier.weight(1f),
+                    )
+                    SummaryGridItem(
+                        label = "Minutes",
+                        value = "$totalMinutes",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
+
+                Text(
+                    text = "powered by Calculator",
+                    fontSize = DhruvNextType.meta,
+                    color = colors.tx3,
+                )
+            }
         }
 
         // Bottom Actions Button Bar

@@ -16,17 +16,12 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DonutSmall
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -102,6 +97,20 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 /**
+ * Cold-launch / post-account-deletion onboarding gate (Task 3 decision 2; Fix 4, final
+ * whole-branch review). Extracted as a pure function — no Android/Compose dependency — so it's
+ * unit-testable without an Activity host: a returning user who has completed or explicitly
+ * skipped onboarding this session ([exitToShell] — [OnboardingViewModel.onUseOfflineSelected] /
+ * [OnboardingViewModel.onSkipEmptyStart]) sees the shell; everyone else, including a user
+ * freshly routed back here by [OnboardingViewModel.resetForNewOnboardingSession] after deleting
+ * their account, sees [OnboardingHost].
+ */
+internal fun shouldShowOnboarding(
+    hasCompletedOnboarding: Boolean,
+    exitToShell: Boolean,
+): Boolean = !hasCompletedOnboarding && !exitToShell
+
+/**
  * The DhruvNext 5-tab shell (ADR-0024, tab set revised by ADR-0027): Home · Money · Calc · Plan ·
  * Insights, a nested `NavController` for Plan's loan/invest/tax/everyday drill-in (NAV1), and a
  * `detailRoute` overlay for the shell-level "no tab" routes (Settings/Ask/Currency/Units/Date/
@@ -119,19 +128,6 @@ import org.koin.compose.koinInject
  * `com.dhruv.finance.app.ui.onboarding.OnboardingHost` instead — full-frame, no tab bar, no top
  * bar, same as the branded splash overlay already renders bare on top of either one.
  */
-/**
- * Cold-launch / post-account-deletion onboarding gate (Task 3 decision 2; Fix 4, final
- * whole-branch review). Extracted as a pure function — no Android/Compose dependency — so it's
- * unit-testable without an Activity host: a returning user who has completed or explicitly
- * skipped onboarding this session ([exitToShell] — [OnboardingViewModel.onUseOfflineSelected] /
- * [OnboardingViewModel.onSkipEmptyStart]) sees the shell; everyone else, including a user
- * freshly routed back here by [OnboardingViewModel.resetForNewOnboardingSession] after deleting
- * their account, sees [OnboardingHost].
- */
-internal fun shouldShowOnboarding(
-    hasCompletedOnboarding: Boolean,
-    exitToShell: Boolean,
-): Boolean = !hasCompletedOnboarding && !exitToShell
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

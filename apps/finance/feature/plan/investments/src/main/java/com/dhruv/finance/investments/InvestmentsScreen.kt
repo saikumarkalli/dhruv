@@ -41,10 +41,11 @@ fun InvestmentsScreen(viewModel: InvestmentsViewModel) {
             options = InvestmentTabs,
             selectedIndex = selectedTab,
             onSelected = { selectedTab = it },
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = DhruvNextSpacing.screenGutter,
-                vertical = DhruvNextSpacing.interCardGap,
-            ),
+            modifier =
+                Modifier.fillMaxWidth().padding(
+                    horizontal = DhruvNextSpacing.screenGutter,
+                    vertical = DhruvNextSpacing.interCardGap,
+                ),
         )
         when (selectedTab) {
             0 -> SipCalculatorRedesign(viewModel)
@@ -126,7 +127,12 @@ fun SipCalculatorRedesign(viewModel: InvestmentsViewModel) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Estimated Yields", fontSize = DhruvNextType.meta, color = colors.pos)
-                        Text(formatCurrency(estimatedReturns), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.pos)
+                        Text(
+                            formatCurrency(estimatedReturns),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.body,
+                            color = colors.pos,
+                        )
                     }
                 }
 
@@ -303,7 +309,12 @@ fun FdRdBatCalculator(viewModel: InvestmentsViewModel) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         Text("Accumulated Invested Base:", fontSize = DhruvNextType.meta, color = colors.tx3)
-                        Text(formatCurrency(principalInvested), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.tx)
+                        Text(
+                            formatCurrency(principalInvested),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.body,
+                            color = colors.tx,
+                        )
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Accrued Interest Gains:", fontSize = DhruvNextType.meta, color = colors.pos)

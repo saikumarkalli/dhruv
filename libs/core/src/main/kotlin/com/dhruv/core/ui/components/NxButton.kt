@@ -1,3 +1,7 @@
+// File named for the composable it exports (`NxButton`), not `NxButtonVariant` — the enum is a
+// supporting type for the button's own API, not the file's subject.
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
+
 package com.dhruv.core.ui.components
 
 import androidx.compose.foundation.background
@@ -63,8 +67,7 @@ fun NxButton(
                         NxButtonVariant.Ghost -> it.border(1.dp, colors.line, shape)
                         else -> it
                     }
-                }
-                .clickable(enabled = enabled, onClick = onClick)
+                }.clickable(enabled = enabled, onClick = onClick)
                 .padding(horizontal = 20.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

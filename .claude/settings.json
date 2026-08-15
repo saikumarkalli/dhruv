@@ -54,8 +54,6 @@
       "Bash(./gradlew :apps:finance:app:assembleDebug --rerun-tasks)",
       "Bash(npx --yes supabase --version)",
       "Bash(npx --yes supabase migration list)",
-      "Bash(export SUPABASE_ACCESS_TOKEN=\"sbp_14b8cf1ba649d74b132ccc90b8103990fee5577d\")",
-      "Bash(curl -s https://api.supabase.com/v1/projects/dsfnrtckgpnvyvscevxn/config/auth -H 'Authorization: Bearer sbp_14b8cf1ba649d74b132ccc90b8103990fee5577d')",
       "Bash(python3 -m json.tool)",
       "Bash(cd /tmp)",
       "Bash(curl -s -o gts_root_r4.der \"https://pki.goog/repo/certs/gtsrootr4.der\" -w \"download HTTP %{http_code}\\\\n\")",
@@ -65,7 +63,26 @@
       "Bash(openssl enc *)",
       "Bash(curl -sL -o gtsr4.der \"https://pki.goog/repo/certs/gtsr4.der\")",
       "Bash(curl -sL -o gtsr1.der \"https://pki.goog/repo/certs/gtsr1.der\" -w \"HTTP %{http_code} size=%{size_download}\\\\n\")",
-      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew :apps:finance:feature:onboarding:testDebugUnitTest :apps:finance:feature:onboarding:detekt -q)"
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew :apps:finance:feature:onboarding:testDebugUnitTest :apps:finance:feature:onboarding:detekt -q)",
+      "Bash(python -c \"import yaml\")",
+      "Bash(python -c ' *)",
+      "Bash(grep -n \"needs: \\\\[ static-analysis, security, tests, build \\\\]\\\\|Gate 4 · Build\\\\|results = {\\\\|build: '\" .github/workflows/ci.yml)",
+      "Bash(grep -n \"if: github.event_name\\\\|needs: \\\\[ changes \\\\]\\\\|^  [a-z-]*:$\" .github/workflows/ci.yml)",
+      "Bash(python -m unittest discover -s scripts/ci -p \"test_*.py\" -v)",
+      "Bash(bash scripts/ci/test_detect_bump.sh)",
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java\" -jar ktlint.jar --version)",
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java\" -jar ktlint.jar -F \"apps/**/*.kt\" \"libs/**/*.kt\" \"build-logic/src/**/*.kt\" \"!**/build/**\")",
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java\" -jar ktlint.jar \"apps/**/*.kt\" \"libs/**/*.kt\" \"build-logic/src/**/*.kt\" \"!**/build/**\")",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew :libs:core:testDebugUnitTest --tests \"com.dhruv.core.ui.theme.DhruvNextResponsiveTokensTest\" -q)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew regressionCheck --continue -q)",
+      "Read(//tmp/**)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew regressionCheck --continue)",
+      "Bash(echo \"EXIT_CODE=$?\")"
+    ],
+    "additionalDirectories": [
+      "d:\\Work\\code-base\\dhruv-ci\\.github\\workflows",
+      "d:\\Work\\code-base\\dhruv-ci\\platform",
+      "d:\\Work\\code-base\\dhruv-ci"
     ]
   },
   "hooks": {

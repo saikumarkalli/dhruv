@@ -1,3 +1,7 @@
+// File named for the screen it renders (`UnitScreen`), not `UnitTab` — the enum is a supporting
+// type for the screen's own state, not the file's subject.
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
+
 package com.dhruv.finance.unit
 
 import android.content.res.Configuration
@@ -707,9 +711,10 @@ private fun UnitKeypad(
         }
 
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .height(keyMinHeight * 4 + gap * 3),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(keyMinHeight * 4 + gap * 3),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) {
             KeypadButton(

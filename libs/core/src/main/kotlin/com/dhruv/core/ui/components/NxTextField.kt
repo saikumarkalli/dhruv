@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,10 +63,11 @@ fun NxTextField(
     val shape = RoundedCornerShape(CornerRadius)
 
     val borderColor = if (isFocused) colors.acc else colors.line
-    val textStyle = TextStyle(
-        color = colors.tx,
-        fontSize = DhruvNextType.cardTitle,
-    )
+    val textStyle =
+        TextStyle(
+            color = colors.tx,
+            fontSize = DhruvNextType.cardTitle,
+        )
 
     Column(modifier = modifier.alpha(if (enabled) 1f else 0.45f)) {
         if (label != null) {
@@ -82,21 +82,22 @@ fun NxTextField(
 
         val focusRingShape = RoundedCornerShape(CornerRadius + 4.dp)
         Box(
-            modifier = Modifier
-                .border(
-                    width = FocusRingWidth,
-                    color = if (isFocused) colors.accSoft else Color.Transparent,
-                    shape = focusRingShape,
-                )
-                .padding(2.dp),
+            modifier =
+                Modifier
+                    .border(
+                        width = FocusRingWidth,
+                        color = if (isFocused) colors.accSoft else Color.Transparent,
+                        shape = focusRingShape,
+                    ).padding(2.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(shape)
-                    .background(colors.surf)
-                    .border(BorderWidth, borderColor, shape)
-                    .padding(horizontal = HorizontalPadding, vertical = VerticalPadding),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(shape)
+                        .background(colors.surf)
+                        .border(BorderWidth, borderColor, shape)
+                        .padding(horizontal = HorizontalPadding, vertical = VerticalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (prefix != null) {

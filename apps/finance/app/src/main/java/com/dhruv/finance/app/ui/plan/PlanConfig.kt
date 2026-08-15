@@ -1,3 +1,7 @@
+// File named for what it holds (Plan tab config: PlanSectionItem + the PlanSections list), not
+// just the first declaration — same convention as DhruvNextTokens.kt/DhruvBrandColors.kt.
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
+
 package com.dhruv.finance.app.ui.plan
 
 import androidx.compose.material.icons.Icons
@@ -16,9 +20,10 @@ data class PlanSectionItem(
     val tool: PlanTool,
 )
 
-val PlanSections = listOf(
-    PlanSectionItem("Borrowing", "Loan EMI", "EMI, tenure & prepayment", Icons.Default.AccountBalance, PlanTool.LOAN),
-    PlanSectionItem("Growing", "SIP & returns", "SIP growth, XIRR", Icons.AutoMirrored.Filled.TrendingUp, PlanTool.INVEST),
-    PlanSectionItem("Tax & salary", "GST & salary", "GST, CTC to take-home", Icons.Default.Receipt, PlanTool.TAX),
-    PlanSectionItem("Everyday", "Everyday maths", "Interest, discount, tip split", Icons.Default.Calculate, PlanTool.EVERYDAY),
-)
+val PlanSections =
+    listOf(
+        PlanSectionItem("Borrowing", "Loan EMI", "EMI, tenure & prepayment", Icons.Default.AccountBalance, PlanTool.LOAN),
+        PlanSectionItem("Growing", "SIP & returns", "SIP growth, XIRR", Icons.AutoMirrored.Filled.TrendingUp, PlanTool.INVEST),
+        PlanSectionItem("Tax & salary", "GST & salary", "GST, CTC to take-home", Icons.Default.Receipt, PlanTool.TAX),
+        PlanSectionItem("Everyday", "Everyday maths", "Interest, discount, tip split", Icons.Default.Calculate, PlanTool.EVERYDAY),
+    )

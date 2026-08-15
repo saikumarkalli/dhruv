@@ -24,10 +24,11 @@ fun PlanLauncher(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(DhruvNextSpacing.screenGutter),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(DhruvNextSpacing.screenGutter),
         verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.sectionGap),
     ) {
         PlanSections.forEach { section ->

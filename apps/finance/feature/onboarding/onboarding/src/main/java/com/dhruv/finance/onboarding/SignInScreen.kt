@@ -141,13 +141,15 @@ fun SignInScreen(
                         val rawNonce = generateRawNonce()
                         runCatching {
                             val googleIdOption =
-                                GetGoogleIdOption.Builder()
+                                GetGoogleIdOption
+                                    .Builder()
                                     .setFilterByAuthorizedAccounts(false)
                                     .setServerClientId(googleSignInConfig.webClientId)
                                     .setNonce(sha256Hex(rawNonce))
                                     .build()
                             val request =
-                                GetCredentialRequest.Builder()
+                                GetCredentialRequest
+                                    .Builder()
                                     .addCredentialOption(googleIdOption)
                                     .build()
                             CredentialManager.create(context).getCredential(context, request)

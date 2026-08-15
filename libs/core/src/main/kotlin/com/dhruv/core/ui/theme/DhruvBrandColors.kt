@@ -1,6 +1,8 @@
 // File named for what it documents (brand-chrome colors), not the `DhruvBrand` object name —
-// mirrors DhruvNextTokens.kt's naming, which also doesn't match its top-level declarations.
-@file:Suppress("MatchingDeclarationName")
+// mirrors DhruvNextTokens.kt's naming, which also doesn't match its top-level declarations. Also
+// avoids colliding with the different DhruvBrand.kt (logo/wordmark composables, ADR-0028) already
+// in com.dhruv.core.ui.components.
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
 
 package com.dhruv.core.ui.theme
 

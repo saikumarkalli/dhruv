@@ -53,7 +53,8 @@ class AuthInterceptorTest {
         val interceptor = AuthInterceptor(sessionStore, anonKey) { api }
         val client = OkHttpClient.Builder().addInterceptor(interceptor).build()
         val retrofit =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl(server.url("/auth/v1/"))
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))

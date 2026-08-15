@@ -72,11 +72,12 @@ fun KeypadButton(
     val colors = LocalDhruvNextColors.current
     val hapticFeedback = LocalHapticFeedback.current
 
-    val contentColor = contentColorOverride ?: when {
-        solidAccent -> colors.onAcc
-        isOperator -> colors.acc
-        else -> colors.tx
-    }
+    val contentColor =
+        contentColorOverride ?: when {
+            solidAccent -> colors.onAcc
+            isOperator -> colors.acc
+            else -> colors.tx
+        }
     val fontWeight = fontWeightOverride ?: if (isOperator) FontWeight.SemiBold else FontWeight.Medium
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -84,64 +85,66 @@ fun KeypadButton(
 
     val rippleProgress by animateFloatAsState(
         targetValue = if (isPressed) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) 80 else 200,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec =
+            tween(
+                durationMillis = if (isPressed) 80 else 200,
+                easing = FastOutSlowInEasing,
+            ),
         label = "rippleProgress",
     )
     val rippleBaseColor = contentColor
     val keyShape = RoundedCornerShape(DhruvNextRadii.listGroup)
 
     Box(
-        modifier = modifier
-            .then(if (keyHeight == Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
-            .clip(keyShape)
-            .background(
-                when {
-                    solidAccent -> colors.acc
-                    fillAccent -> colors.accSoft
-                    else -> colors.surf
-                },
-            )
-            .then(if (fillAccent || solidAccent) Modifier else Modifier.border(1.dp, colors.line, keyShape))
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onClick()
-                },
-                onLongClick = onLongClick?.let {
-                    {
+        modifier =
+            modifier
+                .then(if (keyHeight == Dp.Unspecified) Modifier.fillMaxHeight() else Modifier.height(keyHeight))
+                .clip(keyShape)
+                .background(
+                    when {
+                        solidAccent -> colors.acc
+                        fillAccent -> colors.accSoft
+                        else -> colors.surf
+                    },
+                ).then(if (fillAccent || solidAccent) Modifier else Modifier.border(1.dp, colors.line, keyShape))
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = {
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        it()
+                        onClick()
+                    },
+                    onLongClick =
+                        onLongClick?.let {
+                            {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                it()
+                            }
+                        },
+                ).drawWithContent {
+                    drawContent()
+                    if (rippleProgress > 0f) {
+                        val maxRadius = size.minDimension * 0.9f
+                        val currentRadius = maxRadius * rippleProgress
+                        val alpha = (0.28f * (1f - rippleProgress * 0.5f)).coerceAtLeast(0f)
+                        val brush =
+                            Brush.radialGradient(
+                                colors =
+                                    listOf(
+                                        rippleBaseColor.copy(alpha = alpha),
+                                        rippleBaseColor.copy(alpha = alpha * 0.4f),
+                                        Color.Transparent,
+                                    ),
+                                center = Offset(size.width / 2f, size.height / 2f),
+                                radius = currentRadius,
+                            )
+                        drawCircle(
+                            brush = brush,
+                            radius = currentRadius,
+                            center = Offset(size.width / 2f, size.height / 2f),
+                        )
                     }
-                },
-            )
-            .drawWithContent {
-                drawContent()
-                if (rippleProgress > 0f) {
-                    val maxRadius = size.minDimension * 0.9f
-                    val currentRadius = maxRadius * rippleProgress
-                    val alpha = (0.28f * (1f - rippleProgress * 0.5f)).coerceAtLeast(0f)
-                    val brush = Brush.radialGradient(
-                        colors = listOf(
-                            rippleBaseColor.copy(alpha = alpha),
-                            rippleBaseColor.copy(alpha = alpha * 0.4f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(size.width / 2f, size.height / 2f),
-                        radius = currentRadius,
-                    )
-                    drawCircle(
-                        brush = brush,
-                        radius = currentRadius,
-                        center = Offset(size.width / 2f, size.height / 2f),
-                    )
-                }
-            }
-            .testTag(tag ?: if (text != null) "key_btn_$text" else "key_btn_icon"),
+                }.testTag(tag ?: if (text != null) "key_btn_$text" else "key_btn_icon"),
         contentAlignment = Alignment.Center,
     ) {
         if (text != null) {
@@ -155,11 +158,12 @@ fun KeypadButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = contentColorOverride ?: when {
-                    solidAccent -> colors.onAcc
-                    isOperator -> colors.acc
-                    else -> colors.tx.copy(alpha = 0.8f)
-                },
+                tint =
+                    contentColorOverride ?: when {
+                        solidAccent -> colors.onAcc
+                        isOperator -> colors.acc
+                        else -> colors.tx.copy(alpha = 0.8f)
+                    },
                 modifier = Modifier.size(iconSize),
             )
         }
@@ -170,9 +174,10 @@ fun KeypadButton(
                 fontSize = DhruvNextKeypad.caption,
                 fontWeight = FontWeight.Bold,
                 color = colors.acc,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 16.dp, end = 24.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp, end = 24.dp),
             )
         }
     }

@@ -1,3 +1,7 @@
+// File named for what it holds (date-tool config), not the `DateCalcItem` declaration name — same
+// convention as DhruvNextTokens.kt/DhruvBrandColors.kt.
+@file:Suppress("MatchingDeclarationName", "ktlint:standard:filename")
+
 package com.dhruv.finance.date
 
 import androidx.compose.material.icons.Icons

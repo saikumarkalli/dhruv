@@ -86,8 +86,7 @@ class ConsentRepositoryImpl(
 
     override suspend fun setAskDhruvAboutMoney(enabled: Boolean) = setFlag(ConsentKeys.ASK_DHRUV_ABOUT_MONEY, enabled)
 
-    override suspend fun setHasCompletedOnboarding(completed: Boolean) =
-        setFlag(ConsentKeys.HAS_COMPLETED_ONBOARDING, completed)
+    override suspend fun setHasCompletedOnboarding(completed: Boolean) = setFlag(ConsentKeys.HAS_COMPLETED_ONBOARDING, completed)
 
     private suspend fun setFlag(
         key: Preferences.Key<Boolean>,

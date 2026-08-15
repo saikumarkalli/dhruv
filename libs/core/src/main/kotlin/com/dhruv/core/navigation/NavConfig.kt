@@ -8,13 +8,13 @@ import androidx.compose.material.icons.filled.DonutSmall
 import androidx.compose.material.icons.filled.Home
 import com.dhruv.core.ui.components.BottomBarTab
 
-val BottomNavItems = mapOf(
-    TabKey.HOME to BottomBarTab("home", "Home", Icons.Default.Home),
-    TabKey.MONEY to BottomBarTab("money", "Money", Icons.Default.AccountBalanceWallet),
-    TabKey.CALC to BottomBarTab("calc", "Calc", Icons.Default.Calculate),
-    TabKey.PLAN to BottomBarTab("plan", "Plan", Icons.Default.DonutSmall),
-    TabKey.INSIGHTS to BottomBarTab("insights", "Insights", Icons.Default.BarChart),
-)
+val BottomNavItems =
+    mapOf(
+        TabKey.HOME to BottomBarTab("home", "Home", Icons.Default.Home),
+        TabKey.MONEY to BottomBarTab("money", "Money", Icons.Default.AccountBalanceWallet),
+        TabKey.CALC to BottomBarTab("calc", "Calc", Icons.Default.Calculate),
+        TabKey.PLAN to BottomBarTab("plan", "Plan", Icons.Default.DonutSmall),
+        TabKey.INSIGHTS to BottomBarTab("insights", "Insights", Icons.Default.BarChart),
+    )
 
-fun TabKey.toBottomBarTab(): BottomBarTab =
-    BottomNavItems[this] ?: error("Unknown tab: $this")
+fun TabKey.toBottomBarTab(): BottomBarTab = BottomNavItems[this] ?: error("Unknown tab: $this")

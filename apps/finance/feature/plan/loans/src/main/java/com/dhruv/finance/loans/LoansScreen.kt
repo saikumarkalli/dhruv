@@ -53,10 +53,11 @@ fun LoansScreen(viewModel: LoansViewModel) {
             options = LoanTabs,
             selectedIndex = selectedTab,
             onSelected = { selectedTab = it },
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = DhruvNextSpacing.screenGutter,
-                vertical = DhruvNextSpacing.interCardGap,
-            ),
+            modifier =
+                Modifier.fillMaxWidth().padding(
+                    horizontal = DhruvNextSpacing.screenGutter,
+                    vertical = DhruvNextSpacing.interCardGap,
+                ),
         )
         when (selectedTab) {
             0 -> GorgeousLoanEmiCalculator(viewModel)
@@ -82,10 +83,11 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
         }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(DhruvNextSpacing.screenGutter),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(DhruvNextSpacing.screenGutter),
         verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
         SectionLabel(text = "Loan EMI")
@@ -107,11 +109,12 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         principalInput = v.toInt().toString()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = colors.acc,
-                        activeTrackColor = colors.acc,
-                        inactiveTrackColor = colors.surf2,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = colors.acc,
+                            activeTrackColor = colors.acc,
+                            inactiveTrackColor = colors.surf2,
+                        ),
                 )
 
                 NxTextField(
@@ -129,11 +132,12 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         interestInput = "%.2f".format(java.util.Locale.US, r)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = colors.acc,
-                        activeTrackColor = colors.acc,
-                        inactiveTrackColor = colors.surf2,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = colors.acc,
+                            activeTrackColor = colors.acc,
+                            inactiveTrackColor = colors.surf2,
+                        ),
                 )
 
                 NxTextField(
@@ -151,11 +155,12 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                         tenureInput = y.toInt().toString()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = colors.acc,
-                        activeTrackColor = colors.acc,
-                        inactiveTrackColor = colors.surf2,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = colors.acc,
+                            activeTrackColor = colors.acc,
+                            inactiveTrackColor = colors.surf2,
+                        ),
                 )
             }
         }
@@ -196,7 +201,12 @@ fun GorgeousLoanEmiCalculator(viewModel: LoansViewModel) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Interest", fontSize = DhruvNextType.meta, color = colors.neg)
-                        Text(formatCurrency(emiResult.totalInterest), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.body, color = colors.neg)
+                        Text(
+                            formatCurrency(emiResult.totalInterest),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.body,
+                            color = colors.neg,
+                        )
                     }
                 }
 
@@ -301,10 +311,11 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
     val resultB = remember(principalB, rateB, tenureB) { viewModel.calculateEmi(principalB, rateB, tenureB) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(DhruvNextSpacing.screenGutter),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(DhruvNextSpacing.screenGutter),
         verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
         SectionLabel(text = "Comparison")
@@ -313,20 +324,26 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
             Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
                 Text("Loan A", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.acc)
                 NxTextField(
-                    value = principalAInput, onValueChange = { principalAInput = it },
-                    label = "Principal (₹)", prefix = "₹",
+                    value = principalAInput,
+                    onValueChange = { principalAInput = it },
+                    label = "Principal (₹)",
+                    prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 NxTextField(
-                    value = rateAInput, onValueChange = { rateAInput = it },
-                    label = "Interest Rate (% p.a.)", suffix = "%",
+                    value = rateAInput,
+                    onValueChange = { rateAInput = it },
+                    label = "Interest Rate (% p.a.)",
+                    suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 NxTextField(
-                    value = tenureAInput, onValueChange = { tenureAInput = it },
-                    label = "Tenure (Years)", suffix = "Yrs",
+                    value = tenureAInput,
+                    onValueChange = { tenureAInput = it },
+                    label = "Tenure (Years)",
+                    suffix = "Yrs",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -337,20 +354,26 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
             Column(verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
                 Text("Loan B", fontSize = DhruvNextType.cardTitle, fontWeight = FontWeight.Bold, color = colors.tx3)
                 NxTextField(
-                    value = principalBInput, onValueChange = { principalBInput = it },
-                    label = "Principal (₹)", prefix = "₹",
+                    value = principalBInput,
+                    onValueChange = { principalBInput = it },
+                    label = "Principal (₹)",
+                    prefix = "₹",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 NxTextField(
-                    value = rateBInput, onValueChange = { rateBInput = it },
-                    label = "Interest Rate (% p.a.)", suffix = "%",
+                    value = rateBInput,
+                    onValueChange = { rateBInput = it },
+                    label = "Interest Rate (% p.a.)",
+                    suffix = "%",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 NxTextField(
-                    value = tenureBInput, onValueChange = { tenureBInput = it },
-                    label = "Tenure (Years)", suffix = "Yrs",
+                    value = tenureBInput,
+                    onValueChange = { tenureBInput = it },
+                    label = "Tenure (Years)",
+                    suffix = "Yrs",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -364,13 +387,23 @@ fun LoanComparisonCalculator(viewModel: LoansViewModel) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Loan A EMI", fontSize = DhruvNextType.meta, color = colors.tx3)
-                        Text(formatCurrency(resultA.emi), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.acc)
+                        Text(
+                            formatCurrency(resultA.emi),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.cardTitle,
+                            color = colors.acc,
+                        )
                         Text("Interest: ${formatCurrency(resultA.totalInterest)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                         Text("Total: ${formatCurrency(resultA.totalPayment)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                     }
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                         Text("Loan B EMI", fontSize = DhruvNextType.meta, color = colors.tx3)
-                        Text(formatCurrency(resultB.emi), fontWeight = FontWeight.Bold, fontSize = DhruvNextType.cardTitle, color = colors.tx3)
+                        Text(
+                            formatCurrency(resultB.emi),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = DhruvNextType.cardTitle,
+                            color = colors.tx3,
+                        )
                         Text("Interest: ${formatCurrency(resultB.totalInterest)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                         Text("Total: ${formatCurrency(resultB.totalPayment)}", fontSize = DhruvNextType.meta, color = colors.tx2)
                     }
