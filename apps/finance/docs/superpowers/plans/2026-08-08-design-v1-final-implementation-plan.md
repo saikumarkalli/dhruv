@@ -284,6 +284,17 @@ feature` edge (forbidden) or triplicated view-model logic.
 Each phase is independently shippable, ends green on `./gradlew regressionCheck`, and bumps the
 minor version in `platform/versions.json`.
 
+**Spec-kit tracking (added 2026-08-16, ADR-0031-adjacent doc migration).** As phases are formalized
+into spec-kit `spec.md`/`plan.md`/`tasks.md`, the mapping is recorded here — check this table before
+creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`.
+
+| Phase | Spec-kit directory | Status |
+|---|---|---|
+| 0 — Shell foundation | — (shipped before spec-kit was installed; not retrofitted) | shipped |
+| 1 — Identity & consent | — (shipped before spec-kit was installed; not retrofitted) | shipped |
+| 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | spec + plan + tasks (44, T001–T044) done, ready for `/speckit-implement` |
+| 3–7 | not yet created | — |
+
 ### 7.0 How every phase is executed (binding — see the module-standard doc §4 for the full process)
 
 Every phase below runs this fixed step order; no phase may start step 3/4 before steps 1–2 for
