@@ -179,7 +179,7 @@ jobs:
 
   # ── Gate 3: Tests ─────────────────────────────────────────────────────────
   tests:
-    name: "Gate 3 · Tests + ArchUnit + Coverage"
+    name: "Gate 3+4 · Tests + ArchUnit + Coverage + Build"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Exposed to the pr-summary comment and the release notes (see Post-build jobs).
@@ -198,9 +198,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
-      # tests is the cache WRITER (runs early on the critical path): it compiles the
-      # whole project once and populates the Gradle build cache so the build job
-      # reuses those compile/KSP outputs instead of recompiling cold.
+      # Warm the Gradle build cache for subsequent pushes to this same PR: this job
+      # compiles the whole project once (regressionCheck) and assembles the debug
+      # APK below on the same warm daemon.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -249,31 +249,11 @@ jobs:
           name: regression-summary
           path: regression-summary.md
 
-  # ── Gate 4: Build (debug) ─────────────────────────────────────────────────
-  # Validates compile + KSP + Compose on every PR and push. The signed RELEASE
-  # build is NOT here — it is built in the `release` job below AFTER the version is
-  # bumped, so the published APK carries the correct (bumped) versionName/versionCode.
-  build:
-    name: "Gate 4 · Build (debug)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [ static-analysis, security, tests ]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      # Reads the warm build cache populated by the tests job (read-only here).
-      - name: Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: true
-
-      - name: Assemble debug APK
+      # Gate 4, folded in (ADR-0026): regressionCheck above already compiled every
+      # module, so this reuses the warm daemon + build cache instead of paying for a
+      # fresh runner with a cold cache restore. The signed RELEASE build is NOT here —
+      # it is built in the `release` job after the version bump.
+      - name: Assemble debug APK (Gate 4)
         run: ./gradlew :apps:finance:app:assembleDebug
 
       - name: Upload debug APK
@@ -293,7 +273,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [ static-analysis, security, tests, build ]
+    needs: [ static-analysis, security, tests ]
     permissions:
       pull-requests: write
     steps:
@@ -325,14 +305,12 @@ jobs:
               staticAnalysis: '${{ needs.static-analysis.result }}',
               security: '${{ needs.security.result }}',
               tests: '${{ needs.tests.result }}',
-              build: '${{ needs.build.result }}',
             };
             const rows = [
               ['Gate 1 · Static Analysis', icons[results.staticAnalysis] ?? '❔', results.staticAnalysis],
               ['Gate 2 · Security (GitLeaks)', icons[results.security] ?? '❔', results.security],
               ['Gate 2b · OWASP', 'ℹ️', 'scheduled scan (owasp-scheduled.yml)'],
-              ['Gate 3 · Tests + ArchUnit + Coverage', icons[results.tests] ?? '❔', results.tests],
-              ['Gate 4 · Build (debug)', icons[results.build] ?? '❔', results.build],
+              ['Gate 3+4 · Tests + ArchUnit + Coverage + Build', icons[results.tests] ?? '❔', results.tests],
             ];
             const table = ['| Gate | Status | Result |', '|---|---|---|',
               ...rows.map(([n, i, r]) => `| ${n} | ${i} | ${r} |`)].join('\n');
