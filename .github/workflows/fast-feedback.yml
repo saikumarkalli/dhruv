@@ -15,6 +15,9 @@ on:
       - 'feat/**'
       - 'fix/**'
       - 'chore/**'
+      # spec-kit (.specify/) auto-creates unprefixed NNN-slug branches (no feat/ prefix
+      # option in create-new-feature.ps1) — matched here so those get the same pre-PR signal.
+      - '[0-9][0-9][0-9]-**'
   workflow_dispatch:
 
 # Cancel superseded runs on the same branch — feature work is pushed rapidly and only

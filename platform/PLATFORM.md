@@ -40,6 +40,9 @@ dhruv/
 │   ├── versions.json
 │   ├── contracts/DhruvEntity.kt
 │   └── feature-flags/<app>.json
+├── .specify/                    # spec-kit tooling: templates, scripts, memory/constitution.md
+├── specs/                       # spec-kit output — GLOBAL/cross-app features only (rare — most
+│                                 # work is one app; see constitution.md "Spec-Kit Directory Rule")
 ├── libs/
 │   ├── core/                    # :libs:core  — DhruvEntity impl, theme tokens, security/Keystore utils
 │   └── settings/                # :libs:settings — color picker, theme, font, sync, biometric toggles
@@ -47,15 +50,20 @@ dhruv/
     ├── finance/
     │   ├── app/                 # :apps:finance:app  — shell, MainActivity, hubs
     │   ├── data/                # :apps:finance:data — Room/repos/api (feature→data only)
-    │   └── feature/             # Phase 4: calculator, loans, investments, tax, everyday,
-    │       │                    #          currency, unit, date, time, assistant
-    │       └── …                # (loans/investments/tax/everyday supersede emi/sip/loan)
+    │   ├── feature/             # Phase 4: calculator, loans, investments, tax, everyday,
+    │   │   │                    #          currency, unit, date, time, assistant
+    │   │   └── …                # (loans/investments/tax/everyday supersede emi/sip/loan)
+    │   ├── docs/                # this app's specs/plans/SDD — apps/finance/CLAUDE.md indexes it
+    │   └── specs/                # spec-kit output for THIS app — the normal case, one dir per
+    │                             # phase/feature (e.g. specs/001-net-worth-tracker/)
     ├── tools/
     │   ├── app/
-    │   └── feature/ { notes, clipboard, timer, qr, weather, assistant }
+    │   ├── feature/ { notes, clipboard, timer, qr, weather, assistant }
+    │   └── specs/                # spec-kit output, once Tools work starts — same pattern as finance/
     └── vault/
         ├── app/
-        └── feature/ { ... }
+        ├── feature/ { ... }
+        └── specs/                # spec-kit output, once Vault work starts — same pattern as finance/
 web/                             # Web SPA Monorepo
 ├── src/
 │   ├── apps/                    # Route-based modules mapping to Android apps
@@ -324,10 +332,11 @@ Tags on `main` (future) → Play Store internal track.
 
 ## 13. Implementation order
 
-Platform design is done. The authoritative phased plan is the **master roadmap**
-(`apps/finance/docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md`), covering phases R0–R11 with
-per-phase specs in `apps/finance/docs/superpowers/specs/`. Summary order: production hardening (R0) → CI cost
-optimization (R1) → P1 net worth tracker (R2) → security layer (R3) → rates + notifications (R4)
-→ expenses & budgets (R5) → recurring (R5b) → goals & insurance (R6) → reports (R7) → polish (R8)
-→ retirement (R9) → automation (R10) → platform expansion (R11). Distribution is a signed APK via
-GitHub Releases for now; Play is deferred (ADR-0008).
+Platform design is done. **Finance's authoritative phased plan (2026-08-15 on) is the design-v1
+implementation plan** (`apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`),
+Phases 0–7, with its companion functional spec, module-standard/TDD-process doc, QA scenario
+catalog, and surface registries — all under `apps/finance/docs/superpowers/`. The former R0–R11
+master roadmap and its per-phase specs are retired; this is the only forward plan for Finance.
+Distribution is a signed APK via GitHub Releases for now; Play is deferred (ADR-0008). Other apps
+(Tools, Vault, Health, Relationship) have no phased plan yet — one is written under that app's own
+`docs/superpowers/plans/` when work on it starts.
