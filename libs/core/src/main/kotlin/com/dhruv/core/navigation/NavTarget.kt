@@ -4,8 +4,7 @@ package com.dhruv.core.navigation
  * Stable identity for a top-level DhruvNext tab (ADR-0024, tab set revised to 5 roots by
  * ADR-0027). Page index is always resolved by looking this key up in the currently-visible tab
  * list — never by raw pager position — so a flag flip that changes the tab count mid-session
- * can't point [SelectTab] at the wrong tab (NAV1/NAV4,
- * `docs/superpowers/specs/2026-07-12-security-navigation-technical-review.md`).
+ * can't point [SelectTab] at the wrong tab (`platform/DESIGN-SYSTEM.md` §6, navigation law N1/N6).
  */
 enum class TabKey { HOME, MONEY, CALC, PLAN, INSIGHTS }
 

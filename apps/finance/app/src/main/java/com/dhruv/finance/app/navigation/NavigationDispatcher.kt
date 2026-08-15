@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
 /**
- * The only cross-feature navigation mechanism (NAV1/ADR-0024,
- * `docs/superpowers/specs/2026-07-12-security-navigation-technical-review.md`). Producers call
+ * The only cross-feature navigation mechanism (ADR-0024, `platform/DESIGN-SYSTEM.md` §6 navigation
+ * law). Producers call
  * [navigate] with a [NavTarget] (route id + validated args, never a screen class reference);
  * `MainActivity` collects [targets] and drives the pager + the target tab's `NavController`.
  *
