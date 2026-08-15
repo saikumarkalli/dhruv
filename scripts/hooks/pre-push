@@ -5,10 +5,18 @@
 #     git config core.hooksPath scripts/hooks
 # (see scripts/hooks/README.md). Audits every feature module changed vs
 # origin/develop against the project's hard rules.
+#
+# Path pattern requires apps/<app>/feature/<bucket>/<name>/... (5+ segments) — corrected
+# 2026-08-15 for the module-reorg bucket layout: every module now lives at
+# apps/<app>/feature/<bucket>/<name>/, e.g. plan/loans, shell/currency. The old
+# apps/<app>/feature/<name>/... (4-segment) pattern used the BUCKET folder name (plan,
+# shell, home, calc, ...) as the "module name", which is not a real module and predictably
+# failed every check for it. This pattern also naturally excludes bare files directly under
+# feature/ or feature/<bucket>/ (e.g. README.md), which the old pattern mistook for modules too.
 
 CHANGED=$(git diff --name-only origin/develop...HEAD 2>/dev/null \
-  | grep -E '^apps/[^/]+/feature/' \
-  | sed -E 's|^(apps/[^/]+/feature/[^/]+)/.*|\1|' \
+  | grep -E '^apps/[^/]+/feature/[^/]+/[^/]+/' \
+  | sed -E 's|^(apps/[^/]+/feature/[^/]+/[^/]+)/.*|\1|' \
   | sort -u)
 
 if [ -z "$CHANGED" ]; then
@@ -20,9 +28,26 @@ echo "Dhruv: checking feature modules before push..."
 PASS=0
 FAIL=0
 
+# Modules with a documented, intentional no-feature-flag design (not an oversight to keep
+# re-flagging on every push) — onboarding itself isn't feature-flagged (it gates everything else).
+is_flag_exempt() {
+  case "$1" in
+    onboarding) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 for MODULE in $CHANGED; do
+  # Skip paths that aren't a real Gradle module: a pure deletion (old-layout file removed
+  # during the bucket-layout move, directory no longer exists) or a doc-only scaffold folder
+  # (README.md staged ahead of the module itself — CLAUDE.md's "not yet created" list; no
+  # build.gradle.kts, not in settings.gradle.kts). Neither should be held to module rules.
+  if [ ! -f "$MODULE/build.gradle.kts" ]; then
+    continue
+  fi
+
   APP=$(echo "$MODULE" | cut -d/ -f2)
-  MOD_NAME=$(echo "$MODULE" | cut -d/ -f4)
+  MOD_NAME=$(echo "$MODULE" | cut -d/ -f5)
   ISSUES=""
 
   # Check 1: FeatureHost wrapping.
@@ -37,7 +62,7 @@ for MODULE in $CHANGED; do
 
   # Check 2: Feature flag entry (flag files are named dhruv-<app>.json in this repo)
   FLAG_FILE="platform/feature-flags/dhruv-$APP.json"
-  if [ ! -f "$FLAG_FILE" ] || ! grep -q "\"$MOD_NAME\"" "$FLAG_FILE" 2>/dev/null; then
+  if ! is_flag_exempt "$MOD_NAME" && { [ ! -f "$FLAG_FILE" ] || ! grep -q "\"$MOD_NAME\"" "$FLAG_FILE" 2>/dev/null; }; then
     ISSUES="$ISSUES\n  ❌ Missing feature flag entry for '$MOD_NAME' in $FLAG_FILE"
   fi
 

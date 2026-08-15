@@ -64,7 +64,8 @@
       "Bash(openssl dgst *)",
       "Bash(openssl enc *)",
       "Bash(curl -sL -o gtsr4.der \"https://pki.goog/repo/certs/gtsr4.der\")",
-      "Bash(curl -sL -o gtsr1.der \"https://pki.goog/repo/certs/gtsr1.der\" -w \"HTTP %{http_code} size=%{size_download}\\\\n\")"
+      "Bash(curl -sL -o gtsr1.der \"https://pki.goog/repo/certs/gtsr1.der\" -w \"HTTP %{http_code} size=%{size_download}\\\\n\")",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew :apps:finance:feature:onboarding:testDebugUnitTest :apps:finance:feature:onboarding:detekt -q)"
     ]
   },
   "hooks": {

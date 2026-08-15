@@ -389,6 +389,14 @@ criteria. The **Source** column marks which are inherited design-system law (def
 5. **Multi-currency** — the whole design is INR-only (`₹` hardcoded in every value). R5's
    multi-currency decision must state whether tracker values are INR-only by design.
 6. **XIRR definition** (C3) — needs the cashflow set it is computed over specified (ADR reserved).
+7. **Cross-device consent sync** (A3) — consent state (`requiresConsent` toggles) is per-device only
+   today: `SettingsRepository`'s DataStore flag lives on-device, nothing pushes it to or reads it
+   from Supabase. Sign in on a second device and A3 asks again / Settings shows no prior consent,
+   even though `auth.users` and tracker rows are already shared via the Google SSO session (ADR-
+   0031). Deliberately deferred — sign-in itself was the immediate priority (2026-08-15); needs its
+   own design pass (a synced `user_consent` table? last-write-wins per §5 ADR-0004's HLC-LWW, or
+   is consent intentionally device-local — e.g. a shared device shouldn't inherit another device's
+   consent?) before building. Do not build ad hoc when a future phase touches Settings/A3.
 
 ---
 
