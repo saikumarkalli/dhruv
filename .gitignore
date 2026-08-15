@@ -28,6 +28,8 @@ release-body.md
 coverage-report.zip
 /.ci-summary/
 /.ci-coverage/
+__pycache__/
+*.pyc
 
 # Web application
 web/node_modules/
