@@ -36,6 +36,74 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
 
 jobs:
+  # ── Gate 0: Changed-path filter ───────────────────────────────────────────
+  # Docs-only changes skip the build gates AND the release (ADR-0026). This is a
+  # JOB, not trigger-level `paths-ignore`: a job skipped via `if:` reports as
+  # "skipped", which branch protection counts as passing, whereas `paths-ignore`
+  # never creates the check run at all and leaves required checks pending forever.
+  #
+  # Only `docs/**`, any nested `*/docs/**`, and `**/*.md` count as docs.
+  # `platform/versions.json` and the feature-flag JSON are CODE — they feed the build.
+  changes:
+    name: "Gate 0 · Changed paths"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # NO CHECKOUT on purpose. This job runs on EVERY event — including the docs-only
+      # ones it exists to make cheap — so a clone here would eat the saving it creates.
+      # The compare API returns the changed-file list directly, in ~2s.
+      - name: Detect non-docs changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"; HEAD="$PR_HEAD"
+          else
+            BASE="$PUSH_BASE"; HEAD="$GITHUB_SHA"
+          fi
+
+          FILES=""
+          COUNT=0
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            FILES=$(gh api "repos/$GITHUB_REPOSITORY/compare/${BASE}...${HEAD}" \
+                      --jq '.files[].filename' 2>/dev/null || echo "")
+            COUNT=$(printf '%s\n' "$FILES" | grep -c . || true)
+          fi
+
+          # Fail safe 1: unresolvable range (new branch, force push, API error) → run everything.
+          if [ -z "$FILES" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "No resolvable file list — treating as code."
+            exit 0
+          fi
+
+          # Fail safe 2: the compare API caps `.files` at 300 entries. At the cap the list may be
+          # truncated and a code file could sit past the boundary — never skip on a list we
+          # cannot trust.
+          if [ "$COUNT" -ge 300 ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "File list hit the 300-entry API cap — treating as code."
+            exit 0
+          fi
+
+          CODE=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              docs/*|*/docs/*|*.md) ;;
+              *) CODE=true; echo "code change: $f"; break ;;
+            esac
+          done <<< "$FILES"
+
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $(printf '%s\n' "$FILES" | wc -l) · code=$CODE"
+
   # ── Gate 1: Static analysis ────────────────────────────────────────────────
   static-analysis:
     name: "Gate 1 · Static Analysis"
