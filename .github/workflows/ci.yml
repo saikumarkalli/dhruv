@@ -30,10 +30,10 @@ permissions:
 
 env:
   JAVA_VERSION: "21"
-  # Let gradle.properties drive parallel/caching/workers (parallel=true, caching=true,
-  # workers.max=4, configuration-cache=true). Only set memory here. The daemon stays ON:
-  # on a one-shot runner it keeps a warm JVM across the multiple tasks in a job.
-  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+  # gradle.properties keeps workers.max=4 for dev machines. GitHub-hosted standard
+  # runners on a private repo are 2-core/7 GB, so four workers just thrash. Overridden
+  # here (CI only) — the daemon and configuration cache settings stay as configured.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
 
 jobs:
   # ── Gate 0: Changed-path filter ───────────────────────────────────────────
@@ -127,11 +127,23 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
 
-      # Download ktlint binary directly — no third-party action dependency.
+      # ktlint binary is downloaded directly (no third-party action dependency) and
+      # cached by version so it is fetched once, not on every run.
+      - name: Cache ktlint
+        id: ktlint-cache
+        uses: actions/cache@v4
+        with:
+          path: ktlint
+          key: ktlint-1.5.0
+
       - name: Download ktlint
+        if: steps.ktlint-cache.outputs.cache-hit != 'true'
         run: |
           curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
           chmod +x ktlint
+
+      - name: Ensure ktlint is executable
+        run: chmod +x ktlint
 
       # Fails the job (non-zero exit) on any style violation.
       - name: ktlint check
@@ -154,6 +166,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports
+          retention-days: 7
           path: |
             **/build/reports/lint-results*.html
             **/build/reports/detekt/*.html
@@ -244,6 +257,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
+          retention-days: 7
           path: "**/build/reports/tests/"
 
       - name: Upload coverage report
@@ -251,6 +265,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
+          retention-days: 14
           path: build/reports/jacoco/jacocoAggregatedReport/
 
       - name: Upload regression summary
@@ -258,6 +273,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: regression-summary
+          retention-days: 7
           path: regression-summary.md
 
       # Gate 4, folded in (ADR-0026): regressionCheck above already compiled every
@@ -403,6 +419,7 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
           fetch-tags: true
+          filter: blob:none
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 0. Derive the semver segment from the commit types in this push ──

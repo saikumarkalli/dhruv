@@ -29,8 +29,10 @@ permissions:
 
 env:
   JAVA_VERSION: "21"
-  # Daemon stays ON; gradle.properties drives parallel/caching/workers/config-cache.
-  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
+  # gradle.properties keeps workers.max=4 for dev machines. GitHub-hosted standard
+  # runners on a private repo are 2-core/7 GB, so four workers just thrash. Overridden
+  # here (CI only) — the daemon and configuration cache settings stay as configured.
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
 
 jobs:
   # Once a PR is open for this branch, ci.yml's pull_request run is the authoritative
