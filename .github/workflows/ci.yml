@@ -108,6 +108,11 @@ jobs:
   static-analysis:
     name: "Gate 1 · Static Analysis"
     runs-on: ubuntu-latest
+    needs: [ changes ]
+    # PR is the ONLY full-validation pass (ADR-0026). The merge push re-runs nothing:
+    # required up-to-date branches guarantee the merged tree is the tree the PR validated.
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -161,6 +166,10 @@ jobs:
     name: "Gate 2 · Security"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [ changes ]
+    # No changes-gate here on purpose: secrets hide in markdown too, so GitLeaks
+    # runs on docs-only PRs as well.
+    if: github.event_name == 'pull_request'
     # gitleaks-action posts a PR summary comment; without these it fails on PR
     # events with "Resource not accessible by integration".
     permissions:
@@ -182,6 +191,8 @@ jobs:
     name: "Gate 3+4 · Tests + ArchUnit + Coverage + Build"
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: [ changes ]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     # Exposed to the pr-summary comment and the release notes (see Post-build jobs).
     outputs:
       tests_total: ${{ steps.summary.outputs.tests_total }}
