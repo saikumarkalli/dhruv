@@ -9,10 +9,10 @@ class DhruvNextResponsiveTokensTest {
     fun `default phone portrait matches the original fixed DhruvNext values`() {
         val tokens = calculateDhruvNextResponsiveTokens(widthDp = 400, heightDp = 800)
 
-        assertEquals(18f, tokens.spacing.cardPadding.value)
+        assertEquals(22f, tokens.spacing.cardPadding.value)
         assertEquals(16f, tokens.spacing.screenGutter.value)
         assertEquals(12f, tokens.spacing.interCardGap.value)
-        assertEquals(20f, tokens.radii.card.value)
+        assertEquals(16f, tokens.radii.card.value)
         assertEquals(17f, tokens.type.title.value)
         assertEquals(15f, tokens.type.cardTitle.value)
         assertEquals(38f, tokens.type.hero.value)
@@ -71,7 +71,7 @@ class DhruvNextResponsiveTokensTest {
         val allRadii = breakpoints.map { (w, h) -> calculateDhruvNextResponsiveTokens(w, h).radii }
 
         allRadii.forEach { radii ->
-            assertEquals(20f, radii.card.value)
+            assertEquals(16f, radii.card.value)
             assertEquals(18f, radii.listGroup.value)
             assertEquals(14f, radii.innerTile.value)
             assertEquals(26f, radii.pill.value)

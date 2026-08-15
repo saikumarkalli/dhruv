@@ -1,0 +1,22 @@
+.money {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero {
+  font-weight: 700;
+  font-size: 25px;
+  color: var(--c-text);
+}
+
+.row {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.inline {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--c-text);
+}

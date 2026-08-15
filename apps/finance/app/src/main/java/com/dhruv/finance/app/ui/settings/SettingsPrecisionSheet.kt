@@ -6,7 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dhruv.core.ui.components.NxCard
+import com.dhruv.core.ui.theme.DhruvNextSpacing
+import com.dhruv.core.ui.theme.DhruvNextType
+import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -18,40 +21,39 @@ fun SettingsPrecisionSheet(
     onPrecisionSelected: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = LocalDhruvNextColors.current
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(DhruvNextSpacing.screenGutter),
+            verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
         ) {
-            Text("Decimal Precision", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Decimal Precision", fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold, color = colors.tx)
             Text(
                 "Choose how many decimal places results should show across the calculator.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = DhruvNextType.body,
+                color = colors.tx2,
             )
 
-            // Preview
             val previewNumber = 12.3456789
             val pattern = if (currentPrecision > 0) "#." + "#".repeat(currentPrecision) else "#"
             val df = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
             val formatted = df.format(previewNumber)
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                    Text("Preview", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            NxCard {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("Preview", fontWeight = FontWeight.Bold, color = colors.acc)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("12.3456789", fontSize = 16.sp)
-                    Text("becomes", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(formatted, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("12.3456789", fontSize = DhruvNextType.cardTitle, color = colors.tx)
+                    Text("becomes", fontSize = DhruvNextType.body, color = colors.tx2)
+                    Text(formatted, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold, color = colors.tx)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Precision", fontWeight = FontWeight.Bold)
+            Text("Precision", fontWeight = FontWeight.Bold, color = colors.tx)
             val precs = listOf(2, 3, 4, 5, 6, 8)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 precs.forEachIndexed { index, num ->
@@ -65,8 +67,8 @@ fun SettingsPrecisionSheet(
                 }
             }
 
-            Text("Current: $currentPrecision decimal places", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(24.dp))
+            Text("Current: $currentPrecision decimal places", fontSize = DhruvNextType.body, color = colors.tx2)
+            Spacer(modifier = Modifier.height(DhruvNextSpacing.sectionGap))
         }
     }
 }

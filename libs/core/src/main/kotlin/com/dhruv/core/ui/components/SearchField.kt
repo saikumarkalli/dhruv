@@ -30,7 +30,7 @@ fun SearchField(
         placeholder = { Text(placeholder, color = colors.tx3) },
         leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = colors.tx3) },
         singleLine = true,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(13.dp),
         colors =
             OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = colors.acc,

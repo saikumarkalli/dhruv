@@ -1,15 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
-
-/**
- * Web counterpart of Android's `FeatureHost` (PLATFORM.md §4 / SDD-04 §4):
- * every feature route is wrapped so a feature-local crash never blanks the
- * whole app, and a disabled flag renders a fallback instead of the feature.
- *
- * Flag resolution and crash reporting are wired in when the first real
- * feature (net worth dashboard, W1) lands — this scaffold only establishes
- * the isolation boundary shape.
- */
+import styles from "./FeatureHost.module.css";
 
 interface FeatureHostProps {
   featureKey: string;
@@ -23,16 +14,28 @@ interface FeatureHostState {
 
 function FeatureDisabledCard({ featureKey }: { featureKey: string }) {
   return (
-    <div role="status" data-feature={featureKey}>
-      This feature is not available yet.
+    <div className={styles.card} role="status" data-feature={featureKey}>
+      <div className={styles.iconWrap}>
+        <span className={styles.icon}>🔒</span>
+      </div>
+      <span className={styles.heading}>Coming soon</span>
+      <span className={styles.body}>
+        The <strong>{featureKey}</strong> feature is not available yet.
+      </span>
     </div>
   );
 }
 
 function FeatureErrorCard({ featureKey }: { featureKey: string }) {
   return (
-    <div role="alert" data-feature={featureKey}>
-      Something went wrong loading this feature.
+    <div className={`${styles.card} ${styles.errorCard}`} role="alert" data-feature={featureKey}>
+      <div className={styles.iconWrap}>
+        <span className={styles.icon}>⚠️</span>
+      </div>
+      <span className={styles.heading}>Something went wrong</span>
+      <span className={styles.body}>
+        An error occurred in <strong>{featureKey}</strong>. Try refreshing the page.
+      </span>
     </div>
   );
 }

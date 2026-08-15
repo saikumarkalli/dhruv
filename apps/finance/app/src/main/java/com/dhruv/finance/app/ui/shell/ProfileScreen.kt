@@ -32,7 +32,7 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
  * `profile` ("Account") — DhruvNext §6.9
- * (`docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`). The design spec draws
+ * (`platform/DESIGN-SYSTEM.md`). The design spec draws
  * a fully signed-in identity: real avatar/name/email, an "Edit profile" action, a Sync section
  * ("Synced 4 min ago" + a second-device row), and a "Sign out" row. None of that exists today —
  * Supabase auth is a future phase (ADR-0014 §3: R2, not built), so there is no account, nothing

@@ -1,0 +1,24 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 26px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.positive {
+  color: var(--c-pos);
+  background: var(--c-pos-soft);
+}
+
+.negative {
+  color: var(--c-neg);
+  background: var(--c-neg-soft);
+}

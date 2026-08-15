@@ -4,6 +4,7 @@ Read before any work:
 @platform/AGENTS.md
 @platform/PLATFORM.md
 @platform/DECISIONS.md
+@platform/DESIGN-SYSTEM.md
 
 ## Project
 - Kotlin + Jetpack Compose monorepo: multiple apps sharing :libs:core and :libs:settings

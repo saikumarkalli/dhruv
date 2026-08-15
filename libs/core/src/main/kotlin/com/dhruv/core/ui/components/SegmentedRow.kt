@@ -11,7 +11,7 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
  * DhruvNext-styled convenience wrapper over Material3's
- * [SingleChoiceSegmentedButtonRow]/[SegmentedButton] (the app-design-standard's own §5 note: this
+ * [SingleChoiceSegmentedButtonRow]/[SegmentedButton] (the design system's own §5 note: this
  * is a styling convention, not a new primitive) — accent-colored selected segment.
  */
 @OptIn(ExperimentalMaterial3Api::class)

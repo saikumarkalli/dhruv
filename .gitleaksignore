@@ -1,0 +1,11 @@
+# Fingerprint format: <commit>:<file>:<rule-id>:<line>
+# https://github.com/gitleaks/gitleaks#gitleaksignore
+#
+# a17446ac1f2f0529f360f7773078c746e6f7f612:.claude/settings.json:curl-auth-header:58
+# Supabase Management API personal access token, pasted into chat during a debugging session and
+# accidentally captured verbatim into Claude Code's Bash-permission allowlist in that commit.
+# Revoked in the Supabase dashboard 2026-08-15 (dead on arrival by the time this entry was added)
+# and stripped from .claude/settings.json going forward in the same fix. History was not rewritten
+# (branch already pushed as a PR), so the historical commit still contains the now-dead string —
+# this entry keeps GitLeaks passing on that commit without re-embedding the secret anywhere.
+a17446ac1f2f0529f360f7773078c746e6f7f612:.claude/settings.json:curl-auth-header:58

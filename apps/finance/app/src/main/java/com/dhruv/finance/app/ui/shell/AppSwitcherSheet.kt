@@ -31,7 +31,7 @@ private const val DISABLED_ALPHA = 0.5f
 
 /**
  * `shell` — the app-switcher bottom sheet (DhruvNext §6.9
- * (`docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`); app roster per
+ * (`platform/DESIGN-SYSTEM.md`); app roster per
  * `platform/PLATFORM.md` §1). Finance is the only shipped app today; Tools and Vault are real
  * modules already named in the platform's own app table ("planned" / "future" respectively) — not
  * invented destinations — so they render disabled with a "SOON" badge and no `onClick`, rather

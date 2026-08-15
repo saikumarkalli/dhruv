@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /**
- * DhruvNext's trash/undo pattern (app-design-standard §5): a [SnackbarHost] styled to the token
+ * DhruvNext's trash/undo pattern (`platform/DESIGN-SYSTEM.md` §5/§8): a [SnackbarHost] styled to the token
  * surface. Material3's [SnackbarDuration] is an enum (no raw millis) — [SnackbarDuration.Long]
  * (~10s) is the closest fit to the spec's "5s with Undo" and errs on the side of not missing it.
  */

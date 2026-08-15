@@ -46,5 +46,24 @@ include(":apps:finance:feature:unit")
 include(":apps:finance:feature:date")
 include(":apps:finance:feature:time")
 include(":apps:finance:feature:assistant")
+include(":apps:finance:feature:onboarding")
 include(":libs:core")
 include(":libs:settings")
+
+// Physical layout groups feature modules by the DhruvNext tab that owns them
+// (apps/finance/feature/<home|money|calc|plan|insights|onboarding|shell>/<module>/) — see
+// apps/finance/feature/README.md. Gradle coordinates above are deliberately UNCHANGED (every
+// `project(":apps:finance:feature:X")` reference across build.gradle.kts files and every
+// `./gradlew :apps:finance:feature:X:...` command in docs keeps working); only each module's
+// projectDir is remapped to its new physical location.
+project(":apps:finance:feature:calculator").projectDir = file("apps/finance/feature/calc/calculator")
+project(":apps:finance:feature:loans").projectDir = file("apps/finance/feature/plan/loans")
+project(":apps:finance:feature:investments").projectDir = file("apps/finance/feature/plan/investments")
+project(":apps:finance:feature:tax").projectDir = file("apps/finance/feature/plan/tax")
+project(":apps:finance:feature:everyday").projectDir = file("apps/finance/feature/plan/everyday")
+project(":apps:finance:feature:currency").projectDir = file("apps/finance/feature/shell/currency")
+project(":apps:finance:feature:unit").projectDir = file("apps/finance/feature/shell/unit")
+project(":apps:finance:feature:date").projectDir = file("apps/finance/feature/shell/date")
+project(":apps:finance:feature:time").projectDir = file("apps/finance/feature/shell/time")
+project(":apps:finance:feature:assistant").projectDir = file("apps/finance/feature/shell/assistant")
+project(":apps:finance:feature:onboarding").projectDir = file("apps/finance/feature/onboarding/onboarding")

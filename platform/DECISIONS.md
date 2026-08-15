@@ -278,8 +278,8 @@ empty defaults so CI debug builds succeed; the release CI job writes `.env` from
 The anon key is publishable-by-design under RLS but stays out of the repo per the GitLeaks gate.
 Session tokens persist only in encrypted DataStore. The phased roadmap (P1 net worth → P2
 expenses/budgets → P3 goals/debt payoff → P4 insurance → P5 retirement → P6 automation) is specced
-in `docs/superpowers/specs/2026-07-03-*` with the engineering playbook and P1 gap analysis in
-`docs/superpowers/specs/2026-07-04-*`.
+in `apps/finance/docs/superpowers/specs/2026-07-03-*` with the engineering playbook and P1 gap analysis in
+`apps/finance/docs/superpowers/specs/2026-07-04-*`.
 
 ---
 
@@ -336,13 +336,20 @@ let two specs claim 0015 independently.
 ---
 
 ## ADR-0024 — Navigation: DhruvNext 4-tab shell + single global accent (supersedes ADR-0014 §1, §8)
+**Note (2026-08-09):** the source doc this ADR cites below
+(`2026-07-25-dhruvnext-ui-ux-design-reference.md`) was removed — its content lineage is fully
+absorbed by the finalized `2026-08-08-design-v1-final-functional-spec.md` (same Claude Design
+import, later/final version), which ADR-0027 adopted, superseding this ADR's §1 in turn. This
+ADR's own narrative below is unchanged (append-only) — it explains *why* the 4-tab decision was
+made at the time, which stands regardless of the source file's removal.
+
 **Context.** The Finance app's shell had drifted from ADR-0014 §1's 3-tab design into an
 undesigned 5-visible-tab pager (Dashboard/Calc/Converter/Finance/Assistant + a hidden Settings
 page), and `:libs:core`'s design-system component layer (bento/stat/chart/sheet components ADR-
 0014 §8 calls for) was never built — every feature screen hand-rolls Material3 widgets, four of
 them (Loans/Investments/Tax/Everyday) with hardcoded red/green hex and visibly machine-written
 copy. Separately, the maintainer had a complete Claude-designed system on file — **DhruvNext**
-(`docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`), imported as a
+(`apps/finance/docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md`), imported as a
 reference-only document specifically *because* it conflicts with the binding standard: DhruvNext
 draws a **4-tab bottom nav (Home · Calc · Plan · Insights)** with Settings reached via a top-bar
 icon, a **single global accent** color, and a calculator-suite-first IA with a full "Ask Dhruv" AI
@@ -391,4 +398,272 @@ items DhruvNext's own §8 flagged remain open and block their respective screens
 financial-health "score out of 100" has no data spec, and `history` (calculator-result history)
 must stay disambiguated from any future transaction-history surface. The full module-by-module
 build order, component inventory, and gap register live in the DhruvNext overhaul plan (see
-`docs/superpowers/plans/`), not duplicated here.
+`apps/finance/docs/superpowers/plans/`), not duplicated here.
+
+---
+
+## ADR-0027 — Navigation: 5 tab roots (Home · Money · Calc · Plan · Insights); Plan root leads with
+## live modules, calculators demoted to a strip (supersedes ADR-0024 §1)
+**Context.** A finalized Claude Design project (`Dhruv brand & UI/UX finalization`, imported
+2026-08-08 — see `apps/finance/docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md`) drew a
+complete **61-screen, 5-root** route map: **Home · Money · Calc · Plan · Insights**. ADR-0024's
+shipped shell has **4** roots — Home/Calc/Plan/Insights — with no owner for day-to-day money
+movement (the design's Money tab: ledger, quick add, accounts, cards, categories, recurring —
+D1–D9). The same design also revises the **Plan** root: live planning modules (Budgets, Goals,
+Debt payoff, Insurance, Retirement) lead, with the four existing calculators (Loan/SIP/Tax/
+Everyday) demoted to a strip below rather than being the whole tab.
+**Decision.**
+1. `TabKey` gains `MONEY`, inserted between `HOME` and `CALC`: `HOME, MONEY, CALC, PLAN, INSIGHTS`.
+   `pageIndexFor` already resolves by key (not position, NAV4), so the insertion is safe for
+   flag-driven tab hiding without further changes to that resolver.
+2. Money is a new tab root owning the ledger and everything under it (D1–D9). It ships behind its
+   own feature flag once its screens exist (Phase 3 of the implementation plan); until then it
+   renders `NotConfiguredCard`, matching the existing pattern already used for the not-yet-built
+   Insights tab rather than inventing a second "coming soon" treatment.
+3. Plan's root screen (E1) is rewritten once its live modules exist (Phase 4): live modules first,
+   `PlanSections`' calculator strip second. This ADR only fixes the target shape; the rewrite
+   itself is tracked as implementation work, not re-decided here.
+**Why.** The design is the finalized product definition — it is not exploratory, and the maintainer
+chose it as the source of truth over the 8-month-old ADR-0024 shell when the two disagreed (see the
+functional spec §3 D-1). Inserting `MONEY` rather than renaming or repurposing an existing tab
+avoids clobbering Home/Calc/Plan/Insights, all of which keep their ADR-0024 meaning unchanged.
+**Consequences.** `BottomNavItems` (`NavConfig.kt`) gains a Money row. `MainActivity`'s pager grows
+a 5th page; `NavTargetTest`'s fixed tab-index assertions shift by one for every tab at or after
+`MONEY`. ADR-0024 §1 ("Home + single Tools tab" / the 4-tab shape) is superseded by this ADR; its
+§2 (single global accent) and the retirement of `SectionTheme` are **not** touched and remain in
+force. The Money tab's actual screens (D1–D9) are separate implementation work, phased in
+`apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`.
+
+## ADR-0028 — Brand chrome as a second, theme-invariant color group (`DhruvBrand`)
+**Context.** The finalized design (see ADR-0027's source) draws two distinct color roles: an
+**app accent** that already flips between `DhruvNextLightColors`/`DhruvNextDarkColors` (ADR-0024
+§2, unchanged), and a **brand chrome** palette — navy `#0D1B2A`, elevated navy `#132B4D`, blue mid
+`#1E3A6D`, accent blue `#3FA7FF`, silver `#C0C6D1`/`#E6E9EF`, steel `#8E97A6`, logo background
+`#F4F6FA` — that does **not** flip with the system theme. Brand chrome carries identity on the
+splash screen, hero gradient cards (net worth, goal progress), the Settings identity card, and the
+screens the design renders as dark-hero regardless of the user's theme (holding detail, quick-add,
+account detail, goal detail, retirement, P&L, the AA-consent modal). These exact hex values already
+existed as ungrouped top-level constants in `Color.kt` (`DhruvNavy`, `DhruvSilver`, etc.), consumed
+only by the logo/wordmark composables in `DhruvBrand.kt` — there was no themed, importable group for
+a screen to consume when building one of the design's dark-hero surfaces.
+**Decision.** Add `object DhruvBrand` in `:libs:core`'s theme package, bundling the existing
+`Color.kt` brand constants (`navy`, `navyElevated`, `blueMid`, `accentBlue`, `silver`,
+`silverLight`, `steel`, `logoBg`) as one theme-invariant token group, parallel to but independent
+of `LocalDhruvNextColors`. Hero/glass surfaces and the dark-hero screens read `DhruvBrand.*`;
+everything else continues to read `LocalDhruvNextColors` exactly as before.
+**Why.** The values already existed and were already correct (verified byte-for-byte against the
+design during import) — the gap was a consumable, named group, not new colors. A composition-local
+was considered and rejected: brand chrome is deliberately theme-invariant, so routing it through
+`staticCompositionLocalOf` (which exists precisely to vary by theme) would misstate its nature; a
+plain `object` is the honest shape for a constant that never changes.
+**Consequences.** No existing color values changed — `DhruvBrand.kt`'s logo/wordmark composables
+keep working unmodified (they import the raw `Color.kt` constants directly, which is still
+correct for logo rendering). New hero/glass/dark-hero surfaces built against the design (Phase 2+
+of the implementation plan) must read `DhruvBrand.*`, never a raw hex, per the project's
+no-hardcoding rule.
+
+---
+
+## ADR-0029 — Tracker data architecture: Supabase REST on Retrofit/Moshi/OkHttp, append-only
+## valuations, paise integers, currency-less schema (implements ADR-0014 §2/§4/§5/§6)
+**Context.** ADR-0014 committed the tracker domain to Supabase-primary storage but left the actual
+client architecture undecided — which HTTP stack, how auth/consent gate every call, and what the
+first tables look like. Design-v1 Phase 1 (`apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-
+implementation-plan.md` §5, §7) is the first phase to touch the tracker backend at all (sign-in +
+consent), and its migration (`supabase/migrations/0001_init.sql`) commits to a schema shape that is
+expensive to change once RLS-protected user rows exist against it — so the architecture is decided
+and written here, not deferred. A blocking pre-step also had to resolve the functional spec's open
+item §8.5 (multi-currency scope) before this migration could be authored at all: `holdings` and
+`valuations` (this ADR's first two tables) commit to a **currency-less** `value_paise bigint` shape
+with no `currency` column anywhere — R5's pre-work decision
+(`apps/finance/docs/superpowers/specs/2026-07-12-r5-accounts-multicurrency-decisions.md`, "Option A:
+INR-only, validated") already accepted INR-only for the maintainer's actual holdings; this ADR
+implements that by omitting the column entirely rather than adding a `CHECK (currency = 'INR')`
+guard on a column that would otherwise invite a false sense of future flexibility.
+**Decision.**
+1. **Networking = Retrofit + Moshi + OkHttp** against Supabase's GoTrue (`/auth/v1/*`) and PostgREST
+   (`/rest/v1/*`) endpoints — the same stack `CurrencyApiClient` already proves works on this AGP 9 /
+   Gradle 9 toolchain (ADR-0014 §6's own reasoning: no new unproven Gradle plugin, unlike the
+   supabase-kt/Ktor path that was already rejected). Two Retrofit instances share one
+   `OkHttpClient.Builder` base, split into an unauthenticated-consent `authClient` (GoTrue only —
+   sign-in itself is not consent-gated, ONB-BR-001) and a consent-gated `dataClient` (PostgREST) —
+   see `tracker/net/SupabaseClientFactory`.
+2. **Consent is an interceptor, not a screen concern.** `ConsentInterceptor` is attached only to
+   `dataClient` and short-circuits before dispatch if "Sync my financial records" is off (NFR-1,
+   DAT-BR-001) — no code path can reach PostgREST without going through it, because no other
+   PostgREST-capable client is constructed anywhere in the app.
+3. **Auth = `AuthInterceptor`** attaches `apikey` + `Authorization: Bearer` to every tracker
+   request; a 401 triggers exactly one refresh-token attempt, a second consecutive 401 forces
+   `SessionStore` to `SignedOut` (DAT-BR-003) — no retry loop. Tokens live only in
+   `EncryptedDataStore` (DAT-BR-004), never plaintext `SharedPreferences`.
+4. **`holdings`/`valuations` are the first two tables**, RLS `user_id = auth.uid()` on `holdings`
+   directly and via a `holding_id` join on `valuations` (which carries no `user_id` of its own —
+   ownership is transitive through its parent holding). `valuations` gets `SELECT`+`INSERT` RLS
+   policies only — no `UPDATE`, no `DELETE` — making it genuinely append-only at the database layer,
+   not just by client convention (DAT-BR-007). The functional spec's "corrections = soft-delete +
+   append" language (BR-C1, NW-BR-003) describes a Phase 2 concern once C4/C5's edit screens exist;
+   this ADR deliberately does not resolve *how* a correction is issued yet (a future security-definer
+   `correct_valuation()` RPC is the leading candidate, so a raw client UPDATE is never exposed even
+   for corrections) — Phase 2's SA step owns that when it adds `v_latest_valuation` and the other
+   views. The `deleted_at` column ships now (matching the schema table in the implementation plan
+   §5.4) purely as forward-compatible shape; nothing writes to it yet.
+5. **Erasure = two security-definer SQL functions**, not a client-facing `DELETE` policy on tracker
+   tables: `delete_my_data()` (removes every row owned by `auth.uid()` across all tracker tables,
+   leaves the account itself intact — ONB-BR-008) and `delete_my_account()` (calls `delete_my_data()`
+   then removes the caller's own `auth.users` row — ONB-BR-009, ADR-0014 §7). Neither needs a
+   service-role key or an Edge Function; both run as the signed-in user via PostgREST's `rpc/` path.
+   This keeps `holdings`/`valuations` free of any `DELETE` RLS policy at all — the only way a row
+   ever disappears is through one of these two named, auditable functions.
+6. **Certificate pinning stays CA-level** (Google Trust Services GTS Root R1 + R4, DAT-BR-005 —
+   corrected 2026-08-15, see this ADR's Correction paragraph below; ADR-0014 §6 originally named
+   ISRG Root X1/X2) on both Retrofit clients — leaf pinning would brick the app on Supabase's
+   routine certificate rotations, per ADR-0014 §6.
+**Why.** Reusing `CurrencyApiClient`'s proven stack removes the single biggest schedule risk this
+phase could have introduced (an unproven networking library on an already-fragile AGP 9 toolchain —
+the same risk class that ruled out Hilt, Kover, and supabase-kt/Ktor in ADR-0010/0013/0014). Splitting
+auth and data into two client chains makes "zero network call before consent" a structural property
+of the code (nothing routes to PostgREST except through the gated client) instead of a discipline
+every future call site has to remember. Dropping the currency column entirely — rather than adding
+and constraining one — avoids building UI/DTO plumbing for a dimension the maintainer's actual data
+will never use, consistent with the project's YAGNI stance elsewhere (ADR-0010's "code-move, not
+rewrite," ADR-0013's baseline-anchored coverage ratchet).
+**Consequences.** `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/{net,auth,dto,
+model,mapper,repo}` exists from Phase 1 onward (§5.1); `tracker/dto/GoTrueSessionDto.kt` is the
+first file under `tracker/dto/`, which is also what makes the module-standard doc's `.*Dto` ArchUnit
+guard (previously vacuous, `.*Dao`-only) non-vacuous — that guard extension is a Phase 1 Backend
+task, not a follow-up. `SUPABASE_URL`/`SUPABASE_ANON_KEY` ride the existing `.env` secrets-plugin
+mechanism (ADR-0014 §6), sourced from the already-linked `dhruv` Supabase project
+(`supabase/.temp/linked-project.json`, ref `dsfnrtckgpnvyvscevxn`) reused as the dev/RLS-testing
+target rather than provisioning a second project. `GOOGLE_WEB_CLIENT_ID` ships with an empty
+default in `.env.example` (same pattern as `GEMINI_API_KEY`) until the maintainer supplies a real
+OAuth web client id — the Credential Manager call is built against the real API shape regardless, it
+simply cannot complete a live sign-in until that value is set. No multi-currency ADR is written
+separately — this ADR's decision 4/context paragraph is the resolution of functional-spec open item
+§8.5; if multi-currency is ever revisited, it supersedes this ADR's schema decision, not ADR-0018
+(reserved by `apps/finance/docs/superpowers/specs/2026-07-12-r5-accounts-multicurrency-decisions.md`
+for the separate `accounts`/`transactions` currency stance, not yet written into this register).
+**Correction (2026-08-15).** Decision 6 above, and ADR-0014 §6's original text, named ISRG Root
+X1/X2 (Let's Encrypt) as the CA-level pin. Every "live" verification of this build up to that date
+went through the Supabase Management API (`api.supabase.co`) or the raw Postgres wire protocol —
+neither touches the app's actual pinned `OkHttpClient` — so the wrong pins shipped undetected until
+a real device's first live Google sign-in attempt hit the real `*.supabase.co` REST domain through
+`SupabaseClientFactory` and threw `SSLPeerUnverifiedException: Certificate pinning failure!`. The
+exception's own peer-chain dump named the actual root: Google Trust Services' `GTS Root R4`. Both
+`GTS_ROOT_R1_PIN`/`GTS_ROOT_R4_PIN` (`SupabaseClientFactory.kt`) are independently verified against
+Google's own published trust store (`https://pki.goog/repo/certs/gtsr{1,4}.der`, SPKI SHA-256 via
+openssl), not merely copied from the live failure's own dump. This register entry is corrected in
+place (not superseded by a new ADR number) because the wrong pins were never live/reachable
+architecture — this ADR and Phase 1 were still in the same active implementation session when the
+error surfaced, and per the module-standard doc's TDD gate, nothing downstream had shipped against
+the incorrect pins yet. Root cause for the next engineer: cert-pinning a third-party domain
+requires observing that domain's *actual* live TLS chain, not assuming a CA from prose docs.
+
+---
+
+## ADR-0030 — One global design system (`platform/DESIGN-SYSTEM.md`); retires the tracker design
+## system, the app-design-standard, and the root `DESIGN.md`
+**Context.** Three documents each claimed design authority, and none was correct on its own:
+1. **`DESIGN.md`** (repo root) — a token extraction predating DhruvNext. It stated the app's
+   typography was "System Default (Roboto/Inter)"; the app has shipped Space Grotesk + Inter +
+   JetBrains Mono since the DhruvNext work. It was nonetheless the cited upstream source for
+   `web/src/shared/styles/tokens.css`, so the web tokens traced to a stale document.
+2. **`2026-07-03-tracker-design-system.md`** — marked **BINDING** by ADR-0014 §8. A symbol search
+   found that **every component it declared** (`BentoGrid`, `BentoCard`, `HeroStatCard`,
+   `TrendLineChart`, `DonutChart`) and the `SectionTheme` mechanism it themed them through **do not
+   exist in `:libs:core`**. It specified a component library that was never built, against a
+   theming approach ADR-0024 had already retired. Screens were being written against a fiction.
+3. **`2026-07-12-app-design-standard.md`** — also **BINDING**, and genuinely mixed. Its §2 section
+   accents and §3.1/§3.2/§3.4 three-tab model were dead (ADR-0024, then ADR-0027). Its §6–§10
+   (interaction, screen-state matrix, accessibility, copy) were sound app-wide law. Its §5 component
+   table was 8-of-9 real. Its §7 notification-channel / intent / Glance / PDF registries existed
+   **nowhere else in the repo**.
+Meanwhile the finalized design (v1.0 FINAL, imported 2026-08-08) sat at Finance app level, mixing a
+cross-app design system with Finance's 61-screen product spec — so a future Tools/Vault/Health app
+had no design source at all, and Finance had three contradictory ones.
+**Decision.**
+1. **`platform/DESIGN-SYSTEM.md` is the single design contract for every Dhruv app and the web
+   SPA.** It holds tokens (brand chrome + app palette), typography, spacing/radii/responsive tiers,
+   logo directions, the component library, navigation law N1–N7, the screen-state matrix,
+   interaction/motion/accessibility/copy standards, non-Compose surface conventions, and the web
+   parity rule. It defines **no screens**.
+2. **Product specs stay app-level.** An app's screen inventory, business rules and flows live in
+   that app's spec; its route/notification/intent/settings **rows** live in that app's surface
+   registry (Finance: `2026-08-09-finance-surface-registries.md`, extracted from the retired
+   app-design-standard). Design system = how things look and behave; product spec = what screens
+   exist. A Tools app gets its own product spec and registry, and inherits the same system.
+3. **Nothing enters the component table before the code exists.** Built components are listed
+   separately from planned batches, and every entry was verified by symbol search against
+   `libs/core/src/main`. This is a direct response to failure mode (2) above.
+4. All three documents above are **retired** (`git rm`); their salvageable content was folded into
+   the two destinations before deletion, and every inbound reference redirected.
+**Why.** Three competing BINDING documents is worse than none — a reader cannot tell which is
+authoritative, and two of the three described a UI that does not exist. One system with an explicit
+product/system boundary scales to the planned Tools/Vault/Health apps without duplicating tokens
+per app, and `platform/` is the right home because `AGENTS.md`'s session bootstrap already reads it
+first and its "docs and contracts only" rule fits a design contract exactly. The "verify before
+listing" rule is cheap (one grep loop) and would have prevented the fiction-library problem outright.
+**Consequences.** `platform/DESIGN-SYSTEM.md` joins the session-bootstrap reading list in
+`AGENTS.md` and the root `CLAUDE.md`. `web/src/shared/styles/tokens.css` now cites the platform doc
+and carries an explicit "values must stay numerically identical to `:libs:core`, nothing catches
+drift automatically" warning — the two-implementation risk is stated rather than assumed away.
+ADR-0014 §8 (design system lives in `:libs:core`, micro-frontend rule) is **not** overturned — its
+principle survives; only the specific document it blessed is replaced. ADR-0024 §2, ADR-0027 and
+ADR-0028 remain the decision trail this document implements.
+
+---
+
+## ADR-0031 — Dhruv ID: one Google OAuth Web Client + one Supabase project is the cross-app SSO
+## mechanism (resolves ADR-0014 §6's deferred "revisit in a future ADR")
+**Context.** ADR-0014 §6 picked Google sign-in via Supabase Auth for Finance and explicitly said
+this "supersedes the 'Firebase Auth (Dhruv ID SSO)' plan for this app until a cross-app Dhruv ID
+actually ships; revisit in a future ADR then." `PLATFORM.md` §5 already anticipated the shape of
+that revisit: every `DhruvEntity`'s `userId` is `"local"` until "Dhruv ID ships," at which point "a
+one-time WorkManager migration rewrites every `local` row to the real user id — cheap because of
+the index." Design-v1 Phase 1 (this build) is the first phase to actually wire Google sign-in, and
+the maintainer asked directly whether that sign-in should work as SSO across every future Dhruv app
+(Tools, Vault, Health, Relationship — `PLATFORM.md` §1's app table), not just Finance. The answer
+turns out to need no new infrastructure: the Supabase project Phase 1 already links to is named
+`dhruv`, not `dhruv-finance` — it was never scoped to one app — and a single Google Cloud OAuth Web
+Client ID is a property of the *Google Cloud project*, not of an individual Android package.
+**Decision.**
+1. **One Google Cloud project, one OAuth Web Client ID, reused verbatim by every Dhruv app's
+   Credential Manager flow.** Each app additionally registers its own **Android** OAuth client
+   (package name + release/debug SHA-1) under that same Google Cloud project — Android clients gate
+   which package can request a credential; the Web Client ID is the `audience` GoTrue validates the
+   ID token against, and staying identical across apps is what makes `auth.uid()` land on the same
+   row for the same person no matter which app they signed in from.
+2. **One Supabase project (`dhruv`) is the shared `auth.users` table.** No per-app Supabase project,
+   no token-sharing code between apps — Android's own app-sandboxing already prevents one app's
+   `EncryptedDataStore` session from being readable by another, so there is nothing to "sync"; each
+   app independently runs its own Google sign-in and independently lands on the same `auth.uid()`
+   because the same Google account, Web Client, and Supabase project are common to all of them. This
+   *is* "Dhruv ID" — no separate SSO service, no shared identity provider beyond Supabase Auth
+   itself.
+3. **Vault is excluded, entirely.** `PLATFORM.md` §9 / ADR-0003's master-password-derived key is the
+   vault's only real key; Vault also carries a hard "no network/AI/analytics dependency" rule
+   (`PLATFORM.md` §4 table). Dhruv ID sign-in never becomes a path into vault data, not even as
+   optional account linking — the maintainer's explicit call when this ADR was written, over the
+   "optional linking" alternative, to keep Vault's already-locked-in security model exactly as
+   simple as ADR-0003 states it, with zero exception surface for a module not yet built.
+4. **Naming discipline**: the OAuth consent screen and both client entries are named generically
+   ("Dhruv"), not "Dhruv Finance" — the first concrete artifact of this ADR, created directly in
+   Google Cloud Console by the maintainer (no CLI/API path exists that doesn't itself require
+   interactive Google OAuth login, so this step cannot be scripted).
+**Why.** The deferred question in ADR-0014 §6 turned out to already be answered by two decisions
+already on the books — ADR-0001's monorepo (one `dhruv` Supabase project was always the natural
+default, never contested) and ADR-0014 §5's `userId`/`"local"` migration design (which already
+assumed a future *shared* real user id, not a per-app one). Reusing the same Web Client ID needs no
+new moving parts, so it is strictly cheaper than a dedicated SSO/identity service, and it satisfies
+`PLATFORM.md` §5's "Dhruv ID" language exactly. Excluding Vault keeps ADR-0003's threat model
+(unrecoverable-by-design, true E2E, key never derived from anything Google/Supabase can see) fully
+intact rather than special-casing it later once Vault is under construction and the exception is
+harder to say no to.
+**Consequences.** `GOOGLE_WEB_CLIENT_ID` (`.env`/`.env.example`, Phase 1) is a **platform-level**
+secret, not a Finance-scoped one, even though only `:apps:finance:app` reads it today — every future
+app's `secrets`-plugin `.env` config points at the same root `.env` file already (monorepo-wide, per
+ADR-0001), so no new plumbing is needed when Tools/Health/Relationship are built; each just adds its
+own Android OAuth client (package + SHA-1) in the same Google Cloud project and reads the same env
+key. `SUPABASE_URL`/`SUPABASE_ANON_KEY` are equally platform-level for the same reason — this ADR
+makes that implicit sharing explicit rather than changing it. Vault, when built, gets no Koin wiring
+to `SessionStore`/`AuthRepository`/`ConsentRepository` at all — its own future ADR (vault key
+derivation, already mostly specified by ADR-0003) stays fully independent of this one.

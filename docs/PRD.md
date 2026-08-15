@@ -27,6 +27,16 @@
 
 Every document in the ecosystem, grouped by domain. **This section IS the central index.**
 
+> **Global vs app-level split (2026-08-09).** `docs/` and `platform/` hold only documents that are
+> genuinely cross-app or architecture-level — platform decisions (ADRs), the system/backend/shared-
+> contracts/auth/deployment SDDs, this PRD. Everything specific to one app's own build — tracker
+> specs, phase plans, the design-v1 functional spec/implementation plan/QA catalog, that app's own
+> SDD — lives under that app's own `docs/` folder (`apps/finance/docs/`, `web/docs/`), mirroring the
+> same `sdd/`, `superpowers/specs/`, `superpowers/plans/` shape this root `docs/` uses. Same
+> reasoning as the `apps/finance/feature/` module reorg the same day: a doc's location should say
+> who owns it. This index still links every doc regardless of where it lives — it's the map, not a
+> gate.
+
 ### 2.1 Platform Architecture (source of truth)
 
 | Document | Path | Purpose |
@@ -39,19 +49,28 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 | **Version Matrix** | [versions.json](file:///d:/Work/code-base/dhruv/platform/versions.json) | Per-app versions + compatibility |
 | **Feature Flags (Finance)** | [dhruv-finance.json](file:///d:/Work/code-base/dhruv/platform/feature-flags/dhruv-finance.json) | 11 feature flags with enabled/minVersion/requiresConsent |
 | **Feature Flags (Tools)** | [dhruv-tools.json](file:///d:/Work/code-base/dhruv/platform/feature-flags/dhruv-tools.json) | 6 feature flags (planned app) |
-| **Production Readiness** | [PRODUCTION_READINESS.md](file:///d:/Work/code-base/dhruv/platform/PRODUCTION_READINESS.md) | Audit findings + remediation plan |
+| **Production Readiness** | [PRODUCTION_READINESS.md](file:///d:/Work/code-base/dhruv/apps/finance/PRODUCTION_READINESS.md) | Audit findings + remediation plan |
 | **Runbook** | [RUNBOOK.md](file:///d:/Work/code-base/dhruv/platform/RUNBOOK.md) | Operational procedures |
 
 ---
 
 ### 2.2 Design System & UI/UX
 
+> **One design system, globally (ADR-0030, 2026-08-09).** `platform/DESIGN-SYSTEM.md` is the single
+> design contract for every Dhruv app and the web SPA — there is no per-app design system. It
+> replaced three competing documents: the root `DESIGN.md` (a pre-DhruvNext token extraction that
+> mis-stated the typography), `tracker-design-system.md` (specced a `BentoGrid`/`HeroStatCard`
+> component library that was never built, against the retired `SectionTheme`), and
+> `app-design-standard.md` (whose sound app-wide law was folded into the global doc and whose
+> Finance-specific registries moved to the Finance surface-registries doc). All three are retired.
+
 | Document | Path | Purpose |
 |---|---|---|
-| **Brand Design System** | [DESIGN.md](file:///d:/Work/code-base/dhruv/DESIGN.md) | Colors, typography, gradients, glassmorphism, brand assets |
-| **Tracker Design System** | [tracker-design-system.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-tracker-design-system.md) | Component inventory (BentoGrid, HeroStatCard, TrendLineChart, etc.), micro-frontend rule, tokens, states, a11y |
-| **App-Wide Design Standard** | [app-design-standard.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-app-design-standard.md) | Extends tracker design to ALL screens — navigation, settings tree, notifications, widget, PDF, route registry |
-| **Brand Kit** | [Dhruv_Master_Brand_Kit/](file:///d:/Work/code-base/dhruv/Dhruv_Master_Brand_Kit) | Multi-platform icons, wordmarks, lockups |
+| **Design System (global)** ⭐ | [DESIGN-SYSTEM.md](file:///d:/Work/code-base/dhruv/platform/DESIGN-SYSTEM.md) | **BINDING for all apps + web.** Brand chrome vs app tokens, typography, spacing/radii/responsive tiers, logo directions, the built component library (+ planned batches), navigation law N1–N7, screen-state matrix, interaction/motion/a11y/copy standards, non-Compose surface conventions, web parity |
+| **Brand Kit** | [Dhruv_Master_Brand_Kit/](file:///d:/Work/code-base/dhruv/Dhruv_Master_Brand_Kit) | Multi-platform icons, wordmarks, lockups (the rendered assets; DESIGN-SYSTEM.md §4 is the spec) |
+| **Finance — Design v1.0 FINAL Functional Spec** | [design-v1-final-functional-spec.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md) | Finance **product** spec: 61 screens (groups A–G), business rules, user flows, as-is audit, open items. Cites the global design system rather than restating it |
+| **Finance — Surface Registries** | [finance-surface-registries.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md) | Finance's per-surface indexes: route registry, notification channels, intent actions, settings IA tree |
+| **Finance — Implementation Plan** | [design-v1-final-implementation-plan.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md) | Solution architecture: module topology, Supabase schema, nav rebuild, component batches, phases 0–7, risks |
 
 ---
 
@@ -59,14 +78,14 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 
 | Phase | Document | Scope | Status |
 |---|---|---|---|
-| Overview | [tracker-roadmap-overview.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-tracker-roadmap-overview.md) | Umbrella: vision, locked decisions, shared invariants, home bento evolution | Approved |
-| **P1** | [p1-networth-tracker-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p1-networth-tracker-design.md) | Assets, liabilities, valuations, net worth, Google sign-in, DPDP consent | In progress |
-| P1 gaps | [p1-gap-analysis.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-04-p1-gap-analysis.md) | G1–G20 gap register for P1 | Approved |
-| **P2** | [p2-expenses-budgets-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p2-expenses-budgets-design.md) | Transactions, income/expense, budgets, savings rate, quick-add | Specced |
-| **P3** | [p3-goals-debt-payoff-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p3-goals-debt-payoff-design.md) | Savings goals, debt payoff (avalanche/snowball), EMI math extraction | Specced |
-| **P4** | [p4-insurance-registry-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p4-insurance-registry-design.md) | Policy registry, renewal reminders, WorkManager, POST_NOTIFICATIONS | Specced |
-| **P5** | [p5-retirement-projection-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p5-retirement-projection-design.md) | Corpus projection, gap analysis, BigDecimal engine, scenarios | Specced |
-| **P6** | [p6-automation-groundwork-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-p6-automation-groundwork-design.md) | SMS ingestion, account aggregator eval, auto price feeds, Supabase Realtime | Specced |
+| Overview | [tracker-roadmap-overview.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-tracker-roadmap-overview.md) | Umbrella: vision, locked decisions, shared invariants, home bento evolution | Approved |
+| **P1** | [p1-networth-tracker-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p1-networth-tracker-design.md) | Assets, liabilities, valuations, net worth, Google sign-in, DPDP consent | In progress |
+| P1 gaps | [p1-gap-analysis.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-04-p1-gap-analysis.md) | G1–G20 gap register for P1 | Approved |
+| **P2** | [p2-expenses-budgets-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p2-expenses-budgets-design.md) | Transactions, income/expense, budgets, savings rate, quick-add | Specced |
+| **P3** | [p3-goals-debt-payoff-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p3-goals-debt-payoff-design.md) | Savings goals, debt payoff (avalanche/snowball), EMI math extraction | Specced |
+| **P4** | [p4-insurance-registry-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p4-insurance-registry-design.md) | Policy registry, renewal reminders, WorkManager, POST_NOTIFICATIONS | Specced |
+| **P5** | [p5-retirement-projection-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p5-retirement-projection-design.md) | Corpus projection, gap analysis, BigDecimal engine, scenarios | Specced |
+| **P6** | [p6-automation-groundwork-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p6-automation-groundwork-design.md) | SMS ingestion, account aggregator eval, auto price feeds, Supabase Realtime | Specced |
 
 ---
 
@@ -74,16 +93,16 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 
 | Phase | Document | Scope | Status |
 |---|---|---|---|
-| **Master Roadmap** | [master-roadmap-personal-app.md](file:///d:/Work/code-base/dhruv/docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md) | Unified sequence: R0–R11, gap register (N1–N19), dependency graph | Proposed |
-| R3 Security | [r3-app-security-layer-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r3-app-security-layer-design.md) | App lock, privacy mode, FLAG_SECURE | Specced |
-| R4 Updates | [r4-inapp-update-check-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r4-inapp-update-check-design.md) | In-app update check via GitHub Releases | Specced |
-| R5 ADRs | [r5-accounts-multicurrency-decisions.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r5-accounts-multicurrency-decisions.md) | Accounts entity + multi-currency stance | Specced |
-| R5b Recurring | [r5b-recurring-quickadd-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r5b-recurring-quickadd-design.md) | Recurring transactions + quick-add surfaces | Specced |
-| R6 Alerts | [r6-budget-alerts-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r6-budget-alerts-design.md) | Budget overrun + EMI due notifications | Specced |
-| R7 Reports | [r7-reports-export-import-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r7-reports-export-import-design.md) | Reports module, CSV/PDF export, CSV import | Specced |
-| R8 Polish | [r8-daily-driver-polish-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r8-daily-driver-polish-design.md) | Onboarding, widget, search, trash/undo | Specced |
-| R9 Returns | [r9-investment-returns-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-r9-investment-returns-design.md) | XIRR / absolute returns on valuation history | Specced |
-| Currency | [currency-realtime-rates-daily-notification-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-03-currency-realtime-rates-daily-notification-design.md) | Currency accuracy, gold/silver, daily rates notification | Specced |
+| **Master Roadmap** | [master-roadmap-personal-app.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md) | Unified sequence: R0–R11, gap register (N1–N19), dependency graph | Proposed |
+| R3 Security | [r3-app-security-layer-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r3-app-security-layer-design.md) | App lock, privacy mode, FLAG_SECURE | Specced |
+| R4 Updates | [r4-inapp-update-check-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r4-inapp-update-check-design.md) | In-app update check via GitHub Releases | Specced |
+| R5 ADRs | [r5-accounts-multicurrency-decisions.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r5-accounts-multicurrency-decisions.md) | Accounts entity + multi-currency stance | Specced |
+| R5b Recurring | [r5b-recurring-quickadd-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r5b-recurring-quickadd-design.md) | Recurring transactions + quick-add surfaces | Specced |
+| R6 Alerts | [r6-budget-alerts-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r6-budget-alerts-design.md) | Budget overrun + EMI due notifications | Specced |
+| R7 Reports | [r7-reports-export-import-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r7-reports-export-import-design.md) | Reports module, CSV/PDF export, CSV import | Specced |
+| R8 Polish | [r8-daily-driver-polish-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r8-daily-driver-polish-design.md) | Onboarding, widget, search, trash/undo | Specced |
+| R9 Returns | [r9-investment-returns-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r9-investment-returns-design.md) | XIRR / absolute returns on valuation history | Specced |
+| Currency | [currency-realtime-rates-daily-notification-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-currency-realtime-rates-daily-notification-design.md) | Currency accuracy, gold/silver, daily rates notification | Specced |
 
 ---
 
@@ -91,27 +110,31 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 
 | Document | Path | Purpose |
 |---|---|---|
-| Spec Consistency | [spec-consistency-review.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-spec-consistency-review.md) | Cross-spec findings F1–F16 |
-| Security/Nav Review | [security-navigation-technical-review.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-security-navigation-technical-review.md) | SEC1–SEC9, NAV1–NAV6 |
-| PO Premium Review | [po-premium-daily-use-review.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-12-po-premium-daily-use-review.md) | PG1–PG10 premium daily-driver bar |
-| Dev Readiness | [dev-readiness-checklist.md](file:///d:/Work/code-base/dhruv/docs/superpowers/plans/2026-07-12-dev-readiness-checklist.md) | Plugins, deps, connections, tooling |
+| Spec Consistency | [spec-consistency-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-spec-consistency-review.md) | Cross-spec findings F1–F16 |
+| Security/Nav Review | [security-navigation-technical-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-security-navigation-technical-review.md) | SEC1–SEC9, NAV1–NAV6 |
+| PO Premium Review | [po-premium-daily-use-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-po-premium-daily-use-review.md) | PG1–PG10 premium daily-driver bar |
+| Dev Readiness | [dev-readiness-checklist.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-12-dev-readiness-checklist.md) | Plugins, deps, connections, tooling |
 | CI Optimization | [ci-cost-optimization-commit-type-versioning-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-04-ci-cost-optimization-commit-type-versioning-design.md) | CI cost + commit-type versioning |
 
 ---
 
-### 2.6 Software Design Documents (SDD) — Cross-Platform (NEW)
+### 2.6 Software Design Documents (SDD) — Cross-Platform
 
-> These 7 documents formalize the shared web + Android architecture. To be created under `docs/sdd/`.
+> All 7 exist now (this table predates their creation). **Location split (2026-08-09):** the
+> cross-app ones (01, 02, 05, 06, 07) live in `docs/sdd/` — global, apply regardless of which app.
+> 03 (Android, entirely Finance-app content today) moved to `apps/finance/docs/sdd/`; 04 (Web)
+> moved to `web/docs/sdd/` — each next to the app it actually documents. See §2.7's app-level-docs
+> note.
 
-| # | Document | Scope |
-|---|---|---|
-| 01 | **System Architecture SDD** | System context, multi-app map (Android → Web), deployment topology, feature flags (both platforms), NFRs |
-| 02 | **Backend & API SDD** | Supabase schema DDL, PostgREST contract, GoTrue auth, CORS, RLS, error codes, Realtime, migration workflow |
-| 03 | **Android App SDD** | Module graph, data layer, auth, state management, security, CI pipeline |
-| 04 | **Web App SDD** | Vite+React stack, routing, auth (PKCE), React Query, design system (CSS vars), PWA, i18n, error boundaries |
-| 05 | **Shared Data Contracts SDD** | TypeScript + Kotlin types, validation rules, money formatting, category enums, migration workflow |
-| 06 | **Auth & Security SDD** | Auth flows (both platforms), token storage, CSP/CORS, rate limiting, DPDP consent, erasure |
-| 07 | **Deployment & CI/CD SDD** | Android CI, web CI, path-based triggers, Supabase migrations, env management, observability |
+| # | Document | Scope | Location |
+|---|---|---|---|
+| 01 | **System Architecture SDD** | System context, multi-app map (Android → Web), deployment topology, feature flags (both platforms), NFRs | [docs/sdd/01-system-architecture-sdd.md](file:///d:/Work/code-base/dhruv/docs/sdd/01-system-architecture-sdd.md) |
+| 02 | **Backend & API SDD** | Supabase schema DDL, PostgREST contract, GoTrue auth, CORS, RLS, error codes, Realtime, migration workflow | [docs/sdd/02-backend-api-sdd.md](file:///d:/Work/code-base/dhruv/docs/sdd/02-backend-api-sdd.md) |
+| 03 | **Android App SDD** | Module graph, data layer, auth, state management, security, CI pipeline | [apps/finance/docs/sdd/03-android-app-sdd.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/sdd/03-android-app-sdd.md) |
+| 04 | **Web App SDD** | Vite+React stack, routing, auth (PKCE), React Query, design system (CSS vars), PWA, i18n, error boundaries | [web/docs/sdd/04-web-app-sdd.md](file:///d:/Work/code-base/dhruv/web/docs/sdd/04-web-app-sdd.md) |
+| 05 | **Shared Data Contracts SDD** | TypeScript + Kotlin types, validation rules, money formatting, category enums, migration workflow | [docs/sdd/05-shared-data-contracts-sdd.md](file:///d:/Work/code-base/dhruv/docs/sdd/05-shared-data-contracts-sdd.md) |
+| 06 | **Auth & Security SDD** | Auth flows (both platforms), token storage, CSP/CORS, rate limiting, DPDP consent, erasure | [docs/sdd/06-auth-and-security-sdd.md](file:///d:/Work/code-base/dhruv/docs/sdd/06-auth-and-security-sdd.md) |
+| 07 | **Deployment & CI/CD SDD** | Android CI, web CI, path-based triggers, Supabase migrations, env management, observability | [docs/sdd/07-deployment-and-ci-cd-sdd.md](file:///d:/Work/code-base/dhruv/docs/sdd/07-deployment-and-ci-cd-sdd.md) |
 
 ---
 
@@ -124,8 +147,8 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 | **Changelog** | [CHANGELOG.md](file:///d:/Work/code-base/dhruv/CHANGELOG.md) | Chronological change history |
 | **Finance Features** | [FEATURES.md](file:///d:/Work/code-base/dhruv/apps/finance/FEATURES.md) | Per-module detail (screens, VMs, data deps, flags) |
 | **License** | [LICENSE](file:///d:/Work/code-base/dhruv/LICENSE) | MIT © 2026 Sai Kumar Kalli |
-| **Engineering Playbook** | [tracker-engineering-playbook.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-04-tracker-engineering-playbook.md) | Roles matrix, framework-protection rules, deployment pipeline |
-| **P1 Execution Checklist** | [p1-networth-execution-checklist.md](file:///d:/Work/code-base/dhruv/docs/superpowers/plans/2026-07-04-p1-networth-execution-checklist.md) | Task-level checklist for P1 |
+| **Engineering Playbook** | [tracker-engineering-playbook.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-04-tracker-engineering-playbook.md) | Roles matrix, framework-protection rules, deployment pipeline |
+| **P1 Execution Checklist** | [p1-networth-execution-checklist.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-04-p1-networth-execution-checklist.md) | Task-level checklist for P1 |
 
 ---
 

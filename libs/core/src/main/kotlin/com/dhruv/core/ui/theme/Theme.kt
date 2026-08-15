@@ -114,13 +114,13 @@ fun DhruvTheme(
 
     val fontFamily =
         when (font) {
-            DhruvFont.DEFAULT -> FontFamily.Default
-            DhruvFont.MONO -> FontFamily.Monospace
-            DhruvFont.ROUNDED -> FontFamily.SansSerif // placeholder — real rounded font is a follow-up
-            DhruvFont.BRAND_SERIF -> brandSerifFamily
+            DhruvFont.DEFAULT -> null
+            DhruvFont.MONO -> JetBrainsMonoFamily
+            DhruvFont.ROUNDED -> FontFamily.SansSerif
+            DhruvFont.BRAND_SERIF -> SpaceGroteskFamily
         }
     val resolvedTypography =
-        if (font == DhruvFont.DEFAULT) {
+        if (fontFamily == null) {
             Typography
         } else {
             Typography.copy(

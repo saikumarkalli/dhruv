@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * DhruvNext design tokens — docs/superpowers/specs/2026-07-25-dhruvnext-ui-ux-design-reference.md
+ * DhruvNext design tokens — platform/DESIGN-SYSTEM.md
  * §4, landed per ADR-0024. Raw token data only; not yet wired into [DhruvTheme] or consumed by any
  * component (that lands with the shell rebuild and the `:libs:core` component library).
  */
@@ -20,16 +20,22 @@ data class DhruvNextColors(
     val surf2: Color,
     val line: Color,
     val line2: Color,
+    val lineStrong: Color,
     val tx: Color,
     val tx2: Color,
     val tx3: Color,
     val acc: Color,
+    val accBright: Color,
     val accSoft: Color,
     val accLine: Color,
     val onAcc: Color,
     val pos: Color,
+    val posBright: Color,
+    val posSoft: Color,
     val neg: Color,
+    val negSoft: Color,
     val warn: Color,
+    val warnSoft: Color,
     val chart1: Color,
     val chart2: Color,
     val chart3: Color,
@@ -38,63 +44,77 @@ data class DhruvNextColors(
     val chart6: Color,
 )
 
-// acc/onAcc reuse PrimaryLight/PrimaryDark (Color.kt) — DhruvNext's orange is numerically
-// identical to the already-shipped default primary (ADR-0024).
+// Colors aligned with Claude Design project v1.0 FINAL (Dhruv Brand & Theme / Dhruv Web App).
+// acc/onAcc reuse PrimaryLight/PrimaryDark (Color.kt) — numerically identical (ADR-0024).
 val DhruvNextLightColors =
     DhruvNextColors(
-        bg = Color(0xFFF7F7F5),
+        bg = Color(0xFFF9F9F9),
         surf = Color(0xFFFFFFFF),
-        surf2 = Color(0xFFF1F1EE),
-        line = Color(0xFFE5E4E0),
+        surf2 = Color(0xFFF3F4F6),
+        line = Color(0xFFE5E7EB),
         line2 = Color(0xFFEFEEEB),
-        tx = Color(0xFF14161A),
-        tx2 = Color(0xFF6B6F76),
-        tx3 = Color(0xFF9AA0A6),
+        lineStrong = Color(0xFFD1D5DB),
+        tx = Color(0xFF111827),
+        tx2 = Color(0xFF374151),
+        tx3 = Color(0xFF6B7280),
         acc = PrimaryLight,
+        accBright = PrimaryDark,
         accSoft = Color(0xFFFFF1ED),
         accLine = Color(0xFFF9CDBC),
         onAcc = Color(0xFFFFFFFF),
         pos = Color(0xFF00796B),
+        posBright = Color(0xFF4DB6AC),
+        posSoft = Color(0xFFE0F2F0),
         neg = Color(0xFFB3261E),
-        warn = Color(0xFFE65100),
+        negSoft = Color(0xFFFCECEB),
+        warn = Color(0xFFB45309),
+        warnSoft = Color(0xFFFEF3E2),
         chart1 = Color(0xFFF05A28),
         chart2 = Color(0xFF00796B),
-        chart3 = Color(0xFF0061A4),
+        chart3 = Color(0xFF00B0FF),
         chart4 = Color(0xFF4A148C),
-        chart5 = Color(0xFFE65100),
+        chart5 = Color(0xFFB45309),
         chart6 = Color(0xFF455A64),
     )
 
 val DhruvNextDarkColors =
     DhruvNextColors(
-        bg = Color(0xFF0B0B0C),
-        surf = Color(0xFF16171A),
-        surf2 = Color(0xFF1E2024),
-        line = Color(0xFF2A2C31),
-        line2 = Color(0xFF222428),
-        tx = Color(0xFFF2F3F5),
-        tx2 = Color(0xFF9BA1A9),
-        tx3 = Color(0xFF6E747C),
+        bg = Color(0xFF0A0A0A),
+        surf = Color(0xFF1E1E1E),
+        surf2 = Color(0xFF2C2C2C),
+        line = Color(0xFF3A3A3A),
+        line2 = Color(0xFF2C2C2C),
+        lineStrong = Color(0xFF4A4A4A),
+        tx = Color(0xFFF5F5F5),
+        tx2 = Color(0xFFCFD8DC),
+        tx3 = Color(0xFF9E9E9E),
         acc = PrimaryDark,
-        accSoft = Color(0x24FF6D3B), // 14%-alpha accent, per spec
-        accLine = Color(0x52FF6D3B), // 32%-alpha accent, per spec
-        onAcc = Color(0xFF231007),
-        pos = Color(0xFF4CAF50),
+        accBright = Color(0xFFFF8A5C),
+        accSoft = Color(0x24FF6D3B), // 14%-alpha accent
+        accLine = Color(0x52FF6D3B), // 32%-alpha accent
+        onAcc = Color(0xFF003258),
+        pos = Color(0xFF4DB6AC),
+        posBright = Color(0xFF80CBC4),
+        posSoft = Color(0x294DB6AC), // 16%-alpha
         neg = Color(0xFFF2B8B5),
+        negSoft = Color(0x24F2B8B5), // 14%-alpha
         warn = Color(0xFFFFB300),
+        warnSoft = Color(0x26FFB300), // 15%-alpha
         chart1 = Color(0xFFFF6D3B),
-        chart2 = Color(0xFF4CAF50),
+        chart2 = Color(0xFF4DB6AC),
         chart3 = Color(0xFF80D8FF),
         chart4 = Color(0xFFB388FF),
         chart5 = Color(0xFFFFB300),
         chart6 = Color(0xFFCFD8DC),
     )
 
-/** One breakpoint's worth of spacing (dp) — DhruvNext §4: card padding, screen gutter, inter-card gap. */
+/** One breakpoint's worth of spacing (dp) — DhruvNext §4: card padding, screen gutter, inter-card gap, section gap, input group gap. */
 data class DhruvNextSpacingValues(
     val cardPadding: Dp,
     val screenGutter: Dp,
     val interCardGap: Dp,
+    val sectionGap: Dp,
+    val inputGroupGap: Dp,
 )
 
 /** One breakpoint's worth of corner radii (dp) — DhruvNext §4. */
@@ -165,12 +185,33 @@ fun calculateDhruvNextResponsiveTokens(
 
     val spacing =
         when {
-            isExtremelySmall -> DhruvNextSpacingValues(cardPadding = 14.dp, screenGutter = 12.dp, interCardGap = 10.dp)
-            isTablet -> DhruvNextSpacingValues(cardPadding = 24.dp, screenGutter = 20.dp, interCardGap = 16.dp)
-            else -> DhruvNextSpacingValues(cardPadding = 18.dp, screenGutter = 16.dp, interCardGap = 12.dp)
+            isExtremelySmall ->
+                DhruvNextSpacingValues(
+                    cardPadding = 14.dp,
+                    screenGutter = 12.dp,
+                    interCardGap = 10.dp,
+                    sectionGap = 20.dp,
+                    inputGroupGap = 10.dp,
+                )
+            isTablet ->
+                DhruvNextSpacingValues(
+                    cardPadding = 24.dp,
+                    screenGutter = 20.dp,
+                    interCardGap = 16.dp,
+                    sectionGap = 28.dp,
+                    inputGroupGap = 16.dp,
+                )
+            else ->
+                DhruvNextSpacingValues(
+                    cardPadding = 22.dp,
+                    screenGutter = 16.dp,
+                    interCardGap = 12.dp,
+                    sectionGap = 24.dp,
+                    inputGroupGap = 12.dp,
+                )
         }
 
-    val radii = DhruvNextRadiiValues(card = 20.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp)
+    val radii = DhruvNextRadiiValues(card = 16.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp)
 
     val type =
         when {
@@ -216,9 +257,11 @@ fun calculateDhruvNextResponsiveTokens(
 /** Defaults match the phone-portrait tier so a component previewed with no [DhruvTheme] ancestor
  * (should not happen in production — see [LocalDhruvNextColors]) still renders sane sizes. */
 val LocalDhruvNextSpacingValues =
-    staticCompositionLocalOf { DhruvNextSpacingValues(cardPadding = 18.dp, screenGutter = 16.dp, interCardGap = 12.dp) }
+    staticCompositionLocalOf {
+        DhruvNextSpacingValues(cardPadding = 22.dp, screenGutter = 16.dp, interCardGap = 12.dp, sectionGap = 24.dp, inputGroupGap = 12.dp)
+    }
 val LocalDhruvNextRadiiValues =
-    staticCompositionLocalOf { DhruvNextRadiiValues(card = 20.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp) }
+    staticCompositionLocalOf { DhruvNextRadiiValues(card = 16.dp, listGroup = 18.dp, innerTile = 14.dp, pill = 26.dp) }
 val LocalDhruvNextTypeScale =
     staticCompositionLocalOf {
         DhruvNextTypeScaleValues(hero = 38.sp, title = 17.sp, cardTitle = 15.sp, body = 13.5.sp, meta = 11.5.sp, sectionLabel = 10.sp)
@@ -263,6 +306,12 @@ object DhruvNextSpacing {
     val interCardGap: Dp
         @Composable @ReadOnlyComposable
         get() = LocalDhruvNextSpacingValues.current.interCardGap
+    val sectionGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextSpacingValues.current.sectionGap
+    val inputGroupGap: Dp
+        @Composable @ReadOnlyComposable
+        get() = LocalDhruvNextSpacingValues.current.inputGroupGap
 }
 
 /**
@@ -337,6 +386,7 @@ fun resolveDhruvNextColors(
 
     return base.copy(
         acc = accent,
+        accBright = accent,
         onAcc = if (accent.relativeLuminance() > ON_ACCENT_LUMINANCE_THRESHOLD) DARK_ON_ACCENT else Color.White,
         accSoft = accent.copy(alpha = ACCENT_SOFT_ALPHA),
         accLine = accent.copy(alpha = ACCENT_LINE_ALPHA),

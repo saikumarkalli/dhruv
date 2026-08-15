@@ -2,6 +2,10 @@
 <!-- Pre-API 31 backup rules.
      Encrypted DataStore and SQLCipher prefs are Keystore-tied: non-portable across devices. -->
 <full-backup-content>
-    <exclude domain="file" path="datastore/secure_settings.preferences_pb" />
+    <!-- EncryptedDataStoreFactory writes "<fileName>.preferences_pb_enc", not the plain DataStore
+         suffix — corrected here (Phase 1 security review, 2026-08-15) alongside adding the new
+         tracker session store, which was missed when it was first added (ADR-0029). -->
+    <exclude domain="file" path="datastore/secure_settings.preferences_pb_enc" />
+    <exclude domain="file" path="datastore/tracker_session.preferences_pb_enc" />
     <exclude domain="sharedpref" path="dhruv_cipher_prefs.xml" />
 </full-backup-content>

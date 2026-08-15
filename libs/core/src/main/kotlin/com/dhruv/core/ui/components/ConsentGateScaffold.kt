@@ -102,7 +102,7 @@ fun ConsentGateScaffold(
         Button(
             onClick = onAllow,
             modifier = Modifier.padding(top = 20.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(DhruvNextRadii.pill),
+            shape = RoundedCornerShape(DhruvNextRadii.innerTile),
             colors = ButtonDefaults.buttonColors(containerColor = colors.acc, contentColor = colors.onAcc),
         ) {
             Text(allowLabel)
@@ -110,7 +110,7 @@ fun ConsentGateScaffold(
         OutlinedButton(
             onClick = onDecline,
             modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(DhruvNextRadii.pill),
+            shape = RoundedCornerShape(DhruvNextRadii.innerTile),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.tx2),
         ) {
             Text(declineLabel)
