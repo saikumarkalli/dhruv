@@ -312,7 +312,7 @@ jobs:
       # `|| github.token` fallback below take over so commenting still works.
       - name: Mint Dhruv CI Bot token
         id: dhruv-bot
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         continue-on-error: true
         with:
           app-id: ${{ secrets.DHRUV_BOT_APP_ID }}
