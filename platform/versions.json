@@ -6,10 +6,10 @@
   },
   "apps": {
     "finance": {
-      "version": "2.0.2",
+      "version": "2.0.3",
       "requiresCore": ">=1.0.0",
       "requiresSettings": ">=1.0.0",
-      "buildNumber": 14
+      "buildNumber": 15
     },
     "tools": {
       "version": "0.0.0",
@@ -36,5 +36,5 @@
       "status": "future"
     }
   },
-  "notes": "All three version segments (major.minor.patch) and versionCode are CI-owned (ADR-0025) — do not edit by hand. Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
+  "notes": "All three version segments (major.minor.patch) and versionCode are CI-owned (ADR-0025) \u2014 do not edit by hand. Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
 }
