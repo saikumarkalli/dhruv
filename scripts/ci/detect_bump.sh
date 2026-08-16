@@ -8,14 +8,16 @@
 #   any type!: / BREAKING[ -]CHANGE -> major
 #   anything else (incl. merge commits, empty input) -> patch
 #
-# Highest wins across the whole range. Pushes to `main` are ALWAYS patch (D6):
-# a develop -> main promotion replays develop's already-bumped feat commits, and
-# re-detecting them would double-bump.
+# Highest wins across the whole range. The $REF argument is accepted for
+# call-site compatibility but no longer special-cased: ADR-0032 moves the
+# `release` job to run on pushes to `main` only (develop no longer releases),
+# so there is nothing left to double-bump on a develop -> main promotion — main
+# now derives its segment the same way every branch does. (Previously this
+# script forced `main` to always `patch`, per the now-superseded ADR-0025 rule.)
 #
 # Usage:  git log --format='%s%n%b' "$RANGE" | detect_bump.sh "$GITHUB_REF_NAME"
 set -uo pipefail
 
-REF="${1:-}"
 LOG=$(cat)
 BUMP=patch
 
@@ -24,7 +26,5 @@ printf '%s\n' "$LOG" | grep -Eq 'BREAKING[ -]CHANGE:'      && BUMP=major
 if [ "$BUMP" != "major" ]; then
   printf '%s\n' "$LOG" | grep -Eq '^feat(\([^)]*\))?:' && BUMP=minor
 fi
-
-[ "$REF" = "main" ] && BUMP=patch
 
 printf '%s\n' "$BUMP"

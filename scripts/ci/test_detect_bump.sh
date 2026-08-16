@@ -37,7 +37,8 @@ check "feat beats fix in range"   develop minor "fix: a
 feat: b"
 check "breaking beats feat"       develop major "feat: a
 refactor!: b"
-check "main forces patch"         main    patch "feat!: drop api v1"
+check "main derives normally"     main    major "feat!: drop api v1"
+check "main feat -> minor"        main    minor "feat: add networth screen"
 check "empty log"                 develop patch ""
 check "bang only mid-word"        develop patch "fix: resolve foo! in parser"
 

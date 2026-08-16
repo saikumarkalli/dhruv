@@ -119,7 +119,14 @@ class SupabaseClientFactory(
             .build()
 
     /** PostgREST Retrofit instance, consent- and auth-gated. No concrete endpoint interface yet
-     * (Phase 2 adds holdings/valuations) — this phase only needs the gated client to exist. */
+     * (Phase 2 adds holdings/valuations) — this phase only needs the gated client to exist.
+     *
+     * ADR-0033: `holdings`/`valuations` live in the `finance` Postgres schema, not `public`.
+     * Every Phase 2 endpoint built on this Retrofit instance MUST send PostgREST's schema-select
+     * headers — `Accept-Profile: finance` on GET/HEAD, `Content-Profile: finance` on
+     * POST/PATCH/PUT/DELETE (supabase-js's `.schema('finance')` does this automatically; Retrofit
+     * needs an explicit header, e.g. an interceptor added to [dataClient] when those endpoints are
+     * built) — omitting it silently 404s against the (empty) `public` schema instead. */
     val dataRetrofit: Retrofit = moshiRetrofit("$baseUrl/rest/v1/", dataClient)
 
     /** PostgREST Retrofit instance for calls that must succeed regardless of consent state — today
@@ -128,6 +135,10 @@ class SupabaseClientFactory(
      * deliberately NOT consent-gated: DPDP erasure must remain reachable even when — especially
      * when — the user has declined or withdrawn "Sync my financial records" (ONB-BR-002/ONB-BR-008/
      * ONB-BR-009). Do not build any other PostgREST call against this client; every other tracker
-     * data path (Phase 2+) must go through the consent-gated [dataRetrofit] above. */
+     * data path (Phase 2+) must go through the consent-gated [dataRetrofit] above.
+     *
+     * No schema header needed here (ADR-0033): [TrackerRpcApi]'s two functions stay in the
+     * default `public` schema by design — they're the cross-app erasure orchestrators, not
+     * `finance`-domain objects (see `supabase/schemas/public/30_functions/`). */
     val erasureRetrofit: Retrofit = moshiRetrofit("$baseUrl/rest/v1/", authClient)
 }

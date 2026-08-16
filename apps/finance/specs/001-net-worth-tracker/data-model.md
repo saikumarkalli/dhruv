@@ -6,7 +6,7 @@ one new table and two views, migration `0002_networth_phase2.sql`.
 
 ## Existing entities (Phase 1, referenced not changed)
 
-### Holding → `public.holdings`
+### Holding → `finance.holdings`
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid, PK | |
@@ -20,7 +20,7 @@ one new table and two views, migration `0002_networth_phase2.sql`.
 
 RLS: SELECT/INSERT/UPDATE own rows (no client DELETE — erasure only via `delete_my_data()`).
 
-### Recorded value → `public.valuations`
+### Recorded value → `finance.valuations`
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid, PK | |

@@ -10,7 +10,10 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-schemas = ["public", "graphql_public"]
+# `finance` added by ADR-0033 (per-app Postgres schema): a schema not listed here is unreachable
+# by PostgREST regardless of grants — every future per-app schema (tools, ...) must be added here
+# too, alongside its own `supabase/schemas/<app>/` folder and `schema_paths` glob below.
+schemas = ["public", "graphql_public", "finance"]
 # Extra schemas to add to the search_path of every request.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
@@ -61,7 +64,26 @@ max_client_conn = 100
 enabled = true
 # Specifies an ordered list of schema files, directories, or glob patterns that describe your database.
 # Supports paths relative to supabase directory: "./schemas/*.sql", "./database".
-schema_paths = []
+#
+# ADR-0032: declarative schema authorship. These files are the readable, current-state source of
+# truth per object; `supabase db diff -f <name>` reads them to GENERATE the actual executed
+# migration under ./migrations. Glob order is dependency order — extensions, then each app schema
+# (its own create-schema statement, then tables, then views, then functions), then the shared
+# `public` cross-app functions last (they reference app-schema tables, so must come after them).
+#
+# ADR-0033: one folder per Postgres schema — `./schemas/<app>/` for app-owned domain objects,
+# `./schemas/public/` for cross-app orchestration only (today: the two erasure functions, which
+# must run after `finance` exists because they reference `finance.holdings`/`finance.valuations`).
+# Adding a new app schema (tools, ...) means adding its own folder + a block of glob lines here,
+# same as `finance`'s below.
+schema_paths = [
+  "./schemas/00_extensions.sql",
+  "./schemas/finance/00_schema.sql",
+  "./schemas/finance/10_tables/*.sql",
+  "./schemas/finance/20_views/*.sql",
+  "./schemas/finance/30_functions/*.sql",
+  "./schemas/public/30_functions/*.sql",
+]
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.

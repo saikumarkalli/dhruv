@@ -771,3 +771,300 @@ the tracker-architecture questions the P1 spec first raised).
 file or elsewhere is a dangling pointer to a deleted file, not a bug to fix by resurrecting it —
 extend the design-v1 plan instead. `scripts/ci/doc_link_check.py` (added alongside this note) fails
 CI on any new such reference.
+
+---
+
+## ADR-0032 — Dev/prod environment topology: branch-promotion model, one migration set,
+## declarative schema authorship (supersedes ADR-0009's branch roles; amends ADR-0025, ADR-0026)
+**Context.** Two Supabase projects (`dhruv-dev`, `dhruv-prod`) and two intended deploy targets
+(Vercel, GitHub Releases) existed with no environment design connecting them. `docs/sdd/07-
+deployment-and-ci-cd-sdd.md` §3 had already sketched a dev/prod table (`dhruv-dev`/`dhruv-prod`,
+Vercel env vars) but it was never wired to a branch model, and it silently contradicted ADR-0009
+(`main` reserved for Play Store only, never a deploy target) by putting the web prod deploy on
+`main`. `dhruv-prod` sat inactive/paused (Supabase free-tier projects pause after ~7 days idle).
+Repo tooling (`gh`, `supabase`, `vercel` CLIs) was not installed on the maintainer's machine, and no
+GitHub Environments existed — all release secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+`GOOGLE_WEB_CLIENT_ID`, `GEMINI_API_KEY`, the keystore set) were flat repo secrets, readable by any
+workflow with no per-environment approval gate. The maintainer separately confirmed: (1) Google Play
+is a planned future consumer of the same release artifact, not a separate pipeline; (2) the
+Supabase schema must be authored as one migration set applied identically to both projects — no
+env-conditional SQL — so "works in dev" is a true guarantee about prod, not a hope; (3) beyond the
+generated migration files, the schema should also be maintained as individually readable per-object
+scripts (tables/views/functions) for long-term maintainability, not just an append-only migration
+log nobody re-reads.
+**Decision.**
+1. **Branch-promotion model.** `develop` is DEV: `dhruv-dev`, Vercel Preview deployments, debug
+   APK artifact. `main` is PROD: `dhruv-prod`, the Vercel Production domain, the signed release APK
+   (and, once Play is connected, the AAB upload) + GitHub Release. The `develop → main` PR is the
+   **only** path that touches prod data, prod web, or produces an installable/publishable artifact.
+   This supersedes ADR-0009's rule that `main` is Play-only and never a push target — `main` is now
+   the general prod-promotion branch, of which Play is one artifact consumer among several (APK,
+   AAB-future, web, DB).
+2. **GitHub Environments, not flat secrets.** Two Environments, `dev` and `prod`, each holding its
+   own copy of every release-time secret (`SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_REF`/
+   `SUPABASE_DB_PASSWORD`, plus `dev`'s and `prod`'s own `SUPABASE_ACCESS_TOKEN` copy — duplicated
+   rather than a repo-level secret, so only environment-gated jobs can read it). `prod` additionally
+   carries the keystore set (`KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) and a
+   reserved (initially absent) `PLAY_SERVICE_ACCOUNT_JSON` slot. `GOOGLE_WEB_CLIENT_ID` and
+   `GEMINI_API_KEY` are identical in both (ADR-0031's single-identity design; Gemini has no
+   per-env concept) and are kept as repo-level secrets rather than duplicated. The `prod`
+   Environment carries a **required-reviewer protection rule** — any job that declares
+   `environment: prod` pauses for a manual approval click before it runs.
+3. **One migration set, no environment branching in SQL.** `supabase/migrations/*.sql` is applied
+   byte-identical, same order, to both projects — dev first (auto, ungated), prod second (same
+   files, gated by the `prod` Environment approval above). No `IF current_database()`-style
+   conditionals, no prod-only migration file. `supabase/seed.sql` is dev-only fixture data and is
+   never part of a `db push` (only `db reset` loads it) — the migrate workflow asserts this rather
+   than relying on it implicitly. A **drift guard** runs before every prod push: prod's
+   `supabase_migrations.schema_migrations` history must be a prefix of the repo's migration list,
+   or the push aborts — this is what makes "works in dev" a guarantee about prod rather than an
+   assumption, since a hand-run dashboard SQL statement would otherwise invalidate it silently.
+   Corollary: **no SQL is ever run from the Supabase dashboard SQL editor on either project** — a
+   schema change that isn't a committed file is invisible to this guard and voids the equivalence
+   the whole design exists to provide.
+4. **Declarative per-object schema authorship, migrations stay the executed artifact.**
+   `supabase/schemas/` holds one file per table/view/function (`schemas/10_tables/holdings.sql`,
+   `schemas/20_views/…`, `schemas/30_functions/delete_my_data.sql`, …), each colocated with its own
+   RLS policies — the current, readable state of the database, not a change log. Authorship flow:
+   edit the object file → `supabase db diff -f <name>` generates the migration into
+   `supabase/migrations/` → review the generated SQL → commit both. This is Supabase's documented
+   declarative-schema feature (`[db.migrations] schema_paths` in `config.toml`), not a bespoke
+   mechanism. Generated migrations are still append-only and never hand-edited after being applied
+   to dev — declarative authorship changes how the *next* migration is written, not the history.
+   Known tool caveats (verified against current Supabase docs, not assumed) are **not** representable
+   declaratively and must be written as ordinary migrations instead: DML statements; view
+   owner/grants; security-invoker views; materialized views; views not recreated on a column-type
+   change; `ALTER POLICY` (only `CREATE POLICY` diffs — a policy *edit* is written as drop+create);
+   column privileges; schema privileges; `COMMENT ON`; partitions; `ALTER PUBLICATION … ADD TABLE`;
+   `CREATE DOMAIN`; grants duplicated from default privileges. Because `COMMENT ON` isn't diffable,
+   schema documentation is never stored there — it lives in file-header comments and in generated
+   `supabase/SCHEMA.md` (via `scripts/db/gen_schema_docs.py`, which parses `schemas/` statically, no
+   live DB connection required). An **equivalence guard** runs on every PR touching `supabase/**`:
+   apply all migrations to a scratch database, diff the result against `schemas/`, fail on any
+   difference — without this check the per-object files would silently rot into stale documentation
+   within a release or two, the same failure mode ADR-0030 already diagnosed once for design docs.
+5. **Vercel deploys via its own Git integration**, not CI-driven `vercel deploy`. Root directory
+   `web/`, Production Branch `main`, every other branch/PR gets an automatic Preview deployment.
+   This costs zero GitHub Actions runner-minutes (ADR-0026's `≤90 min/PR` budget stays intact) since
+   Vercel builds on its own infrastructure; `web-ci.yml` runs lint/typecheck/test/build as a gate
+   only and never deploys. Safe because `main` only receives already-gated `develop → main` PRs.
+6. **Android env selection stays zero-code.** No product flavors, no `applicationIdSuffix`, no
+   `_DEV`/`_PROD`-suffixed keys. The existing `secrets` Gradle plugin reads whatever `.env` is
+   present at build time: locally that's the developer's own dev-value `.env`; in the `release` job
+   it is overwritten from the `prod` Environment's secrets immediately before `assembleRelease`, as
+   it already was before this ADR (this is not a new mechanism, only a new secret source). The
+   accepted risk is that a release APK built **locally** rather than through CI would silently carry
+   dev keys — mitigated, not eliminated, by decision 7's dev-ref guard, and by the release APK being
+   the CI-built artifact that is actually published, never a hand-built one.
+7. **Dev-ref guard on the release APK.** The existing signed-APK verification step (which already
+   `strings`-scans for `.env.example` placeholder leakage) gains a second scan: the built APK must
+   NOT contain the `dhruv-dev` project's Supabase ref, and MUST contain the `dhruv-prod` ref. The
+   dev ref is exposed as a plain (non-secret) repository variable — it is a project identifier, not
+   a credential, and needs to be visible in this check's own log output to be useful.
+8. **Play Store is a future consumer of the same `main` promotion, not a separate pipeline.** The
+   `release` job's `assembleRelease` → `bundleRelease` swap (already promised by ADR-0008) happens
+   once, in place, when Play is connected; both the APK (GitHub Release) and the AAB (Play) are
+   built from the same `main` commit, same version, same keystore, same `prod` approval click. A
+   `publish-play` step is added now but self-disables via a step-level secret-presence check
+   (`PLAY_SERVICE_ACCOUNT_JSON` absent → skip), the same "never block the pipeline on an optional
+   secret" pattern ADR-0012's PR-summary bot and the keepalive ping already use. Connecting Play
+   also activates two currently-deferred obligations that ADR-0008 explicitly named as deferred
+   *"until a Play launch is planned"*: the Play Data Safety form (declaration only — the underlying
+   consent gate and `delete_my_account()` erasure already exist per ADR-0029 §5) and Play App
+   Signing enrollment (one-way: Google's re-signing key becomes permanent once enrolled, the
+   maintainer's own upload key stays rotatable).
+9. **Amends ADR-0025.** ADR-0025 fixed the bump segment (`patch` always) for pushes to `main` because
+   under the old develop-releases-every-merge model, a `develop → main` promotion replayed
+   `develop`'s already-bumped `feat:` commits, and re-detecting them would double-bump. Under this
+   ADR, `develop` no longer runs the release job at all (decision 1) — there is nothing left to
+   double-bump — so `main` now derives its segment from commit types exactly like every other branch
+   did before. `detect_bump.sh`'s logic is unchanged; only its caller's branch condition changes.
+10. **Amends ADR-0026.** The `release` job's trigger (`github.ref == 'refs/heads/develop' ||
+    github.ref == 'refs/heads/main'`) narrows to `main` only, and the job declares
+    `environment: prod`. `regressionCheck`/tests/static-analysis/security still run on `pull_request`
+    only, unchanged — ADR-0026's core claim ("the PR is the only full-validation pass") is unaffected
+    by which branch triggers the post-merge release.
+**Why.** A single promotion branch keeps Android, web, and DB environment selection consistent under
+one mental model instead of three different branch rules per platform. GitHub Environments are the
+only mechanism that gives a real approval gate in front of prod secrets and prod SQL without hand-
+rolled tooling. One migration set applied identically is the only way "tested in dev" can honestly
+imply "safe in prod" — an env-conditional migration file would silently reintroduce the gap the
+maintainer explicitly asked to close. Declarative schema files solve the maintainability problem
+(a human re-reading 40 migrations to understand current shape) without discarding the migration
+history CI/CD actually executes, using Supabase's own documented mechanism rather than a bespoke
+one. Vercel's Git integration is strictly cheaper than a CI-driven deploy and needs no new secrets.
+Zero-code Android env selection was the maintainer's explicit choice over product flavors, accepted
+with its stated risk rather than paying ADR-0026's build-time budget for a flavor matrix.
+**Consequences.** `main` becomes a real deploy branch — branch protection on `main` (required
+reviews, required up-to-date branches, the `prod` Environment approval) is now load-bearing in the
+same way ADR-0026 already made `develop`'s protection load-bearing. `platform/PLATFORM.md` §11's
+branch table, `docs/sdd/07-deployment-and-ci-cd-sdd.md`, and `supabase/migrations/README.md` are
+rewritten to match this ADR rather than their pre-existing (never-implemented) sketches. A one-time
+baseline step applies the existing `0001_init.sql` to `dhruv-prod` before this design goes live, so
+dev and prod start in lockstep — without it the drift guard would fail on the very first prod push.
+`GEMINI_API_KEY`/`GOOGLE_WEB_CLIENT_ID` remaining repo-level (not per-Environment) means a leak of
+either is equally live against both projects — an accepted continuation of ADR-0031's single-
+identity design, not a new exposure this ADR introduces. CLI tooling (`gh`, `supabase`, `vercel`)
+and one-time console setup (creating the Environments, generating the Supabase access token,
+connecting the Vercel Git integration, adding both Supabase project refs to the Google OAuth
+redirect allowlist) are manual, credentialed, one-person actions that cannot be scripted from an
+unauthenticated CI-adjacent session — they are recorded as a runbook, not automated, and are the
+gating step before any of the workflows in this ADR can run for the first time.
+
+**Correction (2026-08-16).** Decision 2's "required-reviewer protection rule" on the `prod`
+Environment was written assuming that feature is available once the Environment exists. Verified
+live against this repo at implementation time (`gh api --method PUT
+repos/.../environments/prod` with a `reviewers` block): GitHub rejects it with HTTP 422 —
+*"Please ensure the billing plan supports the required reviewers protection rule."* Classic branch
+protection is equally unavailable (HTTP 403, "Upgrade to GitHub Pro") — this repo is private on
+GitHub Free, and both features are Pro/Team-gated for private repos on that tier. This means
+ADR-0026's "Require branches to be up to date before merging" — already called load-bearing there
+— was also never actually enforceable on this billing tier; that gap predates this ADR and is
+noted here because this is where it was discovered, not because this ADR caused it.
+**Substitute mechanism, same UX the maintainer chose (auto-trigger + a visible plan + one
+approval click, not a manual-dispatch fallback):** `release-approval` (`ci.yml`, before `release`)
+and `prod-approval` (`supabase-migrate.yml`, after `prod-plan`, before `prod-apply`) use
+`trstringer/manual-approval@v1` — a free, billing-tier-independent action that opens a GitHub
+issue naming the commit and (for the migration path) points at `prod-plan`'s already-finished
+summary, then pauses until `approvers: saikumarkalli` comments an approval keyword
+(`exclude-workflow-initiator-as-approver: false`, since the sole maintainer is necessarily also
+the one who merged the triggering PR — a solo-maintainer repo has no other approver to exclude in
+favor of). `environment: prod` is kept on `release`/`prod-apply` themselves, but now serves only
+to scope their secrets to the `prod` Environment's copies — the pause comes entirely from the
+preceding approval job, not from the Environment declaration. Both `dev` and `prod` Environments
+were created without any protection rule (confirmed working — only the *reviewer rule* is
+billing-gated, plain Environments as secret-scoping containers are not). Upgrading to GitHub Pro
+later (small monthly cost, unlocks both the native reviewer rule and classic branch protection) is
+a straightforward follow-up, not a blocker for anything in this ADR — the two release/migrate
+workflows would keep working unmodified either way, since the manual-approval jobs are additive
+and would simply become redundant, not wrong.
+
+---
+
+## ADR-0033 — Per-app Postgres schema namespacing (extends ADR-0032's declarative layout)
+**Context.** ADR-0032 gave `supabase/schemas/` a declarative, per-object authorship model, but
+every object still lived in the single `public` Postgres schema (`public.holdings`,
+`public.valuations`, `public.delete_my_data()`, `public.delete_my_account()`) with a flat
+`10_tables/`/`20_views/`/`30_functions/` layout. That was fine with one app's data in the database;
+`PLATFORM.md` §1 plans four more apps (Tools, Vault, Health, Relationship), and Vault aside (no
+network dependency at all, `PLATFORM.md` §4), Tools is the next one likely to want its own
+Supabase-backed tables. Nothing distinguished "this table belongs to Finance" from "this table is
+shared platform state" — a second app's tables would have landed in the same flat `public`
+namespace and the same three folders, and a table name collision between two apps' domains (e.g. a
+future `tools.notes` and some hypothetical `finance` table both wanting a generic name) would have
+had no natural resolution short of manual prefixing. The maintainer asked directly for a real
+DB-repo structure — schema-per-app, tables/views/functions organized and maintained at the schema
+level, dacpac-style — before any second app's tables exist, which is also the cheapest possible
+time to do it: Phase 2 (the first screen that actually writes to `holdings`/`valuations`) hasn't
+shipped, so `dhruv-dev`'s copies of these two tables are schema-only, no user rows to migrate.
+**Decision.**
+1. **One Postgres schema per app that owns Supabase-backed data.** `finance.holdings` and
+   `finance.valuations` replace `public.holdings`/`public.valuations`. A future Tools table gets its
+   own `tools` schema, not a `tools_` prefix inside `public`. Vault is excluded by design (ADR-0031
+   decision 3 already forbids it from touching Supabase at all).
+2. **`supabase/schemas/` gets one folder per Postgres schema**, mirroring the object categories
+   ADR-0032 already used: `schemas/finance/00_schema.sql` (the `create schema` + schema-level grant),
+   `schemas/finance/10_tables/*.sql`, `20_views/*.sql`, `30_functions/*.sql`. `schemas/00_extensions.sql`
+   stays at the top level (extensions aren't app-owned).
+3. **`public` is retained, deliberately, for cross-app orchestration only** — today, the two
+   erasure functions (`public.delete_my_data()`, `public.delete_my_account()`,
+   `schemas/public/30_functions/`). They cannot move into `finance` because `delete_my_account()`
+   deletes the shared `auth.users` row (ADR-0031: one `auth.users` table for every Dhruv app), and
+   `delete_my_data()` is documented (ADR-0029 decision 5) as spanning "all tracker tables," a
+   cross-app concept the moment a second app has Supabase data. The functions reference
+   `finance.holdings`/`finance.valuations` fully-qualified; a future `tools.*` table gets its DELETE
+   added to the same function, the same way.
+4. **Custom schemas need explicit grants** (`grant usage on schema finance to authenticated;` plus
+   per-table `grant select/insert/update on finance.<table> to authenticated;`) — unlike `public`,
+   whose exposure to API roles has ambiguous/legacy defaults (see Consequences), a schema PostgREST
+   has never seen before is reachable only if both `config.toml`'s `[api] schemas` lists it *and*
+   the role has an explicit `GRANT`. No `anon` grant anywhere — every tracker call is authenticated
+   (ADR-0029's `AuthInterceptor`), so there is no anonymous surface to expose.
+5. **`config.toml` changes**: `[api] schemas` gains `"finance"` (a schema PostgREST doesn't list
+   here is completely unreachable, regardless of grants); `[db.migrations].schema_paths` is
+   reordered to `00_extensions.sql` → `finance/00_schema.sql` → `finance/10_tables/*` →
+   `finance/20_views/*` → `finance/30_functions/*` → `public/30_functions/*` — `finance`'s objects
+   must exist before `public`'s erasure functions, since those functions reference them by
+   fully-qualified name.
+6. **`scripts/db/gen_schema_docs.py` becomes schema-aware**: every table/function is tracked and
+   rendered by its fully-qualified `schema.object` name (default `public` when a statement carries
+   no prefix, matching Postgres' own resolution), `SCHEMA.md` groups objects under a `### Schema
+   `<name>`` heading per Postgres schema, and the ADR-0032 equivalence guard additionally compares
+   the set of `create schema` statements between `schemas/` and `migrations/`, not just
+   tables/functions — a schema rename that isn't reflected in both would otherwise pass unnoticed.
+**Why.** Schema-per-app is the direct Postgres analogue of the module-boundary rules the rest of
+the platform already enforces in Gradle/ArchUnit (`PLATFORM.md` §4) — `feature → feature` is
+forbidden in code, so one app's tables sharing a bare namespace with another's was the one place
+that discipline didn't reach. Doing the rename now, before Phase 2 writes real rows, avoids a data
+migration later; doing it as declarative `schemas/` files (not a one-off hand SQL script) keeps
+ADR-0032's "the file describes current state, `db diff` generates the migration" guarantee intact
+for the very first schema-level change made under that model. Keeping the two erasure functions in
+`public` rather than forcing them into `finance` avoids modeling a genuinely cross-app concern
+(shared `auth.users`, "all tracker tables") as if it belonged to one app — the alternative (moving
+them into `finance` and giving Tools its own duplicate `tools.delete_my_account()` that also deletes
+`auth.users`) would create two independently-callable paths to the same destructive action.
+**Consequences.** `supabase/schemas/{10_tables,30_functions}/` (the old flat folders) are removed;
+`supabase/schemas/{finance,public}/` replace them. **`supabase/migrations/0001_init.sql` is
+unchanged by this ADR** — it is append-only executed history (ADR-0032). The move is a **new**
+migration, `20260816211500_move_tracker_to_finance_schema.sql`, expressed as `create schema` +
+`ALTER TABLE … SET SCHEMA` + `create or replace function` (not a drop+recreate): `SET SCHEMA` is
+metadata-only in Postgres, so rows, indexes, foreign keys, RLS enablement and every RLS policy move
+with the table untouched — which is what makes this safe to run against `dhruv-dev` even though
+Phase 2 hasn't shipped. That migration was **hand-authored, not `db diff`-generated**: the local
+Supabase CLI + Docker stack is not installed on the maintainer's machine, and ADR-0032's own caveat
+list already names schema privileges and grants as things `db diff` cannot express anyway, so a
+generated diff would have needed hand-editing for the `grant` statements regardless. It has
+therefore **not been executed against any database** — `supabase db reset` (local) or the
+`develop` push that runs `supabase-migrate.yml`'s `apply-dev` job is its first real execution, and
+that is the point at which its correctness is actually confirmed. Both static CI guards do pass
+(`gen_schema_docs.py equiv`, `docs --check`).
+This required teaching the equivalence guard two things it did not previously understand:
+`ALTER TABLE … SET SCHEMA` (it re-keys the tracked table rather than creating a second entry, so
+policies/indexes accumulated under the pre-move name carry over), and that a `references
+<schema>.<table>` qualifier recorded in an older migration goes stale after the target moves —
+Postgres resolves FK targets by OID, not by the text — so the qualifier is stripped before
+comparison while a change of *which table* is referenced is still caught. `web/src/shared/types/database.ts` and its CI freshness
+check, plus the `supabase gen types` invocations in `migrations/README.md`, move from `--schema
+public` to `--schema public,finance` — a schema omitted from that flag silently loses typed-client
+coverage rather than erroring. No Android or web query code changes today: no concrete
+`holdings`/`valuations` endpoint exists yet on either platform (Phase 2, not yet built), so the only
+changes there are forward-pointing doc comments (`SupabaseClientFactory.kt`, `supabaseClient.ts`)
+recording that Phase 2's PostgREST calls to `finance.*` must set the `Accept-Profile`/
+`Content-Profile: finance` header (`.schema('finance')` on supabase-js) — omitting it does not error
+loudly, it silently 404s against the empty `public` schema instead, so this is written down now
+rather than left to be rediscovered mid-Phase-2. **Known gap, out of scope of this ADR**: `public`
+already held `holdings`/`valuations` with no explicit `GRANT` statements anywhere in
+`0001_init.sql`, relying on `public` schema's ambiguous legacy default-exposure behavior
+(`config.toml`'s own `auto_expose_new_tables` comment flags this as deprecated, removed 2026-10-30).
+Decision 4 above makes grants explicit for every *new* custom schema going forward, but does not
+retroactively audit or fix whatever implicit grant `public` was actually relying on — tracked as a
+follow-up, not resolved here, same pattern as ADR-0032's GitHub Pro correction.
+
+---
+
+## Numbering-hygiene note — second ADR-0032 collision (found 2026-08-16)
+
+**Context.** The same failure class the first numbering-hygiene note (above, dated the ADR-0015
+collision) already diagnosed happened again: `docs/superpowers/plans/2026-08-15-agent-protocol-
+and-doc-verifier.md` — an unbuilt plan for a machine-verified agent-instruction system, no branch
+yet created — reserved **ADR-0032** for its own future decision, written when 0031 was the highest
+entry in this register. Two *actually-implemented* ADRs, 0032 (dev/prod environment topology) and
+0033 (per-app Postgres schema namespacing), landed in this register the same day, both before that
+plan's ADR was ever written. The plan's own Global Constraints section had already anticipated
+exactly this ("If something above 0031 exists, use the next free number") — it just triggered
+before execution instead of during it, since the collision was discovered by review rather than by
+someone actually running the plan and hitting `grep '^## ADR-' platform/DECISIONS.md` themselves.
+**Resolution.** The plan document is corrected in place (all `ADR-0032` references → `ADR-0034`,
+its `Task 6` heading and drafted ADR body renumbered to match) rather than this register being
+touched — same rule as the first collision: a *written* register entry never moves, only a
+*reservation* does. 0034 is the next free number after the two that landed today.
+**Why.** Identical root cause to the first note: a plan's self-assigned ADR number is a forward
+guess, not a claim, and this register — not any individual plan file — is the only authority on
+what number is actually free. The first note's own closing lesson ("check this file's highest
+number, not just other specs' reservations") was aimed at exactly this scenario and would have
+prevented it had the plan been re-checked at execution time rather than left dormant since
+2026-08-15 while unrelated work advanced the register twice.
+**Consequences.** Any future plan or spec reserving an ADR number should treat that reservation as
+provisional until the moment it is actually written here, especially for dormant plans that sit
+unbuilt across multiple unrelated merges. `docs/superpowers/plans/2026-08-15-agent-protocol-and-
+doc-verifier.md` now correctly targets ADR-0034 if and when it is executed.

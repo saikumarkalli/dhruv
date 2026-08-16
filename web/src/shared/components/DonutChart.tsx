@@ -24,7 +24,11 @@ export function DonutChart({
   const center = size / 2;
   const gap = 2;
 
-  let offset = 0;
+  const offsets: number[] = [];
+  segments.reduce((acc, seg) => {
+    offsets.push(acc);
+    return acc + seg.fraction * circumference;
+  }, 0);
 
   return (
     <div className={styles.wrapper}>
@@ -43,10 +47,10 @@ export function DonutChart({
             const segLength = seg.fraction * circumference;
             const gapAdjusted = Math.max(0, segLength - gap);
             const dashArray = `${gapAdjusted} ${circumference - gapAdjusted}`;
-            const rotation = (offset / circumference) * 360;
+            const rotation = (offsets[i] / circumference) * 360;
             const animDelay = `${i * 0.12}s`;
 
-            const el = (
+            return (
               <circle
                 key={i}
                 className={styles.segment}
@@ -64,9 +68,6 @@ export function DonutChart({
                 }
               />
             );
-
-            offset += segLength;
-            return el;
           })}
         </svg>
 

@@ -1,0 +1,126 @@
+name: Web CI
+
+# Lint/typecheck/test/build gate for the web SPA (ADR-0032). Deployment is NOT
+# here — Vercel's own Git integration builds and deploys web/ directly from
+# GitHub on its own infrastructure (Production Branch = main, everything else =
+# Preview), so this workflow spends zero deploy-time runner minutes; it exists
+# purely as a merge gate, same role ci.yml plays for Android.
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+# No trigger-level `paths:` filter — same reasoning as ci.yml's Gate 0 (ADR-0026):
+# a path-filtered trigger never creates a check run for a non-matching PR, which
+# leaves a required status check permanently pending. The `changes` job below is
+# a job-level skip instead — it reports "skipped" (counts as passing) when the PR
+# touches no web/** files.
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: "Gate 0 · Changed paths"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      # NO CHECKOUT on purpose — same reasoning as ci.yml's Gate 0.
+      - name: Detect web changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"; HEAD="$PR_HEAD"
+          else
+            BASE="$PUSH_BASE"; HEAD="$GITHUB_SHA"
+          fi
+
+          FILES=""
+          COUNT=0
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            FILES=$(gh api "repos/$GITHUB_REPOSITORY/compare/${BASE}...${HEAD}" \
+                      --jq '.files[].filename' 2>/dev/null || echo "")
+            COUNT=$(printf '%s\n' "$FILES" | grep -c . || true)
+          fi
+
+          # Fail safes mirror ci.yml Gate 0: unresolvable range or a truncated
+          # (300-cap) file list both mean "cannot trust the list — run it."
+          if [ -z "$FILES" ] || [ "$COUNT" -ge 300 ]; then
+            echo "web=true" >> "$GITHUB_OUTPUT"
+            echo "Unresolvable or capped file list — treating as web change."
+            exit 0
+          fi
+
+          WEB=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              web/*|platform/feature-flags/*) WEB=true; echo "web change: $f" ;;
+            esac
+          done <<< "$FILES"
+
+          echo "web=$WEB" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $(printf '%s\n' "$FILES" | wc -l) · web=$WEB"
+
+  build:
+    name: "Web · Lint + Typecheck + Test + Build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [ changes ]
+    if: needs.changes.outputs.web == 'true'
+    defaults:
+      run:
+        working-directory: web
+    env:
+      # Placeholder values only — this run's sole purpose is verifying lint/type/
+      # test/build all pass; it is never deployed (Vercel builds its own copy with
+      # real per-environment values). `supabaseClient.ts` constructs a client at
+      # module-load time and needs a well-formed URL to not throw during tests.
+      # Real env resolution happens in Vercel's Project Settings (Production =
+      # dhruv-prod keys, Preview/Development = dhruv-dev keys), never here.
+      VITE_SUPABASE_URL: "https://placeholder.supabase.co"
+      VITE_SUPABASE_ANON_KEY: "placeholder"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist/
+          if-no-files-found: warn
+          retention-days: 7

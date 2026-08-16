@@ -7,6 +7,18 @@ name: Supabase Keep-Alive
 # Uses the anon key against PostgREST's root endpoint: no table access, no RLS surface,
 # nothing that could read or write user data even if the key leaked (it is publishable
 # by design under RLS — ADR-0014).
+#
+# ADR-0032: two projects now exist (dhruv-dev, dhruv-prod) — dhruv-prod is the one
+# that was actually sitting paused, so both are pinged. Deliberately NOT using the
+# `dev`/`prod` GitHub Environments here, and deliberately not routed through the
+# `release-approval`/`prod-approval` manual-approval jobs those other workflows use
+# for real mutations (migrations, signed APK): this is a read-only anon-key ping
+# with nothing to approve, so putting it behind either gate would just make an
+# unattended scheduled job silently stall waiting on a human every 5 days. The
+# anon key/URL pair is safe to hold as plain repo secrets precisely because it's
+# publishable, so it is kept separately here (SUPABASE_DEV_URL/SUPABASE_DEV_ANON_KEY,
+# SUPABASE_PROD_URL/SUPABASE_PROD_ANON_KEY) rather than duplicating the Environment
+# secrets used by the gated workflows.
 on:
   schedule:
     - cron: "0 6 */5 * *"   # every 5 days, 06:00 UTC — comfortably inside the 7-day window
@@ -16,25 +28,33 @@ permissions: {}
 
 jobs:
   ping:
-    name: "Ping Supabase"
+    name: "Ping Supabase (${{ matrix.env }})"
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: dev
+            secret_suffix: DEV
+          - env: prod
+            secret_suffix: PROD
     steps:
       - name: Ping PostgREST root
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets[format('SUPABASE_{0}_URL', matrix.secret_suffix)] }}
+          SUPABASE_ANON_KEY: ${{ secrets[format('SUPABASE_{0}_ANON_KEY', matrix.secret_suffix)] }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::warning::SUPABASE_URL/SUPABASE_ANON_KEY not set — skipping keep-alive."
+            echo "::warning::SUPABASE_${{ matrix.secret_suffix }}_URL/ANON_KEY not set — skipping keep-alive for ${{ matrix.env }}."
             exit 0
           fi
           CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
                    --max-time 30 \
                    -H "apikey: $SUPABASE_ANON_KEY" \
                    "${SUPABASE_URL%/}/rest/v1/")
-          echo "PostgREST responded: $CODE"
+          echo "[${{ matrix.env }}] PostgREST responded: $CODE"
           case "$CODE" in
-            2*|3*|401|404) echo "Project is awake." ;;
-            *) echo "::error::Unexpected status $CODE — project may be paused or misconfigured."; exit 1 ;;
+            2*|3*|401|404) echo "[${{ matrix.env }}] Project is awake." ;;
+            *) echo "::error::[${{ matrix.env }}] Unexpected status $CODE — project may be paused or misconfigured."; exit 1 ;;
           esac

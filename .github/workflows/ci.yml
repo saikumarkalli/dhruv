@@ -44,12 +44,19 @@ jobs:
   #
   # Only `docs/**`, any nested `*/docs/**`, and `**/*.md` count as docs.
   # `platform/versions.json` and the feature-flag JSON are CODE — they feed the build.
+  #
+  # Beyond the blanket `code` flag, three narrower outputs (ADR-0032) let each
+  # platform's gates run only when its own paths changed: `android` (everything
+  # non-docs outside web/ and supabase/), `web` (web/**), `db` (supabase/**).
   changes:
     name: "Gate 0 · Changed paths"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      android: ${{ steps.filter.outputs.android }}
+      web: ${{ steps.filter.outputs.web }}
+      db: ${{ steps.filter.outputs.db }}
     steps:
       # NO CHECKOUT on purpose. This job runs on EVERY event — including the docs-only
       # ones it exists to make cheap — so a clone here would eat the saving it creates.
@@ -78,8 +85,11 @@ jobs:
 
           # Fail safe 1: unresolvable range (new branch, force push, API error) → run everything.
           if [ -z "$FILES" ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "No resolvable file list — treating as code."
+            echo "code=true"    >> "$GITHUB_OUTPUT"
+            echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "web=true"     >> "$GITHUB_OUTPUT"
+            echo "db=true"      >> "$GITHUB_OUTPUT"
+            echo "No resolvable file list — treating as code (all platforms)."
             exit 0
           fi
 
@@ -87,22 +97,33 @@ jobs:
           # truncated and a code file could sit past the boundary — never skip on a list we
           # cannot trust.
           if [ "$COUNT" -ge 300 ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "File list hit the 300-entry API cap — treating as code."
+            echo "code=true"    >> "$GITHUB_OUTPUT"
+            echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "web=true"     >> "$GITHUB_OUTPUT"
+            echo "db=true"      >> "$GITHUB_OUTPUT"
+            echo "File list hit the 300-entry API cap — treating as code (all platforms)."
             exit 0
           fi
 
           CODE=false
+          ANDROID=false
+          WEB=false
+          DB=false
           while IFS= read -r f; do
             [ -z "$f" ] && continue
             case "$f" in
               docs/*|*/docs/*|*.md) ;;
-              *) CODE=true; echo "code change: $f"; break ;;
+              web/*) CODE=true; WEB=true; echo "web change: $f" ;;
+              supabase/*) CODE=true; DB=true; echo "db change: $f" ;;
+              *) CODE=true; ANDROID=true; echo "android change: $f" ;;
             esac
           done <<< "$FILES"
 
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
-          echo "Changed files: $(printf '%s\n' "$FILES" | wc -l) · code=$CODE"
+          echo "code=$CODE"       >> "$GITHUB_OUTPUT"
+          echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
+          echo "web=$WEB"         >> "$GITHUB_OUTPUT"
+          echo "db=$DB"           >> "$GITHUB_OUTPUT"
+          echo "Changed files: $(printf '%s\n' "$FILES" | wc -l) · code=$CODE android=$ANDROID web=$WEB db=$DB"
 
   # ── Gate 1: Static analysis ────────────────────────────────────────────────
   static-analysis:
@@ -111,7 +132,9 @@ jobs:
     needs: [ changes ]
     # PR is the ONLY full-validation pass (ADR-0026). The merge push re-runs nothing:
     # required up-to-date branches guarantee the merged tree is the tree the PR validated.
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    # Gated on `android` (not the broader `code`), ADR-0032: a web- or db-only PR
+    # doesn't need to pay for a Gradle run (web-ci.yml / supabase-migrate.yml cover those).
+    if: github.event_name == 'pull_request' && needs.changes.outputs.android == 'true'
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -205,7 +228,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [ changes ]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    # Gated on `android` (ADR-0032) — same reasoning as static-analysis above.
+    if: github.event_name == 'pull_request' && needs.changes.outputs.android == 'true'
     # Exposed to the pr-summary comment and the release notes (see Post-build jobs).
     outputs:
       tests_total: ${{ steps.summary.outputs.tests_total }}
@@ -401,17 +425,64 @@ jobs:
   # default GITHUB_TOKEN works fine (the anti-recursion rule only blocks a pushed
   # tag from *triggering* another workflow, which we no longer rely on). Do NOT set
   # RELEASE_TOKEN — release.yml would then also fire on the tag and double-publish.
+  # GitHub Environments' native required-reviewer protection rule needs GitHub
+  # Pro/Team for a private repo (confirmed live against this repo: creating it
+  # 422s — "Please ensure the billing plan supports the required reviewers
+  # protection rule"). This job substitutes a free approval gate: it opens a
+  # GitHub issue and pauses until the maintainer comments an approval keyword,
+  # then the `release` job below runs. `environment: prod` stays on `release`
+  # itself purely to scope its secrets (dev/prod each hold their own copies) —
+  # on this billing tier that declaration carries no pause of its own, which is
+  # exactly why this job exists to provide one.
+  release-approval:
+    name: "Post-build · Release approval gate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [ changes ]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.android == 'true' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    permissions:
+      issues: write
+    steps:
+      - name: Wait for release approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: saikumarkalli
+          minimum-approvals: 1
+          exclude-workflow-initiator-as-approver: false
+          issue-title: "Release approval — ${{ github.sha }} → dhruv-prod + signed APK"
+          issue-body: |
+            Push to `main` is ready to release: version bump, **signed APK built against
+            `dhruv-prod` secrets**, GitHub Release publish.
+
+            Commit: ${{ github.sha }}
+            Compare: ${{ github.event.compare }}
+
+            Comment `approved`/`approve`/`lgtm`/`yes` to proceed, or `denied`/`deny`/`no` to
+            stop. See the merged PR's diff for what's actually shipping.
+
   release:
     name: "Post-build · Release (bump + build + publish)"
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [ changes ]
-    # Skip on PRs, on docs-only pushes, and on commits made by this job itself.
+    needs: [ changes, release-approval ]
+    # ADR-0032: `main` is now the sole promotion/prod branch — `develop` no longer
+    # releases (it is DEV; dhruv-dev/preview web/debug APK only, all ungated).
+    # Skip on PRs, on docs-only or non-Android pushes, and on this job's own commits.
     if: |
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
-      needs.changes.outputs.code == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.android == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
+    # `prod` GitHub Environment scopes this job to the `prod`-only secrets below
+    # (SUPABASE_URL/SUPABASE_ANON_KEY here are the prod project's values). The
+    # approval pause itself comes from `release-approval` above, not from this
+    # declaration — see that job's comment for why.
+    environment: prod
     permissions:
       contents: write  # push bump commit + tag, create GitHub Release
       actions: read    # download artifacts from the PR's CI run (cross-run fetch below)
@@ -426,8 +497,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 0. Derive the semver segment from the commit types in this push ──
-      # feat: -> minor, type!:/BREAKING CHANGE -> major, else patch; main = always
-      # patch (D6). Checkout above already used fetch-depth: 0, so the full range
+      # feat: -> minor, type!:/BREAKING CHANGE -> major, else patch. `main` is no
+      # longer special-cased to always-patch (ADR-0032 amends ADR-0025's original
+      # rule): since this job only runs on `main` now, there is nothing upstream to
+      # double-bump. Checkout above already used fetch-depth: 0, so the full range
       # is available. Logic lives in a script so it is testable locally (ADR-0025).
       - name: Determine bump type
         id: bumptype
@@ -489,8 +562,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
 
-      # Cache WRITER: tests no longer runs on push, so this is the only job on the
-      # default branch that can populate the shared Gradle cache PRs read from.
+      # Cache WRITER: tests no longer runs on push, and this job now runs only on
+      # `main` pushes (ADR-0032) — the only remaining job that can populate the
+      # shared Gradle cache PRs read from. Runs less often than under the old
+      # develop-releases-every-merge model; PR cache-read misses are more likely
+      # right after a `develop`-only stretch and self-heal on the next `main` push.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -546,6 +622,11 @@ jobs:
         id: apk
         env:
           GH_TOKEN: ${{ github.token }}
+          # Project refs are plain identifiers, not credentials — repo Variables
+          # (not Secrets) is the correct home, and they need to appear in this
+          # step's own log output to be a useful guard (ADR-0032 decision 7).
+          SUPABASE_DEV_PROJECT_REF: ${{ vars.SUPABASE_DEV_PROJECT_REF }}
+          SUPABASE_PROD_PROJECT_REF: ${{ vars.SUPABASE_PROD_PROJECT_REF }}
         run: |
           DIR="apps/finance/app/build/outputs/apk/release"
           APK=$(find "$DIR" -name "*.apk" ! -name "*unsigned*" | head -1)
@@ -571,6 +652,26 @@ jobs:
             exit 1
           fi
           echo "✅ No placeholder secrets in the APK"
+
+          # Dev-ref guard (ADR-0032 decision 7). This job runs on `main` under the
+          # `prod` Environment, so .env was written from PROD secrets above — but
+          # the secrets-plugin fallback and any local misconfiguration are both
+          # silent, so verify the shipped artifact itself rather than trusting the
+          # write step. Skipped (warn, not fail) only if the repo Variables aren't
+          # set yet — day-one bootstrap before they're configured.
+          if [ -z "$SUPABASE_DEV_PROJECT_REF" ] || [ -z "$SUPABASE_PROD_PROJECT_REF" ]; then
+            echo "::warning::SUPABASE_DEV_PROJECT_REF/SUPABASE_PROD_PROJECT_REF repo variables not set — skipping dev-ref guard."
+          else
+            if strings "$DEST" | grep -qF "$SUPABASE_DEV_PROJECT_REF"; then
+              echo "❌ Release APK contains the DEV Supabase project ref ($SUPABASE_DEV_PROJECT_REF) — it would ship reading dhruv-dev, not dhruv-prod." >&2
+              exit 1
+            fi
+            if ! strings "$DEST" | grep -qF "$SUPABASE_PROD_PROJECT_REF"; then
+              echo "❌ Release APK does not contain the PROD Supabase project ref ($SUPABASE_PROD_PROJECT_REF) — prod secrets did not resolve into the build." >&2
+              exit 1
+            fi
+            echo "✅ APK targets dhruv-prod ($SUPABASE_PROD_PROJECT_REF), not dhruv-dev"
+          fi
 
           # Compare against the previous release's APK. Informational on the first release
           # (no prior asset) and never fatal on a lookup failure — a GitHub API hiccup must
@@ -701,7 +802,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tagname.outputs.tag }}
-          name: "Dhruv finance ${{ steps.version_json.outputs.version }}"
+          name: "Dhruv finance v${{ steps.version_json.outputs.version }}"
           body_path: release-body.md
           generate_release_notes: true
           files: |

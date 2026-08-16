@@ -252,8 +252,8 @@ web/src/
 | **Auth** | Credential Manager → Google ID token → GoTrue | OAuth PKCE redirect → GoTrue |
 | **Feature Flags** | Firebase Remote Config → cached → JSON asset | Static JSON import (same files) |
 | **Observability** | Crashlytics + Performance | Vercel Analytics + console (→ Sentry V2) |
-| **CI/CD** | GitHub Actions (4 gates → bump → tag → APK Release) | GitHub Actions (lint → test → build → Vercel deploy) |
-| **Hosting** | GitHub Releases (APK); Play deferred | Vercel (free tier) |
+| **CI/CD** | GitHub Actions (gates on PR → `main`-only bump/tag/APK Release, gated by `prod` Environment approval — ADR-0032) | GitHub Actions (lint → typecheck → test → build gate only); **deploy is Vercel's own Git integration**, not Actions |
+| **Hosting** | GitHub Releases (APK); Play deferred | Vercel (free tier) — Preview per branch/PR, Production on `main` |
 | **Security** | 8-layer (Keystore, encryption, cert pin, biometric, R8) | CSP, CORS, RLS, PKCE, httpOnly where possible |
 | **PWA** | N/A | vite-plugin-pwa (installable, offline shell) |
 | **i18n** | strings.xml (English only V1) | react-intl + en.json (English only V1) |
@@ -291,13 +291,22 @@ web/src/
 
 ## 7. Supabase Schema
 
-Source of truth is `supabase/migrations/` (currently `0001_init.sql` — `holdings`, `valuations`,
-Phase 1's auth/consent tables) plus the full target schema table in the implementation plan §5.4
+Authored declaratively, one Postgres schema per app (ADR-0033), in `supabase/schemas/<app>/`
+(`supabase db diff` generates the actual executed migration into `supabase/migrations/` —
+currently `0001_init.sql` plus `20260816211500_move_tracker_to_finance_schema.sql`: `finance.
+holdings`, `finance.valuations`, Phase 1's auth/consent tables; ADR-0032/ADR-0033), plus the full
+target schema table in the implementation plan §5.4
 (all Phase 1–7 tables: `accounts`, `transactions`, `categories`, `budgets`, `goals`, `policies`,
-`retirement_scenarios`, `suggestions`, `automation_rules`, and the server-side views). Not
-reproduced here — this PRD links, per §12's governance rule against duplicating linked content.
+`retirement_scenarios`, `suggestions`, `automation_rules`, and the server-side views — all land
+under `finance.*`, not `public.*`). Not reproduced here — this PRD links, per §12's governance rule
+against duplicating linked content.
 
-**RPCs:** `delete_my_account()` (security definer — deletes all rows + auth user, ADR-0014 §7).
+**`public` is reserved for cross-app orchestration only** (ADR-0033) — today, the two erasure
+functions below. A future app's own tables get their own schema (`tools.*`, …), never `public.*`
+or a prefix inside `finance`.
+
+**RPCs:** `public.delete_my_account()` (security definer — deletes all rows across every app schema
++ the shared `auth.users` row, ADR-0014 §7).
 
 **Category enums are TEXT, append-only** — never rename a shipped constant.
 

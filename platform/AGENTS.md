@@ -16,8 +16,12 @@ Read this first in every AI/agent session, before touching code.
 - **No code in `platform/`.** Docs and contracts only.
 - **Do not redesign.** Decisions in `DECISIONS.md` are accepted. Propose a new ADR if you think one
   is wrong; do not silently diverge.
-- **Branch rules**: always branch from `develop`. PRs target `develop`. Never push to `main` —
-  that is for Play Store deployment only (future). Tags on `develop` trigger APK + GitHub Release.
+- **Branch rules**: always branch from `develop`. PRs target `develop`. `develop` is DEV
+  (`dhruv-dev`, Vercel Preview, debug APK, ungated). `main` is PROD (`dhruv-prod`, Vercel
+  Production, signed APK → GitHub Release, gated by one approval click on a GitHub issue — native
+  Environment reviewer rules need GitHub Pro on a private repo, unavailable here) — never push to
+  `main` directly; it only receives `develop → main` PRs
+  (ADR-0032, supersedes the former "main = Play Store only" rule).
 - **Module boundaries are enforced** (ArchUnit + Gradle): `feature → feature` forbidden;
   `vault → network/ai/analytics` forbidden; `feature → data` via Repository only; `core` depends on
   nothing internal.

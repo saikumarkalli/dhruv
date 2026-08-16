@@ -140,6 +140,20 @@ Module dependency rules — enforced by **Gradle** + **ArchUnit** tests in CI:
 > source of truth for tracker entities. Auth is Google Sign-In via Credential Manager → Supabase
 > GoTrue. See ADR-0014 in `DECISIONS.md` for full rationale.
 
+### Postgres schema per app (ADR-0032, ADR-0033)
+The Supabase database follows the same module-boundary discipline §4 enforces in Gradle: **one
+Postgres schema per app that owns Supabase-backed data** — `finance.holdings`, `finance.valuations`,
+not `public.holdings`. A future Tools table gets its own `tools` schema, never a `tools_` prefix
+inside `public` or a table dropped into Finance's schema. Vault is excluded by design (ADR-0031 —
+no network dependency at all). `public` is reserved for genuinely cross-app orchestration only —
+today, the two DPDP erasure functions (`public.delete_my_data()`, `public.delete_my_account()`),
+which must stay cross-app because they act on the shared `auth.users` row (ADR-0031's single Dhruv
+ID) and are documented to span every tracker table, not one app's. Schema is authored declaratively
+per-object in `supabase/schemas/<app>/` (`supabase/schemas/public/` for the orchestration
+functions); `supabase db diff` generates the actual executed migration. See `docs/sdd/07-
+deployment-and-ci-cd-sdd.md` §3.3 for the CI pipeline and `supabase/SCHEMA.md` (generated) for the
+current live shape.
+
 ### DhruvEntity (contract in `contracts/DhruvEntity.kt`)
 `id` (UUID), `userId` (`"local"` until Dhruv ID ships), `createdAt`, `updatedAt`, `isSynced`,
 `isDeleted`. Vault entities do **not** implement DhruvEntity. **Tracker entities do not implement
@@ -259,28 +273,42 @@ or tombstone-GC timer.*
 
 ## 11. CI/CD (right-sized for a solo maintainer)
 
-**Branch strategy:**
+**Branch strategy (ADR-0032 — supersedes this section's former "main = Play only" rule):**
 
-| Branch | Purpose | Artifact | Trigger |
-|--------|----------|----------|---------|
-| `develop` | Default. All development, validation, APK distribution | Signed APK → GitHub Release | All PRs target here |
-| `main` | Play Store only (future) | Signed AAB | PR from `develop` only |
-| `feat/*` `fix/*` `chore/*` | Feature work | — | Branch from `develop`, PR back to `develop` |
+`develop` is DEV, `main` is PROD, for every platform (Android, web, database) at once — not just
+Android. The `develop → main` PR is the single promotion gate.
+
+| Branch | Role | Supabase | Web | Android artifact | Trigger |
+|--------|------|----------|-----|-------------------|---------|
+| `develop` | DEV. All development, ungated. | `dhruv-dev` (auto-migrated) | Vercel Preview | debug APK (build artifact only) | All PRs target here |
+| `main` | PROD. The only path that ships. | `dhruv-prod` (migration gated on approval) | Vercel Production | Signed APK → GitHub Release (+ future: AAB → Play, same job) | PR from `develop` only, `environment: prod` |
+| `feat/*` `fix/*` `chore/*` | Feature work | — | — | — | Branch from `develop`, PR back to `develop` |
 
 **PR is the single full-validation pass (ADR-0026).** A `changes` gate job resolves first on every
-PR and push (docs-only changes skip everything below it); the four gates then run **only on the
-PR** — the merge push re-runs nothing, because required up-to-date branches (below) guarantee the
-merged tree is the tree the PR validated:
+PR and push (docs-only changes skip everything below it; ADR-0032 further splits it into
+`android`/`web`/`db` outputs so each platform's gates run only when its own paths changed) — the
+Android gates run **only on the PR**, never re-run on the merge push, because required up-to-date
+branches (below) guarantee the merged tree is the tree the PR validated:
 
-1. **Static analysis** (`pull_request` only) — ktlint, detekt (per-module ruleset), Android lint
+1. **Static analysis** (`pull_request` only, `android` paths) — ktlint, detekt (per-module
+   ruleset), Android lint
 2. **Security scan** (`pull_request` only, incl. docs-only PRs) — GitLeaks. OWASP dependency-check
    runs on a **schedule**, not per-PR — see below.
-3. **Tests + Build** (`pull_request` only) — unit (per module), integration (Room, DataStore),
-   **ArchUnit** (dependency rules), and the debug APK assembled on the same warm daemon
-4. **Release** (push to `develop`/`main` only, after the PR's gates passed) — bumps the version,
-   builds the **signed** release artifact, verifies it, tags and publishes
-   - `develop`: signed **APK** → attached to GitHub Release on version tag
-   - `main`: signed **AAB** → Play Store ready (deployment deferred)
+3. **Tests + Build** (`pull_request` only, `android` paths) — unit (per module), integration (Room,
+   DataStore), **ArchUnit** (dependency rules), and the debug APK assembled on the same warm daemon
+4. **Release** (push to `main` only, gated behind one approval click) — a `release-approval` job
+   opens a GitHub issue and pauses until the maintainer comments approve (native Environment
+   reviewer rules need GitHub Pro on a private repo, unavailable on this tier — ADR-0032's
+   correction), then `release` bumps the version, builds the **signed** release APK against
+   `dhruv-prod` secrets, verifies it (incl. a dev/prod Supabase-ref check, ADR-0032 decision 7),
+   tags and publishes to GitHub Releases. `develop` pushes build/release **nothing** — Android CI
+   feedback on `develop` is the PR's own debug-APK artifact, already available before merge.
+
+Web (`web-ci.yml`, lint/typecheck/test/build) and the database (`supabase-migrate.yml`,
+dev-auto/prod-gated migration apply + a schema/docs equivalence guard) follow the identical
+`develop`=dev / `main`=prod split — see `docs/sdd/07-deployment-and-ci-cd-sdd.md` §3 for both.
+Web deployment itself is **not** a GitHub Actions job — Vercel's own Git integration deploys
+directly from `main`/every-other-branch on Vercel's infrastructure, at zero runner-minute cost.
 
 **OWASP dependency-check** runs in its own `owasp-scheduled.yml` (monthly cron +
 `workflow_dispatch`), off the merge path entirely — it was warn-only with findings masked and cost
@@ -294,26 +322,41 @@ avatar, `Issues: Read & write` only, installed solely on this repo), minting a s
 back to the default `GITHUB_TOKEN` (`github-actions[bot]`) so commenting never blocks merge. It is
 informational only — never added to branch-protection required checks. See ADR-0012.
 
-**Release job** (push to `develop`/`main` only, docs-only pushes skipped by the `changes` gate):
+**Release job** (push to `main` only, `environment: prod`, docs/non-Android pushes skipped by the
+`changes` gate):
 
 - Derives the semver segment from the commit types in the push range (`feat:` → minor,
-  `type!:`/`BREAKING CHANGE` → major, else patch; `main` always patch) via
-  `scripts/ci/detect_bump.sh`, then bumps every active app in `platform/versions.json` and
-  `VERSION_CODE`/`VERSION_NAME` in `gradle.properties` via `scripts/ci/bump_version.py`
-  (ADR-0025). Commits the bump back with `[skip ci]`.
-- Builds the signed release APK at the bumped version, verifies it is signed, within the size
-  budget, contains no `.env.example` placeholder secrets, and within a 20% size-delta budget of
-  the previous release.
+  `type!:`/`BREAKING CHANGE` → major, else patch — `main` is **no longer** forced to always-patch;
+  ADR-0032 amends ADR-0025's original rule, since `develop` no longer releases at all, there is
+  nothing left to double-bump) via `scripts/ci/detect_bump.sh`, then bumps every active app in
+  `platform/versions.json` and `VERSION_CODE`/`VERSION_NAME` in `gradle.properties` via
+  `scripts/ci/bump_version.py` (ADR-0025). Commits the bump back with `[skip ci]`.
+- Builds the signed release APK at the bumped version against `dhruv-prod` secrets, verifies it is
+  signed, within the size budget, contains no `.env.example` placeholder secrets, contains the
+  `dhruv-prod` Supabase ref and not the `dhruv-dev` one, and within a 20% size-delta budget of the
+  previous release.
 - Creates/pushes the `dhruv-<app>-v<version>` tag (idempotent: skips if it already exists) and
   publishes the GitHub Release with the APK attached — done in the same run, no separate
   tag-triggered workflow to coordinate.
+- **Play Store (future, ADR-0032 decision 8):** when connected, the same job's
+  `assembleRelease` → `bundleRelease` swap (promised by ADR-0008) builds the AAB from the same
+  commit/version/keystore/approval, and a `publish-play` step (self-disabling until
+  `PLAY_SERVICE_ACCOUNT_JSON` is set) uploads it — no separate pipeline, no separate branch.
 
 **Required repo setting:** *"Require branches to be up to date before merging"* on `develop` and
 `main` is load-bearing, not optional — it is what makes skipping the merge-push re-run safe
-(ADR-0026).
+(ADR-0026). **Known gap (found 2026-08-16, ADR-0032's correction):** classic branch protection —
+including this setting — needs GitHub Pro/Team for a private repo; this repo is on Free, and the
+GitHub API 403s the request. This setting has therefore likely never actually been enforced since
+ADR-0026 named it load-bearing. It predates and is independent of the dev/prod work; GitHub Pro
+(small monthly cost) is the direct fix, tracked as a follow-up rather than solved here.
+The `prod` release/migrate approval gate is equally load-bearing for `main` — it is the only
+checkpoint between a merge and real user data/a published artifact — and is currently implemented
+as a free GitHub-issue approval gate (`trstringer/manual-approval`, ADR-0032 correction) rather
+than a native Environment reviewer rule, for the same Free-tier reason.
 
-Tags on `develop` → GitHub Release with APK(s).
-Tags on `main` (future) → Play Store internal track.
+Tags on `main` → GitHub Release with APK(s) (and, once connected, Play Store internal track).
+`develop` is never tagged — it has no release job (ADR-0032).
 
 ---
 

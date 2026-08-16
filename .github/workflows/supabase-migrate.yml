@@ -1,0 +1,236 @@
+name: Supabase Migrate
+
+# ADR-0032: one migration set (supabase/migrations/**), applied byte-identical to
+# dhruv-dev then dhruv-prod. dev is auto/ungated (develop). prod is gated behind
+# one approval click before it applies anything. Native GitHub Environment
+# required-reviewer rules need Pro/Team for a private repo (confirmed 422
+# against this repo — see ADR-0032's correction), so the gate here is a free
+# `trstringer/manual-approval` job (`prod-approval`) instead: it opens a GitHub
+# issue and pauses until the maintainer comments approve. The "print the plan
+# before the approve button" requirement (ADR-0032 decision 3) is why this is
+# three jobs, not one: `prod-plan` (no environment, no secrets, pure git/grep —
+# runs and completes immediately) → `prod-approval` (opens the issue, pauses) →
+# `prod-apply` (`environment: prod`, for secret scoping only). The maintainer
+# opens `prod-plan`'s already-finished job summary to see the real SQL before
+# commenting approve on the issue `prod-approval` opened.
+
+on:
+  push:
+    branches: [ develop, main ]
+    paths: [ "supabase/**" ]
+  pull_request:
+    branches: [ develop, main ]
+    paths: [ "supabase/**" ]
+
+concurrency:
+  group: supabase-migrate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ── PR: static verification, no live DB, no secrets that can mutate anything ──
+  verify:
+    name: "Verify · schema equivalence + generated docs/types"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `dev` has no required-reviewer protection rule, so this does not pause —
+    # it only scopes SUPABASE_ACCESS_TOKEN for the (read-only) type-gen step
+    # below. Nothing here can write to any project.
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ADR-0032 decision 4: schemas/ (declarative, current-state) and
+      # migrations/ (executed history) must describe the same database, or the
+      # per-object files are lying documentation. Pure static parse — no DB.
+      - name: Equivalence guard (schemas/ vs migrations/)
+        run: python3 scripts/db/gen_schema_docs.py equiv
+
+      - name: SCHEMA.md freshness
+        run: python3 scripts/db/gen_schema_docs.py docs --check
+
+      # Best-effort: needs live schema introspection (unlike the two checks
+      # above), so it reads the DEV project — never writes to it — via a
+      # read-only `gen types` call. Not fatal on infra hiccups (network, CLI
+      # version drift); missing/expired SUPABASE_ACCESS_TOKEN degrades to a
+      # warning rather than blocking the PR on a secret that isn't set up yet.
+      - name: Set up Supabase CLI
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        uses: supabase/setup-cli@v1
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: web/src/shared/types/database.ts freshness
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DEV_PROJECT_REF: ${{ vars.SUPABASE_DEV_PROJECT_REF }}
+        continue-on-error: true
+        run: |
+          if [ -z "$SUPABASE_DEV_PROJECT_REF" ]; then
+            echo "::warning::SUPABASE_DEV_PROJECT_REF not set — skipping database.ts freshness check."
+            exit 0
+          fi
+          # ADR-0033: finance's tracker tables live in the `finance` Postgres schema, not `public`
+          # — both must be requested or supabase-js's typed client loses type coverage for them.
+          GENERATED=$(supabase gen types typescript --project-id "$SUPABASE_DEV_PROJECT_REF" --schema public,finance)
+          COMMITTED="web/src/shared/types/database.ts"
+          if [ ! -f "$COMMITTED" ]; then
+            echo "::warning::$COMMITTED does not exist yet — skipping (nothing to diff)."
+            exit 0
+          fi
+          if ! diff -q <(printf '%s' "$GENERATED") "$COMMITTED" > /dev/null; then
+            echo "::warning::$COMMITTED is stale vs dhruv-dev's live schema. Regenerate:"
+            echo "::warning::  npx supabase gen types typescript --project-id \$SUPABASE_DEV_PROJECT_REF --schema public,finance > $COMMITTED"
+          else
+            echo "✅ $COMMITTED matches dhruv-dev"
+          fi
+
+  # ── develop push: auto-apply to dhruv-dev, ungated ─────────────────────────
+  apply-dev:
+    name: "Apply · dhruv-dev"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Link dhruv-dev
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      # The CLI's own remote migration-history tracking is the drift guard: if
+      # dhruv-dev's applied history has diverged from this directory's file
+      # list (e.g. a hand-run dashboard statement — README's corollary rule),
+      # `db push` refuses rather than guessing. --dry-run first so the pending
+      # SQL is visible in the log even though this job is ungated.
+      - name: Preview pending migrations
+        run: supabase db push --dry-run --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: Apply migrations to dhruv-dev
+        run: supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+  # ── main push: print the plan (ungated), then apply behind prod approval ──
+  prod-plan:
+    name: "Plan · dhruv-prod (pending migrations + destructive scan)"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List migrations changed by this push + scan for destructive SQL
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            RANGE="${GITHUB_SHA}~1..${GITHUB_SHA}"
+          else
+            RANGE="${BASE}..${GITHUB_SHA}"
+          fi
+
+          CHANGED=$(git diff --name-only --diff-filter=ACMR "$RANGE" -- 'supabase/migrations/*.sql' || true)
+
+          {
+            echo "## Pending migrations for dhruv-prod"
+            echo ""
+            if [ -z "$CHANGED" ]; then
+              echo "_No migration files changed in this push (schemas/ or config-only change)._"
+            else
+              echo '```'
+              printf '%s\n' "$CHANGED"
+              echo '```'
+              echo ""
+              echo "### Destructive-statement scan"
+              echo ""
+              FOUND=0
+              for f in $CHANGED; do
+                MATCHES=$(grep -inE 'drop |drop table|drop column|truncate |alter .* drop|rename ' "$f" || true)
+                if [ -n "$MATCHES" ]; then
+                  FOUND=1
+                  echo "**⚠️ $f**"
+                  echo '```'
+                  printf '%s\n' "$MATCHES"
+                  echo '```'
+                fi
+              done
+              if [ "$FOUND" -eq 0 ]; then
+                echo "No DROP/TRUNCATE/ALTER…DROP/RENAME statements found."
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Plan written to job summary — review it on the Environments approval screen before clicking approve."
+
+  # Native Environment required-reviewer protection needs GitHub Pro/Team for a
+  # private repo (confirmed live: creating it on `prod` 422s on this billing
+  # tier). This substitutes a free approval gate — opens an issue, pauses until
+  # the maintainer comments an approval keyword. prod-plan's summary (above) is
+  # already visible on this same run before the approval decision is made.
+  prod-approval:
+    name: "Approval · dhruv-prod"
+    needs: [ prod-plan ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      issues: write
+    steps:
+      - name: Wait for prod migration approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: saikumarkalli
+          minimum-approvals: 1
+          exclude-workflow-initiator-as-approver: false
+          issue-title: "Prod migration approval — ${{ github.sha }} → dhruv-prod"
+          issue-body: |
+            Push to `main` has pending `supabase/migrations/**` changes for `dhruv-prod`.
+
+            **See the "Plan · dhruv-prod" job on this same run for the pending migration list
+            and destructive-statement scan before approving.**
+
+            Commit: ${{ github.sha }}
+
+            Comment `approved`/`approve`/`lgtm`/`yes` to proceed, or `denied`/`deny`/`no` to stop.
+
+  prod-apply:
+    name: "Apply · dhruv-prod"
+    needs: [ prod-plan, prod-approval ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # `prod` Environment scopes this job's secrets — the approval pause itself
+    # comes from `prod-approval` above (see that job's comment for why).
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Link dhruv-prod
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Preview pending migrations (post-approval sanity check)
+        run: supabase db push --dry-run --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: Apply migrations to dhruv-prod
+        run: supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"

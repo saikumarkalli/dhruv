@@ -359,22 +359,26 @@ Runs on every push to `develop`/`main` and every PR targeting them. Right-sized 
 - **`pr-summary`** (PRs only, `if: always()`) — posts/updates one **sticky** comment summarizing all
   gate results, branded under a dedicated **"Dhruv Bot"** GitHub App (falls back to `github-actions[bot]`
   if the App token can't be minted). Informational only — never a required check ([ADR-0012](platform/DECISIONS.md)).
-- **`release`** (push to `develop`/`main` only, after gates pass) — does the *whole* release in one run
-  so it can't half-complete:
-  1. bump patch version (`MAJOR.MINOR.PATCH+1`) in `platform/versions.json` + `VERSION_CODE`/`VERSION_NAME`
-     in `gradle.properties`;
-  2. build the **signed release APK at the bumped version**, verify it is signed and within the **50 MB**
-     budget;
+- **`release-approval` → `release`** (push to `main` only, after gates pass) — a free GitHub-issue
+  approval gate (native Environment reviewer rules need GitHub Pro on a private repo, unavailable
+  here) pauses until the maintainer comments approve; `release` then does the *whole* release in
+  one run so it can't half-complete:
+  1. derive the semver segment from commit types and bump `platform/versions.json` +
+     `VERSION_CODE`/`VERSION_NAME` in `gradle.properties`;
+  2. build the **signed release APK at the bumped version** against `dhruv-prod` secrets, verify it
+     is signed, within the **50 MB** budget, and targets the `dhruv-prod` Supabase project (not dev);
   3. commit the bump with `[skip ci]`; create + push the idempotent `dhruv-finance-v<version>` tag;
   4. publish a GitHub Release with the APK attached.
 
-**Required secrets:** `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` (signing);
-optional `DHRUV_BOT_APP_ID` / `DHRUV_BOT_PRIVATE_KEY` (PR-summary branding). No secret ever lives in the
-repo or APK.
+**Required secrets:** `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` (signing, in
+the `prod` GitHub Environment); optional `DHRUV_BOT_APP_ID` / `DHRUV_BOT_PRIVATE_KEY` (PR-summary
+branding). No secret ever lives in the repo or APK.
 
-**Branch strategy** ([ADR-0009](platform/DECISIONS.md)): branch from `develop` → PR back to `develop`.
-`develop` builds a signed **APK**; `main` is reserved for a future Play launch (signed **AAB**). Never
-push directly to `main`.
+**Branch strategy** ([ADR-0032](platform/DECISIONS.md), supersedes ADR-0009's branch roles):
+branch from `develop` → PR back to `develop`. `develop` is **DEV** (`dhruv-dev`, Vercel Preview,
+debug APK, ungated). `main` is **PROD** (`dhruv-prod`, Vercel Production, signed APK → GitHub
+Release, and — once connected — AAB → Play) via the `develop → main` PR, gated by one approval
+click on a GitHub issue. Never push directly to `main`.
 
 ---
 

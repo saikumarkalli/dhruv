@@ -18,3 +18,8 @@ export const supabase = createClient<Database>(
   supabaseUrl ?? "",
   supabaseAnonKey ?? "",
 );
+
+// ADR-0033: tracker tables (holdings, valuations, ...) live in the `finance` Postgres schema, not
+// `public`. Query them via `supabase.schema("finance").from("holdings")` — the default `.from()`
+// above only reaches `public`, where the two cross-app erasure RPCs
+// (delete_my_data/delete_my_account) intentionally still live.
