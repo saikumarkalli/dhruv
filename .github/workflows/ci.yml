@@ -701,7 +701,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tagname.outputs.tag }}
-          name: "Dhruv finance ${{ steps.version_json.outputs.version }}"
+          name: "Dhruv finance v${{ steps.version_json.outputs.version }}"
           body_path: release-body.md
           generate_release_notes: true
           files: |
