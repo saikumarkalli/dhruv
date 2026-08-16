@@ -740,3 +740,34 @@ key. `SUPABASE_URL`/`SUPABASE_ANON_KEY` are equally platform-level for the same 
 makes that implicit sharing explicit rather than changing it. Vault, when built, gets no Koin wiring
 to `SessionStore`/`AuthRepository`/`ConsentRepository` at all — its own future ADR (vault key
 derivation, already mostly specified by ADR-0003) stays fully independent of this one.
+
+---
+
+## Doc-retirement note — P1–P6 and R0–R11 specs deleted (2026-08-15)
+
+**Context.** The P1–P6 tracker specs (ADR-0029's context, `2026-07-03-p1-networth-tracker-design.md`
+and siblings) and the R0–R11 refinement specs (ADR-0027's `2026-07-25-dhruvnext-ui-ux-design-
+reference.md` note already flagged the first casualty of this) were superseded in substance by the
+design-v1 FINAL functional spec + implementation plan (2026-08-08) and its 2026-08-09 companions —
+they described a roadmap and screen set the shipped code had already moved past, the same drift
+pattern ADR-0030 diagnosed for the design-system docs. All 26 files (`apps/finance/docs/superpowers/
+specs/2026-07-*` and `2026-07-12-*`, `apps/finance/docs/superpowers/plans/2026-07-*`) were deleted
+on this date, along with root `docs/superpowers/` duplicates of the same material. This register's
+own ADR bodies that cite those paths by name (ADR-0027 context, ADR-0029 context/consequences) are
+**not edited** — append-only, per this file's own rule — the citations remain accurate as a record
+of what was true when each ADR was written.
+**Resolution.** The single forward plan for Finance is now `apps/finance/docs/superpowers/plans/
+2026-08-08-design-v1-final-implementation-plan.md` (Phases 0–7) — see `PLATFORM.md` §13 and
+`docs/PRD.md` §2.3/§8, both updated the same date. Every app's own docs (specs, plans, SDD) now live
+exclusively under that app's own `docs/` folder — nothing Finance-specific remains at the repo-global
+`docs/` or `platform/` level; those two hold only genuinely cross-app material.
+**Why.** Two roadmaps for the same app (P1–P6/R0–R11 vs design-v1) is the multiple-competing-
+authoritative-document failure ADR-0030 already named once; deleting rather than archiving matches
+this repo's stated preference (`docs/PRD.md` §12) for one authoritative index over parallel history,
+and every one of the 26 files' content that still mattered was already carried forward into the
+design-v1 pair or an ADR (ADR-0025/0026 implement the CI-cost spec's decisions; ADR-0029 implements
+the tracker-architecture questions the P1 spec first raised).
+**Consequences.** Any future reference to a `p1-`/`p2-`/`r3-`…`r9-`/`master-roadmap-` path in this
+file or elsewhere is a dangling pointer to a deleted file, not a bug to fix by resurrecting it —
+extend the design-v1 plan instead. `scripts/ci/doc_link_check.py` (added alongside this note) fails
+CI on any new such reference.

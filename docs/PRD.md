@@ -1,7 +1,16 @@
 # Dhruv — Product Requirements Document (PRD)
 
-> **Version:** 1.0 · **Date:** 2026-07-16 · **Author:** Sai Kumar Kalli  
+> **Version:** 1.1 · **Date:** 2026-08-15 · **Author:** Sai Kumar Kalli  
 > **Status:** ACTIVE — this document is the central index. Individual docs are authoritative for their own scope; this PRD links, summarizes, and orders them.
+>
+> **2026-08-15 — roadmap consolidation.** The P1–P6 tracker specs and R0–R11 refinement-phase specs
+> (§2.3/§2.4 in v1.0) were superseded and removed. **The single finalized forward plan is
+> `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`** (Phases
+> 0–7) with its companion functional spec, module-standard/TDD process doc, QA scenario catalog, and
+> surface registries — all four live under `apps/finance/docs/superpowers/`. Reviews/audits scoped to
+> the deleted specs were removed with them. Every app's own docs now live under that app's `docs/`
+> folder exclusively (`apps/finance/docs/`, `web/docs/`) — this root `docs/` and `platform/` hold
+> only genuinely cross-app material, verified by content scan on this date.
 
 ---
 
@@ -74,47 +83,27 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 
 ---
 
-### 2.3 Feature Specifications — Finance Tracker (P1–P6)
+### 2.3 Finance — Forward Plan (the one active roadmap)
 
-| Phase | Document | Scope | Status |
-|---|---|---|---|
-| Overview | [tracker-roadmap-overview.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-tracker-roadmap-overview.md) | Umbrella: vision, locked decisions, shared invariants, home bento evolution | Approved |
-| **P1** | [p1-networth-tracker-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p1-networth-tracker-design.md) | Assets, liabilities, valuations, net worth, Google sign-in, DPDP consent | In progress |
-| P1 gaps | [p1-gap-analysis.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-04-p1-gap-analysis.md) | G1–G20 gap register for P1 | Approved |
-| **P2** | [p2-expenses-budgets-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p2-expenses-budgets-design.md) | Transactions, income/expense, budgets, savings rate, quick-add | Specced |
-| **P3** | [p3-goals-debt-payoff-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p3-goals-debt-payoff-design.md) | Savings goals, debt payoff (avalanche/snowball), EMI math extraction | Specced |
-| **P4** | [p4-insurance-registry-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p4-insurance-registry-design.md) | Policy registry, renewal reminders, WorkManager, POST_NOTIFICATIONS | Specced |
-| **P5** | [p5-retirement-projection-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p5-retirement-projection-design.md) | Corpus projection, gap analysis, BigDecimal engine, scenarios | Specced |
-| **P6** | [p6-automation-groundwork-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-p6-automation-groundwork-design.md) | SMS ingestion, account aggregator eval, auto price feeds, Supabase Realtime | Specced |
-
----
-
-### 2.4 Feature Specifications — Refinement Phases (R0–R11)
-
-| Phase | Document | Scope | Status |
-|---|---|---|---|
-| **Master Roadmap** | [master-roadmap-personal-app.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-12-master-roadmap-personal-app.md) | Unified sequence: R0–R11, gap register (N1–N19), dependency graph | Proposed |
-| R3 Security | [r3-app-security-layer-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r3-app-security-layer-design.md) | App lock, privacy mode, FLAG_SECURE | Specced |
-| R4 Updates | [r4-inapp-update-check-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r4-inapp-update-check-design.md) | In-app update check via GitHub Releases | Specced |
-| R5 ADRs | [r5-accounts-multicurrency-decisions.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r5-accounts-multicurrency-decisions.md) | Accounts entity + multi-currency stance | Specced |
-| R5b Recurring | [r5b-recurring-quickadd-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r5b-recurring-quickadd-design.md) | Recurring transactions + quick-add surfaces | Specced |
-| R6 Alerts | [r6-budget-alerts-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r6-budget-alerts-design.md) | Budget overrun + EMI due notifications | Specced |
-| R7 Reports | [r7-reports-export-import-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r7-reports-export-import-design.md) | Reports module, CSV/PDF export, CSV import | Specced |
-| R8 Polish | [r8-daily-driver-polish-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r8-daily-driver-polish-design.md) | Onboarding, widget, search, trash/undo | Specced |
-| R9 Returns | [r9-investment-returns-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-r9-investment-returns-design.md) | XIRR / absolute returns on valuation history | Specced |
-| Currency | [currency-realtime-rates-daily-notification-design.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-03-currency-realtime-rates-daily-notification-design.md) | Currency accuracy, gold/silver, daily rates notification | Specced |
-
----
-
-### 2.5 Reviews & Audits
+The P1–P6 tracker specs and R0–R11 refinement specs formerly indexed here are **retired** — folded
+into, or superseded by, the design-v1 FINAL functional spec and implementation plan. Do not recreate
+a second roadmap; extend these four documents instead.
 
 | Document | Path | Purpose |
 |---|---|---|
-| Spec Consistency | [spec-consistency-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-spec-consistency-review.md) | Cross-spec findings F1–F16 |
-| Security/Nav Review | [security-navigation-technical-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-security-navigation-technical-review.md) | SEC1–SEC9, NAV1–NAV6 |
-| PO Premium Review | [po-premium-daily-use-review.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-12-po-premium-daily-use-review.md) | PG1–PG10 premium daily-driver bar |
-| Dev Readiness | [dev-readiness-checklist.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-12-dev-readiness-checklist.md) | Plugins, deps, connections, tooling |
-| CI Optimization | [ci-cost-optimization-commit-type-versioning-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-04-ci-cost-optimization-commit-type-versioning-design.md) | CI cost + commit-type versioning |
+| **Functional Spec** | [design-v1-final-functional-spec.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md) | 61 screens (A–G), business rules, flows — the *what* |
+| **Implementation Plan** | [design-v1-final-implementation-plan.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md) | Module topology, Supabase schema, nav rebuild, Phases 0–7 with DoDs — the *how* |
+| **Module Standard & TDD Process** | [module-standard-and-tdd-process.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-09-module-standard-and-tdd-process.md) | Binding on how every phase step is executed (RED/GREEN/REFACTOR, roles) |
+| **QA Test Scenario Catalog** | [qa-test-scenario-catalog.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md) | Every scenario a module must satisfy, written before its code |
+| **Surface Registries** | [finance-surface-registries.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md) | Route/notification/intent/settings registries |
+
+Build state: Phase 0 (shell) and Phase 1 (identity & consent) shipped. Phase 2 (net worth) next —
+see the implementation plan §7 and §10.
+
+**Spec-kit** (2026-08-16 on): each phase above is formalized as a spec-kit feature under
+`apps/finance/specs/NNN-slug/` (spec.md/plan.md/tasks.md) — never repo-root `specs/`, reserved for
+cross-app work. Phase→directory mapping: implementation plan §7's tracking table. Directory
+convention: `.specify/memory/constitution.md` Spec-Kit Directory Rule.
 
 ---
 
@@ -147,8 +136,7 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 | **Changelog** | [CHANGELOG.md](file:///d:/Work/code-base/dhruv/CHANGELOG.md) | Chronological change history |
 | **Finance Features** | [FEATURES.md](file:///d:/Work/code-base/dhruv/apps/finance/FEATURES.md) | Per-module detail (screens, VMs, data deps, flags) |
 | **License** | [LICENSE](file:///d:/Work/code-base/dhruv/LICENSE) | MIT © 2026 Sai Kumar Kalli |
-| **Engineering Playbook** | [tracker-engineering-playbook.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/specs/2026-07-04-tracker-engineering-playbook.md) | Roles matrix, framework-protection rules, deployment pipeline |
-| **P1 Execution Checklist** | [p1-networth-execution-checklist.md](file:///d:/Work/code-base/dhruv/apps/finance/docs/superpowers/plans/2026-07-04-p1-networth-execution-checklist.md) | Task-level checklist for P1 |
+| **CI Optimization** | [ci-cost-optimization-commit-type-versioning-design.md](file:///d:/Work/code-base/dhruv/docs/superpowers/specs/2026-07-04-ci-cost-optimization-commit-type-versioning-design.md) | CI cost + commit-type versioning (implemented, ADR-0025/0026) |
 
 ---
 
@@ -166,23 +154,32 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 
 ### 3.2 Finance App — Feature Matrix
 
-| Feature | Android Module | Web Route | Backend | Status |
-|---|---|---|---|---|
-| **Net Worth Dashboard** | `:feature:networth` | `/finance/dashboard` | Supabase `assets` + `liabilities` + `valuation_entries` | P1 (in progress) |
-| **Expenses & Budgets** | `:feature:expenses` | `/finance/expenses` | Supabase `transactions` + `budgets` | P2 (specced) |
-| **Goals & Debt Payoff** | `:feature:goals` | `/finance/goals` | Supabase `goals` + `goal_links` + `payoff_plans` | P3 (specced) |
-| **Insurance Registry** | `:feature:insurance` | `/finance/insurance` | Supabase `policies` | P4 (specced) |
-| **Retirement Projection** | `:feature:retirement` | `/finance/retirement` | Supabase `retirement_scenarios` | P5 (specced) |
-| Calculator | `:feature:calculator` | `/finance/tools/calculator` | Room (local) | ✅ Built |
-| Loans (EMI) | `:feature:loans` | `/finance/tools/loans` | Pure calc | ✅ Built |
-| Investments (SIP/ROI/FD) | `:feature:investments` | `/finance/tools/investments` | Pure calc | ✅ Built |
-| Tax (GST/Salary) | `:feature:tax` | `/finance/tools/tax` | Pure calc | ✅ Built |
-| Everyday (Interest/Tip) | `:feature:everyday` | `/finance/tools/everyday` | Pure calc | ✅ Built |
-| Currency Converter | `:feature:currency` | `/finance/tools/currency` | Exchange rate API + Room cache | ✅ Built |
-| Unit Converter | `:feature:unit` | `/finance/tools/unit` | Pure calc | ✅ Built |
-| Date Tools | `:feature:date` | `/finance/tools/date` | Pure calc | ⛔ Flag-disabled |
-| Time (Stopwatch/Timer) | `:feature:time` | — (device-specific) | In-memory | ⛔ Flag-disabled |
-| AI Assistant | `:feature:assistant` | `/finance/tools/assistant` | Gemini API (via proxy) | Version-gated ≥1.2.0 |
+Module names and phase numbers below are the design-v1 implementation plan's (§6–§7), the single
+active roadmap — not the retired P1–P6 naming.
+
+| Feature | Android Module | Backend | Status |
+|---|---|---|---|
+| **Onboarding & consent** | `:feature:onboarding` | Supabase GoTrue + `holdings`/`valuations` RLS | ✅ Phase 1 shipped |
+| **Net worth (holdings, valuations, liabilities)** | `:feature:networth` (planned) | Supabase `holdings` + `valuations` + `liabilities_meta` | Phase 2 — next |
+| **Money (ledger, accounts, categories, recurring)** | `:feature:money` (planned) | Supabase `accounts` + `transactions` + `categories` | Phase 3 |
+| **Planning (budgets, goals, debt payoff)** | `:feature:planning` (planned) | Supabase `budgets` + `goals` + `goal_links` | Phase 4 |
+| **Insurance registry** | `:feature:insurance` (planned) | Supabase `policies` + `policy_premiums` | Phase 4 |
+| **Retirement projection** | `:feature:retirement` (planned) | Supabase `retirement_scenarios` | Phase 4 |
+| **Insights (statements, reports, export)** | `:feature:insights` (planned) | Supabase views (`v_cashflow`, `v_pnl`, …) | Phase 5 |
+| **Automation (SMS/AA suggestions, review queue)** | `:feature:automation` (planned) | Supabase `suggestions` + `automation_rules` | Phase 7, flag-off until then |
+| Calculator | `:feature:calculator` | Room (local) | ✅ Built |
+| Loans (EMI) | `:feature:loans` | Pure calc | ✅ Built |
+| Investments (SIP/ROI/FD) | `:feature:investments` | Pure calc | ✅ Built |
+| Tax (GST/Salary) | `:feature:tax` | Pure calc | ✅ Built |
+| Everyday (Interest/Tip) | `:feature:everyday` | Pure calc | ✅ Built |
+| Currency Converter | `:feature:currency` | Exchange rate API + Room cache | ✅ Built |
+| Unit Converter | `:feature:unit` | Pure calc | ✅ Built |
+| Date Tools | `:feature:date` | Pure calc | ⛔ Flag-disabled |
+| Time (Stopwatch/Timer) | `:feature:time` | In-memory | ⛔ Flag-disabled |
+| AI Assistant | `:feature:assistant` | Gemini API (via proxy) | Version-gated ≥1.2.0 |
+
+Web routes for the new tracker modules are not yet defined — the web track picks up each phase's
+routes one phase behind Android (`web-android-parallel-dev` decision), see §2.3.
 
 ---
 
@@ -292,83 +289,52 @@ web/src/
 
 ---
 
-## 7. Supabase Schema (All Phases)
+## 7. Supabase Schema
 
-Source of truth for table DDL: individual phase specs (§2.3). Migration files in `supabase/migrations/`.
+Source of truth is `supabase/migrations/` (currently `0001_init.sql` — `holdings`, `valuations`,
+Phase 1's auth/consent tables) plus the full target schema table in the implementation plan §5.4
+(all Phase 1–7 tables: `accounts`, `transactions`, `categories`, `budgets`, `goals`, `policies`,
+`retirement_scenarios`, `suggestions`, `automation_rules`, and the server-side views). Not
+reproduced here — this PRD links, per §12's governance rule against duplicating linked content.
 
-| Table | Phase | Columns (key) | RLS |
-|---|---|---|---|
-| `assets` | P1 | id, user_id, name, category, notes, currency, is_deleted | own rows |
-| `liabilities` | P1 | id, user_id, name, category, notes, currency, is_deleted | own rows |
-| `valuation_entries` | P1 | id, user_id, parent_id, parent_type, value_paise, recorded_at, is_deleted | own rows |
-| `transactions` | P2 | id, user_id, type (INCOME/EXPENSE), category, amount_paise, occurred_at, account_ref, is_deleted | own rows |
-| `budgets` | P2 | id, user_id, category, month_key, limit_paise, is_deleted | own rows |
-| `goals` | P3 | id, user_id, name, target_paise, target_date, icon, is_deleted | own rows |
-| `goal_links` | P3 | goal_id, asset_id, user_id | own rows |
-| `payoff_plans` | P3 | id, user_id, liability_id, strategy, apr_bps, min_payment_paise, is_deleted | own rows |
-| `policies` | P4 | id, user_id, type, insurer, sum_assured_paise, premium_paise, renewal_date, is_deleted | own rows |
-| `retirement_scenarios` | P5 | id, user_id, name, ages, expense/SIP/rates as _bps, is_deleted | own rows |
-| `calculator_history` | P6+ | id, user_id, expression, result, tags, notes, is_favorite, is_deleted | own rows |
-
-**RPCs:** `delete_my_account()` (security definer — deletes all rows + auth user).
+**RPCs:** `delete_my_account()` (security definer — deletes all rows + auth user, ADR-0014 §7).
 
 **Category enums are TEXT, append-only** — never rename a shipped constant.
 
-**Money is integer paise** (`bigint`) — `BigDecimal` only inside pure calculation engines.
+**Money is integer paise** (`bigint` / Kotlin `Long`) — `BigDecimal` only inside pure calculation
+engines (calculator tools, retirement projection), never on the tracker write path
+(`checkTrackerMoneyPrecision`, implementation plan §8).
 
 ---
 
-## 8. Roadmap — Unified Sequence
+## 8. Roadmap
 
-Merges the Android master roadmap (R0–R11) with the web app phases (W0–W4+).
+**Single active sequence: the design-v1 implementation plan's Phases 0–7** (§2.3). The former
+dual R0–R11 / W0–W5 numbering is retired — it tracked the P1–P6 specs, which no longer exist.
 
-### Phase Dependencies
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | Design-system + 5-tab shell foundation | ✅ shipped |
+| 1 | Identity & consent (Google sign-in, `holdings`/`valuations` schema) | ✅ shipped |
+| 2 | Net worth (C1–C7) + real Home | next |
+| 3 | Money tab — ledger, accounts, categories, recurring (D1–D9) | planned |
+| 4 | Plan live modules — budgets, goals, debt payoff, insurance, retirement (E1–E9) | planned |
+| 5 | Insights — statements, reports, export (F1–F5) | planned |
+| 6 | Search & notifications (B2, B3) | planned |
+| 7 | Automation — SMS/AA suggestions, review queue (G1–G3), flag-off until this checkpoint | planned |
 
-```
-R0 hardening ──┬──────────────────────────────► everything
-R1 CI costs ───┘ (parallel)
-R2 P1 networth ──► R3 security ──► R4 rates+notif+update
-                                      │ (plumbing)
-R2+R4 ──► R5 P2 expenses (+ADRs) ──► R5b recurring/quick-add
-R5 ──► R6a P3 goals ─┐
-R2+R4 ─► R6b P4 ins. ┼──► R7 reports/export ──► R9 P5 retirement(+XIRR)
-R5 ─────────────────┘         │
-R7 ──► R8 polish (onboarding/widget/search/trash)
-R9 ──► R10 P6 automation (+localization ADR) ──► R11 platform expansion
+Full per-phase role tables (SA/QA/Backend/Android/Sec), schema, checkpoints, and risk register:
+implementation plan §7–§9. Web tracks Android one phase behind, schema-sequenced (`web-android-
+parallel-dev` decision) — no separate web phase numbering.
 
-W0 SDDs + scaffold ──► W1 auth+consent ──► W2 dashboard+calculators ──► W3 deploy
-W3 ──► W4 (P2 web) ──► W5 (P3/P4 web) ──► ... (tracks Android phases)
-```
-
-### Sequence Table
-
-| # | Phase | Scope | Android | Web | Spec |
-|---|---|---|---|---|---|
-| R0 | Production hardening | Firebase wiring, Room migration safety, DPDP consent fixes, cert pinning, PRIVACY.md | ✅ | — | PRODUCTION_READINESS.md |
-| R1 | CI cost optimization | Commit-type versioning, path-scoped triggers | ✅ | — | ci-cost-optimization spec |
-| R2 | P1 Net Worth Tracker | Assets, liabilities, valuations, Google sign-in, bento Home | ✅ | — | p1-networth spec |
-| **W0** | **SDD + Web scaffold** | **7 SDD documents, Vite+React project init, Supabase migrations, ADR-0015** | — | **✅** | **This PRD + implementation plan** |
-| **W1** | **Web auth + consent** | **Google OAuth PKCE, consent gate, feature flags, layout** | — | **✅** | **SDD-04, SDD-06** |
-| R3 | Security layer | App lock, privacy mode, FLAG_SECURE | ✅ | — | r3-security spec |
-| **W2** | **Web dashboard + tools** | **Net worth dashboard, CRUD, calculator tools (session history)** | — | **✅** | **SDD-04, SDD-05** |
-| R4 | Currency + updates | Rate accuracy, gold/silver, daily notification, in-app update check | ✅ | ✅ (currency tool) | r4-update spec |
-| **W3** | **Web deploy** | **Responsive, dark/light theme, PWA, Vercel deploy, web-ci.yml** | — | **✅** | **SDD-07** |
-| R5 | P2 Expenses & Budgets | Transactions, budgets, savings rate, quick-add | ✅ | — | p2-expenses spec |
-| R5b | Recurring + quick-add | Recurring rules, app shortcut, review inbox | ✅ | — | r5b-recurring spec |
-| **W4** | **P2 Web** | **Expenses & budgets pages on web** | — | **✅** | **SDD-04** |
-| R6 | P3 Goals + P4 Insurance | Goals, payoff, insurance, budget alerts | ✅ | — | p3/p4 specs |
-| **W5** | **P3/P4 Web** | **Goals, insurance pages on web** | — | **✅** | **SDD-04** |
-| R7 | Reports, export, import | Monthly/yearly reports, CSV/PDF export, CSV import | ✅ | ✅ | r7-reports spec |
-| R8 | Daily-driver polish | Onboarding, widget, search, trash | ✅ | ✅ (search, trash) | r8-polish spec |
-| R9 | P5 Retirement | Projection engine, XIRR returns | ✅ | ✅ | p5-retirement spec |
-| R10 | P6 Automation | SMS ingestion, auto feeds, Realtime, offline cache revisit | ✅ | ✅ (Realtime) | p6-automation spec |
-| R11 | Platform expansion | Tools app, Vault app, Telegram bot, AI proxy | ✅ | ✅ (app modules) | PLATFORM.md |
+Platform-wide items outside this app's phase sequence — Tools app, Vault app, Telegram bot —
+are tracked in [PLATFORM.md](file:///d:/Work/code-base/dhruv/platform/PLATFORM.md) §13, not here.
 
 ---
 
 ## 9. Success Criteria
 
-### V1 (Web Finance — W0 through W3)
+### V1 (Web Finance — scaffold through deploy)
 
 - [ ] Sign in with Google on web → see same data as Android app
 - [ ] Add/edit/delete assets, liabilities, valuations from web
@@ -385,7 +351,7 @@ W3 ──► W4 (P2 web) ──► W5 (P3/P4 web) ──► ... (tracks Android 
 
 ### Ongoing (per tracker phase)
 
-- [ ] Each tracker phase (P2–P6) has web pages shipped within 1 sprint of Android merge
+- [ ] Each tracker phase (2–7, implementation plan §7) has web pages shipped within 1 sprint of Android merge
 - [ ] Paise formatting identical on both platforms (unit tests assert same outputs)
 - [ ] Validation rules identical (same test cases on both platforms)
 - [ ] Feature flag keys match between `dhruv-finance.json` and web implementation
@@ -396,13 +362,13 @@ W3 ──► W4 (P2 web) ──► W5 (P3/P4 web) ──► ... (tracks Android 
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Supabase free-tier limits | Slow fetches as data grows | Paginate/aggregate server-side from R7; P6 revisit |
+| Supabase free-tier limits | Slow fetches as data grows | Server-side views (implementation plan §5.4) aggregate from Phase 2 onward; revisit at Phase 5 |
 | Two platforms diverge on validation/formatting | Users see inconsistent data | SDD-05 is the shared contract; both platforms test against it |
-| CORS misconfiguration | Web app can't reach Supabase | Documented in SDD-02; verified in W1 smoke test |
+| CORS misconfiguration | Web app can't reach Supabase | Documented in SDD-02; verified on the web track's first auth phase |
 | localStorage token theft (XSS) | Session hijack | CSP restricts script sources; React auto-escapes; no dangerouslySetInnerHTML |
-| Web app maintenance burden (solo maintainer) | Feature parity lag | Web phases track Android phases; React Query minimizes boilerplate |
+| Web app maintenance burden (solo maintainer) | Feature parity lag | Web phases track Android phases one behind; React Query minimizes boilerplate |
 | Supabase schema drift | Broken queries on one platform | `supabase/migrations/` is single source of truth; both CIs must pass |
-| Calculator history not synced cross-platform | User confusion | Clear UI message; sync planned for P6+ |
+| Calculator history not synced cross-platform | User confusion | Clear UI message; sync revisited at Phase 7 (automation) |
 
 ---
 
@@ -430,7 +396,7 @@ W3 ──► W4 (P2 web) ──► W5 (P3/P4 web) ──► ... (tracks Android 
 | **This PRD** | Central index only — never duplicates content from linked docs. Updated when new docs are added. |
 | **PLATFORM.md** | Architecture source of truth. If README.md disagrees, PLATFORM.md wins. |
 | **DECISIONS.md** | ADRs are append-only and ACCEPTED. New decisions = new ADR. |
-| **Phase specs** | Authoritative for their own scope. Cross-spec consistency verified in spec-consistency-review.md. |
+| **Finance forward plan** | The design-v1 functional spec + implementation plan (§2.3) are authoritative for Finance's own scope; retired phase specs are not recreated. |
 | **SDDs** | Technical implementation details for the cross-platform architecture. |
 | **Feature flags JSON** | Runtime truth for feature visibility. Same files consumed by both platforms. |
 | **versions.json** | Version matrix — CI-owned for Android; manual for web. |

@@ -9,7 +9,14 @@ functional spec/implementation plan/module standard/QA catalog, this app's own S
 `apps/finance/docs/` (`sdd/`, `superpowers/specs/`, `superpowers/plans/`), not the repo-global
 `docs/`. Start with `apps/finance/docs/superpowers/specs/2026-08-08-design-v1-final-functional-spec.md`
 (current design source of truth) and `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`
-(current build order). `docs/PRD.md` §2 is still the full cross-app index if you need something else.
+(current build order, §7 has the per-phase spec-kit tracking table). `docs/PRD.md` §2 is still the
+full cross-app index if you need something else.
+
+**Spec-kit** (`/speckit-*` skills): this app's formalized specs live in `apps/finance/specs/NNN-slug/`
+(one directory per phase — see the implementation plan §7's tracking table for which phase maps to
+which number), never the repo-root `specs/` (reserved for genuinely cross-app work — see
+`.specify/memory/constitution.md`'s Spec-Kit Directory Rule). Pass
+`SPECIFY_FEATURE_DIRECTORY=apps/finance/specs/<dir>` explicitly when running `/speckit-specify`.
 
 ## Modules
 - `:apps:finance:app` — shell: `MainActivity` (pager + bottom nav), Settings UI, `platformModule`/`appModule` Koin wiring, Converter/Finance hubs.
