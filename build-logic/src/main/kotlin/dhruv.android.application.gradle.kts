@@ -11,11 +11,11 @@ plugins {
 // We configure the JVM target via pluginManager.withPlugin so it runs after Kotlin is ready.
 
 configure<ApplicationExtension> {
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = (project.findProperty("VERSION_CODE") as? String)?.toInt() ?: 1
         versionName = (project.findProperty("VERSION_NAME") as? String) ?: "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
