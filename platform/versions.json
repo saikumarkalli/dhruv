@@ -6,10 +6,10 @@
   },
   "apps": {
     "finance": {
-      "version": "2.0.3",
+      "version": "2.0.4",
       "requiresCore": ">=1.0.0",
       "requiresSettings": ">=1.0.0",
-      "buildNumber": 15
+      "buildNumber": 16
     },
     "tools": {
       "version": "0.0.0",
