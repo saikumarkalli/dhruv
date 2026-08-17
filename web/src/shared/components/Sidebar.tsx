@@ -1,6 +1,18 @@
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import styles from "./Sidebar.module.css";
 import { ThemeToggle } from "./ThemeToggle";
+
+// Matches the [data-theme] convention in shared/styles/tokens.css: absent or "dark" -> dark
+// (tokens.css's own fallback selector is `:root:not([data-theme="light"])`), "light" -> light.
+const THEME_STORAGE_KEY = "dhruv-theme";
+
+function getInitialIsDark(): boolean {
+  if (typeof document === "undefined") return true;
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "light") return false;
+  if (stored === "dark") return true;
+  return document.documentElement.dataset.theme !== "light";
+}
 
 interface NavItem {
   key: string;
@@ -24,6 +36,13 @@ export function Sidebar({
   userEmail,
   onNavigate,
 }: SidebarProps) {
+  const [isDark, setIsDark] = useState(getInitialIsDark);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    window.localStorage.setItem(THEME_STORAGE_KEY, isDark ? "dark" : "light");
+  }, [isDark]);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
@@ -46,7 +65,7 @@ export function Sidebar({
       </nav>
 
       <div className={styles.footer}>
-        <ThemeToggle />
+        <ThemeToggle isDark={isDark} onToggle={() => setIsDark((prev) => !prev)} />
         {userName && (
           <div className={styles.profile}>
             <div className={styles.avatar}>
