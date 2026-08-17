@@ -1,0 +1,424 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# CodeRabbit configuration — Dhruv monorepo (saikumarkalli/dhruv)
+#
+# Surface ownership (see docs/ci/pr-review-bots.md):
+#   CodeRabbit owns  → the PR walkthrough / high-level summary AND inline line-level review.
+#   Qodo Merge owns  → ONE collapsed code-suggestion table (`/improve`). It never describes
+#                      the PR and never posts a second walkthrough.
+#
+# CodeRabbit is ADVISORY. `.github/workflows/ci.yml` is the merge gate — this bot never
+# requests changes and never fails a commit status.
+#
+# Anything already gated by CI is switched OFF below (detekt, ktlint, ESLint, GitLeaks).
+# Duplicate findings are noise, and CI is authoritative.
+
+language: "en-US"
+
+# Max 250 characters (schema-enforced).
+tone_instructions: >-
+  Terse senior-engineer tone. No praise, no restating the diff, no LGTM filler.
+  Flag only real defects or platform-rule breaks; cite the ADR or doc section and
+  give the fix. Skip style nits — ktlint, detekt and ESLint already gate CI.
+
+early_access: false
+enable_free_tier: true
+
+reviews:
+  # `chill` = balanced. `assertive` floods a solo-maintainer repo; `quiet` hides
+  # findings we actually want.
+  profile: chill
+
+  # ADVISORY ONLY. Never block a merge — ci.yml is the gate.
+  request_changes_workflow: false
+  commit_status: false
+  fail_commit_status: false
+
+  # ── Summary / walkthrough: CodeRabbit owns this surface ──────────────────
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  review_details: false
+  review_progress: false
+  review_status: false
+
+  # Filler and length control — the maintainer is solo and abandons chatty bots.
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+
+  # Solo maintainer: there is nobody to suggest as a reviewer, and label churn
+  # on every PR is pure noise.
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
+  # Public-repo spam detection. Off: an auto-applied `slop` label on a
+  # maintainer's own PR is worse than the drive-by PR it exists to catch.
+  slop_detection:
+    enabled: false
+
+  # "Finishing touches" append docstring/test/autofix CTA blocks to every review.
+  # All off — they lengthen every comment and duplicate what TDD + regressionCheck
+  # already cover (CLAUDE.md "Skills", ADR-0013).
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  # Pre-merge checks post their own status block. Off — advisory bot, ci.yml gates.
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
+
+  # Handy when a Claude Code / agent session picks up the review afterwards.
+  enable_prompt_for_ai_agents: true
+
+  auto_review:
+    enabled: true
+    # No review of draft PRs. Mark ready-for-review to trigger the first pass.
+    drafts: false
+    # Re-review on subsequent pushes, then self-pause so a long-running PR does
+    # not generate an unbounded comment stream.
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    # Every PR targets develop; develop -> main is the promotion PR (ADR-0032).
+    base_branches:
+      - "develop"
+      - "main"
+    ignore_title_keywords:
+      - "WIP"
+      - "wip"
+      - "DO NOT MERGE"
+      - "skip ci"
+      - "skip-review"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "github-actions[bot]"
+
+  # ── Path scope ────────────────────────────────────────────────────────────
+  # Includes first, then `!` exclusions. Anything not listed is not reviewed:
+  # docs/, platform/, specs/ and the *.md tree are read as context via
+  # knowledge_base.code_guidelines below, not line-reviewed.
+  path_filters:
+    - "apps/**"
+    - "libs/**"
+    - "build-logic/**"
+    - "web/src/**"
+    - "supabase/**"
+    - "scripts/**"
+    - ".github/workflows/**"
+    # Build output / vendored / binary — never review.
+    - "!**/build/**"
+    - "!build/**"
+    - "!web/node_modules/**"
+    - "!web/dist/**"
+    - "!.gradle/**"
+    - "!.idea/**"
+    - "!**/__pycache__/**"
+    # Vendored third-party agent skills — not this project's code.
+    - "!.claude/skills/**"
+    - "!.claude/worktrees/**"
+    - "!**/*.jar"
+    - "!**/*.ttf"
+    - "!**/*.otf"
+    - "!**/*.png"
+    - "!**/*.webp"
+    - "!**/*.jks"
+    - "!**/*.keystore"
+    - "!gradle/wrapper/**"
+
+  # ── Project-specific review rules ─────────────────────────────────────────
+  # These encode platform/AGENTS.md + platform/PLATFORM.md + platform/DECISIONS.md
+  # + platform/DESIGN-SYSTEM.md. Generic review advice is not wanted here.
+  path_instructions:
+    - path: "**/*.kt"
+      instructions: |
+        Dhruv is Kotlin + Jetpack Compose + Coroutines/Flow + Koin ONLY.
+
+        Flag as WRONG-FOR-THIS-PROJECT (cite the ADR, do not just "suggest"):
+        - Any Hilt or Dagger annotation: @HiltAndroidApp, @AndroidEntryPoint,
+          @HiltViewModel, @Inject, @Provides, @Binds, or a dagger.Module import.
+          DI is Koin only — the Hilt Gradle plugin is incompatible with AGP 9
+          (ADR-0010). The correct shape is a `val <name>Module = module { viewModel { … } }`
+          in the feature's `di/` package, aggregated in CalculatorApplication.
+        - RxJava (io.reactivex.*), LiveData / MutableLiveData / observeAsState in NEW
+          code, or AsyncTask. Use StateFlow / SharedFlow + collectAsStateWithLifecycle.
+        - New `.java` source files anywhere. Kotlin only.
+        - `runBlocking` outside tests, or `GlobalScope`. Use viewModelScope /
+          an injected dispatcher.
+        - Money: tracked amounts are integer paise (`Long`, SQL `bigint`) — never
+          Double or Float (ADR-0014 §4). `BigDecimal` is legal ONLY inside the
+          calculator/converter domains (loans, investments, tax, everyday,
+          currency, unit). A Double/Float carrying rupees or paise is a defect.
+        - Hardcoded secrets, API keys, tokens, Supabase service-role keys, OAuth
+          client ids, or a real JWT — in source, resources, or test fixtures.
+          Secrets ride the `.env` / secrets-plugin mechanism only.
+
+        Every feature ViewModel must: call `crashReporter.setModule("<flagKey>")`
+        in `init`, expose `featureError: StateFlow<Throwable?>` fed by a
+        CoroutineExceptionHandler, and wrap one primary operation in
+        `performanceTracer.trace("<key>_…")`. Flag a new ViewModel missing these.
+
+        Do NOT report ktlint/detekt style issues — CI Gate 1 already fails on them.
+
+    - path: "apps/finance/feature/**/*.kt"
+      instructions: |
+        Feature-module boundary rules (PLATFORM.md §4, enforced by
+        apps/finance/app/src/test/kotlin/com/dhruv/finance/app/arch/DependencyRulesTest.kt):
+
+        - `feature -> feature` is FORBIDDEN. Flag ANY import of
+          `com.dhruv.finance.<otherFeature>.*` from inside a feature module, and
+          any Gradle `implementation(project(":apps:finance:feature:…"))` edge.
+        - `feature -> data` is allowed ONLY through a Repository. Flag any import
+          of a `*Dao` or `*Dto` type from a feature module — go through the
+          repository in `:apps:finance:data`.
+        - A `*Screen` composable must never reference another `*Screen` class.
+          Cross-feature navigation is by `NavTarget` id, resolved by the app
+          shell (libs/core/.../navigation/NavTarget.kt) — never a class reference.
+        - Every NavHost route must be wrapped in `FeatureHost(featureKey,
+          isEnabled = resolver.isEnabled(key), featureError, crashReporter)`.
+          A new route rendered without FeatureHost is a defect — "never a blank
+          crash" (AGENTS.md hard rules).
+        - A new feature needs its flag row in
+          `platform/feature-flags/dhruv-finance.json`. Flag a new route with no
+          flag entry.
+
+    - path: "{apps,libs}/**/*Screen.kt"
+      instructions: |
+        Design-system law (platform/DESIGN-SYSTEM.md §5, §10). Feature modules own
+        screens and flows ONLY — zero feature-local styling.
+
+        Flag inside any screen/composable file:
+        - Raw `.dp` / `.sp` literals. Use DhruvNextSpacing / DhruvNextRadii /
+          DhruvNextType via the resolved responsive tokens.
+        - Raw hex colours, `Color(0xFF…)`, or `MaterialTheme.colorScheme.*` /
+          `MaterialTheme.typography.*`. Read `LocalDhruvNextColors.current` for app
+          colours and `DhruvBrand.*` for theme-invariant brand chrome (ADR-0028).
+        - Hardcoded user-visible string literals. All copy lands in `strings.xml`
+          from birth.
+        - A hand-rolled card / button / segmented control / money renderer when
+          `:libs:core`'s `com.dhruv.core.ui.components` already has one (NxCard,
+          NxButton, NxTextField, SegmentedRow, ListGroup, SectionLabel, MoneyText,
+          StatDeltaChip, EmptyStateCard, RetryErrorCard, …). Extend the existing
+          component; never add a parallel one.
+        - Positive/negative meaning carried by colour alone — a glyph (▲/▼) or
+          label is mandatory.
+        - Money text that can ellipsise. Money wraps or switches to compact
+          (₹4.8L / ₹1.25Cr); it never truncates. Always tabular numerals.
+        - An icon-only action, chart, ring or chip with no `contentDescription`;
+          a touch target under 48dp, or a list/settings row under 56dp.
+        - A missing screen state. Every screen defines its applicable states from
+          the §7 matrix: loading (SkeletonBlock), empty (EmptyStateCard, message +
+          verb CTA), error (RetryErrorCard), offline (OfflineStateCard /
+          OfflineBanner), signed-out (SignedOutCard), not-configured
+          (NotConfiguredCard). These are designed states, not spinners or dialogs.
+
+    - path: "libs/core/**/*.kt"
+      instructions: |
+        `:libs:core` is a pure shared library. It must depend on NOTHING internal —
+        flag any import of `com.dhruv.finance.*`, `com.dhruv.tools.*` or
+        `com.dhruv.vault.*` (PLATFORM.md §4; enforced by DependencyRulesTest).
+        Compose + Material3 only.
+
+        A new public component here becomes part of the design contract: it must be
+        themed purely through `LocalDhruvNextColors` / `DhruvNextType` /
+        `DhruvNextSpacing` / `DhruvNextRadii` / `DhruvBrand`, take no feature types,
+        and carry accessibility metadata. Adding a second component that overlaps an
+        existing one (e.g. a new button next to `NxButton`) is a defect — extend the
+        existing API instead (DESIGN-SYSTEM.md §5.3).
+
+    - path: "apps/finance/data/**/*.kt"
+      instructions: |
+        Tracker data architecture (ADR-0014, ADR-0029, ADR-0033):
+
+        - Tracker entities live in Supabase, NOT Room. They do not implement
+          DhruvEntity and carry no HLC/sync fields.
+        - Amounts are integer paise (`Long`) with no `currency` column — the schema
+          is deliberately currency-less (ADR-0029 decision 4).
+        - `valuations` is APPEND-ONLY. Flag any client-side UPDATE or DELETE against
+          `finance.valuations` (PATCH/DELETE on the PostgREST path, a Retrofit
+          @PATCH/@DELETE for that table, or a supabase-js `.update()`/`.delete()`).
+          Corrections are soft-delete + append, via a security-definer RPC — never a
+          raw client write.
+        - Networking is Retrofit + Moshi + OkHttp only. Flag any new HTTP client,
+          Ktor, or supabase-kt (rejected: AGP 9 compatibility risk, ADR-0029 §1).
+        - Any new PostgREST-capable client MUST route through the consent-gated
+          `dataClient` (ConsentInterceptor + AuthInterceptor). Constructing a second
+          OkHttp/Retrofit instance that can reach `/rest/v1/*` bypasses the DPDP
+          consent gate structurally — treat it as a blocking defect.
+        - Session tokens go in EncryptedDataStore only. Flag plaintext
+          SharedPreferences / DataStore / logging of a token or refresh token.
+        - Certificate pinning stays CA-level (GTS Root R1/R4). Flag a leaf-cert pin.
+        - Phase 2+ calls to `finance.*` tables must set `Accept-Profile` /
+          `Content-Profile: finance`; omitting it silently 404s against `public`.
+
+    - path: "supabase/**/*.sql"
+      instructions: |
+        Database rules (ADR-0032, ADR-0033):
+
+        - Schema is authored declaratively per object under `supabase/schemas/<schema>/`
+          and the migration in `supabase/migrations/` is GENERATED by `supabase db diff`.
+          Flag a hand-edited migration that has no matching `schemas/` change — the CI
+          equivalence guard will fail it.
+        - Migrations are append-only. Flag any edit to an already-applied migration file.
+        - One migration set is applied byte-identical to dhruv-dev and dhruv-prod. Flag
+          ANY environment-conditional SQL (`IF current_database() …`, a prod-only file).
+        - App-owned objects live in a per-app Postgres schema (`finance.*`), never bare
+          `public.*`. `public` is reserved for cross-app orchestration (the two erasure
+          functions). Flag a new table created in `public`.
+        - A new table in a custom schema needs explicit grants
+          (`grant usage on schema … to authenticated;` + per-table grants) AND RLS
+          enabled with a `user_id = auth.uid()` policy. Flag a table with RLS missing,
+          or any grant to `anon` — every tracker call is authenticated.
+        - `finance.valuations` must keep SELECT+INSERT policies only. Flag the addition
+          of an UPDATE or DELETE policy on it — append-only is enforced at the DB layer,
+          not by client convention (ADR-0029 decision 4).
+        - Rows are removed only via `public.delete_my_data()` / `public.delete_my_account()`.
+          Flag a new client-facing DELETE policy on a tracker table.
+        - `seed.sql` is dev-only fixture data and must never be referenced by a migration.
+
+    - path: "web/src/**/*.{ts,tsx}"
+      instructions: |
+        The web SPA is a dumb client over the same Supabase REST API as Android
+        (ADR-0015). React 19 + React Query + vanilla CSS custom properties.
+
+        - Styling reads the token custom properties in
+          `web/src/shared/styles/tokens.css` (`--c-*`, `--radius-*`, `--font-*`).
+          Flag raw hex colours, raw px spacing, and the legacy `--color-*` layer,
+          which is being retired (DESIGN-SYSTEM.md §12.1).
+        - Any change to a token VALUE must land on the Android side in the same
+          change set — `libs/core/.../ui/theme/DhruvNextTokens.kt`. Nothing catches
+          drift automatically; flag a one-sided token change explicitly.
+        - Money is integer paise in transit; format for display, never store a
+          float. No `parseFloat` on an amount.
+        - `finance.*` queries need `.schema('finance')` — without it supabase-js
+          silently 404s against `public` (ADR-0033).
+        - Flag any hardcoded Supabase URL, anon key or OAuth client id. They come
+          from `import.meta.env.VITE_*`, configured per-environment in Vercel.
+        - Flag `any`, non-null `!` on API data, and a missing loading/empty/error
+          state — the §7 screen-state matrix is app-wide law, web included.
+        - Do NOT report ESLint findings — `web-ci.yml` runs `npm run lint` as a gate.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        CI cost and safety model (ADR-0026, ADR-0032):
+
+        - The PR is the ONLY full-validation pass. Flag a job that re-runs
+          static-analysis / tests / regressionCheck on a `push` event.
+        - Standing budgets: <= 90 billed minutes per merged PR, <= +4 min on
+          regressionCheck per new module. Flag a new always-on job with no
+          `changes`-gate condition and no timeout-minutes.
+        - Path skipping is done with a job-level `if:` on the `changes` gate, never
+          trigger-level `paths`/`paths-ignore` — a filtered trigger never creates the
+          check run and leaves a required check pending forever.
+        - Third-party actions must be pinned to a full commit SHA, not a tag.
+        - Flag any secret echoed to stdout, interpolated into a `run:` script body
+          (use `env:`), or exposed to a `pull_request_target` job.
+        - `main` is the only branch that releases or touches prod. Flag a new job
+          that pushes to prod / builds a signed artifact without `environment: prod`
+          and the preceding manual-approval gate.
+        - Flag a `permissions:` block wider than the job needs.
+
+    - path: "scripts/**/*.py"
+      instructions: |
+        CI helper scripts run on the runner's preinstalled interpreter with the
+        standard library only — flag any third-party import (requests, yaml, tomlkit).
+        They must stay testable locally: a `--dry-run` or `--check` mode and a matching
+        `test_*.py` beside them is the established pattern (bump_version.py,
+        sync_versions.py, regression_summary.py). Flag a non-zero-exit path that
+        prints nothing actionable, and any credential read from a hardcoded default.
+
+  # ── Linters ───────────────────────────────────────────────────────────────
+  # OFF = CI already gates it, and a duplicate comment is noise. CI is authoritative.
+  tools:
+    detekt:
+      enabled: false          # ci.yml Gate 1 · `./gradlew detekt`
+    eslint:
+      enabled: false          # web-ci.yml · `npm run lint`
+    biome:
+      enabled: false          # duplicate JS/TS linter
+    oxc:
+      enabled: false          # duplicate JS/TS linter
+    gitleaks:
+      enabled: false          # ci.yml Gate 2 · blocking secret scan
+    trufflehog:
+      enabled: false          # duplicate secret scan
+    github-checks:
+      enabled: false          # the Dhruv CI Bot sticky comment already reports gates
+    markdownlint:
+      enabled: false          # docs-heavy repo; prose nits are noise
+    languagetool:
+      enabled: false          # prose nits
+    yamllint:
+      enabled: false          # actionlint below covers workflows without the style noise
+    sqlfluff:
+      enabled: false          # SQL style noise; squawk (below) covers real migration risk
+
+    # ON = covers something CI does not.
+    actionlint:
+      enabled: true           # workflow correctness — nothing in CI lints workflows
+    zizmor:
+      enabled: true           # workflow security (injection, over-broad permissions)
+    shellcheck:
+      enabled: true           # scripts/ci/detect_bump.sh + workflow run: blocks
+    ruff:
+      enabled: true           # scripts/ci/*.py, scripts/db/*.py
+    semgrep:
+      enabled: true           # security patterns beyond secret scanning
+    squawk:
+      enabled: true           # dangerous Postgres migrations
+    osvScanner:
+      enabled: true           # OWASP dependency-check is monthly + warn-only (ADR-0026)
+
+chat:
+  art: false
+  auto_reply: true
+  # Public repo: let drive-by contributors talk to the bot on their own PR.
+  allow_non_org_members: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  # Feed CodeRabbit the platform contracts so reviews cite the real rules rather
+  # than generic best practice. These files are context, not review targets —
+  # they are deliberately absent from path_filters above.
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "CONTRIBUTING.md"
+      - "platform/AGENTS.md"
+      - "platform/PLATFORM.md"
+      - "platform/DECISIONS.md"
+      - "platform/DESIGN-SYSTEM.md"
+  # Public repo: keep every learning/issue/PR association scoped to this repo.
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local

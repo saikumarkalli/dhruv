@@ -1,0 +1,218 @@
+# Qodo Merge (PR-Agent) configuration — Dhruv monorepo (saikumarkalli/dhruv)
+#
+# Installed as the HOSTED Qodo Merge GitHub App. There is deliberately NO
+# .github/workflows/qodo-pr-agent.yml: the self-hosted GitHub Action needs a
+# maintainer-supplied LLM key (real per-PR cost) and burns runner minutes against
+# ADR-0026's <= 90 billed-min/PR budget. The hosted App costs neither.
+# See docs/ci/pr-review-bots.md.
+#
+# Surface ownership (do not let the two bots overlap):
+#   CodeRabbit owns  → PR walkthrough / high-level summary + inline line-level review.
+#   Qodo Merge owns  → ONE collapsed code-suggestion table (`/improve`), updated in
+#                      place. `/describe` and `/review` are NOT run automatically, so
+#                      there is no second description rewrite and no second walkthrough.
+#
+# Qodo is ADVISORY. `.github/workflows/ci.yml` is the merge gate — nothing here
+# approves, labels, or blocks a PR.
+#
+# Draft PRs are skipped by the App itself (hardcoded in the GitHub webhook handler,
+# not configurable) — mark ready-for-review to trigger the first pass.
+
+[config]
+publish_output = true
+publish_output_progress = false
+verbosity_level = 0
+response_language = "en-US"
+
+# Never auto-commit or auto-apply anything. Suggestions are read-only advice.
+persistent_inline_comments = false
+
+# Skip PRs that are explicitly not for review.
+ignore_pr_title = ["^\\[Auto\\]", "^Auto", "^WIP", "^wip", "^\\[WIP\\]", "\\[skip ci\\]"]
+ignore_pr_labels = ["do-not-merge", "no-ai-review", "documentation"]
+ignore_pr_authors = ["dependabot[bot]", "github-actions[bot]"]
+
+# REVIEW SCOPE. Everything outside these folders is not analysed: docs/, platform/,
+# specs/, Dhruv_Master_Brand_Kit/ and the root *.md tree are documentation, and the
+# ArchUnit/ADR rules that matter are restated in the extra_instructions below.
+# NOTE: if Qodo ever stops commenting entirely, this allowlist is the first key to check.
+allow_only_specific_folders = [
+  'apps',
+  'libs',
+  'build-logic',
+  'web/src',
+  'supabase',
+  'scripts',
+  '.github/workflows',
+]
+
+# ── File exclusions ─────────────────────────────────────────────────────────
+# Build output, vendored trees and binaries. `glob` matches the file path;
+# `regex` is used for directory trees because it is unambiguous about separators.
+[ignore]
+glob = [
+  '*.jar',
+  '*.ttf',
+  '*.otf',
+  '*.png',
+  '*.webp',
+  '*.jks',
+  '*.keystore',
+  '*.lockb',
+]
+regex = [
+  '^build/.*$',
+  '^.*/build/.*$',
+  '^web/node_modules/.*$',
+  '^web/dist/.*$',
+  '^\.gradle/.*$',
+  '^\.idea/.*$',
+  '^.*/__pycache__/.*$',
+  '^\.claude/skills/.*$',
+  '^\.claude/worktrees/.*$',
+  '^gradle/wrapper/.*$',
+  '^web/package-lock\.json$',
+]
+
+# ── /improve — the ONE surface Qodo owns ────────────────────────────────────
+[pr_code_suggestions]
+# false => a single collapsed suggestion table comment, NOT inline comments.
+# This is what keeps Qodo from colliding with CodeRabbit's inline review.
+commitable_code_suggestions = false
+# Update the same comment on every push instead of adding a new one per push.
+persistent_comment = true
+# Only real problems — no "consider renaming", no stylistic preference.
+focus_only_on_problems = true
+# Drop low-confidence suggestions. The maintainer is solo; a long low-value list
+# is how this bot gets muted.
+suggestions_score_threshold = 6
+publish_output_no_suggestions = false
+enable_help_text = false
+enable_chat_text = false
+# No self-review checkbox flow and no auto-approve — ci.yml is the gate.
+demand_code_suggestions_self_review = false
+approve_pr_on_self_review = false
+
+extra_instructions = """
+This is the Dhruv Android monorepo: Kotlin + Jetpack Compose (:apps, :libs,
+:build-logic), a Vite/React/TypeScript SPA (web/), Supabase SQL (supabase/), and
+stdlib-only Python CI helpers (scripts/). Rules below come from platform/AGENTS.md,
+platform/PLATFORM.md, platform/DECISIONS.md and platform/DESIGN-SYSTEM.md. They
+override generic best practice — a suggestion that contradicts one of them is wrong.
+
+DO NOT SUGGEST (already gated by .github/workflows/ci.yml — duplicates are noise):
+- ktlint / detekt / Android-lint formatting or style fixes (Gate 1).
+- ESLint findings in web/ (web-ci.yml runs `npm run lint`).
+- Hardcoded-secret detection (Gate 2 runs GitLeaks and blocks the merge).
+- "Add tests" as a generic remark. regressionCheck + a JaCoCo floor already gate
+  coverage (ADR-0013). Only call out a specific untested branch that can break.
+- Migrating to Hilt/Dagger, Ktor, supabase-kt, RxJava, LiveData, Kover, or product
+  flavors. Each was explicitly rejected by an ADR (0010, 0013, 0014, 0029, 0032).
+
+DO SUGGEST — architecture and correctness defects:
+1. Module boundaries (PLATFORM.md §4, ArchUnit DependencyRulesTest):
+   feature -> feature imports FORBIDDEN; vault -> network/ai/analytics FORBIDDEN;
+   feature -> data only through a Repository (never a *Dao or *Dto import);
+   :libs:core must import nothing from com.dhruv.finance/tools/vault.
+2. DI is KOIN ONLY (ADR-0010). Flag @HiltAndroidApp, @AndroidEntryPoint,
+   @HiltViewModel, @Inject, @Provides, @Binds, or a dagger.* import as wrong for
+   this project — the AGP 9 toolchain cannot build Hilt.
+3. Kotlin + Compose + Coroutines/Flow only. Flag new .java files, RxJava, LiveData
+   in new code, GlobalScope, and runBlocking outside tests.
+4. Every NavHost feature route must be wrapped in FeatureHost(...) with a fallback
+   card — a route that can render blank on error is a defect. A new feature also
+   needs its flag row in platform/feature-flags/dhruv-finance.json.
+5. Money: tracked amounts are integer paise (Long / SQL bigint) — never Double or
+   Float (ADR-0014 §4). BigDecimal is allowed ONLY in the calculator/converter
+   domains. A float carrying rupees is a correctness bug, not a nit.
+6. supabase `finance.valuations` is APPEND-ONLY (ADR-0029). Flag any client-side
+   UPDATE/DELETE against it — Retrofit @PATCH/@DELETE, a PostgREST PATCH/DELETE
+   path, supabase-js .update()/.delete(), or a new UPDATE/DELETE RLS policy.
+   Corrections are soft-delete + append via a security-definer RPC.
+7. DPDP (ADR-0005, ADR-0029): any NEW code path that sends data off-device must sit
+   behind the persisted, revocable consent gate. Concretely, a PostgREST-capable
+   HTTP client that does not go through ConsentInterceptor + AuthInterceptor is a
+   structural consent bypass — report it as high severity. Session tokens live in
+   EncryptedDataStore only, never plaintext prefs and never in a log line.
+8. Design system (DESIGN-SYSTEM.md §5, §10): inside screen/composable files flag raw
+   .dp/.sp literals, raw hex or Color(0xFF..), MaterialTheme.colorScheme/typography,
+   hardcoded user-visible strings (must be strings.xml), a hand-rolled component that
+   duplicates one in com.dhruv.core.ui.components, colour-only positive/negative
+   meaning, ellipsised money, a missing contentDescription, and a screen missing its
+   loading/empty/error/offline/signed-out states.
+9. supabase/: per-app schema (finance.*, never bare public.*), RLS enabled with a
+   user_id = auth.uid() policy, explicit grants to `authenticated` and never `anon`,
+   no environment-conditional SQL, and no edit to an already-applied migration.
+10. .github/workflows/: third-party actions pinned to a full commit SHA; secrets via
+    `env:` not interpolated into a run: body; least-privilege `permissions:`; no job
+    re-running the PR gates on a push event (ADR-0026).
+11. scripts/: Python CI helpers are standard-library only — flag a third-party import.
+
+Style: one short paragraph per suggestion, name the file and the rule/ADR it breaks,
+give the concrete fix. No praise, no summary of the diff, no restating what the code
+already says.
+"""
+
+# ── /review — NOT run automatically (CodeRabbit owns the review surface) ────
+# Configured only so a manually-typed `/review` behaves sanely and stays advisory.
+[pr_reviewer]
+persistent_comment = true
+num_max_findings = 3
+require_security_review = true
+require_score_review = false
+require_tests_review = false
+require_estimate_effort_to_review = false
+require_can_be_split_review = false
+require_ticket_analysis_review = false
+require_todo_scan = false
+# No labels applied to the PR by this bot.
+enable_review_labels_security = false
+enable_review_labels_effort = false
+enable_intro_text = false
+enable_help_text = false
+publish_output_no_suggestions = false
+extra_instructions = """
+Same Dhruv rules as [pr_code_suggestions].extra_instructions above. Highest-value
+findings only: module-boundary breaks (feature->feature, feature->Dao/Dto,
+core->app), Hilt/Dagger usage (Koin only, ADR-0010), float money instead of integer
+paise (ADR-0014), a client-side write to append-only finance.valuations (ADR-0029),
+an off-device data path with no consent gate (DPDP), a route not wrapped in
+FeatureHost, and secrets in code or fixtures. Do not repeat ktlint/detekt/ESLint/
+GitLeaks findings — CI already gates those.
+"""
+
+# ── /describe — NOT run automatically (CodeRabbit owns the summary surface) ──
+# Configured only so a manually-typed `/describe` never rewrites the PR title and
+# never applies labels.
+[pr_description]
+generate_ai_title = false
+publish_labels = false
+add_original_user_description = true
+use_bullet_points = true
+enable_pr_diagram = false
+enable_help_text = false
+enable_help_comment = false
+include_generated_by_header = false
+# Post as a comment rather than overwriting the maintainer's PR body.
+publish_description_as_comment = true
+publish_description_as_comment_persistent = true
+
+# ── Automation triggers ─────────────────────────────────────────────────────
+[github_app]
+# On PR open / reopen / ready-for-review: suggestions only. No /describe, no /review.
+handle_pr_actions = ['opened', 'reopened', 'ready_for_review']
+pr_commands = [
+  "/improve",
+]
+
+# Re-run on subsequent pushes, updating the same comment in place
+# (persistent_comment = true above).
+handle_push_trigger = true
+push_commands = [
+  "/improve",
+]
+push_trigger_ignore_bot_commits = true
+push_trigger_ignore_merge_commits = true
+push_trigger_wait_for_initial_review = true
+push_trigger_pending_tasks_backlog = true
+push_trigger_pending_tasks_ttl = 300

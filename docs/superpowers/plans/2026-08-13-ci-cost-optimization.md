@@ -428,8 +428,8 @@ name: OWASP Weekly
 # update each time — pure cost on the merge path for zero gate value.
 #
 # Cadence is MONTHLY, not weekly, and that is deliberate: while
-# `continue-on-error: true` masks every finding (the dependency-check plugin is
-# still unwired — PRODUCTION_READINESS T11/M1), this scan produces no signal
+# `continue-on-error: true` masks every finding (the `org.owasp.dependencycheck`
+# plugin is still unwired in `build-logic`), this scan produces no signal
 # anyone acts on. A weekly masked scan is 52 × 30 min/year of pure cost. Monthly
 # keeps the artifact available for manual review at ~1/4 the spend. Move it back
 # to weekly in the same change that flips continue-on-error to false.
@@ -477,8 +477,8 @@ jobs:
           restore-keys: |
             nvd-
 
-      # Still warn-only until the dependency-check plugin is wired in build-logic
-      # (PRODUCTION_READINESS.md M1 / T11). Flip continue-on-error to false then.
+      # Still warn-only until the dependency-check plugin is wired in build-logic.
+      # Flip continue-on-error to false then.
       - name: OWASP Dependency Check
         run: ./gradlew dependencyCheckAnalyze
         continue-on-error: true
@@ -2683,8 +2683,8 @@ Audited 2026-08-14 alongside the cost work. Recorded here so they are visible de
 
 | # | Gap | Evidence | Why not here |
 |---|---|---|---|
-| H1 | **OWASP is a fake gate.** `continue-on-error: true` and the `org.owasp.dependencycheck` plugin is unwired in `build-logic`, so findings are masked and `pr-summary` always shows ✅ | ci.yml `owasp` job; ADR-0012's own consequences admit it | Already tracked as PRODUCTION_READINESS M1/T11. Task 3 moves it off the merge path so it stops costing money while it stays useless; wiring the plugin is that ticket's job. Task 17 (Dependabot) is the partial mitigation — updating dependencies beats scanning ones nobody updates. |
-| H2 | **No post-release signal.** Firebase entirely unwired — an APK ships and returns zero crash or performance data | `libs/core/.../CrashReporter.kt:32-34` defensively no-ops; no `google-services.json`, no plugin | PRODUCTION_READINESS H1/T7. Needs a DPDP consent gate for Crashlytics collection, which makes it app work, not pipeline work. |
+| H1 | **OWASP is a fake gate.** `continue-on-error: true` and the `org.owasp.dependencycheck` plugin is unwired in `build-logic`, so findings are masked and `pr-summary` always shows ✅ | ci.yml `owasp` job; ADR-0012's own consequences admit it | Already tracked in the Finance production-readiness backlog. Task 3 moves it off the merge path so it stops costing money while it stays useless; wiring the plugin is that ticket's job. Task 17 (Dependabot) is the partial mitigation — updating dependencies beats scanning ones nobody updates. |
+| H2 | **No post-release signal.** Firebase entirely unwired — an APK ships and returns zero crash or performance data | `libs/core/.../CrashReporter.kt:32-34` defensively no-ops; no `google-services.json`, no plugin | Tracked in the Finance production-readiness backlog. Needs a DPDP consent gate for Crashlytics collection, which makes it app work, not pipeline work. |
 | H4 | **No rollback path.** `release.yml` is a `workflow_dispatch` republish tool; a bad APK on GitHub Releases has no documented un-publish or roll-forward procedure, and users install directly | release.yml | Needs a decision (delete the release? publish a `+1` patch? mark pre-release?) before it can be automated. Worth an ADR, not a script. |
 | M2 | **Supabase migrations are never validated in CI.** `supabase/migrations/0001_init.sql` is applied by hand; nothing catches drift between the file and the live project | only `0001_init.sql` + README under `supabase/` | Task 15's local-first workflow makes `supabase db reset` routine, which is the cheap 80 %. A CI job needs a throwaway Postgres service container — worth doing once a second migration exists. |
 | M3 | **Coverage floor is 9 %** — a non-regression ratchet by design (ADR-0013), not a gate that catches much | `build.gradle.kts:45` `globalLineFloor = "0.09"` | Deliberate. Raising it is the `dhruv-coverage` agent's job, ramped at plan checkpoints, never ahead of landed tests. |
@@ -2699,5 +2699,5 @@ Audited 2026-08-14 alongside the cost work. Recorded here so they are visible de
 
 1. **`feat/networth-tracker` double-bump (spec §7.2).** That branch carries a manual `1.3.0` edit in `platform/versions.json`. If it merges after this change with `feat:` commits, CI bumps again. **Revert the manual edit in that branch before merging it.** The same applies to any other open branch holding a hand-edited version.
 2. **`pr-summary` stays informational-only** (ADR-0012) — `continue-on-error: true` makes it always report success, so requiring it as a status check would be purely cosmetic.
-3. **OWASP findings are still masked** (`continue-on-error: true`) until the `org.owasp.dependencycheck` plugin is wired in `build-logic` — tracked separately as PRODUCTION_READINESS T11/M1. Moving it to a monthly schedule loses no gate value it currently has, but does not fix it either.
+3. **OWASP findings are still masked** (`continue-on-error: true`) until the `org.owasp.dependencycheck` plugin is wired in `build-logic` — tracked separately in the Finance production-readiness backlog. Moving it to a monthly schedule loses no gate value it currently has, but does not fix it either.
 4. **Concurrency blocks are unchanged**: PR runs still cancel superseded runs; pushes to protected branches are never cancelled.

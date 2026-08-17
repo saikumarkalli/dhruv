@@ -8,20 +8,24 @@
     (AGENTS.md branch rules, ADR-0032 decision 1). This script is the *real*
     enforcement of that rule.
 
-    IT DOES NOT WORK ON GITHUB FREE. Repository rulesets and classic branch
-    protection are both Pro/Team features for a PRIVATE repo. Verified live
-    against this repo:
+    Repository rulesets and classic branch protection are Pro/Team features for a
+    PRIVATE repo, and are FREE on a public one. GitHub's own refusal named both
+    exits — verified live against this repo while it was still private:
 
         GET /repos/saikumarkalli/dhruv/rulesets
           403 "Upgrade to GitHub Pro or make this repository public to enable this feature."
 
-    Until that upgrade the rule is enforced by two unpaid substitutes, both of
-    which stay useful afterwards but stop being load-bearing:
+    ADR-0034 took the second exit: the repository is public, so this script now
+    works without any plan upgrade. Run it once after the visibility flip.
+
+    Two unpaid substitutes predate it and are deliberately KEPT, since a local
+    check that fails in two seconds still beats a server-side rejection after a
+    push. They are no longer load-bearing:
       * scripts/hooks/pre-push          - preventive, refuses the push locally
       * .github/workflows/branch-guard.yml - detective, red-X's a bypassed push
 
-    Run this script the day the plan is upgraded. It will tell you plainly if
-    the tier still refuses.
+    If the API still refuses, this script will say so plainly rather than
+    reporting a success it did not achieve.
 
 .PARAMETER Repo
     owner/name. Defaults to the repo the current directory is a clone of.
@@ -74,10 +78,15 @@ catch {
     Write-Host ""
     Write-Host "BLOCKED - the rulesets API refused." -ForegroundColor Yellow
     Write-Host "  A PRIVATE repo on GitHub Free cannot use rulesets or classic branch"
-    Write-Host "  protection. Either:"
-    Write-Host "    a) upgrade this account to GitHub Pro, then re-run this script; or"
-    Write-Host "    b) keep the free substitutes (scripts/hooks/pre-push +"
+    Write-Host "  protection. Three exits, cheapest first:"
+    Write-Host "    a) make the repository PUBLIC - rulesets are free there, and this is"
+    Write-Host "       what ADR-0034 chose. Then re-run this script."
+    Write-Host "    b) upgrade this account to GitHub Pro, then re-run this script; or"
+    Write-Host "    c) keep the free substitutes (scripts/hooks/pre-push +"
     Write-Host "       .github/workflows/branch-guard.yml), which are already active."
+    Write-Host ""
+    Write-Host "  If you expected (a) to already be done, the visibility flip has not"
+    Write-Host "  landed yet - check: gh api repos/$Repo --jq .visibility"
     Write-Host ""
     Write-Host "  Raw response:"
     gh api "repos/$Repo/rulesets" 2>&1 | ForEach-Object { Write-Host "    $_" }
@@ -206,8 +215,11 @@ Write-Host ""
 Write-Host "Done. Verify at: https://github.com/$Repo/settings/rules"
 Write-Host ""
 Write-Host "Follow-ups now that protection is real:"
-Write-Host "  1. Delete .github/workflows/branch-guard.yml - GitHub enforces this now."
+Write-Host "  1. branch-guard.yml is now redundant as enforcement, but ADR-0034 keeps it"
+Write-Host "     deliberately - a detective check costs nothing and covers the window if a"
+Write-Host "     ruleset is ever disabled. Delete it only as a conscious decision."
 Write-Host "  2. The pre-push hook can stay; it just fails faster than the server does."
-Write-Host "  3. GitHub Pro also unlocks the `prod` Environment's required-reviewer rule."
-Write-Host "     Once set, the trstringer/manual-approval jobs in ci.yml and"
-Write-Host "     supabase-migrate.yml become redundant (ADR-0032 correction, 2026-08-16)."
+Write-Host "  3. A public repo also unlocks the ``prod`` Environment's required-reviewer rule."
+Write-Host "     Set it, then the trstringer/manual-approval jobs in ci.yml and"
+Write-Host "     supabase-migrate.yml become redundant (ADR-0032 correction; ADR-0034 d.2"
+Write-Host "     keeps both for now rather than removing them in the same change)."

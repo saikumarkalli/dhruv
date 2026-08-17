@@ -58,7 +58,7 @@ Every document in the ecosystem, grouped by domain. **This section IS the centra
 | **Version Matrix** | [versions.json](file:///d:/Work/code-base/dhruv/platform/versions.json) | Per-app versions + compatibility |
 | **Feature Flags (Finance)** | [dhruv-finance.json](file:///d:/Work/code-base/dhruv/platform/feature-flags/dhruv-finance.json) | 11 feature flags with enabled/minVersion/requiresConsent |
 | **Feature Flags (Tools)** | [dhruv-tools.json](file:///d:/Work/code-base/dhruv/platform/feature-flags/dhruv-tools.json) | 6 feature flags (planned app) |
-| **Production Readiness** | [PRODUCTION_READINESS.md](file:///d:/Work/code-base/dhruv/apps/finance/PRODUCTION_READINESS.md) | Audit findings + remediation plan |
+| **Production Readiness** | *maintained privately — not part of this repo* | Audit findings + remediation plan for `:apps:finance` |
 | **Runbook** | [RUNBOOK.md](file:///d:/Work/code-base/dhruv/platform/RUNBOOK.md) | Operational procedures |
 
 ---

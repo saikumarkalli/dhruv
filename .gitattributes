@@ -2,3 +2,10 @@
 # (the interpreter chokes on a `#!/bin/sh\r` shebang). Overrides core.autocrlf.
 scripts/hooks/* text eol=lf
 *.sh           text eol=lf
+
+# Vendored third-party license texts are copied byte-for-byte from upstream (ADR-0034
+# decision 5). `core.autocrlf=true` is set on the maintainer's machine and would silently
+# rewrite their line endings on commit — Space Grotesk's upstream OFL.txt is CRLF, the other
+# two are LF. `-text` disables newline normalization entirely so the bytes we redistribute
+# stay identical to the bytes the font authors published.
+third_party/**  -text
