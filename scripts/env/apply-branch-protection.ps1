@@ -101,11 +101,19 @@ catch {
 # `changes` gate, and a skipped job counts as passing - which is exactly why
 # ADR-0026 uses a job-level `if:` instead of `paths-ignore`.
 
+# The gate names contain U+00B7 MIDDLE DOT. Do NOT paste the literal character here.
+# Windows PowerShell 5.1 reads a BOM-less .ps1 as ANSI (cp1252), so the UTF-8 bytes
+# C2 B7 are decoded as the two characters "Â·" and this script then writes a
+# required-status-check name that can never match a real check — which silently BRICKS
+# merges on both protected branches (every PR waits forever on a check that will never
+# report). Observed live on the first successful run, 2026-08-18. Building the character
+# from its code point keeps this file pure ASCII and encoding-independent.
+$dot = [char]0x00B7
 $requiredChecks = @(
-    'Gate 1 · Static Analysis',
-    'Gate 2 · Security',
-    'Gate 3+4 · Tests + ArchUnit + Coverage + Build',
-    'Web · Lint + Typecheck + Test + Build'
+    "Gate 1 $dot Static Analysis",
+    "Gate 2 $dot Security",
+    "Gate 3+4 $dot Tests + ArchUnit + Coverage + Build",
+    "Web $dot Lint + Typecheck + Test + Build"
 )
 
 $bypassActors = @()
@@ -167,11 +175,15 @@ function New-RulesetPayload {
 
 # --- Apply -----------------------------------------------------------------
 
-$existing = gh api "repos/$Repo/rulesets" --jq '.[] | "\(.id) \(.name)"' 2>$null
+# NOTE: do not use `gh api --jq '... "\(.id) \(.name)" ...'` here. Windows PowerShell 5.1
+# re-quotes native-command arguments and splits a jq expression containing double quotes
+# into two positional args, so gh fails with `accepts 1 arg(s), received 2`. Fetch raw JSON
+# and let PowerShell parse it instead — no jq expression crosses the process boundary.
 $existingMap = @{}
-if ($existing) {
-    foreach ($line in ($existing -split "`n")) {
-        if ($line -match '^\s*(\d+)\s+(.+?)\s*$') { $existingMap[$Matches[2]] = $Matches[1] }
+$existingRaw = gh api "repos/$Repo/rulesets" 2>$null
+if ($LASTEXITCODE -eq 0 -and $existingRaw) {
+    foreach ($rs in ($existingRaw | ConvertFrom-Json)) {
+        if ($rs.name) { $existingMap[$rs.name] = $rs.id }
     }
 }
 
@@ -189,9 +201,13 @@ foreach ($branch in @('main', 'develop')) {
 
     $tmp = [System.IO.Path]::GetTempFileName()
     try {
-        # -Encoding utf8 matters: gh reads the file as UTF-8 and the check names
-        # contain a non-ASCII middle dot.
-        $json | Out-File -FilePath $tmp -Encoding utf8 -NoNewline
+        # UTF-8 WITHOUT a BOM, written via .NET rather than Out-File. Two separate traps:
+        #   * encoding must be UTF-8 at all — the required check names contain a non-ASCII
+        #     middle dot, and the ANSI codepage mangles it;
+        #   * `Out-File -Encoding utf8` on Windows PowerShell 5.1 emits a BOM, and GitHub's
+        #     JSON parser rejects it outright with `Problems parsing JSON (HTTP 400)` —
+        #     observed live on the first real run of this script, 2026-08-18.
+        [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
 
         if ($existingMap.ContainsKey($name)) {
             $id = $existingMap[$name]
