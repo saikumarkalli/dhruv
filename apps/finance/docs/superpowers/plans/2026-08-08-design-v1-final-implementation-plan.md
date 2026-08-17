@@ -293,7 +293,8 @@ creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`
 | 0 — Shell foundation | — (shipped before spec-kit was installed; not retrofitted) | shipped |
 | 1 — Identity & consent | — (shipped before spec-kit was installed; not retrofitted) | shipped |
 | 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | spec + plan + tasks (44, T001–T044) done, ready for `/speckit-implement` |
-| 3–7 | not yet created | — |
+| 3 — Money tab | [`apps/finance/specs/002-money-tab/`](../../../specs/002-money-tab/) | spec + plan + research + data-model + routes + quickstart + tasks (83, T001–T083) done, ready for `/speckit-implement` |
+| 4–7 | not yet created | — |
 
 ### 7.0 How every phase is executed (binding — see the module-standard doc §4 for the full process)
 
@@ -406,6 +407,16 @@ Phase 2's deferred credit-card-bill row on Home (accounts now exists). (b) D4's 
 field (`Groceries · 68% used`) needs the `budgets` table, which doesn't exist until Phase 4. **D4
 ships in Phase 3 without the budget-impact row**; Phase 4 adds it back as an explicit follow-up
 task (below) once `budgets` exists — not silently missing.
+
+**Table-list correction (found 2026-08-16 while writing `apps/finance/specs/002-money-tab/`):**
+step 1's table list below omits **`recurring_templates`** and **`suggestions`**, but this phase owns
+screen **D9 (Recurring)** and QA rows `MNY-BR-005` ("a `suggestions` row is created, not a
+`transactions` row") and `MNY-FLOW-002` ("a `recurring_templates` row is created") — neither can
+pass without both tables. Both are already specified in §5.4; only this row's enumeration was short.
+Phase 7 still owns the SMS/AA *sources* and the shared review-queue screen (G1–G3); Phase 3's review
+surface is recurring-only. See `apps/finance/specs/002-money-tab/research.md` R1 and R7 (recurring
+occurrences are materialised client-side on open, idempotent on `(recurring_id, due_on)` — there is
+no server scheduler).
 
 | Step | Role | Work |
 |---|---|---|
