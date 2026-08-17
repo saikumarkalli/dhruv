@@ -1,0 +1,146 @@
+name: Bug report
+description: Something in Dhruv behaves incorrectly, crashes, or shows wrong data.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bug reports are the only issue type in this repo — feature work is planned in
+        `apps/<app>/docs/` and architecture changes go through an ADR in `platform/DECISIONS.md`.
+
+        **Security vulnerability? Stop.** Do not file it here. Email
+        kallileelasaikumar@gmail.com instead — see [SECURITY.md](../blob/develop/SECURITY.md).
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      description: Where does it happen?
+      options:
+        - Android app
+        - Web app
+        - Both Android and web
+        - CI / release pipeline
+        - Supabase / database
+        - Build / local tooling
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Closest feature area. Pick "Unsure" rather than guessing wrong.
+      options:
+        - Home / net worth
+        - Money / ledger
+        - Calc / converters
+        - Plan (loans, investments, tax, everyday)
+        - Insights
+        - Settings / theme
+        - Onboarding / sign-in / consent
+        - Sync / data
+        - AI assistant
+        - Notifications / widget
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: |
+        Be honest — inflating severity here just makes the label useless later.
+        Anything involving wrong money figures or data loss is at least High.
+      options:
+        - Critical — data loss, wrong money figure, or app unusable
+        - High — core flow broken, no workaround
+        - Medium — broken with a workaround
+        - Low — cosmetic or minor annoyance
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Settings → About, or the release tag. Example: dhruv-finance-v2.0.4"
+      placeholder: dhruv-finance-v2.0.4
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Device / browser and OS
+      description: Android device + version, or browser + version.
+      placeholder: Pixel 7, Android 15 — or Chrome 130 on Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, from a cold start. A bug that cannot be reproduced cannot be fixed.
+      placeholder: |
+        1. Open the app, signed in
+        2. Home → tap the net-worth card
+        3. Add a holding worth ₹1,00,000
+        4. Pull back to Home
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Attach a screenshot or screen recording if it is visual.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often
+      options:
+        - Every time
+        - Often, not always
+        - Happened once
+        - Only under a specific condition (describe above)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: |
+        `adb logcat`, the browser console, or the failing CI job's output.
+        **Redact tokens, emails and any real account values before pasting.**
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I am on the latest release, or have said above why I am not
+          required: true
+        - label: This is not a security vulnerability (those go to email, not here)
+          required: true
+        - label: I removed any secrets, tokens, or real personal data from what I pasted
+          required: true

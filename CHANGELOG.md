@@ -1,11 +1,66 @@
 # Changelog
 
-All notable changes to the **Dhruv Calculator & Conversions** application will be documented in this file.
+All notable changes to the **Dhruv** monorepo are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-07-26 - DhruvNext 4-tab shell rebuild
+**Headings are namespaced per component** — `finance-*` is the Android app, `web-finance-*` is the
+web SPA. Each component versions **independently**: a web-only release does not move the Android
+version. The heading for a release is injected by CI; the prose underneath is written by hand.
+See [`platform/VERSIONING.md`](platform/VERSIONING.md).
+
+## [finance-2.0.4] - 2026-08-16
+
+### Changed
+- `kotlin-and-compose` dependency group bumped (7 updates).
+
+## [finance-2.0.3] - 2026-08-16
+
+### Added
+- GitHub spec-kit (v0.16.4) installed; Dhruv constitution written.
+- Phase 2 net-worth spec-kit artifacts (spec, plan, tasks).
+
+### Changed
+- `compileSdk` / `targetSdk` raised to 37, unblocking the androidx/Compose dependency updates.
+- Dependency bumps: roborazzi, `@testing-library/jest-dom`, the web `tooling` and `react` groups,
+  `actions/create-github-app-token`, `actions/upload-artifact`.
+
+### Removed
+- Orphaned Finance P1–P6 / R0–R11 specs retired; the forward plan consolidated onto design-v1
+  (see the doc-retirement note in `platform/DECISIONS.md`).
+
+## [finance-2.0.2] - 2026-08-01
+
+### Added
+- Calculator engine scenarios and feature view models with observability support.
+- Core finance architecture and the initial feature modules with screen definitions.
+- Temperature and Area conversion engines (TDD).
+- DhruvNext strong chip variant and `NxTopBar` trailing action in `:libs:core`.
+- Unit-converter and calculator-engine test suites.
+
+### Changed
+- DhruvNext §6.6 rebuilds of the unit and currency screens; Calc keypad restyle with a DhruvNext
+  title bar (§6.3).
+
+### Fixed
+- `Pill` strong-variant font weight now matches spec.
+
+## [finance-2.0.1] - 2026-07-27
+
+First tagged release of the 2.x line. Content is the DhruvNext shell rebuild described under
+`finance-2.0.0` below — that entry was written before the release was cut, and the tag landed as
+`2.0.1`. No `dhruv-finance-v2.0.0` tag exists.
+
+## [web-finance-0.1.0] - 2026-07-25
+
+### Added
+- Vite + React SPA scaffold under `web/` (ADR-0015), deployed to Vercel. Shares
+  `platform/feature-flags/dhruv-finance.json` with the Android app and the Supabase backend.
+
+This is the web app's own version line and is unrelated to `finance-*` above (VERSIONING.md D1).
+
+## [finance-2.0.0] - 2026-07-26 - DhruvNext 4-tab shell rebuild
 
 Major/breaking architecture release — the navigation model itself changed. See ADR-0024
 (`platform/DECISIONS.md`).
@@ -43,7 +98,11 @@ Major/breaking architecture release — the navigation model itself changed. See
   destinations, not user-toggleable, so the controls were actively misleading rather than merely
   unused.
 
-## [Unreleased] - Phase 4: Finance feature split
+## [Unversioned] - Phase 4: Finance feature split
+
+> This work shipped across the 1.2.x line but never got its own entry, and the heading sat as
+> `[Unreleased]` *below* an already-released version. Retitled rather than assigned a number:
+> guessing which release contained it would be fabrication. Left in chronological position.
 
 ### Added
 - Split the Finance monolith into **10 feature modules** under `apps/finance/feature/` (`calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`) plus a shared **`:apps:finance:data`** module (Room DB, DAOs, repositories, `CurrencyApi`, `GeminiRepository`, `CurrencyFormatter`).
@@ -79,7 +138,7 @@ Major/breaking architecture release — the navigation model itself changed. See
 - The legacy `dhruv-compose-screen` SKILL is stale (shows Hilt / `DhruvTheme.colors` / `crashReporter.report`); `dhruv-feature-scaffold` is authoritative for the real Koin patterns.
 - App `build.gradle.kts` still lists unused Room/network/Moshi/KSP deps (harmless) — prune in a cleanup pass.
 
-## [1.1.0] - 2026-06-07
+## [finance-1.1.0] - 2026-06-07
 
 ### Added
 
@@ -99,6 +158,6 @@ Major/breaking architecture release — the navigation model itself changed. See
 
 - **CI/CD Build Crash**: Resolved `packageRelease` pipeline failure caused by a missing keystore password. The release signing config in `build.gradle.kts` now safely aborts signing and produces an unsigned APK if the `STORE_PASSWORD` is omitted, rather than crashing the CI.
 
-## [1.0.0] - Initial Structure
+## [finance-1.0.0] - Initial Structure
 - Initial project scaffolding and foundational architecture setup.
 - Basic functional capabilities documented in `knowledge_hub`.

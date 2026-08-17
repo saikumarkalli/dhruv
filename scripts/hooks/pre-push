@@ -1,10 +1,66 @@
 #!/bin/sh
-# Compliance audit on feature modules before push — deterministic, zero AI tokens.
+# Pre-push gate. Two checks, in order:
+#   1. Protected-branch block — no direct pushes to main/develop; everything via PR.
+#   2. Compliance audit on feature modules — deterministic, zero AI tokens.
 #
 # Versioned, shared hook. Activate once per clone with:
 #     git config core.hooksPath scripts/hooks
 # (see scripts/hooks/README.md). Audits every feature module changed vs
 # origin/develop against the project's hard rules.
+
+# ---------------------------------------------------------------------------
+# Check 0: protected branches (AGENTS.md branch rules, ADR-0032 decision 1)
+#
+# `develop` is DEV and `main` is PROD; both may only advance through a merged
+# PR. GitHub's own branch protection / rulesets would enforce this server-side,
+# but both are Pro-gated on a private repo and this repo is on GitHub Free
+# (403 "Upgrade to GitHub Pro"; see ADR-0032's 2026-08-16 correction). Until
+# that upgrade this hook is the *preventive* layer and
+# .github/workflows/branch-guard.yml is the *detective* one — the hook stops
+# the push, the workflow catches anything that bypassed the hook.
+#
+# Deliberate escape hatch for the genuine emergency:
+#     DHRUV_ALLOW_PROTECTED_PUSH=1 git push ...
+# (plain `--no-verify` also skips it, and skips the module audit below too).
+# Either way branch-guard.yml still reports the violation on the push.
+# ---------------------------------------------------------------------------
+
+if [ "$DHRUV_ALLOW_PROTECTED_PUSH" != "1" ]; then
+  BLOCKED=""
+  # git feeds pre-push one line per ref on stdin:
+  #   <local ref> <local sha> <remote ref> <remote sha>
+  while read -r _local_ref local_sha remote_ref _remote_sha; do
+    case "$remote_ref" in
+      refs/heads/main|refs/heads/develop)
+        case "$local_sha" in
+          0000000000000000000000000000000000000000)
+            BLOCKED="$BLOCKED\n  x DELETE ${remote_ref#refs/heads/}" ;;
+          *)
+            BLOCKED="$BLOCKED\n  x push to ${remote_ref#refs/heads/}" ;;
+        esac
+        ;;
+    esac
+  done
+
+  if [ -n "$BLOCKED" ]; then
+    echo ""
+    echo "PUSH BLOCKED - main and develop are PR-only."
+    printf "%b\n" "$BLOCKED"
+    echo ""
+    echo "  develop = DEV, main = PROD (ADR-0032). Both advance only via a merged PR."
+    echo ""
+    echo "  Move your work to a branch and open a PR:"
+    echo "      git switch -c feat/<short-description>"
+    echo "      git push -u origin feat/<short-description>"
+    echo "      gh pr create --base develop --fill"
+    echo ""
+    echo "  Branch prefixes: feat/  fix/  chore/  refactor/  docs/"
+    echo "  Emergency override: DHRUV_ALLOW_PROTECTED_PUSH=1 git push ..."
+    echo "  (branch-guard.yml still flags the violation server-side.)"
+    echo ""
+    exit 1
+  fi
+fi
 #
 # Path pattern requires apps/<app>/feature/<bucket>/<name>/... (5+ segments) — corrected
 # 2026-08-15 for the module-reorg bucket layout: every module now lives at

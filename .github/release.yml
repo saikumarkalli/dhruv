@@ -1,0 +1,51 @@
+# Configures GitHub's auto-generated release notes.
+#
+# This is honoured because the release step sets `generate_release_notes: true`
+# (`ci.yml`, "Publish GitHub Release"). Those generated notes are appended to
+# `release-body.md` — the regression/coverage summary ADR-0013 requires on every
+# release — so this file shapes the "what changed" half, not the whole body.
+#
+# LIMITATION, stated rather than papered over: GitHub categorises by PR **label**
+# and **author** only. It cannot read the conventional-commit prefix in the PR
+# title, which is this repo's actual convention and what ADR-0025 uses to pick
+# the semver segment. So:
+#   * "Dependencies" fills itself — Dependabot labels its own PRs `dependencies`.
+#   * "Fixes"/"Features"/"Documentation" fill only if you label the PR.
+#   * Everything unlabelled lands in "Other changes", which is still an accurate
+#     changelog, just a flat one.
+# Habit that closes the gap with no CI cost:
+#     gh pr create --base develop --fill --label enhancement
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+      - wontfix
+
+  categories:
+    - title: 🚀 Features
+      labels:
+        - enhancement
+
+    - title: 🐛 Fixes
+      labels:
+        - bug
+
+    - title: 🔒 Security
+      labels:
+        - security
+
+    - title: 📚 Documentation
+      labels:
+        - documentation
+
+    - title: ⬆️ Dependencies
+      labels:
+        - dependencies
+
+    # Catch-all. Must stay last — GitHub assigns each PR to the first matching
+    # category, so a wildcard above this point would swallow everything.
+    - title: 🧱 Other changes
+      labels:
+        - "*"

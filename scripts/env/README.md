@@ -27,6 +27,96 @@ it, then proceeds. No setup needed for this — it works out of the box with the
 mechanisms and also fix branch protection, which — separately — was likely never actually enforced
 either (same tier gate). Not required for anything below to work.
 
+## Branch protection (`main` / `develop` are PR-only)
+
+Same billing wall, re-confirmed live on 2026-08-17 — **both** GitHub mechanisms refuse:
+
+```
+GET /repos/saikumarkalli/dhruv/rulesets
+  403 "Upgrade to GitHub Pro or make this repository public to enable this feature."
+PUT /repos/saikumarkalli/dhruv/branches/main/protection
+  403 (Pro required)
+```
+
+Auto-merge (`allow_auto_merge`) silently stays `false` for the same reason. So the rule is enforced
+in two unpaid halves, both committed:
+
+| Layer | File | What it does |
+|---|---|---|
+| Preventive | `scripts/hooks/pre-push` | Refuses a push to `main`/`develop` on your machine, before it reaches GitHub. Prints the branch-and-PR commands to use instead. |
+| Detective | `.github/workflows/branch-guard.yml` | On any push to `main`/`develop`, checks every pushed commit resolves to a merged PR. If not: red X on the commit, failing run, job summary naming the offending commits. Also flags force-pushes. |
+
+**The hook is not optional** — it is the only thing that actually *stops* a direct push:
+
+```powershell
+git config core.hooksPath scripts/hooks
+```
+
+Emergency override (still reported by `branch-guard`):
+`DHRUV_ALLOW_PROTECTED_PUSH=1 git push ...`
+
+### When you upgrade to GitHub Pro
+
+```powershell
+pwsh ./scripts/env/apply-branch-protection.ps1 -WhatIf   # preview the rulesets
+pwsh ./scripts/env/apply-branch-protection.ps1           # apply
+```
+
+Idempotent. Creates/updates a `protect-main` and `protect-develop` ruleset: PR required, no
+force-push, no deletion, required checks = the four CI gate job names, and
+`strict_required_status_checks_policy: true` — which is the *"require branches to be up to date"*
+setting ADR-0026 calls load-bearing and which has never actually been enforced on this tier.
+Approval count is deliberately **0** (a solo maintainer cannot approve their own PR; the PR itself
+is the gate). Afterwards, delete `branch-guard.yml` — GitHub enforces it natively at that point.
+
+## Repo hardening applied 2026-08-17 (all free-tier)
+
+| # | Setting | State | How to re-verify |
+|---|---|---|---|
+| 1 | Dependency graph + **Dependabot alerts** + automated security fixes | **on** — was off; 308 packages now graphed, **2 open high alerts** in `web/package-lock.json` (react-router CSRF, brace-expansion DoS). Security-update PRs open automatically. | `gh api repos/saikumarkalli/dhruv/dependabot/alerts?state=open --jq length` |
+| 2 | Third-party actions **SHA-pinned** | 8 call sites: `gitleaks-action`, `action-gh-release` ×2, `setup-cli` ×3, `manual-approval` ×2 | `grep -rn "uses: \(gitleaks\|softprops\|supabase/setup-cli\|trstringer\)" .github/workflows/` |
+| 3 | Default `GITHUB_TOKEN` permissions → **read**, Actions may not approve PRs | every job that needs write already declares it explicitly, so nothing broke | `gh api repos/saikumarkalli/dhruv/actions/permissions/workflow` |
+| 4 | Milestones **Phase 0–7** | 8 created, all open | `gh api repos/saikumarkalli/dhruv/milestones --jq '.[].title'` |
+| 5 | `.github/release.yml` | auto-categorised release notes (honoured because the release step sets `generate_release_notes: true`) | — |
+| 6 | Homepage → `https://dhruv-finance.vercel.app` | verified HTTP 200 | `gh api repos/saikumarkalli/dhruv --jq .homepage` |
+| 7 | Description + 20 topics + `delete_branch_on_merge` | applied 2026-08-17 | `gh repo view --json description,repositoryTopics` |
+
+### Action-pinning policy
+
+**Third-party actions are pinned to a full commit SHA with the tag as a trailing comment.** A
+mutable tag can be repointed by its owner at any commit; this repo's `release` job holds the
+**signing keystore**, so a repointed tag is a path to a signed APK built from someone else's code.
+`actions/*` stay on major tags — GitHub-owned, and their release tags are the org's own protected
+pointers.
+
+Dependabot's `github-actions` ecosystem (already configured, monthly) reads the trailing `# v2`
+comment and bumps the SHA for you, so pinning does not mean going stale.
+
+When adding a new third-party action:
+
+```sh
+gh api repos/<owner>/<action>/commits/<tag> --jq .sha
+# uses: <owner>/<action>@<sha> # <tag>
+```
+
+### Project board (one interactive step, then scripted)
+
+Projects v2 is account-level, so it is free even on a private repo — but it needs a token scope
+the default login does not grant:
+
+```powershell
+gh auth refresh -s project,read:project    # opens a browser, once
+pwsh ./scripts/env/setup-project-board.ps1
+```
+
+### Still blocked by GitHub Free
+
+Rulesets / branch protection / Environment required reviewers / auto-merge — see the
+[Branch protection](#branch-protection-main--develop-are-pr-only) section above. Code scanning
+(CodeQL) and GitHub secret scanning on a private repo are **GitHub Advanced Security**, not Pro —
+a separate enterprise product. GitLeaks (`ci.yml` Gate 2) and detekt already cover that ground; do
+not budget for it.
+
 ## Remaining steps
 
 ### 1. Supabase — set environment secrets

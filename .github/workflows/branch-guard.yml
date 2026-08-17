@@ -1,0 +1,143 @@
+name: Branch Guard
+
+# Detective half of the "main and develop are PR-only" rule (AGENTS.md branch
+# rules, ADR-0032 decision 1).
+#
+# GitHub's own enforcement — classic branch protection AND repository rulesets —
+# is Pro/Team-gated for a *private* repo, and this repo is on GitHub Free. Both
+# were verified live against this repo and both refuse:
+#
+#     GET  /repos/saikumarkalli/dhruv/rulesets
+#       403 "Upgrade to GitHub Pro or make this repository public to enable this feature."
+#     PUT  /repos/saikumarkalli/dhruv/branches/main/protection
+#       403 "Upgrade to GitHub Pro"
+#
+# (Same billing-tier wall ADR-0032's 2026-08-16 correction already hit for the
+# `prod` Environment's required-reviewer rule, and the same reason ADR-0026's
+# "require branches to be up to date" was never actually enforceable.)
+#
+# So enforcement is split in two, neither of which needs a paid plan:
+#   * PREVENTIVE — scripts/hooks/pre-push refuses the push on the developer's
+#     machine before it ever reaches GitHub.
+#   * DETECTIVE  — this workflow, which cannot stop the push (nothing on Free
+#     can) but turns it into a red X on the commit and a failing run, so a
+#     bypassed hook is never silent.
+#
+# Delete this workflow the day `scripts/env/apply-branch-protection.ps1`
+# succeeds — real server-side protection makes it redundant.
+
+on:
+  push:
+    branches: [ main, develop ]
+
+# Read-only: this job reports, it never mutates the repo.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: branch-guard-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  direct-push-guard:
+    name: "Guard · Direct push to protected branch"
+    runs-on: ubuntu-latest
+    # CI's own version-bump commit is pushed by the release job with [skip ci],
+    # so it never reaches this workflow at all. The check below is belt-and-braces
+    # in case that marker is ever dropped.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify every pushed commit arrived through a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          FORCED: ${{ github.event.forced }}
+          PUSHER: ${{ github.event.pusher.name }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: |
+          set -euo pipefail
+
+          # jq is preinstalled on GitHub-hosted runners, but the parse below sits
+          # inside a process substitution — a missing jq there would yield zero
+          # commits and silently PASS the guard. Fail loudly instead.
+          command -v jq >/dev/null || { echo "::error::jq not available; cannot verify commits."; exit 1; }
+
+          violations=0
+          {
+            echo "## Branch guard — \`$BRANCH\`"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FORCED" = "true" ]; then
+            echo "::error::Force-push to protected branch '$BRANCH' by @$PUSHER. History on $BRANCH must be append-only."
+            echo "- ❌ **Force-push detected** by \`@$PUSHER\` — history on \`$BRANCH\` must be append-only." >> "$GITHUB_STEP_SUMMARY"
+            violations=$((violations + 1))
+          fi
+
+          # GitHub caps `commits` at 20 entries per push payload. A push larger
+          # than that is itself abnormal for a PR-merge-only branch, and the
+          # first 20 are more than enough to prove a violation happened.
+          #
+          # id and first line of the message come straight from the payload as
+          # one tab-separated record — no extra API call, and no `| head -1`
+          # (which would SIGPIPE the upstream command under `pipefail`).
+          mapfile -t records < <(printf '%s' "$COMMITS" \
+            | jq -r '.[]? | [.id, (.message | split("\n")[0])] | @tsv')
+
+          if [ "${#records[@]}" -eq 0 ]; then
+            echo "No commits in payload (branch create/delete or empty push) — nothing to check." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          for record in "${records[@]}"; do
+            sha="${record%%$'\t'*}"
+            subject="${record#*$'\t'}"
+            short="${sha:0:7}"
+
+            # "List pull requests associated with a commit". A commit that
+            # reached this branch through a merged PR resolves to >= 1 PR here;
+            # a commit pushed straight to the branch resolves to none.
+            #
+            # Deliberately NOT filtering on base.ref == $BRANCH: a develop -> main
+            # promotion carries commits whose associated PR has base.ref=develop,
+            # which that filter would false-flag on main.
+            merged=$(gh api "repos/$REPO/commits/$sha/pulls" \
+                       --jq '[.[] | select(.merged_at != null)] | length' 2>/dev/null || echo 0)
+            # An API hiccup returning an empty string would otherwise make the
+            # numeric test below abort the whole job under `set -e`.
+            merged="${merged:-0}"
+
+            if [ "$merged" -gt 0 ]; then
+              echo "- ✅ \`$short\` $subject" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Commit $short ('$subject') was pushed directly to '$BRANCH' — no merged pull request contains it."
+              echo "- ❌ \`$short\` $subject — **no merged PR contains this commit**" >> "$GITHUB_STEP_SUMMARY"
+              violations=$((violations + 1))
+            fi
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$violations" -gt 0 ]; then
+            {
+              echo "### ❌ $violations violation(s)"
+              echo ""
+              echo "\`main\` and \`develop\` advance **only** through a merged pull request"
+              echo "(AGENTS.md branch rules, ADR-0032 decision 1)."
+              echo ""
+              echo "**To avoid this next time**, activate the local hook once per clone:"
+              echo ""
+              echo '```sh'
+              echo "git config core.hooksPath scripts/hooks"
+              echo '```'
+              echo ""
+              echo "It refuses the push before it leaves your machine."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "### ✅ All pushed commits arrived through a merged pull request." >> "$GITHUB_STEP_SUMMARY"

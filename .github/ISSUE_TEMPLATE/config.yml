@@ -1,0 +1,22 @@
+# Bugs are the only issue type in this repo. Feature work is planned in
+# apps/<app>/docs/, and architecture changes go through an ADR in
+# platform/DECISIONS.md — neither belongs in the issue tracker.
+#
+# NOTE: this only removes the "open a blank issue" escape hatch in the web UI.
+# Issues created through the API are unaffected, which is what keeps the
+# `trstringer/manual-approval` release/migration approval gates working
+# (ci.yml, supabase-migrate.yml — ADR-0032 correction).
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/saikumarkalli/dhruv/blob/develop/SECURITY.md
+    about: Never file a security issue publicly. Email kallileelasaikumar@gmail.com instead.
+
+  - name: Architecture change or new decision
+    url: https://github.com/saikumarkalli/dhruv/blob/develop/platform/DECISIONS.md
+    about: Propose an ADR in the decision register. Do not silently diverge from an accepted one.
+
+  - name: How to contribute
+    url: https://github.com/saikumarkalli/dhruv/blob/develop/CONTRIBUTING.md
+    about: Branch rules, commit conventions, and the pre-merge gate.

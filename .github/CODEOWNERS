@@ -1,0 +1,38 @@
+# Code owners for the Dhruv monorepo.
+#
+# Solo-maintainer repo: one owner for everything. The per-path rows below are
+# not redundancy — they are the list of areas where a review is *load-bearing*
+# rather than routine, and they become meaningful the moment a second
+# maintainer exists (change the owner on that row, nothing else).
+#
+# NOTE: CODEOWNERS only auto-requests review; it only *blocks* a merge when a
+# ruleset sets `require_code_owner_review`, which needs GitHub Pro on a private
+# repo (see scripts/env/apply-branch-protection.ps1). Until then this file is
+# documentation + auto-assignment.
+
+# Default owner for everything.
+*                                   @saikumarkalli
+
+# --- Areas where a change is expensive to get wrong -------------------------
+
+# Platform contracts and the decision register. Nothing here is "just docs":
+# DECISIONS.md is append-only and PLATFORM.md is the source of truth.
+/platform/                          @saikumarkalli
+/platform/DECISIONS.md              @saikumarkalli
+/platform/contracts/                @saikumarkalli
+
+# CI/CD, release signing, and the cost budgets in ADR-0026.
+/.github/workflows/                 @saikumarkalli
+/scripts/ci/                        @saikumarkalli
+/scripts/env/                       @saikumarkalli
+
+# Database. Migrations are append-only executed history (ADR-0032); the
+# declarative schema files must stay equivalent to them.
+/supabase/                          @saikumarkalli
+
+# Shared library — every app depends on it, so a break here breaks everything.
+/libs/core/                         @saikumarkalli
+
+# Compliance surfaces (DPDP): consent, erasure, privacy policy.
+/PRIVACY.md                         @saikumarkalli
+/SECURITY.md                        @saikumarkalli
