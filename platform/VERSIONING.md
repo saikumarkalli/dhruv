@@ -336,11 +336,17 @@ is a rounding error against the ≤90 min/PR budget.
 all sit on that assumption. They must become conditional on `apps.finance` having moved, or a
 web-only promotion will fail trying to verify an APK that was never built.
 
-**ADR number:** the highest *written* register entry is ADR-0033, so this takes **ADR-0034** by the
-register's own rule that a written entry outranks a reservation. `docs/superpowers/plans/2026-08-15-
-agent-protocol-and-doc-verifier.md` currently reserves 0034 and moves to 0035 — the resolution both
-existing numbering-hygiene notes already prescribe. Do this in step 8, not before, so a dormant plan
-is not renumbered for an ADR that never lands.
+**ADR number:** this takes **ADR-0035**. The reasoning below is unchanged and was correct — it was
+the arithmetic that went stale. When this section was written, ADR-0033 was the highest *written*
+register entry, so this document reserved 0034 by the register's own rule that a written entry
+outranks a reservation, and instructed `docs/superpowers/plans/2026-08-15-agent-protocol-and-doc-
+verifier.md` to move from 0034 to 0035. That assumed this plan would land next; **ADR-0034 (public
+repository) landed first**, on 2026-08-18, while every step in §9's table was still unchecked. Both
+reservations therefore shifted by one, preserving the order prescribed here — this document to
+**0035**, the agent-protocol plan to **0036** — recorded in the third numbering-hygiene note in
+`DECISIONS.md`. Confirm the number is still free with `grep '^## ADR-' platform/DECISIONS.md` at
+step 8, not before: that check is the only authority, and this is now the third time a reservation
+written ahead of execution has gone stale underneath a dormant plan.
 
 ---
 

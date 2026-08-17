@@ -22,8 +22,10 @@ build → version-bump → tag → GitHub-Release pipeline.
 > - [`CHANGELOG.md`](CHANGELOG.md) — chronological change history
 >
 > Working in the repo: [`CONTRIBUTING.md`](CONTRIBUTING.md) (branches, commits, the pre-merge gate) ·
-> [`SECURITY.md`](SECURITY.md) (reporting a vulnerability) · [`PRIVACY.md`](PRIVACY.md) (DPDP).
+> [`SECURITY.md`](SECURITY.md) (reporting a vulnerability) · [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) ·
+> [`PRIVACY.md`](PRIVACY.md) (DPDP) · [`NOTICE`](NOTICE) (third-party attribution).
 > Bugs go through the [bug report form](.github/ISSUE_TEMPLATE/bug_report.yml) — the only issue type.
+> **Security problems do not**: use private reporting, never a public issue ([`SECURITY.md`](SECURITY.md)).
 
 ---
 
@@ -527,4 +529,12 @@ From [`platform/Implementation.md`](platform/Implementation.md) (Phase 0–7):
 ## License
 
 [MIT](LICENSE) © 2026 Sai Kumar Kalli. Privacy policy: [PRIVACY.md](PRIVACY.md).
-Brand assets in `Dhruv_Master_Brand_Kit/` are project-owned and not covered by the MIT grant.
+
+Two carve-outs from the MIT grant:
+
+- **Brand assets** in `Dhruv_Master_Brand_Kit/` (and the `Dhruv*` name, logo and wordmark) are
+  project-owned. MIT covers the source code, not the identity — a fork may use the code, not the
+  brand.
+- **Bundled fonts** in `libs/core/src/main/res/font/` are third-party, licensed under the SIL Open
+  Font License 1.1, not MIT. Full texts and provenance: [`third_party/fonts/`](third_party/fonts/),
+  summarised in [`NOTICE`](NOTICE).

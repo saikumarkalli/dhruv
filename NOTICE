@@ -1,0 +1,41 @@
+Dhruv — third-party attribution notice
+======================================
+
+The Dhruv source code is licensed under the MIT License; see LICENSE.
+
+In addition, this repository redistributes third-party font binaries that carry their own
+license. Those licenses are not superseded by LICENSE and apply to the font files listed below.
+
+
+Fonts
+-----
+
+Three font families are bundled in libs/core/src/main/res/font/. All three are licensed under the
+SIL Open Font License, Version 1.1. The full license text for each family, its upstream source and
+the exact files bundled are documented in third_party/fonts/.
+
+  Inter
+  Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+  SIL Open Font License 1.1 — third_party/fonts/inter/OFL.txt
+
+  Space Grotesk
+  Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+  SIL Open Font License 1.1 — third_party/fonts/space-grotesk/OFL.txt
+
+  JetBrains Mono
+  Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+  SIL Open Font License 1.1 — third_party/fonts/jetbrains-mono/OFL.txt
+
+None of the three declares a Reserved Font Name. The fonts are bundled unmodified.
+
+
+Scope
+-----
+
+This notice covers only the binary assets this repository redistributes. Gradle and npm
+dependencies are resolved at build time from their own registries and are not redistributed here,
+so they are not listed. Brand assets in Dhruv_Master_Brand_Kit/ are project-owned and are not
+covered by the MIT grant — see README.md.
+
+Adding a new bundled third-party asset means adding its license to third_party/ and a matching
+entry here, in the same change.

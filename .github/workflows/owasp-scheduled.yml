@@ -5,8 +5,8 @@ name: OWASP Weekly
 # update each time — pure cost on the merge path for zero gate value.
 #
 # Cadence is MONTHLY, not weekly, and that is deliberate: while
-# `continue-on-error: true` masks every finding (the dependency-check plugin is
-# still unwired — PRODUCTION_READINESS T11/M1), this scan produces no signal
+# `continue-on-error: true` masks every finding (the `org.owasp.dependencycheck`
+# plugin is still unwired in `build-logic`), this scan produces no signal
 # anyone acts on. A weekly masked scan is 52 × 30 min/year of pure cost. Monthly
 # keeps the artifact available for manual review at ~1/4 the spend. Move it back
 # to weekly in the same change that flips continue-on-error to false.
@@ -57,8 +57,8 @@ jobs:
           restore-keys: |
             nvd-
 
-      # Still warn-only until the dependency-check plugin is wired in build-logic
-      # (PRODUCTION_READINESS.md M1 / T11). Flip continue-on-error to false then.
+      # Still warn-only until the dependency-check plugin is wired in build-logic.
+      # Flip continue-on-error to false then.
       - name: OWASP Dependency Check
         run: ./gradlew dependencyCheckAnalyze
         continue-on-error: true

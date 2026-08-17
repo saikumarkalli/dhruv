@@ -40,7 +40,7 @@
 | `platform/RUNBOOK.md` | **retire** | Genesis-era runbook ("rename the GitHub repo") |
 | `platform/CLAUDE-MD-TEMPLATES.md` | **retire** | Templates now served by the 4 real files |
 | `platform/adr/0010-initial-repo-state.md` | **retire** | Vestigial split; 31 ADRs live in `DECISIONS.md` |
-| `platform/DECISIONS.md` | modify | ADR-0034 (renumbered from 0032 — see Global Constraints) |
+| `platform/DECISIONS.md` | modify | ADR-0036 (renumbered 0032 → 0034 → 0036 — see Global Constraints) |
 | `README.md`, `docs/PRD.md` | modify | Redirect references to retired docs |
 | `.gitignore` | modify | `.claude/worktrees/` (currently local-only) |
 | `.github/workflows/ci.yml` | modify | Verifier step in Gate 1 |
@@ -73,10 +73,12 @@ git switch -c chore/agent-protocol origin/develop
 ```bash
 grep '^## ADR-' platform/DECISIONS.md | tail -3
 ```
-Expected highest at execution time: re-run the grep above — `ADR-0033` was the highest as of this
-correction (2026-08-16). Use **ADR-0034**. If something above 0033 exists by the time this plan
-actually runs, use the next free number and note it in Task 6 (same self-correction this line
-already asked for once — it just triggered before execution instead of during it).
+Expected highest at execution time: re-run the grep above — `ADR-0034` is the highest as of the
+second correction (2026-08-18). Use **ADR-0036**. This line has now been proved right twice: the
+number moved 0032 → 0034 when ADR-0032/0033 landed, then 0034 → 0036 when ADR-0034 (public
+repository) and `platform/VERSIONING.md`'s reservation took 0034 and 0035 respectively — both
+times while this plan sat dormant. Do not trust the number printed here; re-run the grep and use
+the next free one, noting it in Task 6.
 
 ---
 
@@ -739,7 +741,7 @@ In `static-analysis`, before the ktlint steps (it is the fastest check — fail 
 
 ```yaml
       # Proves the agent-doc set is true: declared surface == disk, links resolve,
-      # ADR references exist, no orphaned platform/ doc. See ADR-0034.
+      # ADR references exist, no orphaned platform/ doc. See ADR-0036.
       - name: Verify agent docs
         run: python3 scripts/ci/verify_agent_docs.py
 ```
@@ -789,7 +791,7 @@ git commit -m "chore: run agent-doc verifier in Gate 1 and pre-push"
 
 ---
 
-## Task 6: ADR-0034
+## Task 6: ADR-0036
 
 **Files:**
 - Modify: `platform/DECISIONS.md`
@@ -799,7 +801,7 @@ git commit -m "chore: run agent-doc verifier in Gate 1 and pre-push"
 ```markdown
 ---
 
-## ADR-0034 — Agent instructions are machine-verified, not just written
+## ADR-0036 — Agent instructions are machine-verified, not just written
 **Context.** The agent-doc set drifted repeatedly and silently. `AGENTS.md`'s session
 bootstrap told every agent to read `<module>/AGENTS.md`; no such file has ever existed.
 `CLAUDE-MD-TEMPLATES.md` templated module files nobody created. `platform/adr/` held one
@@ -843,13 +845,13 @@ the drift rate, it does not eliminate review.
 ```bash
 python scripts/ci/verify_agent_docs.py
 ```
-Expected: exit 0. If ADR-0034 is referenced from `AGENTS.md` or `ci.yml` comments, check 3 now resolves it.
+Expected: exit 0. If ADR-0036 is referenced from `AGENTS.md` or `ci.yml` comments, check 3 now resolves it.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add platform/DECISIONS.md
-git commit -m "docs: ADR-0034 machine-verified agent instructions"
+git commit -m "docs: ADR-0036 machine-verified agent instructions"
 ```
 
 ---

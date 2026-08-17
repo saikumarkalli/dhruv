@@ -1068,3 +1068,138 @@ prevented it had the plan been re-checked at execution time rather than left dor
 provisional until the moment it is actually written here, especially for dormant plans that sit
 unbuilt across multiple unrelated merges. `docs/superpowers/plans/2026-08-15-agent-protocol-and-
 doc-verifier.md` now correctly targets ADR-0034 if and when it is executed.
+
+---
+
+## ADR-0034 — The repository is public: GitHub Free's paid gates unlock, and untrusted
+## contributors become a first-class CI trust boundary
+
+**Context.** This repo was private on GitHub Free, and two controls earlier ADRs called
+*load-bearing* were never actually enforceable on that tier — ADR-0032's own correction recorded
+both after hitting them live: ADR-0026's *"Require branches to be up to date before merging"*
+(HTTP 403, "Upgrade to GitHub Pro") and ADR-0032 decision 2's `prod` Environment required-reviewer
+rule (HTTP 422, "Please ensure the billing plan supports the required reviewers protection rule").
+The substitute for the second was a free `trstringer/manual-approval` issue gate; the first had no
+substitute at all, which means ADR-0026's central safety claim — *the merged tree is byte-identical
+to the tree the PR validated, so re-running the gates on push verifies nothing new* — has been
+resting on an unenforced setting since the day it was written. Separately, ADR-0026's entire cost
+model (PR-only validation, no merge-push re-run, OWASP demoted from weekly to monthly, four standing
+runner-minute budgets) exists solely because private repos on Free share a 2000 min/month cap.
+
+A full pre-publication audit on 2026-08-17 read all 679 tracked files, all 160 commits across every
+branch, and all 8 workflows. It found **no live secret has ever been committed**: no JWT, no
+Supabase anon key, no `*.apps.googleusercontent.com` client id, no `google-services.json`, no
+service-account JSON, and — importantly — never the release keystore. `.env` has been gitignored
+since the first commit and both `.env.example` files hold only `MY_*` placeholders. The workflows
+were already in good shape: no `pull_request_target` anywhere, every third-party action already
+SHA-pinned by the preceding hardening commit, `permissions: contents: read` as the default, and
+every `${{ github.event.* }}` value interpolated into a shell is a commit SHA (hex, no injection
+surface). Two **dead** artifacts do sit in history and will become world-readable: an Android
+**debug** keystore (`debug.keystore.base64`, alias `androiddebugkey`, standard `android` password,
+added 2026-05-24 and later deleted) and a Supabase Management API token revoked 2026-08-15 and
+already documented in `.gitleaksignore`. The maintainer reviewed a history rewrite (`git-filter-repo`
+across 160 commits, force-push, all SHAs change) and **declined it**, accepting both as permanent
+public records.
+
+**Decision.**
+1. **The repository is public.** The two dead history artifacts above are accepted as public;
+   mitigation for the debug keystore happens at the identity layer, not the git layer (decision 6).
+2. **Adopt the controls that were previously paywalled.** Branch protection with required
+   up-to-date branches on `develop` and `main`, and the **native** `prod` Environment
+   required-reviewer rule — both free on a public repo. The two `trstringer/manual-approval` jobs
+   stay in place for now: ADR-0032's correction already predicted they "would simply become
+   redundant, not wrong." Removing them (which also removes a third-party action from the path
+   between a `main` merge and a real prod migration) is deliberate follow-up work, not a silent
+   side effect of this ADR.
+3. **Untrusted contributors are now a real trust boundary.** `supabase-migrate.yml`'s `verify` job
+   is split in two: the static checks (schema equivalence, `SCHEMA.md` freshness) declare no
+   `environment` and use no secrets, so they run identically on a fork PR; the one check that
+   genuinely needs `SUPABASE_ACCESS_TOKEN` moves to a new `verify-types` job guarded on
+   `github.event.pull_request.head.repo.fork == false`. **`pull_request_target` is forbidden
+   repo-wide** — it is the single trigger that would hand a live token to code from an untrusted
+   branch, and the guard comment in that workflow says so at the call site rather than only here.
+4. **Gradle wrapper validation** (`gradle/actions/wrapper-validation`) is added to **Gate 2**, not
+   Gate 3. Gate 2 is the only job that runs on every pull request including docs-only ones, and
+   `gradle-wrapper.jar` is a binary that executes before any of this repo's own code is read.
+5. **Third-party attribution is now a redistribution obligation.** The three bundled font families
+   (Inter, Space Grotesk, JetBrains Mono — all SIL OFL 1.1) ship their license texts in
+   `third_party/fonts/`, indexed from a root `NOTICE`. This was already non-compliant while private
+   and simply went unnoticed; publishing is what makes it redistribution.
+6. **The debug keystore is mitigated in Google Cloud, not in git.** ADR-0031 decision 1 makes
+   *package name + signing SHA-1* the gate deciding which Android app may request a credential
+   against the shared Dhruv ID Web Client. A public debug private key means that SHA-1 is no longer
+   evidence of app authenticity, so any Android OAuth client registered under it is removed, or the
+   debug keystore is rotated and re-registered.
+7. **The internal production-readiness gap tracker leaves the tree.** It enumerated open Critical
+   and High findings with `file.kt:line` evidence — a turn-key map against APKs already published to
+   GitHub Releases. Because decision 1 declines a history rewrite, this **reduces discoverability
+   without erasing exposure**: GitHub code search and the browsable tree index default-branch HEAD
+   only, but every historical revision remains reachable. Recorded as a partial mitigation
+   deliberately, so nobody later mistakes it for deletion.
+8. **A governance surface exists**: `SECURITY.md` (private vulnerability reporting as the primary
+   channel, plus an explicit not-a-vulnerability list covering the two dead history artifacts and
+   the publishable-by-design anon key), `CONTRIBUTING.md` (which states the fork-PR reality from
+   decision 3 in the contributor's own terms), and `CODE_OF_CONDUCT.md`.
+9. **AI PR review bots** (CodeRabbit, Qodo Merge) are enabled, both configured with this repo's own
+   architecture rules (module boundaries, Koin-not-Hilt, integer-paise money, append-only
+   `finance.valuations`, no feature-local styling, consent-gate requirements) rather than generic
+   defaults. They are **advisory only and never merge gates** — never added to required status
+   checks, the same status ADR-0012 fixed for `pr-summary`; `ci.yml` remains the sole merge
+   authority. Their surfaces are split so they do not duplicate each other: **CodeRabbit** owns the
+   PR walkthrough and inline line-level review, **Qodo** owns a single collapsed code-suggestion
+   table (`/improve` only — no `/describe`, no `/review`). Both are free on a public repo, which is
+   itself a consequence of decision 1; Qodo's free tier is capped at 30 reviews/month, which is why
+   the *uncapped* bot owns the always-needed summary surface. Bot-side linters that duplicate a CI
+   gate (detekt, ESLint, GitLeaks) are disabled — CI is authoritative and a second opinion on the
+   same finding is noise. Operator detail, install steps and the drift risk of hand-copying project
+   rules into two vendor configs: `docs/ci/pr-review-bots.md`.
+
+**Why.** Going public converts the two blocked controls from "needs a paid plan" into "free and on,"
+which is strictly better than continuing to carry ADR-0026's safety claim on a setting that has
+never actually been enforced. Security by obscurity was never doing any work here: RLS
+(`user_id = auth.uid()`), the `ConsentInterceptor`, and the CA-level certificate pins are all
+designed to hold when read — ADR-0029 built them that way on purpose. Doing the untrusted-contributor
+hardening (decisions 3 and 4) *in the same change* as the flip is the point: those two gaps are
+harmless on a private repo and become live the moment the first stranger can open a PR.
+
+**Consequences.** Secret scanning and push protection are enabled at flip time; the `.gitleaksignore`
+token will raise an alert, which is **dismissed as already-revoked rather than re-remediated** —
+that is the intended outcome of decision 1, not an oversight. First-time contributors' workflow runs
+require maintainer approval. Unlimited GitHub-hosted runner minutes retire the constraint ADR-0026
+was designed around, but this ADR deliberately does **not** re-litigate ADR-0026's topology:
+PR-only validation remains correct on its own merits, and re-running the gates on the merge push is
+now merely affordable, not obviously valuable. ADR-0026's four standing budgets survive as a
+performance signal rather than a spend ceiling. OWASP's monthly cadence is unchanged — ADR-0026 tied
+that to its findings being masked by `continue-on-error`, not to cost, so the cost argument
+disappearing changes nothing there. The MIT license means anyone may fork and ship this app under
+their own name; that is a product consequence the maintainer accepted, not a security one. Fork PRs
+will show `Verify · database.ts freshness (same-repo PRs)` as skipped and may not receive the sticky
+summary comment (the `pr-summary` job cannot mint its App token without secrets) — both are working
+as designed, and `CONTRIBUTING.md` says so, so that nobody "fixes" them by reaching for the
+forbidden trigger in decision 3.
+
+---
+
+## Numbering-hygiene note — third ADR collision, both claimants dormant (found 2026-08-18)
+
+**Context.** For the third time (see the ADR-0015 and ADR-0032 notes above), a number reserved by
+an unbuilt document collided with an ADR that actually landed. **Two** dormant documents each
+claimed ADR-0034 while ADR-0033 was the highest written entry: `platform/VERSIONING.md` §9 (the
+per-component versioning plan, all steps still unchecked) and `docs/superpowers/plans/2026-08-15-
+agent-protocol-and-doc-verifier.md` (already renumbered once by the previous note). VERSIONING.md
+had even worked out the correct resolution in advance — *"the highest written register entry is
+ADR-0033, so this takes ADR-0034 by the register's own rule that a written entry outranks a
+reservation"* — and instructed that the other plan move to 0035. That reasoning was right; it just
+assumed VERSIONING.md would be the next thing to land, and this ADR landed first.
+**Resolution.** ADR-0034 above is a written register entry and does not move. Both reservations
+shift by one, preserving the order VERSIONING.md itself prescribed: `platform/VERSIONING.md` →
+**ADR-0035**, `docs/superpowers/plans/2026-08-15-agent-protocol-and-doc-verifier.md` →
+**ADR-0036**. Neither document's content changes; only its self-assigned number.
+**Why.** Same rule as both earlier notes, applied unchanged: the register is the only authority on
+which number is free, and a reservation is provisional until the moment it is written here.
+**Consequences.** VERSIONING.md's step 8 ("write the ADR") now writes ADR-0035. The recurrence rate
+— three collisions in three months, every one caused by a document sitting dormant while the
+register advanced — is itself the finding: a reservation written more than one merge before it is
+executed should be assumed stale and re-checked against `grep '^## ADR-' platform/DECISIONS.md` at
+execution time, which is exactly what the agent-protocol plan's own Global Constraints section
+already says to do.

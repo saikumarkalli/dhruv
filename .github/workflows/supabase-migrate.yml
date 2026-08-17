@@ -30,16 +30,17 @@ permissions:
   contents: read
 
 jobs:
-  # ── PR: static verification, no live DB, no secrets that can mutate anything ──
+  # ── PR: static verification. No environment, no secrets, no DB. ───────────────
+  # Deliberately secret-free so it runs identically on a fork PR (ADR-0034): on a
+  # public repo GitHub withholds every secret — including Environment secrets — from
+  # fork-originated runs, so any check that needs one is guaranteed to fail there.
+  # Splitting the static checks out keeps the merge gate meaningful for outside
+  # contributors instead of red-by-construction.
   verify:
-    name: "Verify · schema equivalence + generated docs/types"
+    name: "Verify · schema equivalence + generated docs"
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # `dev` has no required-reviewer protection rule, so this does not pause —
-    # it only scopes SUPABASE_ACCESS_TOKEN for the (read-only) type-gen step
-    # below. Nothing here can write to any project.
-    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -57,24 +58,47 @@ jobs:
       - name: SCHEMA.md freshness
         run: python3 scripts/db/gen_schema_docs.py docs --check
 
-      # Best-effort: needs live schema introspection (unlike the two checks
-      # above), so it reads the DEV project — never writes to it — via a
+  # ── PR (same-repo branches only): live read-only type-freshness check ─────────
+  # Split from `verify` above because this one genuinely needs SUPABASE_ACCESS_TOKEN.
+  # The `head.repo.fork == false` guard is the load-bearing line (ADR-0034): it states
+  # in the workflow what GitHub already enforces at the platform level, so the failure
+  # mode for a fork PR is a *skipped* job (counts as passing) rather than a red check
+  # someone is tempted to "fix" by reaching for `pull_request_target` — which WOULD
+  # hand this token to untrusted branch code. Never change this trigger.
+  verify-types:
+    name: "Verify · database.ts freshness (same-repo PRs)"
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `dev` has no required-reviewer protection rule, so this does not pause —
+    # it only scopes SUPABASE_ACCESS_TOKEN for the (read-only) type-gen step
+    # below. Nothing here can write to any project.
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      # Best-effort: needs live schema introspection (unlike the two static checks
+      # in `verify`), so it reads the DEV project — never writes to it — via a
       # read-only `gen types` call. Not fatal on infra hiccups (network, CLI
       # version drift); missing/expired SUPABASE_ACCESS_TOKEN degrades to a
       # warning rather than blocking the PR on a secret that isn't set up yet.
       - name: Set up Supabase CLI
-        if: env.SUPABASE_ACCESS_TOKEN != ''
         uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: web/src/shared/types/database.ts freshness
-        if: env.SUPABASE_ACCESS_TOKEN != ''
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DEV_PROJECT_REF: ${{ vars.SUPABASE_DEV_PROJECT_REF }}
         continue-on-error: true
         run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::warning::SUPABASE_ACCESS_TOKEN not available — skipping database.ts freshness check."
+            exit 0
+          fi
           if [ -z "$SUPABASE_DEV_PROJECT_REF" ]; then
             echo "::warning::SUPABASE_DEV_PROJECT_REF not set — skipping database.ts freshness check."
             exit 0
