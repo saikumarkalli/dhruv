@@ -75,11 +75,45 @@ is the gate). Afterwards, delete `branch-guard.yml` — GitHub enforces it nativ
 |---|---|---|---|
 | 1 | Dependency graph + **Dependabot alerts** + automated security fixes | **on** — was off; 308 packages now graphed, **2 open high alerts** in `web/package-lock.json` (react-router CSRF, brace-expansion DoS). Security-update PRs open automatically. | `gh api repos/saikumarkalli/dhruv/dependabot/alerts?state=open --jq length` |
 | 2 | Third-party actions **SHA-pinned** | 8 call sites: `gitleaks-action`, `action-gh-release` ×2, `setup-cli` ×3, `manual-approval` ×2 | `grep -rn "uses: \(gitleaks\|softprops\|supabase/setup-cli\|trstringer\)" .github/workflows/` |
-| 3 | Default `GITHUB_TOKEN` permissions → **read**, Actions may not approve PRs | every job that needs write already declares it explicitly, so nothing broke | `gh api repos/saikumarkalli/dhruv/actions/permissions/workflow` |
+| 3 | Actions barred from approving PRs → **on**. Default `GITHUB_TOKEN` permissions → **`write`** (tried `read`, reverted — see below) | `can_approve_pull_request_reviews: false` kept; the `read` default was reverted the same day after it broke both open Dependabot PRs | `gh api repos/saikumarkalli/dhruv/actions/permissions/workflow` |
 | 4 | Milestones **Phase 0–7** | 8 created, all open | `gh api repos/saikumarkalli/dhruv/milestones --jq '.[].title'` |
 | 5 | `.github/release.yml` | auto-categorised release notes (honoured because the release step sets `generate_release_notes: true`) | — |
 | 6 | Homepage → `https://dhruv-finance.vercel.app` | verified HTTP 200 | `gh api repos/saikumarkalli/dhruv --jq .homepage` |
 | 7 | Description + 20 topics + `delete_branch_on_merge` | applied 2026-08-17 | `gh repo view --json description,repositoryTopics` |
+
+### Do NOT set the default workflow permissions to `read` (2026-08-17)
+
+It was set to `read` as a least-privilege measure and **broke `Gate 2 · Security` on every open
+Dependabot PR** (#36, #37) within minutes:
+
+```
+RequestError [HttpError]: Resource not accessible by integration
+    at async Object.ScanPullRequest (.../gitleaks-action/v2/dist/index.js)
+  status: 403
+Secret source: Dependabot
+```
+
+**Why.** For a **Dependabot-triggered** event the repository's *default* workflow permissions act as
+a hard **cap** on `GITHUB_TOKEN` — a job-level `permissions:` block cannot exceed it the way it can
+on a normal PR. `ci.yml`'s `security` job asks for `pull-requests: write`; with the default at
+`read` that request is capped away and `gitleaks-action`'s PR-scan path 403s. Normal PRs are
+unaffected, which is why only the two Dependabot PRs failed.
+
+**Confirmed by single-variable test**, not inference: same commit, same action — flipping the repo
+default `read → write` and re-running the identical job took `Gate 2` from `fail (9s)` to
+`pass (15s)` on both PRs.
+
+**Why reverting costs nothing.** Every job in every workflow already declares its own
+`permissions:` block — verified across all eight workflows, **zero** jobs inherit the repo default.
+The setting is therefore dead config for normal runs, and its only observable effect was capping the
+Dependabot token. It bought no real privilege reduction and broke a blocking gate.
+
+**A fix cannot be validated before merge.** Dependabot PRs run the workflow from their own branch
+(based on `develop`), so a workflow change sitting in a feature-branch PR has no effect on them. Any
+future attempt at this has to land on `develop` first and be verified afterwards, with the open
+Dependabot PRs as the canary — which is why it was not retried blind.
+
+`can_approve_pull_request_reviews: false` is unrelated, kept, and caused none of this.
 
 ### Action-pinning policy
 
