@@ -7,34 +7,79 @@
   "apps": {
     "finance": {
       "version": "2.0.4",
+      "status": "active",
       "requiresCore": ">=1.0.0",
       "requiresSettings": ">=1.0.0",
-      "buildNumber": 16
+      "buildNumber": 16,
+      "paths": [
+        "apps/finance/**",
+        "libs/**",
+        "build-logic/**",
+        "gradle/**",
+        "settings.gradle.kts",
+        "build.gradle.kts"
+      ],
+      "tag": "dhruv-finance-v{version}",
+      "artifact": "github-release"
     },
     "tools": {
       "version": "0.0.0",
       "status": "planned",
-      "requiresCore": ">=1.0.0"
+      "requiresCore": ">=1.0.0",
+      "paths": [
+        "apps/tools/**"
+      ],
+      "tag": "dhruv-tools-v{version}",
+      "artifact": "github-release"
     },
     "vault": {
       "version": "0.0.0",
       "status": "future",
-      "requiresCore": ">=1.0.0"
+      "requiresCore": ">=1.0.0",
+      "paths": [
+        "apps/vault/**"
+      ],
+      "tag": "dhruv-vault-v{version}",
+      "artifact": "github-release"
     }
   },
   "web": {
     "finance": {
       "version": "0.1.0",
-      "status": "in-development"
+      "status": "active",
+      "paths": [
+        "web/**"
+      ],
+      "tag": "dhruv-web-finance-v{version}",
+      "artifact": "tag-only"
     },
     "tools": {
       "version": "0.0.0",
-      "status": "future"
+      "status": "future",
+      "paths": [
+        "web/src/apps/tools/**"
+      ],
+      "tag": "dhruv-web-tools-v{version}",
+      "artifact": "tag-only"
     },
     "vault": {
       "version": "0.0.0",
-      "status": "future"
+      "status": "future",
+      "paths": [
+        "web/src/apps/vault/**"
+      ],
+      "tag": "dhruv-web-vault-v{version}",
+      "artifact": "tag-only"
     }
   },
-  "notes": "All three version segments (major.minor.patch) and versionCode are CI-owned (ADR-0025) \u2014 do not edit by hand. Web version is bumped manually in web/package.json. Update requiresCore when a breaking core change lands."
+  "excludedPaths": [
+    "platform/versions.json",
+    "gradle.properties",
+    "web/package.json",
+    "web/package-lock.json",
+    "web/src/shared/version.ts",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "notes": "Version protocol: platform/VERSIONING.md. This file is the single source of truth; gradle.properties, web/package.json, web/src/shared/version.ts, the README version block and the CHANGELOG headings are GENERATED from it (scripts/ci/sync_versions.py) and must never be hand-edited. Each active component under apps/* and web/* carries an INDEPENDENT version line, bumped by CI only when that component's own `paths` changed in the promotion range (D1, 2026-08-17) — a web-only merge does not move the Android version. `excludedPaths` are generated files: they are the EFFECT of a release, never a cause, and are ignored by every component's path match. `libs.*` and `platformContractVersion` are contract versions, NOT release versions — they are deliberately frozen and bumped by hand only when a :libs:* public contract changes, gated on an ADR (D2, 2026-08-17); CI asserts they never change silently and that every `requiresCore`/`requiresSettings` constraint is satisfied. Do not hand-edit any `version` or `buildNumber` field."
 }

@@ -195,6 +195,36 @@ jobs:
             **/build/reports/detekt/*.html
             build/reports/ktlint/ktlint.xml
 
+  # ── Gate 1b: Version sync ─────────────────────────────────────────────────
+  # Verifies every GENERATED version location still matches platform/versions.json,
+  # and that the CHECKED ones stay coherent (see platform/VERSIONING.md).
+  #
+  # Deliberately NOT gated on `needs.changes.outputs.android`: the surfaces this
+  # guards — README, CHANGELOG, web/package.json, feature-flag minVersions — are
+  # touched by web-only and docs-only PRs too, which is exactly how the README
+  # badge drifted eight releases without anyone noticing. Same reasoning ADR-0026
+  # already applies to GitLeaks running on docs-only PRs.
+  #
+  # No Gradle, no cache, no JDK — pure stdlib Python on the preinstalled
+  # interpreter. Runs in seconds; a rounding error against ADR-0026's ≤90 min/PR
+  # budget.
+  version-sync:
+    name: "Gate 1b · Version sync"
+    runs-on: ubuntu-latest
+    needs: [ changes ]
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check generated version files against platform/versions.json
+        run: python3 scripts/ci/sync_versions.py --check --format=github
+
+      - name: Unit-test the version tooling
+        run: |
+          python3 scripts/ci/test_sync_versions.py
+          python3 scripts/ci/test_bump_version.py
+
   # ── Gate 2: Security scan (GitLeaks) ──────────────────────────────────────
   # GitLeaks is the BLOCKING secret gate — fast, gates the build. OWASP now runs
   # on a schedule in owasp-scheduled.yml, off the merge path entirely (ADR-0026).
@@ -218,7 +248,7 @@ jobs:
 
       # Hard failure on any detected secret — no continue-on-error.
       - name: GitLeaks — secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -448,7 +478,7 @@ jobs:
       issues: write
     steps:
       - name: Wait for release approval
-        uses: trstringer/manual-approval@v1
+        uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1
         with:
           secret: ${{ github.token }}
           approvers: saikumarkalli
@@ -799,7 +829,7 @@ jobs:
       # fail_on_unmatched_files is off here only so that a best-effort coverage-report.zip
       # (nice-to-have) can be absent without blocking the release.
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ steps.tagname.outputs.tag }}
           name: "Dhruv finance v${{ steps.version_json.outputs.version }}"
