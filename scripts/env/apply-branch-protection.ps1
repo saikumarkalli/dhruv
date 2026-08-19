@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Applies real, server-side branch protection to `main` and `develop` via GitHub
-    repository rulesets. Idempotent — safe to re-run.
+    repository rulesets. Idempotent - safe to re-run.
 
 .DESCRIPTION
     `main` (PROD) and `develop` (DEV) advance only through a merged pull request
@@ -10,7 +10,7 @@
 
     Repository rulesets and classic branch protection are Pro/Team features for a
     PRIVATE repo, and are FREE on a public one. GitHub's own refusal named both
-    exits — verified live against this repo while it was still private:
+    exits - verified live against this repo while it was still private:
 
         GET /repos/saikumarkalli/dhruv/rulesets
           403 "Upgrade to GitHub Pro or make this repository public to enable this feature."
@@ -103,11 +103,13 @@ catch {
 
 # The gate names contain U+00B7 MIDDLE DOT. Do NOT paste the literal character here.
 # Windows PowerShell 5.1 reads a BOM-less .ps1 as ANSI (cp1252), so the UTF-8 bytes
-# C2 B7 are decoded as the two characters "Â·" and this script then writes a
-# required-status-check name that can never match a real check — which silently BRICKS
-# merges on both protected branches (every PR waits forever on a check that will never
-# report). Observed live on the first successful run, 2026-08-18. Building the character
-# from its code point keeps this file pure ASCII and encoding-independent.
+# C2 B7 are decoded as two separate cp1252 characters (A-circumflex, then the dot), and
+# this script then writes a required-status-check name that can never match a real check
+# - which silently BRICKS merges on both protected branches: every PR waits forever on a
+# check that will never report. Observed live on the first successful run, 2026-08-18.
+# Building the character from its code point keeps this file pure ASCII and
+# encoding-independent. Same reason there is no non-ASCII anywhere else in this file,
+# comments included - a warning written in the characters it warns about is worthless.
 $dot = [char]0x00B7
 $requiredChecks = @(
     "Gate 1 $dot Static Analysis",
@@ -178,12 +180,27 @@ function New-RulesetPayload {
 # NOTE: do not use `gh api --jq '... "\(.id) \(.name)" ...'` here. Windows PowerShell 5.1
 # re-quotes native-command arguments and splits a jq expression containing double quotes
 # into two positional args, so gh fails with `accepts 1 arg(s), received 2`. Fetch raw JSON
-# and let PowerShell parse it instead — no jq expression crosses the process boundary.
+# and let PowerShell parse it instead - no jq expression crosses the process boundary.
+# Discovery MUST hard-fail. If this call errors and we merely continue with an empty map,
+# every branch below takes the create path and POSTs a duplicate ruleset instead of
+# updating the existing one - silently breaking the idempotent re-run contract this script
+# advertises in its own SYNOPSIS. A transient 5xx would then leave two competing rulesets
+# on a protected branch, which is worse than not running at all.
 $existingMap = @{}
-$existingRaw = gh api "repos/$Repo/rulesets" 2>$null
-if ($LASTEXITCODE -eq 0 -and $existingRaw) {
-    foreach ($rs in ($existingRaw | ConvertFrom-Json)) {
-        if ($rs.name) { $existingMap[$rs.name] = $rs.id }
+$existingRaw = gh api "repos/$Repo/rulesets" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw ("Ruleset discovery failed (exit $LASTEXITCODE); refusing to continue, because " +
+           "proceeding would POST duplicate rulesets instead of updating existing ones. " +
+           "Response: $existingRaw")
+}
+if ($existingRaw) {
+    try {
+        foreach ($rs in ($existingRaw | ConvertFrom-Json)) {
+            if ($rs.name) { $existingMap[$rs.name] = $rs.id }
+        }
+    }
+    catch {
+        throw "Ruleset discovery returned unparseable JSON; refusing to continue. $_"
     }
 }
 
@@ -202,10 +219,10 @@ foreach ($branch in @('main', 'develop')) {
     $tmp = [System.IO.Path]::GetTempFileName()
     try {
         # UTF-8 WITHOUT a BOM, written via .NET rather than Out-File. Two separate traps:
-        #   * encoding must be UTF-8 at all — the required check names contain a non-ASCII
+        #   * encoding must be UTF-8 at all - the required check names contain a non-ASCII
         #     middle dot, and the ANSI codepage mangles it;
         #   * `Out-File -Encoding utf8` on Windows PowerShell 5.1 emits a BOM, and GitHub's
-        #     JSON parser rejects it outright with `Problems parsing JSON (HTTP 400)` —
+        #     JSON parser rejects it outright with `Problems parsing JSON (HTTP 400)` -
         #     observed live on the first real run of this script, 2026-08-18.
         [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
 
