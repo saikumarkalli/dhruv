@@ -294,7 +294,9 @@ creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`
 | 1 — Identity & consent | — (shipped before spec-kit was installed; not retrofitted) | shipped |
 | 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | spec + plan + tasks (44, T001–T044) done, ready for `/speckit-implement` |
 | 3 — Money tab | [`apps/finance/specs/002-money-tab/`](../../../specs/002-money-tab/) | spec + plan + research + data-model + routes + quickstart + tasks (83, T001–T083) done, ready for `/speckit-implement` |
-| 4–7 | not yet created | — |
+| 4 — Plan live modules | [`apps/finance/specs/003-plan-live-modules/`](../../../specs/003-plan-live-modules/) | spec + plan + research + data-model + routes + quickstart + tasks (134, T001-T134) done (2026-08-19), ready for `/speckit-implement` |
+| 5–7 | not yet created | — |
+| — Settings (cross-phase surface, not a numbered phase) | [`apps/finance/specs/004-settings/`](../../../specs/004-settings/) | spec + requirements checklist done (2026-08-19); blocked on a `SET-*` QA catalog module before `/speckit-tasks` — see that checklist's coverage section |
 
 ### 7.0 How every phase is executed (binding — see the module-standard doc §4 for the full process)
 
