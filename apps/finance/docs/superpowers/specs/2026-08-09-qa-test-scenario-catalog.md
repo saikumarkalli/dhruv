@@ -245,11 +245,115 @@ not a feature module — see the module-standard doc's `HOM`/`PLN` correction).
 
 ---
 
-## 13. Coverage summary (updated as rows close)
+## 13. SET — Settings control plane (shell-owned, Phase 0b)
+
+Added 2026-08-19 for `apps/finance/specs/004-settings/`. Shell-owned (`:apps:finance:app`), like
+`HOM` and `NAV` — Settings has no feature flag and no `FeatureHost` of its own, though each
+**contributed** module entry does (SET-ARCH-007).
+
+Larger than a typical module section because Settings is a control plane, not a screen: it carries a
+contract other modules implement (`004/contracts/settings-contribution.md`), a shell-level security
+checkpoint (`004/contracts/app-lock-gate.md`), and the migration of 19 shipped rows. Source column
+cites `004 FR-*`/`SC-*` from that feature's `spec.md`, and the two contracts by name.
+
+**Rows reused, not restated** (constitution principle II — cite the id, do not duplicate the row):
+
+| Concern | Reused row | Why it already covers it |
+|---|---|---|
+| Consent persists across restart | `ONB-BR-004` (§2) | same `ConsentRepository`, same DataStore round-trip |
+| Consent withdrawn in Settings persists; others unaffected | `ONB-BR-005` (§2) | already written against Settings' switches |
+| Dependent surfaces degrade on withdrawal | `ONB-BR-006` (§2) | deferred there for the same reason (Phase 2 screens) |
+| No network call before consent | `DAT-BR-001` (§11) | interceptor-level, unchanged by this feature |
+| Erasure removes rows / account | `ONB-BR-008`, `ONB-BR-009`, `DAT-FLOW-001` | Settings only relocates the action; the mechanism is closed |
+| Withdraw-then-erase sequence | `ONB-FLOW-005` (§2) | exactly this feature's Account flow |
+| One back arrow to a single parent | `NAV-ARCH-002` (§1) | the tier back-steps are an instance of N2 |
+| Settings icon present on every tab | `NAV-UI-002` (§1) | already asserts the top-bar trio |
+| No `feature → feature` import | `NAV-ARCH-004` (§1) | re-verified per new module, contributions included |
+
+### 13.1 Contribution mechanism (architecture)
+
+| ID | Given | When | Then | Source | Size | Auto | Owner | Status |
+|---|---|---|---|---|---|---|---|---|
+| SET-ARCH-001 | several modules each register a `SettingsContribution` | the registry resolves | every registered contribution is returned by type — the registry holds no module names of its own | 004 FR-004, contract §4 | M | Y | Backend | ☐ |
+| SET-ARCH-002 | a throwaway module with a contribution is added to the build | `git status` after a successful assemble | no file under `app/ui/settings/` appears in the diff — only the new module's own files | 004 SC-004 | M | N (manual diff) | QA | ☐ |
+| SET-ARCH-003 | `com.dhruv.finance.app.ui.settings` sources | `DependencyRulesTest` runs | no class there references a feature-module type | 004 FR-004, contract §5 | S | Y | SA | ☐ |
+| SET-ARCH-004 | every `SettingsContribution` implementation | `DependencyRulesTest` runs | none references a Compose type — contributions stayed declarative data | contract §2, constitution V | S | Y | SA | ☐ |
+| SET-ARCH-005 | every registered contribution | its `moduleKey` is checked against `platform/feature-flags/dhruv-finance.json` | the key exists — an unknown key would make the entry silently never appear | contract §1 rule 1 | S | Y | Backend | ☐ |
+| SET-ARCH-006 | today's `SettingsKeys` key set | the shipped build's key set is enumerated | today's set is a **subset** — no migrated row got a new key | 004 FR-011, SC-001, constitution IX | S | Y | Backend | ☐ |
+| SET-ARCH-007 | one contribution throws while producing its rows | the modules tier renders | that entry shows its `FeatureErrorCard`; every other entry and the tier itself still render | contract §4 rule 12, constitution IV | M | Y | Android | ☐ |
+
+### 13.2 Registry and row behaviour
+
+| ID | Given | When | Then | Source | Size | Auto | Owner | Status |
+|---|---|---|---|---|---|---|---|---|
+| SET-BR-001 | a module whose flag is `enabled: false` | modules tier resolves | its entry is absent — not greyed out, not present-and-inert | 004 FR-006 | S | Y | Backend | ☐ |
+| SET-BR-002 | a module enabled but with `minVersion` above the running version | modules tier resolves | its entry is absent, matching how the resolver already gates routes | 004 FR-006 | S | Y | Backend | ☐ |
+| SET-BR-003 | a module previously disabled | its flag is enabled | its entry appears in the tier with no other change to Settings | 004 FR-007 | S | Y | Backend | ☐ |
+| SET-BR-004 | contributions with differing `order` and titles, registered in arbitrary order | the tier renders twice | ordering is `order` then title, identical both times | contract §4 | S | Y | Backend | ☐ |
+| SET-BR-005 | an optional module with non-default settings | the module is turned off, then on again | its stored preferences are retained and restored — no reset on disable | 004 FR-032 | M | Y | Backend | ☐ |
+| SET-BR-006 | the notification channel registry (surface registries §2) and the contributed alert toggles | both are enumerated | counts are equal and the mapping is one-to-one; no channel without a control, no control without a channel | 004 FR-030, SC-006 | M | Y | Backend | ☐ |
+| SET-BR-007 | any row is changed | the change is made | it persists immediately with no save action; a write that fails reverts the displayed value and states why | 004 FR-042, contract §2 rule 9 | M | Y | Android | ☐ |
+| SET-BR-008 | theme, accent or app lock changed from the quick row | the owning section is opened (and vice versa) | both show the same value from the same stored preference — one setting, two surfaces | 004 FR-002, SC-003 | S | Y | Android | ☐ |
+| SET-BR-009 | every persisted preference key in the app | each is located in Settings | every key has exactly one row; a key with no row is either an FR-003 violation or dead state to delete | 004 FR-003, SC-005 | L | N (manual enumeration) | QA | ☐ |
+| SET-BR-010 | the app-wide notification master is off | any module would post an alert | none is posted, regardless of that module's own alert setting | 004 FR-026 | M | Y | Backend | ☐ |
+| SET-BR-011 | assistant consent granted | app force-stopped and relaunched | the grant still holds and the assistant does not ask again — replaces today's in-memory flag | 004 FR-036 | S | Y | Backend | ☐ |
+| SET-BR-012 | a personal AI key saved | screens, logs, the export file and a crash report are searched | the key appears in full in none of them; the row shows it masked and removes it in one action | 004 FR-038, SC-014 | M | Y | Backend | ☐ |
+
+### 13.3 App lock (see `004/contracts/app-lock-gate.md`)
+
+| ID | Given | When | Then | Source | Size | Auto | Owner | Status |
+|---|---|---|---|---|---|---|---|---|
+| SET-BR-013 | app lock enabled | app cold-started | state is LOCKED — there is no "recently used" credit across process death | gate §1 rule 1 | S | Y | Backend | ☐ |
+| SET-BR-014 | each timeout option in turn | app backgrounded for less than, and more than, that duration | LOCKED exactly when elapsed ≥ timeout; `Immediate` locks on any backgrounding however brief | gate §1 rules 2–3 | M | Y | Backend | ☐ |
+| SET-BR-015 | a successful authentication | the app stays foregrounded | it does not re-prompt; the unlock covers the current foreground session only | gate §1 rule 3 | S | Y | Backend | ☐ |
+| SET-BR-016 | app lock turned off while a locked state exists | — | state is UNLOCKED immediately; no stale locked state survives | gate §1 rule 4 | S | Y | Backend | ☐ |
+| SET-BR-017 | a device with no enrolled credential | the user toggles app lock on | it is refused with what to enrol; the switch does not turn on | 004 FR-022, gate §2 rule 10 | S | Y | Android | ☐ |
+| SET-UI-001 | app lock on, gate showing | each tab is attempted, **including Calc** | no content is composed or drawn anywhere — absent, not dimmed or blurred; a screenshot shows the lock surface only | 004 FR-021, gate §2 rules 6–7 | M | Y | Android | ☐ |
+| SET-UI-002 | app lock on | app cold-started and the launch recorded | no frame of unlocked content appears before the gate resolves | gate §2 rule 7 | M | N (screen recording) | QA | ☐ |
+| SET-UI-003 | the unlock prompt showing | the user cancels or fails | content stays hidden with a retry affordance; no attempt limit or lockout of our own | gate §2 rule 9 | S | Y | Android | ☐ |
+| SET-FLOW-001 | app locked | a notification or deep link is tapped | unlock happens first, then the destination is reached — never skipped, never delivered before unlock | 004 FR-023, gate §3 | M | Y | Android | ☐ |
+| SET-FLOW-002 | a held target and a cancelled unlock | the user unlocks successfully later in the same launch | the held target is dispatched exactly once; a process death before that clears it | gate §3 rules 12–13 | M | Y | Backend | ☐ |
+| SET-BR-018 | a target already held while locked | a second target arrives | the second replaces the first — the user's most recent intent wins, and only one is held | gate §3 rule 14 | S | Y | Backend | ☐ |
+| SET-BR-019 | hide-amounts on | money is rendered on a screen, the widget and a notification | all three mask the value while counts, dates and percentages stay readable; masking is independent of lock state | 004 FR-025, gate §4 rule 16 | M | Y | Backend | ☐ |
+| SET-BR-020 | the legacy calculator history lock is on | app lock is enabled | the history lock is unchanged and still gates history inside an unlocked app; it is labelled legacy | 004 FR-028, gate §4 rule 17 | S | Y | Android | ☐ |
+
+### 13.4 Account
+
+| ID | Given | When | Then | Source | Size | Auto | Owner | Status |
+|---|---|---|---|---|---|---|---|---|
+| SET-FLOW-003 | no session | Settings › Account opened and sign-in used | sign-in completes without passing through first-run onboarding; no placeholder identity is shown at any point | 004 FR-012, SC-008 | M | Y | Android | ☐ |
+| SET-FLOW-004 | an active session | sign out | session and stored credentials are cleared; on-device calculator history survives | 004 FR-013 | M | Y | Backend | ☐ |
+| SET-BR-021 | account erasure requested | the confirmation is shown | it names exactly what is destroyed and that it cannot be undone, and requires a typed confirmation rather than a single tap | 004 FR-015 | S | Y | Android | ☐ |
+| SET-BR-022 | erasure is attempted offline or the server rejects it | — | the failure is reported as a failure, nothing claims success, and the action stays available for retry | 004 FR-016 | M | Y | Backend | ☐ |
+| SET-BR-023 | the export cannot yet produce a file (no financial records exist) | Account is opened | no export row is present at all | 004 FR-018 | S | Y | Android | ☐ (phase-gated — closes in the phase that ships the records; see 004 research R7) |
+
+### 13.5 Structure, migration and presentation
+
+| ID | Given | When | Then | Source | Size | Auto | Owner | Status |
+|---|---|---|---|---|---|---|---|---|
+| SET-UI-004 | Settings opened | the top level renders | order is quick rows → Account → App → modules tier, with no inline controls other than the three quick rows | 004 FR-001 | S | Y | Android | ☐ |
+| SET-UI-005 | a module with submodules | its entry is opened | submodule settings are grouped and labelled under it, never promoted to the top level | 004 FR-029, contract §1 rule 4 | S | Y | Android | ☐ |
+| SET-UI-006 | any settings screen | back is pressed | one step to the Settings top level, one more to the originating tab (instance of `NAV-ARCH-002`) | 004 FR-009 | S | Y | Android | ☐ |
+| SET-UI-007 | a build of the previous version with all 19 rows set to distinctive values | this build is installed **over** it without uninstalling | all 19 rows are reachable at their new homes with values intact | 004 SC-001, data-model §2 | L | N (manual over-install) | QA | ☐ |
+| SET-UI-008 | a module entry whose controls need a consent the user has not granted | the entry is opened | it states which consent is needed and offers the route to grant it, rather than showing inert controls | 004 FR-035 | M | Y | Android | ☐ |
+| SET-UI-009 | every shipped row | each is exercised | zero rows both appear operable and change nothing; a preference-only row says it is preference-only | 004 FR-043, SC-011 | M | N (review pass) | QA | ☐ |
+| SET-UI-010 | a primary navigation destination | the user looks for a way to hide it | none is offered; optionality applies to content and tools only | 004 FR-033 | S | Y | Android | ☐ |
+| SET-UI-011 | every item on a surface hidden by a module setting | that surface is opened | an empty state points back to the setting that hid it — never a blank screen | 004 FR-034 | M | Y | Android | ☐ |
+| SET-UI-012 | notification permission denied at system level | the App tier's notification area is opened | a banner above the controls explains no alert can be delivered and offers the route to system settings | 004 FR-027 | M | Y | Android | ☐ |
+| SET-UI-013 | App details opened | the version is read | it matches the installed build exactly, including build number | 004 FR-039 | S | Y | Android | ☐ |
+| SET-UI-014 | an update check runs and fails | — | the failure is reported; the app never silently reports "current" on a failed check | 004 FR-040 | M | Y | Android | ☐ (phase-gated — update channel not built) |
+| SET-UI-015 | every settings screen | rendered light and dark, at smallest and largest system text size | no clipped or truncated row label; only token values change (NFR-005/006 apply) | 004 SC-012 | M | N (visual) | QA | ☐ |
+| SET-UI-016 | every switch, icon-only control and destructive action in Settings | TalkBack traverses the tier | each announces its subject and current state; destructive rows are visually distinct and never first-focused | 004 SC-013, FR-045 | M | N (manual) | QA | ☐ |
+
+---
+
+## 14. Coverage summary (updated as rows close)
 
 **Recount 2026-08-15b** (Phase 1 fully closed — the manual dev-project pass ran against the live
 `dhruv` Supabase project after the 2026-08-15 code-review-only recount; `DAT-BR-007`, `DAT-FLOW-001`,
 and `ONB-BR-009`'s SQL half all closed for real, not just code-reviewed):
+
+**SET added 2026-08-19** (Phase 0b, `apps/finance/specs/004-settings/`) — 50 rows, all **☐**. This is a definitional addition, not a recount: no existing row changed state. The counts below are the 2026-08-15b figures plus SET.
 
 | Module | Rows | ☐ | 🔴 | 🟢 | ✅ |
 |---|---|---|---|---|---|
@@ -265,7 +369,8 @@ and `ONB-BR-009`'s SQL half all closed for real, not just code-reviewed):
 | SRC | 5 | 5 | 0 | 0 | 0 |
 | DAT | 9 | 0 | 0 | 5 | 4 |
 | HOM | 5 | 5 | 0 | 0 | 0 |
-| **Total** | **117** | **93** | **0** | **19** | **5** |
+| SET | 50 | 50 | 0 | 0 | 0 |
+| **Total** | **167** | **143** | **0** | **19** | **5** |
 
 Phase 1's own module (`ONB`, `DAT`) has zero rows blocked on infrastructure now — every remaining
 `ONB` ☐ row is deliberately deferred with a stated reason, not silently missing: `ONB-BR-006`/

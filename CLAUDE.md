@@ -15,7 +15,11 @@ Read before any work:
 
 ### Project-specific (`platform/skills/`)
 - New feature module → read platform/skills/dhruv-feature-scaffold/SKILL.md
+- New Supabase object (table/view/function/RLS/migration) → read platform/skills/dhruv-supabase-object/SKILL.md
+  — **tracker data is Supabase, not Room** (ADR-0014); use this, not dhruv-room-entity
 - New Room entity / data layer → read platform/skills/dhruv-room-entity/SKILL.md
+  — calculator/converter data only. NOTE: this skill still says "Hilt wiring", which is stale —
+  DI is Koin (ADR-0010)
 - New Compose screen → read platform/skills/dhruv-compose-screen/SKILL.md
 - Pre-merge check → read platform/skills/dhruv-module-audit/SKILL.md
 - Version bump / release → read platform/skills/dhruv-release/SKILL.md

@@ -65,6 +65,20 @@ Delete rows that genuinely do not apply — do not leave them unticked and silen
 - [ ] Migration is additive; no hand-edit of an already-applied migration
 - [ ] `supabase/SCHEMA.md` regenerated
 - [ ] New table has RLS enabled and an explicit `GRANT` (custom schemas are not exposed by default)
+- [ ] **Every new view carries `security_invoker = on`** — without it the view runs as its owner,
+      bypasses RLS, and returns every user's rows through PostgREST. `db diff` cannot emit it, so it
+      is hand-verified in the generated migration
+- [ ] **Every new user-data table added to `public.delete_my_data()`** in the same migration — this
+      is the entire DPDP 7-day erasure guarantee and a miss is silent, with no failing test
+- [ ] RLS test asserts a second user reads **zero rows** from every new table *and every new view*
+
+### If it changes shipped behaviour (feature change, defect fix, removal)
+- [ ] The owning spec's **Implementation record** updated in this same PR (constitution Art. Xa)
+- [ ] For a defect fix: names the **FR whose stated behaviour was not actually delivered** — a fix
+      that changes behaviour without naming what was wrong is an undocumented behaviour change
+- [ ] `CHANGELOG.md` entry added under the `finance-*` heading
+- [ ] Any affected registry row updated (route / notification channel / intent / settings)
+- [ ] If a doc is now wrong and cannot be fixed here, it says so with a dated "known stale" line
 
 ### If it changes architecture
 - [ ] A new ADR is proposed in `platform/DECISIONS.md` — decisions are not silently diverged from

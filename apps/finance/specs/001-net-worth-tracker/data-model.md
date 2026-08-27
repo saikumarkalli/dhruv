@@ -1,22 +1,34 @@
 # Phase 1 Data Model: Net Worth Tracker (Phase 2)
 
-Maps spec.md's Key Entities to concrete storage. `holdings`/`valuations` already exist (Phase 1,
-`supabase/migrations/0001_init.sql`) and are **not modified** by this feature — only extended with
-one new table and two views, migration `0002_networth_phase2.sql`.
+Maps spec.md's Key Entities to concrete storage.
 
-## Existing entities (Phase 1, referenced not changed)
+> **Updated 2026-08-23 to match the authored schema.** The 2026-08-22 audit found two requirements
+> in this phase that were impossible against the committed schema, and the
+> [readiness architecture decisions](../../docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md)
+> resolve them. `holdings` and `valuations` **are** modified by this feature now (they were
+> previously described as untouched), and the phase adds one table, **three** views and **two**
+> functions. Migration is `supabase/migrations/20260823094500_networth_phase2.sql`, not the
+> `0002_networth_phase2.sql` earlier drafts named.
+>
+> Declarative source of truth is `supabase/schemas/finance/` (ADR-0032 decision 4); the tables,
+> views and functions below are authored there. **Open DB gaps and maintenance obligations are in
+> §"DB readiness" at the foot of this file** — read it before running the migration.
+
+## Modified entities (Phase 1 tables, extended by this phase)
 
 ### Holding → `finance.holdings`
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid, PK | |
 | `user_id` | uuid, FK → `auth.users` | RLS: `user_id = auth.uid()` |
-| `name` | text | |
+| `name` | text, `CHECK length(btrim(name)) BETWEEN 1 AND 120` | |
 | `kind` | text, `CHECK IN ('ASSET','LIABILITY')` | maps spec's "ownership direction" |
-| `sector` | text | free TEXT at the DB layer; **enum-validated at the Kotlin repository boundary** per FR-001/FR-012 — not a DB CHECK constraint, so adding a category never needs a migration (BR-C3, NW-BR-004/005) |
+| `sector` | text, **`CHECK IN` the 10 frozen values** | `BANK · MUTUAL_FUND · STOCKS · PROPERTY · GOLD · EPF_PPF · CASH · VEHICLE · CRYPTO · OTHER`. **Changed 2026-08-23**: previously free TEXT "enum-validated at the Kotlin repository boundary… so adding a category never needs a migration". The audit found the value set existed only in the functional spec's prose while T011 tested rejection against it. BR-C3 makes these append-only *forever*, so a migration to add one is the correct cost, and the repository still validates too (fail fast, better message) |
+| `invested_paise` | bigint, nullable, `CHECK >= 0` | **New.** Cost basis for C3's `INVESTED`/`GAIN`. Nullable because a holding whose cost the user does not know is normal (inherited gold, an old EPF balance) — C3 omits the stat rather than showing a wrong zero. Funds a **simple** return, not XIRR (see §"Simple return, not XIRR") |
+| `request_id` | uuid, nullable, **UNIQUE** | **New.** Client-generated when the user commits, so a retry after a timeout collides here instead of creating a second holding |
 | `notes` | text, nullable | |
 | `created_at` | timestamptz | |
-| `deleted_at` | timestamptz, nullable | soft-delete slot; not written by this phase |
+| `deleted_at` | timestamptz, nullable | soft-delete slot. Writable — `holdings` has an UPDATE policy — so holding soft-delete is mechanically possible; FR coverage for edit/delete is tracked as gap-remediation work, not a schema gap |
 
 RLS: SELECT/INSERT/UPDATE own rows (no client DELETE — erasure only via `delete_my_data()`).
 
@@ -25,36 +37,55 @@ RLS: SELECT/INSERT/UPDATE own rows (no client DELETE — erasure only via `delet
 |---|---|---|
 | `id` | uuid, PK | |
 | `holding_id` | uuid, FK → `holdings` | ownership transitive through parent (no `user_id` column) |
-| `value_paise` | bigint | **FR-005/constitution Article VII** — paise, never numeric/float |
-| `as_of` | date | |
-| `source` | text | e.g. `MANUAL`, `STATEMENT` |
+| `value_paise` | bigint, `CHECK >= 0` | **FR-005/constitution Article VII** — paise, never numeric/float |
+| `as_of` | date, **`CHECK as_of <= current_date`** | **New guard.** `v_latest_valuation` orders `as_of DESC`, so a mistyped 2030 date would become permanently "latest" and — before `correct_valuation()` existed — could never be superseded. `current_date` is STABLE not IMMUTABLE, which Postgres permits in a CHECK; safe here **only** because the predicate is monotonic (a row valid on insert stays valid on restore). Do not copy the pattern to a lower-bound check |
+| `source` | text, **`CHECK IN` 4 frozen values** | `MANUAL · STATEMENT · IMPORT · CORRECTION`. Previously documented as "e.g. `MANUAL`, `STATEMENT`" — never frozen, while Phase 5's `has_self_valued` needs the exact partition. **That partition is now defined: `MANUAL` and `CORRECTION` are self-valued; `STATEMENT` and `IMPORT` are not.** `CORRECTION` is written by `correct_valuation()` so C3's history can label a corrected entry |
+| `request_id` | uuid, nullable, **UNIQUE** | **New.** Retry idempotency, same role as on `holdings` |
 | `created_at` | timestamptz | |
-| `deleted_at` | timestamptz, nullable | used by FR-004's "hide, never alter" correction path |
+| `deleted_at` | timestamptz, nullable | Written by **exactly one thing**: `finance.correct_valuation()` |
 
-RLS: SELECT/INSERT only — **no UPDATE policy exists at all**. This is what makes FR-004
+RLS: SELECT/INSERT only — **no UPDATE policy and no UPDATE grant exists**. This is what makes FR-004
 ("preserve every previously recorded value... never altering or removing the original record")
 true at the database layer, not just by client discipline.
 
+> **Correction (2026-08-23).** This file previously described FR-004's correction as "mark the wrong
+> row `deleted_at = now()`" and cited the missing UPDATE policy as the guarantee that made it work.
+> Setting `deleted_at` **is** an UPDATE, so the correction was impossible: the RLS cited as the
+> guarantee was what forbade it. Resolved by `finance.correct_valuation()` (below), which is the RPC
+> ADR-0029 decision 4 already named and assigned to this phase's SA step.
+> **Do not "fix" this by adding an UPDATE policy** — that makes the table ordinarily mutable and
+> destroys BR-C1's database-level append-only guarantee, which is the entire reason it has none.
+
 **Validation rules** (from FR-002): a new holding and its first valuation are written in one
-transaction — the repository layer either writes both or neither (atomicity requirement, not
-expressible as a single-table constraint since they're two inserts).
+transaction. This is **not** achievable from the client — it is two PostgREST inserts over HTTP, and
+a failed second insert leaves an orphan holding that no client DELETE policy can clean up. It is
+therefore done server-side by `finance.create_holding_with_value()` (below).
 
 ## New entities (this phase)
 
-### Liability detail → `public.liabilities_meta`
+### Liability detail → `finance.liabilities_meta`
 1:1 extension of a `holdings` row where `kind = 'LIABILITY'`.
+
+> **Schema corrected 2026-08-23: `finance`, not `public`.** This file previously declared
+> `public.liabilities_meta` while `holdings`/`valuations` in the same file were `finance.*`. Under
+> ADR-0033 a `public` table is unreachable — every tracker call sends `Accept-Profile: finance` and
+> would 404 against `public`, silently rather than loudly. 002 and 003 each flagged this as an
+> unresolved carry-over and 005 silently assumed `finance.`; all four now agree.
 
 | Column | Type | Notes |
 |---|---|---|
 | `holding_id` | uuid, PK, FK → `holdings` | one row per liability holding |
-| `liability_type` | text | `HOME_LOAN \| CAR_LOAN \| CREDIT_CARD \| BNPL` — same append-only-TEXT convention as `sector` |
-| `rate_bps` | integer | basis points, not a float percentage |
-| `emi_paise` | bigint | **constitution Article VII** — paise |
-| `debit_day` | integer | day-of-month, feeds Home's UPCOMING list (FR-010) |
-| `tenure_months` | integer | |
-| `paid_months` | integer | drives payoff-progress display (C6 "84 of 180 paid") |
-| `linked_account_id` | uuid, nullable | forward-compatible; no `accounts` table exists until Phase 3, so this stays null this phase |
-| `collateral_holding_id` | uuid, nullable, FK → `holdings` | e.g. a home loan's collateral property |
+| `liability_type` | text, `CHECK IN` 4 frozen values | `HOME_LOAN · CAR_LOAN · CREDIT_CARD · BNPL` — append-only (BR-C3) |
+| `rate_bps` | integer, `CHECK 0–10000` | basis points, not a float percentage |
+| `emi_paise` | bigint, nullable, `CHECK >= 0` | **constitution Article VII** — paise |
+| `debit_day` | smallint, nullable, `CHECK 1–31` | day-of-month, feeds Home's UPCOMING list (FR-010) |
+| `tenure_months` | integer, nullable, `CHECK > 0` | |
+| `paid_months` | integer, default 0, `CHECK >= 0` and `<= tenure_months` | drives payoff-progress display (C6 "84 of 180 paid") |
+| `original_principal_paise` | bigint, nullable, `CHECK >= 0` | **New.** Required to derive C7's amortisation split (principal paid / interest paid / left) — the audit found T028 asserting that split "sums to total obligation" against a computation with no stored inputs. Nullable for a card or BNPL line, which has no sanctioned principal |
+| `collateral` | text, nullable | **Deviation to confirm**: earlier drafts had `collateral_holding_id uuid FK → holdings`. Authored as free text because the design's C7 shows collateral as a descriptive line ("collateral"), and modelling it as a holding FK asserts the collateral is itself a tracked holding — often false (a hypothecated vehicle, a pledged deposit outside the tracker). Reversible while no rows exist |
+| `linked_account_id` | uuid, nullable | forward-compatible; **no FK constraint this phase** — `finance.accounts` does not exist until Phase 3, which adds the constraint in its own migration so Phase 2 never depends on a table it cannot create |
+| `request_id` | uuid, nullable, UNIQUE | retry idempotency |
+| `created_at` / `updated_at` / `deleted_at` | timestamptz | mutable state, unlike `valuations` |
 
 RLS: ownership transitive through `holding_id → holdings.user_id`, same pattern as `valuations`.
 SELECT/INSERT/UPDATE own rows (unlike `valuations`, this is mutable state — EMI/tenure legitimately
@@ -70,6 +101,14 @@ computed by summing raw rows client-side (R4, NFR-8).
 
 ## Views (server-side aggregation, this phase)
 
+> **Every view carries `with (security_invoker = on)`, and this is not optional.** A Postgres 15+
+> view executes as its **owner** by default, bypassing RLS on the underlying tables — and PostgREST
+> exposes these views. Without the clause each of them returns **every user's rows to every
+> signed-in caller**. The audit found all 8 planned views across Phases 2–4 missing it.
+> `supabase db diff` cannot express security-invoker views (ADR-0032 decision 4's documented caveat
+> list), so the clause is hand-verified in the generated migration and each phase's RLS test asserts
+> a second user reads zero rows from every view it adds.
+
 ### `v_latest_valuation`
 One row per holding: its most recent non-deleted `valuations` row (`DISTINCT ON (holding_id) ...
 ORDER BY holding_id, as_of DESC, created_at DESC`). Feeds C1's totals, C2's per-holding current
@@ -80,13 +119,138 @@ Aggregates `v_latest_valuation` joined to `holdings`, grouped by `kind` + `secto
 count of holdings, summed `value_paise`, and each sector's share of its `kind`'s total. Backs C1's
 ranked legend and the net/asset/liability subtotals (FR-005, FR-007).
 
+### `v_net_worth_history` *(new — resolves FR-010's undefined trend)*
+Trailing **24 month-ends**, clamped so the newest point is today rather than a future month-end.
+Columns: `user_id`, `as_of`, `assets_paise`, `liabilities_paise`, `net_paise`.
+
+Added because FR-010 mandates a `▲/▼ %` delta and an area sparkline on Home, and C1 a delta in its
+donut centre, while this phase previously defined only current-state views — the delta had no source
+and "delta vs *when*" was undefined. Home's delta compares the latest point against the same holding
+set **30 days prior**; C2's per-holding sparkline reads that holding's own valuation rows directly.
+
+Derivation is **"latest valuation ≤ date"** — deliberately the same rule Phase 5's
+`report_balance_sheet(p_as_of)` uses, so this is not a competing mechanism and 005 may read this view
+rather than re-derive. Cost is O(months × holdings) index lookups served by
+`valuations_holding_id_as_of_idx`, which is fine at personal-finance scale.
+
+**The 30-day window is a product choice, not a fact** — chosen because the design's copy says "this
+month". Calendar-month-to-date changes only the view's window.
+
+## Functions (this phase)
+
+### `finance.correct_valuation(p_valuation_id, p_value_paise, p_as_of, p_note)` → `uuid`
+`security definer`. The **only** path by which a valuation row is ever amended, and the resolution
+of FR-004's impossibility (above). Asserts the caller owns the parent holding, soft-deletes the
+target row and inserts the corrected one with `source = 'CORRECTION'` — in one transaction, so a
+holding can never be left with both rows live or neither. Because `security definer` bypasses RLS,
+the ownership check is explicit and is the same statement that resolves the holding, leaving no
+window between the two.
+
+### `finance.create_holding_with_value(...)` → `uuid`
+`security definer`. Creation only — an ordinary later valuation append stays a plain PostgREST
+insert against the existing INSERT policy. Delivers FR-002's atomicity server-side. Replays
+idempotently: a retry carrying the same `p_request_id` returns the already-created holding instead of
+duplicating it.
+
+## Simple return, not XIRR
+
+`invested_paise` funds `(current − invested) / invested`, which C3 must label **"Simple return"** —
+**not** XIRR. The design's own text says XIRR and the two are not comparable. XIRR needs a dated
+cashflow series; a single scalar cost basis cannot provide one, and 005's research R8 records that
+no holding↔transaction link exists to build one from. XIRR stays deferred to its own ADR, and this
+column narrows that ADR's scope rather than closing it.
+
 ## State transitions
 
 - **Holding**: created → (exists indefinitely; no state machine — a holding either exists with ≥1
   valuation, or doesn't exist at all, per FR-002's atomicity rule).
-- **Valuation**: created → (immutable). A "correction" (FR-004) is: mark the wrong row
-  `deleted_at = now()` (excluded from `v_latest_valuation`'s view logic) + insert a new row. Never
-  an UPDATE — the RLS policy set makes this the only possible path, not just the intended one.
+- **Valuation**: created → (immutable to every client path). A "correction" (FR-004) is a single
+  call to `finance.correct_valuation()`, which soft-deletes the wrong row (excluding it from
+  `v_latest_valuation`) and appends the corrected one as `source = 'CORRECTION'`. The client never
+  issues an UPDATE, and cannot: there is no UPDATE policy and no UPDATE grant. The RLS policy set
+  makes the RPC the only possible path — which is the property the earlier draft claimed while
+  describing a client-side `deleted_at` write that the same policy set forbade.
 - **Liability meta**: created alongside its holding → updatable in place (EMI/tenure/paid_months
   change over the life of the loan) — the one entity in this phase that is *not* append-only, since
   it represents current loan terms, not a value history.
+
+---
+
+## DB readiness — what is authored, what is open
+
+### Authored (on disk now)
+
+| Artifact | Path |
+|---|---|
+| `liabilities_meta` table | `supabase/schemas/finance/10_tables/liabilities_meta.sql` |
+| `holdings` extensions | `supabase/schemas/finance/10_tables/holdings.sql` |
+| `valuations` extensions | `supabase/schemas/finance/10_tables/valuations.sql` |
+| 3 views, all `security_invoker` | `supabase/schemas/finance/20_views/v_{latest_valuation,net_worth_by_sector,net_worth_history}.sql` |
+| 2 functions | `supabase/schemas/finance/30_functions/{correct_valuation,create_holding_with_value}.sql` |
+| Erasure extended | `supabase/schemas/public/30_functions/delete_my_data.sql` (+ `liabilities_meta`) |
+| Migration | `supabase/migrations/20260823094500_networth_phase2.sql` |
+
+`config.toml`'s `schema_paths` already globs `20_views/*.sql` and `30_functions/*.sql`, so no
+config change was needed.
+
+### Open — planned, not done
+
+**1. The migration has never been executed.** It is **hand-authored, not `supabase db diff`-
+generated**. `supabase db reset` locally, or the `develop` push that runs `supabase-migrate.yml`'s
+`apply-dev` job, is its **first real execution and the point at which its correctness is actually
+confirmed**. → T078.
+
+*Toolchain, verified 2026-08-23 (an earlier draft of this section repeated ADR-0033's "CLI + Docker
+not installed" without re-checking — that was true when that ADR was written on 2026-08-16 and is no
+longer true of the CLI):* **`supabase` CLI v2.114.0 is installed. Docker is not.** So the local
+stack (`supabase db reset`) cannot run, and the default `migra` diff engine is containerised.
+`supabase db diff --linked`, which diffs local migration files against the linked project, is the
+path to try first — confirm it works before relying on it. ADR-0032 decision 4's caveat list
+requires hand-authorship for several statements here regardless (security-invoker views, grants,
+`create or replace function` bodies), so a generated diff would still need hand-editing.
+
+**2. The ADR-0032 equivalence guard — RESOLVED 2026-08-23.** It reported
+`finance.holdings` and `finance.valuations` as drifted when the schema was in fact
+consistent, because `gen_schema_docs.py` had no rule for `ALTER TABLE … ADD COLUMN`, so a
+column introduced by a migration was invisible on the executed side. The parser now
+understands `ADD COLUMN` and `ADD CONSTRAINT`, compares columns **order-insensitively** on
+name + type (a `db diff` migration appends columns; the declarative file declares them in
+place), and compares CHECK expressions as a **normalized per-table set** so the same rule
+spelled inline and spelled as a named constraint match. `equiv` is green, and it was
+verified to still catch a column present on only one side and a changed CHECK, while
+correctly ignoring a pure column reorder. → T079.
+
+*Known remaining gap, deliberate:* a named `UNIQUE`/`PRIMARY KEY`/`FOREIGN KEY` added by
+`ALTER` has no comparable inline spelling on the declarative side, so those are **not**
+compared. Folding them in would reintroduce exactly the permanent false positives this
+change removed, and a guard that cries wolf gets ignored.
+
+**3. The Windows crash — RESOLVED 2026-08-23.** `gen_schema_docs.py` wrote `SCHEMA.md`
+successfully and then died printing `✅` under cp1252, reporting failure for a run that had
+succeeded. It now reconfigures stdout/stderr to UTF-8 itself; no `PYTHONIOENCODING` needed.
+→ T080.
+
+**4. Two schema choices are reversible only while no rows exist** and should be confirmed before the
+migration runs against `dhruv-dev`: `collateral text` versus a holdings FK (above), and the 30-day
+comparison window in `v_net_worth_history`.
+
+### Maintenance conventions for every later phase
+
+These exist so phases 3–7 do not re-derive them. Each is a rule the audit found *missing*, not a
+restatement of ADR-0032.
+
+1. **Every view carries `with (security_invoker = on)`.** No exceptions. `db diff` cannot emit it —
+   verify by hand in the generated migration, every time.
+2. **Every new user-data table adds its `DELETE` to `public.delete_my_data()`** in the same
+   migration. This is the whole DPDP 7-day erasure guarantee and a miss is silent — no test fails.
+3. **Grants are hand-appended.** `db diff` emits no `GRANT`, and ADR-0033 decision 4 makes an
+   explicit grant mandatory for custom-schema objects — without one the object is simply unreachable.
+4. **One declarative file per object**, then `db diff`, then review, then commit both. Never
+   hand-edit a migration that has already been applied to dev.
+5. **Each phase's RLS test asserts a second user reads zero rows** from every table *and every view*
+   it adds. Views were the gap: table policies were tested, view invoker-rights were not.
+6. **Money is `bigint` paise; proportions are integer basis points.** No `numeric`, no float, no
+   whole-percent columns (the audit found `nominee_share_pct` unable to represent three equal
+   nominees).
+7. **A frozen TEXT enum gets a `CHECK` constraint**, not prose. BR-C3 makes the values append-only
+   forever, so the migration cost of adding one is correct and intended.

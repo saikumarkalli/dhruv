@@ -31,7 +31,7 @@ story is independently implementable, testable, and demoable — matching spec.m
 
 **Purpose**: Stand up the new Gradle module before any story-specific code.
 
-- [ ] T001 Create `:apps:finance:feature:networth` module skeleton — `apps/finance/feature/home/networth/build.gradle.kts` (`dhruv.android.library` + `dhruv.android.compose`, deps on `:apps:finance:data`, `:libs:core`, `:libs:settings`, same shape as `apps/finance/feature/plan/loans`); register in `settings.gradle.kts`
+- [ ] T001 Create `:apps:finance:feature:networth` module skeleton — `apps/finance/feature/home/networth/build.gradle.kts` (`dhruv.android.library` + `dhruv.android.compose`, deps on `:apps:finance:data`, `:libs:core`, `:libs:settings`, same shape as `apps/finance/feature/plan/loans`); register in `settings.gradle.kts` **with the `projectDir` remap** — the module directory is `apps/finance/feature/home/networth` but its Gradle coordinate is `:apps:finance:feature:networth`, so `project(":apps:finance:feature:networth").projectDir = file("apps/finance/feature/home/networth")` is required or Gradle resolves `apps/finance/feature/networth` and configuration fails (audit 2026-08-22; see the existing remaps at `settings.gradle.kts:59-69`). In the same task add `:apps:finance:feature:networth` to `coveredModules`/`_FEATURES` in the root `build.gradle.kts` — omitted in the original draft, and reported-but-declined by three later plans, which would leave this module's coverage invisible to the JaCoCo gate and to release notes
 - [ ] T002 [P] Create `di/NetWorthModule.kt` Koin module stub in `apps/finance/feature/home/networth/` and aggregate it in `CalculatorApplication`
 - [ ] T003 [P] Create `NetWorthConfig.kt` scaffold in `apps/finance/feature/home/networth/` (screen-level constants — sector labels, chart ranges — per the no-hardcoding rule; filled in per-story below, not left empty)
 
@@ -44,12 +44,27 @@ story is independently implementable, testable, and demoable — matching spec.m
 **⚠️ CRITICAL**: No user story task below may start before this phase closes (constitution
 Article II — SA schema + QA catalog rows, in that order, before Backend/Android code).
 
-- [ ] T004 [SA] Write `supabase/migrations/0002_networth_phase2.sql` — `liabilities_meta` table (RLS
-      transitive through `holding_id → holdings.user_id`, mutable per data-model.md, not
-      append-only) + `v_latest_valuation` + `v_net_worth_by_sector` views, per data-model.md; add
-      the matching `DELETE FROM liabilities_meta` line to `delete_my_data()` in this same migration
-      (the `0001_init.sql` comment's own reminder — a forgotten table here breaks DPDP erasure
-      silently)
+- [ ] T004 [SA] **Author declaratively first, then generate the migration** (ADR-0032 decision 4 —
+      the original draft hand-wrote the migration only, which fails the PR equivalence guard on
+      merge; audit 2026-08-22). Write `supabase/schemas/finance/10_tables/liabilities_meta.sql`
+      (RLS transitive through `holding_id → holdings.user_id`, mutable per data-model.md, not
+      append-only) and `supabase/schemas/finance/20_views/v_latest_valuation.sql` +
+      `v_net_worth_by_sector.sql`. **Both views MUST be declared `with (security_invoker = on)`** —
+      without it a Postgres 15+ view runs as its owner and bypasses RLS on `holdings`/`valuations`,
+      returning every user's rows to every signed-in caller through PostgREST (this is the single
+      most severe finding of the 2026-08-22 audit; 005 already applies the equivalent reasoning to
+      its reporting functions at `005/plan.md:138-146`). Then run `supabase db diff -f
+      networth_phase2` to generate `supabase/migrations/`, review the generated SQL, and commit both
+- [ ] T004a [SA] Hand-append to the generated migration the statements `db diff` cannot emit
+      (ADR-0032's caveat list): the `DELETE FROM liabilities_meta` line inside `delete_my_data()`
+      (a forgotten table here breaks DPDP erasure silently — the `0001_init.sql` comment's own
+      reminder), `grant select, insert, update, delete on finance.liabilities_meta to authenticated`,
+      and `grant select on finance.v_latest_valuation, finance.v_net_worth_by_sector to
+      authenticated` (ADR-0033 decision 4 — custom-schema objects are unreachable without an
+      explicit grant; 002 T010 and 003 T022 already do this, 001 originally did not)
+- [ ] T004b [SA] Run `python scripts/db/gen_schema_docs.py equiv` and `... docs --check` and commit
+      the regenerated `supabase/SCHEMA.md`; regenerate `web/src/shared/types/database.ts` with
+      `--schema public,finance`. These are the CI guards every other phase runs and 001 omitted
 - [ ] T005 [P] [Sec] RLS policy test for `liabilities_meta` and both new views against the dev
       Supabase project — verifies no cross-user leakage, no client UPDATE/DELETE path exists where
       the schema says there shouldn't be one
@@ -236,7 +251,7 @@ confirm all three render without navigation.
 
 - [ ] T038 [P] [QA] Close every `NW-*`/`HOM-*` row in
       `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §3/§12 as its
-      test lands; update the §13 coverage-summary table. Confirm append-only holds at the SQL layer
+      test lands; update the §14 coverage-summary table. Confirm append-only holds at the SQL layer
       too (no UPDATE policy exists on `valuations`), not just the repository layer
 - [ ] T039 [P] [Sec] Full DPDP/secrets/RLS checklist pass on `liabilities_meta` + the two new views
       (module-standard doc §4 step 6); confirm `delete_my_data()`'s new DELETE line (T004) actually
@@ -292,3 +307,295 @@ next-highest-value additions, not required for a demoable MVP.
 Phase 1+2 → US1 (MVP) → US2 → US3 → US4 → US5 → Phase 8 (polish/checkpoint). Each story lands as
 its own reviewable increment; the implementation plan's own Phase 2 checkpoint (§7) is satisfied
 only once Phase 8 closes.
+
+---
+
+## Phase 9: Gap remediation (multi-agent spec audit, 2026-08-22)
+
+**Source**: `apps/finance/docs/superpowers/reviews/2026-08-22-spec-phase-gap-register.md`.
+
+**Already folded into existing tasks — do not re-do here**: the `projectDir` remap and
+`coveredModules` registration (T001), declarative-first schema authorship + `security_invoker = on`
+on both views (T004), the grants and `delete_my_data()` line (T004a), and the equivalence/docs/
+`database.ts` guards (T004b). Those were corrected in place because a developer running the
+originals would ship an RLS bypass and a build failure.
+
+**⚠️ T045–T047 are blocking and must be answered before US1 starts** — each is a product decision
+the spec cannot make for itself, and screens are already tasked to render the results.
+
+- [ ] T045 [SA] **Decide cost basis.** C3's `INVESTED` and `GAIN` stats have no source column
+      anywhere: `finance.holdings` carries no invested amount and C4's form captures none, yet
+      FR-006a is written as "for an asset holding with a known invested amount" and T023 builds the
+      stat. Either (a) add `invested_paise bigint null` to
+      `supabase/schemas/finance/10_tables/holdings.sql` plus a capture field in C4 and an FR, or
+      (b) formally drop `INVESTED`/`GAIN`/XIRR from C3 and adjust its copy. Record the choice in
+      `spec.md` Assumptions; Phase 5's `report_investment_returns` (005 R8) depends on the answer
+- [ ] T046 [SA] **Decide the net-worth history source.** FR-010 mandates a `▲/▼ %` delta and an area
+      sparkline on Home (01) and a delta in C1's donut centre, and C2 requires a per-holding
+      sparkline plus `% change`. This phase defines only current-state views — there is no
+      historical series anywhere, and "delta vs when" is undefined. Either author a
+      `v_net_worth_history` (or equivalent) view in T004's declarative set with an explicit
+      comparison window, or defer the trend to Phase 5's `report_balance_sheet(p_as_of)` and change
+      the affected screens' copy. T017 currently drops C2's sparkline, last-updated date and
+      `% change` **with no deferral recorded** — whichever way this goes, record it
+- [ ] T047 [SA] **Decide `liabilities_meta`'s Postgres schema.** `data-model.md:44` declares
+      `public.liabilities_meta` while `holdings`/`valuations` in the same file are `finance.*`.
+      Under ADR-0033 a `public` table is unreachable through the `Accept-Profile: finance` header
+      002 mandates. 002 and 003 each raise this as an unresolved carry-over and 005 silently assumes
+      `finance.`. Fix the data model and T004's declarative file to agree
+
+- [ ] T048 [SA] **Freeze the enum value lists in `data-model.md`.** The 10 `sector` values
+      (`BANK`, `MUTUAL_FUND`, `STOCKS`, `PROPERTY`, `GOLD`, `EPF_PPF`, `CASH`, `VEHICLE`, `CRYPTO`,
+      `OTHER`) exist only in the functional spec's prose, yet T011 tests rejection against "the fixed
+      list" and BR-C3 makes them append-only forever. Do the same for `valuations.source`, currently
+      documented as "**e.g.** `MANUAL`, `STATEMENT`" — Phase 5's `has_self_valued` needs the exact
+      partition of that set. (`liability_type` is already frozen in the same file — match it)
+- [ ] T049 [SA] Add a **`NavTarget` additions** section to `contracts/routes.md`. This is the only
+      phase contract without one, yet 003 and 006 both cite `OpenHolding`/`OpenLiability` as "added
+      by Phase 2" — the cases currently exist only inside T034's task line, breaking the registry's
+      sealed-case-plus-registry-row pairing rule. Include the **Home → Currency** quick action:
+      `NavTarget.kt:20-24` states Currency is deliberately not a NavTarget, but T036 and QA row
+      `HOM-UI-002` both require all four quick actions to route "via `NavTarget`" — add the case or
+      specify the alternative mechanism
+- [ ] T050 [SA] Declare **C3 as a dark-hero surface** in `contracts/routes.md` and have T023 read
+      `DhruvBrand.*`. Functional spec D-2 and implementation plan §3.1 name C3 theme-invariant;
+      003 declares E5/E9 and 005 declares F3, but this spec never mentions dark hero or `DhruvBrand`,
+      so C3 would ship on the flipping palette
+
+- [ ] T051 [P] [Android] **RED** tests for holding **edit** and **soft-delete** —
+      `HoldingRepositoryTest` + `AddEditHoldingViewModelTest`. Neither path is specified today: no
+      FR, no task, no QA row and no RLS DELETE policy exist, so a mistakenly-entered holding can
+      only be removed by full-account erasure, and C4 is titled "Add / **edit** holding" while T018
+      builds the UI with nothing specifying its behaviour
+- [ ] T052 [Backend] GREEN for T051 — add the edit path and a `deleted_at` soft-delete to
+      `HoldingRepository`, and the matching RLS `UPDATE`/soft-delete policy to T004's declarative
+      table file. Valuations stay append-only and untouched (BR-C1)
+- [ ] T053 [Android] Wire `UndoSnackbarHost` (already built in `:libs:core` §5.1) to the holding
+      soft-delete, per DESIGN-SYSTEM §8's binding soft-delete + 5s undo + recoverable-location rule.
+      **Undo is currently specified in none of the six phases** — this is the first implementation,
+      so keep the pattern reusable rather than local to this screen. The "recoverable location"
+      (Trash) is unowned; see the register's §1 — record here whichever owner is chosen
+- [ ] T054 [SA] Write FRs for the fields the design shows and this spec omits: C4's **as-of date**
+      and **optional notes** (present in `data-model.md` and tasks but in no requirement), and C7's
+      **collateral**, **linked account** and **payment history** (same gap). C2's **search**,
+      **filter chips**, **last-updated date** and **sector grouping** likewise have no FR — the word
+      "search" does not appear in this spec, yet 006 later assumes C2's asset search already exists
+
+- [ ] T055 [SA] **Decide C7 "Record payment".** The design requires a *Record payment* action and a
+      "recent payments with principal/interest split" list; no payments table exists in any phase and
+      002 never links a transaction to a liability. Either add the table here, route it to Phase 3's
+      ledger with a liability link, or descope both with a recorded reason. Related: T028 asserts the
+      **amortisation split** "sums to total obligation" against a derivation stated nowhere — the
+      original principal is not stored, and C6's "outstanding, not original" rule means outstanding
+      comes from the latest valuation, a different quantity than the amortisation schedule implies.
+      Define the computation or drop the donut
+- [ ] T056 [SA] Resolve **C3 "Link to goal"** (T023). Goals and `goal_links` do not exist until
+      Phase 4, and 003 specifies linking only from the E5 side (FR-023). Unlike the credit-card-bill
+      and budget-impact deferrals, this forward dependency is flagged nowhere — either hide the
+      action behind the `goals` flag or move it to Phase 4 with a reciprocal task
+
+- [ ] T057 [SA] Add **loading, error, empty and not-configured** state requirements. FR-011 is this
+      spec's only state requirement and covers signed-out + offline only; "empty" appears once, as a
+      C1 Edge Case, not as an FR. DESIGN-SYSTEM §7 makes all eight states binding per screen, and
+      002 FR-032 / 003 FR-048 both mandate five. Cover all 8 screens
+- [ ] T058 [QA] Add the missing **RED test tasks** so the RED→GREEN gate (implementation plan §7.0,
+      constitution Article I) actually holds: T016/T017/T018 (C1/C2/C4), T023 (C3), T027 (C5 live
+      delta, `NW-UI-003`), T031 (`NW-UI-004`), T036, and the state-card tasks T020/T037
+      (`NW-UI-005`, `HOM-FLOW-001`) all currently have no preceding failing test
+- [ ] T059 [Android] Ship this module's **`SettingsContribution`** per
+      `../004-settings/contracts/settings-contribution.md`. 004 declares "every later phase ships its
+      module's settings entry with the module"; this phase plans none, and Phase 6's value-update-
+      overdue alert control has no home without it
+- [ ] T060 [P] **De-duplicate `PaceRing`.** T006 places it in `ui/components/charts/`; 003 T043
+      places it in `ui/components/Rings.kt` and calls it "genuinely new (verified absent by symbol
+      search)". Agree one path with 003 before either lands
+- [ ] T061 [QA] Backfill **FR ids into task descriptions**. This spec cites 1 FR across 13 tasks
+      (005 cites 46 of 51); tasks reference QA-catalog rows and user stories instead, so an FR with
+      no catalog row — FR-009's prepay projection, for one — has no verifiable owner
+
+---
+
+## Phase 10: Gap remediation, round 2 (UI/UX + requirements audit, 2026-08-22)
+
+**Source**: the same register, second pass — UI/UX fidelity to the finalized design, design-system
+enforcement, and a requirements re-review. This phase was the weakest of the six on both axes:
+1 of 8 screens matches the design as drawn, and it has no accessibility, `strings.xml`, motion or
+observability task at all.
+
+**⚠️ T062–T063 are correctness blockers.** Both are asserted as working in three documents each and
+are impossible against the schema as committed.
+
+- [ ] T062 [SA] **FR-004's correction path cannot work.** FR-004 requires hiding a wrong valuation;
+      the only mechanism is setting `deleted_at`, which is an UPDATE — and
+      `supabase/schemas/finance/10_tables/valuations.sql` has **SELECT and INSERT policies only**,
+      with `grant select, insert` and an explicit comment "Deliberately no UPDATE policy … and no
+      DELETE policy". `data-model.md` states that absence as the guarantee, T026 cites it as
+      *enforcement*, and T025 asserts a test that will fail at RLS. ADR-0029 decision 4 already named
+      the fix — a security-definer **`correct_valuation()` RPC** — and assigned it to "Phase 2's SA
+      step"; no task creates it. Build it, or drop FR-004. **Do not add an UPDATE policy** — that
+      destroys BR-C1's database-level append-only guarantee, which is the whole point of the table
+- [ ] T063 [SA] **FR-002's atomicity is not achievable as specified.** "Holding + first valuation
+      written atomically" is two PostgREST inserts over HTTP; `data-model.md:38-40` concedes it is
+      "not expressible as a single-table constraint" and pushes it to "the repository layer either
+      writes both or neither", which cannot be transactional across two requests. There is no RPC and
+      no compensating delete — and `holdings` has no client DELETE policy — so a failed second insert
+      leaves an orphan holding, violating FR-002's own invariant. Add a `create_holding_with_value()`
+      RPC (one transaction, server-side) or specify the compensating path explicitly
+- [ ] T064 [SA] **Guard future-dated valuations, and state C4/C5 validation.** `v_latest_valuation`
+      orders `as_of DESC`, so a mistyped 2030 date becomes permanently "latest" and can never be
+      superseded — and cannot be corrected until T062 lands. No FR, no repository rule and no CHECK
+      exists. While there, state the field rules C4 and C5 have none of: required vs optional,
+      min/max, zero, negative, and the future-date rule
+- [ ] T065 [SA] **Close the intra-phase drift the round-1 edit introduced.** T004/T004a now author
+      `supabase/schemas/finance/10_tables/liabilities_meta.sql` and grant on `finance.liabilities_meta`,
+      while `data-model.md:44` still says `public.liabilities_meta` and `plan.md`/`quickstart.md`
+      still name a hand-written `0002_networth_phase2.sql` that `db diff` will not produce. Land
+      T047's decision across all four files, not just tasks.md
+
+- [ ] T066 [Android] **Use `MoneyText` — it appears in zero tasks in this phase.** It is THE money
+      renderer (DESIGN-SYSTEM §5.1), tabular numerals, and the design specifies **compact on cards**
+      (`₹18.42L` on the Home hero, C1's centre) and **full in lists, sheets and history**. No task
+      plans the compact/full split; money must never ellipsise
+- [ ] T067 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** — both already built in `:libs:core`
+      and named in **zero** tasks across all six phases. They own every ▲/▼ delta (01, C1, C2, C3) and
+      every three-stat header (C3's INVESTED·GAIN·XIRR, C6's TOTAL OUTSTANDING·MONTHLY OUTGO·DEBT-FREE
+      BY). Hand-rolling them breaks both the micro-frontend rule and §1's never-colour-only rule
+- [ ] T068 [Android] **Add a `strings.xml` task.** DESIGN-SYSTEM §10: "All user-visible strings land
+      in `strings.xml` from birth." This phase has no such task; 003, 004, 005 and 006 all do
+- [ ] T069 [Android] **Add the accessibility task this phase entirely lacks** (§9 is a gate, not an
+      aspiration): `contentDescription` on every icon-only action and on **every chart, ring and
+      sparkline this phase builds** — T006's `DonutChart`, `AmortisationDonut` and `PaceRing`, C3's
+      trend chart, C2's per-holding sparklines — at the design's stated verbosity ("Net worth, ₹18.42
+      lakh, up 6.4 percent this month"); touch targets ≥48dp and list rows ≥56dp; contrast ≥4.5:1 in
+      **both** themes; no colour-only meaning; dynamic-type safety with money wrapping or compacting
+      rather than ellipsising; TalkBack order following visual hierarchy
+- [ ] T070 [Android] **Wrap every screen in `FeatureHost`** — only C1 is wrapped today (1 of 8), and
+      NFR-2/PLATFORM.md §4 require every route. Add the per-ViewModel observability triad the repo
+      convention mandates and this phase omits entirely: `crashReporter.setModule("networth")`,
+      `performanceTracer.trace("networth_…")` on one primary operation, and a `featureError`
+      StateFlow fed by a `CoroutineExceptionHandler`
+- [ ] T071 [QA] **Verify light and dark render from the same tokens** (nav law N7) and check the
+      three responsive tiers via `calculateDhruvNextResponsiveTokens` — phone, tablet ≥600dp, small
+      <360dp. **No phase in the entire feature mentions responsiveness at all**; theme verification is
+      planned only in 004 and partially 003
+- [ ] T072 [P] **Add the token-enforcement rule the whole feature assumes and nothing provides.**
+      `config/detekt/detekt.yml:34-35` sets `MagicNumber: active: false`, there is no
+      `ForbiddenImport`/`ForbiddenMethodCall` rule, and `DependencyRulesTest` has five rules, none
+      about tokens — so "zero `MaterialTheme.colorScheme`/`.typography` and zero raw hex/dp/sp in
+      screen files" is enforced by nothing. 005 T169 says it verifies NFR-5 "by review and detekt",
+      against a check that cannot fire. Add a detekt rule or an ArchUnit test here, in the first phase
+      that builds tracker screens, so every later phase inherits it
+- [ ] T073 [Android] **Motion (§8, NFR-7) has zero coverage in any of the six phases** — no FR, task,
+      QA row or constant, and the catalog's own NFR-007 row is marked "Partial" and cited by nobody.
+      This phase builds four animating surfaces; state the standard easing `cubic-bezier(.16,1,.3,1)`
+      and the "charts animate in once, not on every recomposition" rule for them
+
+- [ ] T074 [Android] **Close the per-screen fidelity gaps against the design as drawn**: C3's header
+      is missing `LAST VALUED <date>` and the sector, and its 3M/6M/1Y/All range chips name no
+      component while `PeriodChipRow` exists (005 T045 uses it); C6's rows are missing **rate** and
+      **EMI**; 01 is missing the one-line state ("everything on track"); C1's legend is missing the
+      **enum tag**; C7's prepay projection needs the §10 derived-output label that 003 gives its
+      equivalents (FR-047 + T032) and this phase does not; C4 substitutes `SelectionSheet` (B9) for
+      the design's **`EnumPickerGrid`** (B2) — pick one deliberately; the design draws **area** charts
+      on 01, C2 and C3 and `:libs:core` has only `TrendSparkline`/`BarChart` — decide before a screen
+      hand-rolls one. Drop `PieChart` from T006 unless a consumer exists (no screen in any phase uses it)
+- [ ] T075 [SA] **Specify the post-write invalidation model.** SC-001 promises totals update "without
+      a manual refresh" and DESIGN-SYSTEM §8 forbids pull-to-refresh, but no phase states how a write
+      invalidates the server-side views it feeds, whether reads re-poll, or what the screen shows
+      between write-ack and re-read. This is a day-one blocker for every mutating screen in 001–003
+- [ ] T076 [QA] **Cite SC ids in tasks.** This phase cites **0 of 5**; SC-003 ("0% of sessions" — a
+      production-telemetry metric with no telemetry planned anywhere) and SC-004 ("under 2 minutes")
+      are also unmeasurable as written. Either give them an instrument and a fixture, or restate them
+- [ ] T077 [SA] **Specify concurrency behaviour.** ADR-0014 removed all client-side conflict
+      resolution, and this phase specifies nothing for two devices editing the same holding, a stale
+      read, or last-write-wins. 002 solves its one race with an idempotency key and 003 with a
+      trigger; this phase names none. Related and unowned feature-wide: **no phase specifies
+      write-retry semantics** — no idempotency key on manual creates, no client request id, so a
+      retry after a timeout silently duplicates a holding or a valuation
+
+---
+
+## Phase 11: DB readiness — execute, verify, and make the guard usable (2026-08-23)
+
+**Context.** The SA schema step for this phase is **authored** — see `data-model.md` § "DB readiness"
+for the artifact list and the
+[readiness architecture decisions](../../docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md)
+for why each object exists. What is authored is not what is *verified*: the migration has never
+run, and one CI guard cannot currently pass for a structural reason. These tasks close that.
+
+**T004/T004a/T004b's scope is now narrower**: the declarative files, the migration, the grants, the
+`delete_my_data()` extension and the regenerated `SCHEMA.md` all exist on disk. Those tasks become
+*review and regenerate*, not *author from scratch*.
+
+- [ ] T078 [Backend] **Execute the migration for the first time and verify it.** It is
+      **hand-authored, not `supabase db diff`-generated** (the CLI + Docker are not installed on the
+      authoring machine — the same situation ADR-0033's own migration records). It has therefore
+      never been run. Either `supabase db reset` locally, or let `supabase-migrate.yml`'s `apply-dev`
+      job run it on the `develop` push — that execution is the first real confirmation it is
+      correct. **If the CLI is available, prefer regenerating it**: edit nothing, run
+      `supabase db diff -f networth_phase2`, and compare against the hand-authored file; the
+      declarative files under `supabase/schemas/finance/` are the source of truth either way.
+      Watch specifically for: the `security_invoker` clause surviving on all three views, the
+      `as_of <= current_date` CHECK being accepted (`current_date` is STABLE, not IMMUTABLE — see
+      data-model), and `alter table … add constraint` succeeding against any rows already in
+      `dhruv-dev`
+- [x] T079 [P] [Backend] **DONE 2026-08-23.** Taught `scripts/db/gen_schema_docs.py` about `ALTER TABLE … ADD COLUMN`
+      and `ADD CONSTRAINT`.** The ADR-0032 equivalence guard is RED today and **cannot go green
+      without this** — it reports `finance.holdings` and `finance.valuations` signatures differing
+      when the schema is in fact consistent. Cause: the parser has rules for `create table`,
+      `create index`, `enable row level security`, `set schema`, `create policy` and
+      `create function`, and **none for adding a column to an existing table**, so a column
+      introduced by a migration is invisible on the executed side. Every later phase that extends an
+      existing table hits this identically. ADR-0033 set the precedent by teaching this same guard
+      `ALTER TABLE … SET SCHEMA` for exactly this class of reason. Consider whether table signature
+      comparison should be **order-insensitive** on columns while you are there — a `db diff`-
+      generated migration appends columns at the end, so declarative order and executed order will
+      routinely differ without meaning anything
+- [x] T080 [P] [Backend] **DONE 2026-08-23.** Fixed `gen_schema_docs.py`'s Windows crash. It writes `SCHEMA.md`
+      successfully and then dies printing a `✅` under cp1252
+      (`UnicodeEncodeError: 'charmap' codec can't encode character '✅'`), so the work completes
+      but the exit code reports failure — which reads as a broken guard to anyone running it
+      locally. Either reconfigure stdout to UTF-8 inside the script or drop the emoji from its
+      output. Workaround until then: `PYTHONIOENCODING=utf-8`
+- [ ] T081 [Sec] **Extend the RLS test to cover views and the two RPCs**, not just tables. Assert a
+      second user reads **zero rows** from `v_latest_valuation`, `v_net_worth_by_sector` and
+      `v_net_worth_history` — this is the test that would have caught the missing
+      `security_invoker` — and that `correct_valuation()` and `create_holding_with_value()` both
+      reject a caller who does not own the target holding. Both are `security definer`, so they
+      bypass the RLS that would otherwise refuse them, and their explicit ownership checks are the
+      only thing standing in
+- [ ] T082 [Backend] **Test `correct_valuation()` end to end**: the corrected row appears with
+      `source = 'CORRECTION'`, the original is excluded from `v_latest_valuation`, both happen in one
+      transaction, and a second correction of an already-corrected row is refused. This replaces
+      T025/T026's assertions, which were written against a client-side `deleted_at` UPDATE that RLS
+      forbids
+- [ ] T083 [Backend] **Test `create_holding_with_value()` idempotency**: the same `p_request_id`
+      replayed returns the original holding id and creates no second holding or valuation
+- [ ] T084 [SA] **Confirm the two reversible schema choices before the migration touches
+      `dhruv-dev`** — cheap now, a data migration later: `collateral text` versus a holdings FK, and
+      `v_net_worth_history`'s 30-day comparison window versus calendar-month-to-date
+
+---
+
+## Phase 12: Closure — tracking (runs last, after the checkpoint is green)
+
+Per the tracking rule in `apps/finance/CLAUDE.md`. All three move together; a phase is not done
+until they do.
+
+- [ ] T085 [P] Move **`networth`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of
+      the "Planned" table into the shipped Modules table — `Status: enabled`, flag `networth`
+      (`requiresConsent: true`), owner tab Home
+- [ ] T086 [P] Rewrite **`apps/finance/feature/home/networth/README.md`** — drop the
+      "(not yet created)" heading and the "does not exist yet" preamble, and write the real screens
+      (C1–C7), ViewModels, repositories consumed, the two RPCs this phase introduced, and the flag
+      key. Detail belongs here and **not** back in FEATURES.md
+- [ ] T087 [P] Add the **root [`CHANGELOG.md`](../../../../CHANGELOG.md)** entry under the
+      `finance-*` heading CI injects. This phase's notable items: the net-worth tracker itself, the
+      `finance.correct_valuation()` and `finance.create_holding_with_value()` RPCs, the
+      `v_net_worth_history` view, `invested_paise`, the frozen `sector`/`source` enums, and —
+      because they are behaviour changes a reader would otherwise be surprised by —
+      `security_invoker` on every view and the new no-future-date constraint on `valuations.as_of`
+- [ ] T088 [P] Update the **spec-kit tracking table** in
+      `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §7:
+      Phase 2's status moves to *shipped*, and its "NOT ready for `/speckit-implement`" note is
+      removed once T045–T047 and T078–T084 are closed

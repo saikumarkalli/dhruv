@@ -46,7 +46,7 @@ F and G depends on that layer.
 
 | Area | Evidence |
 |---|---|
-| **Colour tokens** | [DhruvNextTokens.kt](../../../libs/core/src/main/kotlin/com/dhruv/core/ui/theme/DhruvNextTokens.kt) light/dark values are byte-identical to the design's `--c-*` CSS variables (`#F9F9F9/#FFFFFF/#F3F4F6/#E5E7EB/#111827…` light, `#0A0A0A/#1E1E1E/#2C2C2C/#3A3A3A/#F5F5F5…` dark), including `chart1–chart6`, `pos/neg/warn` and their soft variants. |
+| **Colour tokens** | [DhruvNextTokens.kt](../../../../../libs/core/src/main/kotlin/com/dhruv/core/ui/theme/DhruvNextTokens.kt) light/dark values are byte-identical to the design's `--c-*` CSS variables (`#F9F9F9/#FFFFFF/#F3F4F6/#E5E7EB/#111827…` light, `#0A0A0A/#1E1E1E/#2C2C2C/#3A3A3A/#F5F5F5…` dark), including `chart1–chart6`, `pos/neg/warn` and their soft variants. |
 | **Accent** | `#F05A28` light / `#FF6D3B` dark — matches, and `resolveDhruvNextColors` already supports the Settings accent override. |
 | **Typography** | Space Grotesk (4 weights), Inter (3), JetBrains Mono (2) are on disk and wired in `DhruvFont.kt` — exactly the design's three-family system. |
 | **Responsive scale** | `calculateDhruvNextResponsiveTokens` gives small/phone/tablet tiers for spacing, radii (card 16 / listGroup 18 / innerTile 14 / pill 26), type and keypad. |
@@ -59,7 +59,7 @@ F and G depends on that layer.
 
 | Screen | File | Design expects |
 |---|---|---|
-| Home tab | [DashboardScreen.kt](../../../apps/finance/app/src/main/java/com/dhruv/finance/app/ui/dashboard/DashboardScreen.kt) — 27 lines, logo + "coming soon" | **01 HOME**: greeting + date line, net-worth hero with area sparkline and ▲% delta, 4 quick-action tiles, "Upcoming" list (EMI auto-debit, card bill), Ask pill |
+| Home tab | [DashboardScreen.kt](../../../app/src/main/java/com/dhruv/finance/app/ui/dashboard/DashboardScreen.kt) — 27 lines, logo + "coming soon" | **01 HOME**: greeting + date line, net-worth hero with area sparkline and ▲% delta, 4 quick-action tiles, "Upcoming" list (EMI auto-debit, card bill), Ask pill |
 | Insights tab | `EmptyStateCard("Insights lands once expense tracking ships")` in `MainActivity` | **F1 Monthly summary** root + F2–F5 |
 | Plan tab | `PlanLauncher` — 4 calculator tiles only | **E1 PLAN ROOT (REVISED)**: *live modules on top* (Budgets, Goals, Debt payoff, Insurance, Retirement), calculators demoted to a strip **below** |
 | Notifications | `NotifScreen.kt` stub | **B2**: grouped Today/Earlier, budget overrun · EMI due · renewal · rate alert, "Mark all read" |

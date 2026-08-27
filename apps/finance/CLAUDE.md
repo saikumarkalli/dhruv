@@ -18,6 +18,11 @@ which number), never the repo-root `specs/` (reserved for genuinely cross-app wo
 `.specify/memory/constitution.md`'s Spec-Kit Directory Rule). Pass
 `SPECIFY_FEATURE_DIRECTORY=apps/finance/specs/<dir>` explicitly when running `/speckit-specify`.
 
+[ARCHITECTURE.md](ARCHITECTURE.md) is the detailed engineering reference — module graph and what
+enforces it, package layout of `:app` / `:data` / `:libs:core`, navigation and fault isolation, the
+Room-vs-Supabase split, the testing stack, and a tripwire list of failures this repo has actually
+hit. Read it before a first change to an unfamiliar module.
+
 ## Modules
 - `:apps:finance:app` — shell: `MainActivity` (pager + bottom nav), Settings UI, `platformModule`/`appModule` Koin wiring, Converter/Finance hubs.
 - `:apps:finance:data` — shared Room DB + entities + DAOs + repositories + `CurrencyApi` + `GeminiRepository` + `CurrencyFormatter`. Feature modules depend on this (Repository-only access).
@@ -32,6 +37,34 @@ lives at `apps/finance/feature/plan/loans/`. **Gradle coordinates are unchanged*
 
 [FEATURES.md](FEATURES.md) is the module index; each module's own `README.md` (linked from there)
 is where the actual detail lives (screens, ViewModels, data deps, flag keys) — one source, not two.
+
+**Tracking rule — every phase closes these three, and its spec carries the task:**
+1. **[FEATURES.md](FEATURES.md)** — the module's row moves from *planned* to *enabled*/*disabled*.
+   Every module appears there from the moment a phase **plans** it, so "built", "planned" and
+   "unowned" are always distinguishable. A phase that adds no Gradle module (0b, 6) gets no row and
+   is listed in that file's no-module table instead.
+2. **The module's own `README.md`** — drop the "not yet created" preamble, write the real screens,
+   ViewModels, data dependencies and flag key. Detail lives only there, never copied back into
+   FEATURES.md (that duplication was removed in 2026-08-09 because it drifted).
+3. **Root [`CHANGELOG.md`](../../CHANGELOG.md)** — an entry under the `finance-*` release heading.
+   CI injects the heading; the prose under it is hand-written.
+
+4. **The spec's own `spec.md` § "Implementation record"** — what actually shipped, what deviated
+   from the spec and why, what was deferred and to where. The spec stops describing the future at
+   this point and starts describing the system.
+
+Shared-library work (`:libs:core`, `:libs:settings`) gets a CHANGELOG entry only — it is not a
+Finance module and never gets a FEATURES.md row.
+
+**Docs stay current after the phase ships** (constitution Article Xa). Any later change to shipped
+behaviour — a defect fix, a functional change, a schema migration, a removal — adds a row to the
+owning spec's Implementation record **in the same PR that changes the behaviour**, plus a CHANGELOG
+entry, plus any registry row it touches. A defect row names the **FR whose stated behaviour was not
+actually delivered**; that is what distinguishes a fix from an undocumented behaviour change.
+
+If a change makes a doc wrong and there is no time to fix it properly, mark it stale with a date.
+A confidently wrong document is worse than a missing one — this repo has shipped certificate pins
+the code never used and a component library that never existed, both because a doc was trusted.
 
 ## Feature flags
 `platform/feature-flags/dhruv-finance.json` is the single source of truth — it's packaged as an
