@@ -66,9 +66,10 @@ before steps 3/4).
 - [ ] T014 [P] Author `supabase/schemas/finance/10_tables/policies.sql` per data-model.md, including `documents jsonb` (research R6) and `remind_days_before` (research R8)
 - [ ] T015 [P] Author `supabase/schemas/finance/10_tables/policy_premiums.sql` per data-model.md with **SELECT + INSERT policies only** — no UPDATE, no DELETE, no `deleted_at` (Article IX, same shape as `valuations`)
 - [ ] T016 [P] Author `supabase/schemas/finance/10_tables/retirement_scenarios.sql` per data-model.md with `assumptions jsonb` and no stored corpus
-- [ ] T017 [P] Author `supabase/schemas/finance/20_views/v_budget_status.sql` joining `budgets` to Phase 3's `v_category_spend` — transfer and excluded-category exclusion come from that view, never re-derived (research R7)
-- [ ] T018 [P] Author `supabase/schemas/finance/20_views/v_goal_progress.sql` — `Σ (latest valuation × earmark_bps / 10000)` with integer truncation last, plus the `link_count` column that lets E4 distinguish unfunded from 0%
-- [ ] T019 [P] Author `supabase/schemas/finance/20_views/v_annual_income.sql` from `v_month_summary`, including the `months_observed` honesty column (research R3)
+- [ ] T017 [P] Author `supabase/schemas/finance/20_views/v_budget_status.sql` joining `budgets` to Phase 3's `v_category_spend` — transfer and excluded-category exclusion come from that view, never re-derived (research R7). **Declare `with (security_invoker = on)`** — see T019a
+- [ ] T018 [P] Author `supabase/schemas/finance/20_views/v_goal_progress.sql` — `Σ (latest valuation × earmark_bps / 10000)` with integer truncation last, plus the `link_count` column that lets E4 distinguish unfunded from 0%. **Declare `with (security_invoker = on)`** — see T019a
+- [ ] T019 [P] Author `supabase/schemas/finance/20_views/v_annual_income.sql` from `v_month_summary`, including the `months_observed` honesty column (research R3). **Declare `with (security_invoker = on)`** — see T019a
+- [ ] T019a [Sec] **Every view this phase authors (T017, T018, T019) MUST carry `with (security_invoker = on)`.** A Postgres 15+ view runs as its owner and bypasses RLS on the underlying tables; PostgREST exposes these views, so without the clause `v_budget_status`/`v_goal_progress`/`v_annual_income` return every user's rows to every signed-in caller (audit 2026-08-22). `db diff` cannot express it (ADR-0032 caveat list) — hand-verify the generated migration carries the clause, and extend this phase's RLS policy test to assert a second user reads zero rows from each view
 - [ ] T020 Author `supabase/schemas/finance/30_functions/fn_goal_link_earmark_guard.sql` + `BEFORE INSERT OR UPDATE` trigger on `goal_links` enforcing the per-holding 10000 bps cap across all of a user's goals (FR-024 — a CHECK cannot see other rows, and a client check races)
 - [ ] T021 Extend `supabase/schemas/public/30_functions/delete_my_data.sql` to hard-delete the six new tables in FK order (`goal_links` → `goals`, `policy_premiums` → `policies`, `budgets`, `retirement_scenarios`), fully qualified as `finance.*`
 - [ ] T022 Add explicit `grant usage`/per-table `grant select,insert,update` (and `delete` on `goal_links` only) to `authenticated` for all six tables and three views — ADR-0033 decision 4; `db diff` cannot express grants, so these are hand-written
@@ -321,7 +322,7 @@ module-standard `HOM`/`PLN` correction and impl plan §6.
 - [ ] T126 **Sec step**: RLS verification against `dhruv-dev` — every one of the six tables refuses another user's rows; `policy_premiums` refuses UPDATE and DELETE; the `goal_links` earmark trigger refuses an over-cap write issued directly against PostgREST, bypassing the app
 - [ ] T127 **Sec step**: DPDP pass — all five flags carry `requiresConsent: true`, no PostgREST call is reachable before the "Sync my financial records" switch is on (Article VIII), and `delete_my_data()` removes every row across all six tables (NFR-1, quickstart scenario 20)
 - [ ] T128 Run the full `quickstart.md` manual scenario list (20 scenarios) and record the results
-- [ ] T129 Close all 21 catalog rows in `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §5–§7 — 20 closed, `PLN-FLOW-003` deferred with the research R8 citation (T061) — and update the §13 coverage-summary table
+- [ ] T129 Close all 21 catalog rows in `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §5–§7 — 20 closed, `PLN-FLOW-003` deferred with the research R8 citation (T061) — and update the §14 coverage-summary table
 - [ ] T130 Run `python scripts/ci/regression_summary.py` and confirm all three modules appear as their own rows, not under `(other)`; record both the module totals and the engine/ViewModel logic totals side by side
 - [ ] T131 Ratchet `globalLineFloor` in the root `build.gradle.kts` **once**, to just under the newly measured merged coverage — never above it (Article X)
 - [ ] T132 [P] Write the five deltas back into `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md`'s Phase 4 section as a dated note: research R1 (`earmark_bps` replaces `earmark_qty`), R2 (engine placement), R3 (derived income), R4 (three added columns, three views), R9 (payoff termination and tie-breaks)
@@ -454,3 +455,168 @@ a different module and can proceed alongside anything.
 - Do not move the four engines into `tracker/` (research R2), and do not relax
   `checkTrackerMoneyPrecision` to accommodate them
 - Commit after each task or logical group; stop at any checkpoint to validate a story independently
+
+---
+
+## Phase 11: Gap remediation (multi-agent spec audit, 2026-08-22)
+
+**Source**: `apps/finance/docs/superpowers/reviews/2026-08-22-spec-phase-gap-register.md`.
+
+**Already folded into an existing task — do not re-do here**: `security_invoker = on` on all three
+views (T017 + the new T019a), corrected in place because the originals would have returned every
+user's rows to every signed-in caller through PostgREST.
+
+**⚠️ T135–T136 are blocking** — E9's headline number and E5's chart have no defined inputs today,
+and tasks already exist to render both.
+
+- [ ] T135 [SA] **Define the retirement projection's inputs.** `PROJECTED CORPUS AT 60` has no
+      starting value and no contribution stream: the `assumptions` jsonb holds six fields (retire
+      age, monthly spend today, inflation, pre- and post-retirement return, life expectancy), all of
+      which describe the *target*, none of which is "what I have now" or "what I add per month".
+      Research R3 sources only annual income and monthly spend. `RetirementProjectionEngine` (T106)
+      therefore has no input for the figure it exists to produce. Decide the current-corpus source
+      (Σ holdings? which sectors? user-entered?) and the contribution source, then add both to
+      `data-model.md` and an FR
+- [ ] T136 [SA] **Define the goal projection's inputs.** Goal *progress* is fully specified
+      (`v_goal_progress`); the E5 **projection chart** is not — no growth assumption and no
+      contribution rate is modelled anywhere, yet T072 renders one. The design's *Add a contribution*
+      action likewise appears in no FR and no task, and has no write target given BR-E1's "nothing is
+      moved, locked or duplicated". Specify both or descope them with a recorded reason
+
+- [ ] T137 [SA] **Fix `nominee_share_pct`.** Typed `integer` whole percent, so three equal nominees
+      (33.33% each) cannot be expressed and cannot sum to 100 — the exact condition the spec says it
+      will "surface, not block". Every other proportional field in this repo uses basis points
+      (`earmark_bps`, `rate_bps`, `share_bps`). Change to `nominee_share_bps` before any policy row
+      exists
+- [ ] T138 [SA] **Add `name` to `finance.policies`.** The table has kind, insurer, policy_no, sums,
+      dates, nominee, riders and documents but no name. E7 groups policies for display, E8 is
+      "Policy detail", and Phase 6's search contract returns **policy name as the result title** —
+      `../006-search-notifications/data-model.md:139` even lists `policies (name, …)` as a column it
+      reads
+- [ ] T139 [SA] **Correct `data-model.md:19`**, which cites `liabilities_meta (… outstanding
+      balance)` as though outstanding were a column on that table. It is not — outstanding is the
+      liability holding's latest valuation. `DebtPayoffEngine` is currently specced against a column
+      that does not exist
+
+- [ ] T140 [SA] **Propagate BR-D5 (audit trail) to this phase's entities.** 002 implements it well
+      for transactions (`fn_transaction_audit` trigger, `transaction_events` SELECT+INSERT-only), but
+      this phase has no audit or history FR for budget, goal, goal_link, policy, premium or scenario
+      mutations, and no `PLN/INS/RET` QA row asserting one. A raised budget or a changed earmark is
+      silently mutable with no record. Add the trigger to the tables that need it and the matching FRs
+- [ ] T141 [SA] **Specify the missing lifecycle paths**: budget delete; goal-link earmark-quantity
+      change; policy-document delete; premium-payment correction (currently append-only with no
+      correction path, unlike valuations which have soft-delete + append); saved-scenario delete
+      (edit exists only as an Assumption, not an FR)
+- [ ] T142 [Android] Wire **`UndoSnackbarHost`** to this phase's soft-deletes, per DESIGN-SYSTEM §8.
+      Undo is specified in none of the six phases; coordinate the shared pattern with 001 T053 and
+      002 T088 rather than inventing a third
+- [ ] T143 [QA] Add a **`PLN-*` QA row for BR-D1's transfer clause.** FR-010 restates "transfers are
+      never spend" for budgets, but the only row asserting it (`MNY-BR-001`) lives in Phase 3, where
+      budgets do not exist — so the assertion is currently untestable in both phases
+- [ ] T144 [Android] Ship this module's **`SettingsContribution`** per
+      `../004-settings/contracts/settings-contribution.md`. This phase creates several modules and
+      plans no settings entry; Phase 6's budget-threshold and policy-renewal alert controls have no
+      home without it
+- [ ] T145 [P] **De-duplicate `PaceRing` with 001.** T043 places it in `ui/components/Rings.kt` and
+      calls it "genuinely new (verified absent by symbol search)"; 001 T006 places it in
+      `ui/components/charts/`. Agree one path before either lands
+- [ ] T146 [SA] **Claim or reassign `NxTabs` (design-system batch B8).** 005 needs it for statement
+      tabs and states it is "owed by earlier phases"; no phase builds it, and this spec mentions it
+      only to say it is not `SegmentedRow`. Without an owner Phase 5 hand-rolls it, which the
+      micro-frontend rule forbids
+- [ ] T147 [SA] Add the **E3 → filtered-ledger `NavTarget` case**. `contracts/routes.md:83` describes
+      the jump as `SelectTab(MONEY)` "+ a category filter argument", but `SelectTab` carries only a
+      `TabKey` and this phase's NavTarget-additions table adds no filtered-ledger case
+- [ ] T148 [SA] Add the receiving task for **D4's budget-impact line**, which 002 deferred to this
+      phase with a stated reason and this phase never picked up
+
+---
+
+## Phase 12: Gap remediation, round 2 (UI/UX + requirements audit, 2026-08-22)
+
+This phase is the **strongest of the six on UI/UX fidelity** — 8 of 9 screens match the design as
+drawn, and it is the only phase with a real accessibility task (T122). The findings below are
+narrow by comparison.
+
+- [ ] T149 [SA] **Define the three retirement scenarios' parameters.** SC-011 and FR-042 demand three
+      *distinct* corpus figures and T103 tests distinctness, but the only definition anywhere is an
+      Assumption — "base, optimistic and cautious differ by their return and inflation assumptions" —
+      with the actual deltas stated nowhere. A developer must invent them, and **any invented value
+      passes the test**. Pairs with T135 (the projection has no starting corpus either)
+- [ ] T150 [SA] **Fix "five assumptions" that are six.** FR-041 says "five" then lists six; SC-010,
+      the Key Entity and both acceptance scenarios say five; `data-model.md` calls the jsonb "the
+      five inputs" at :152, "these six values" at :168 and "the other five" at :174
+- [ ] T151 [SA] **State field validation for goals and policies.** `budgets` has a full
+      repository-boundary rule set; `goals` has none — no `target_paise > 0`, no rule for a target
+      date in the past (which this spec's own Edge Cases say must not yield a negative monthly
+      requirement), no maximum. Policies validate only `kind`/`frequency`/`sum_assured_paise`;
+      premium, `renews_on` and nominee share are unvalidated. Retirement `assumptions` says
+      "validated at the repository boundary" without stating a single rule
+- [ ] T152 [SA] Cover the **six Edge Cases with no FR and no task**: a budget created mid-month
+      ("state which period it is measuring"); zero-days-remaining / last-day pace; a budget on a
+      category later excluded from spend ("say why"); a goal whose linked holding is sold, deleted or
+      zeroed — **there is no cascade rule, and `v_goal_progress` joins `v_latest_valuation` with no
+      `holdings.deleted_at` filter**; a goal already fully funded or past its target date; a nominee
+      share not totalling 100% ("surfaced as incomplete")
+- [ ] T153 [SA] State **pagination or a bound** for E3's "that category's recent transactions"
+      (FR-011) — currently unbounded, like every other list in the feature
+- [ ] T154 [Android] Add **E1's live figures**. The design draws module cards carrying
+      *spend of budget, N over* and *N active, saved of target*; T116 plans the `THIS MONTH` and
+      `LONG RUN` groups with no summary figures on either card and no ViewModel task supplying them
+- [ ] T155 [Android] **Use `MoneyText`, `StatDeltaChip` and `ThreeUpStatRow`** — none appears in this
+      phase's tasks, and E6's four-stat header, E5's `STILL NEEDED · PER MONTH · MONTHS LEFT` and
+      E9's corpus figures are exactly what they exist for
+- [ ] T156 [QA] Verify **light and dark** render from the same tokens (N7) and the three responsive
+      tiers — T122 covers contrast in both themes but not a full render pass, and no phase covers
+      responsiveness at all
+
+---
+
+## Phase 13: DB obligations inherited from the Phase 2 readiness decisions (2026-08-23)
+
+Binding conventions: `../001-net-worth-tracker/data-model.md` § "Maintenance conventions" and the
+[readiness architecture decisions](../../docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md).
+
+- [ ] T157 [SA] **`security_invoker = on` on all three views** (T017/T018/T019 + T019a now say so).
+      Verify by hand in the generated migration, and extend the RLS test to assert a **second user
+      reads zero rows from each view**
+- [ ] T158 [SA] **`liabilities_meta` is `finance.liabilities_meta`** and carries
+      `original_principal_paise` — added by Phase 2 precisely so `DebtPayoffEngine` and C7's
+      amortisation split have a defined input. Correct `data-model.md:19`, which cites
+      `liabilities_meta (… outstanding balance)` as though outstanding were a column there; it is
+      the liability holding's **latest valuation**, a different quantity
+- [ ] T159 [SA] **Add `request_id uuid unique`** to `budgets`, `goals`, `policies` and
+      `policy_premiums` — retry idempotency, per the Phase 2 standard
+- [ ] T160 [SA] **`nominee_share_bps`, not `nominee_share_pct`** (integer basis points). Whole
+      percent cannot express three equal nominees at 33.33%, which is exactly the case this spec
+      says it will "surface, not block", and every other proportional column in the repo is bps
+- [ ] T161 [SA] **Add `policies.name text not null`** — E7 groups by it, E8 titles on it, and Phase
+      6's search contract returns it as the result title
+- [ ] T162 [SA] **`v_goal_progress` must filter `holdings.deleted_at is null`.** It joins
+      `v_latest_valuation`, which already excludes deleted holdings — confirm the join does not
+      reintroduce them, since this phase's own Edge Cases require a goal whose linked holding was
+      sold or deleted to behave predictably and no task covers it
+- [ ] T163 [SA] Confirm every new table's `DELETE` lands in `public.delete_my_data()` in the same
+      migration (T021 does this for six tables — keep it true for any that get added)
+
+---
+
+## Phase 14: Closure — tracking (runs last, after the checkpoint is green)
+
+Per the tracking rule in `apps/finance/CLAUDE.md`. This phase ships **three** modules, so each gets
+its own row and its own README.
+
+- [ ] T164 [P] Move **`planning`, `insurance` and `retirement`** in
+      [`apps/finance/FEATURES.md`](../../FEATURES.md) out of the "Planned" table into the shipped
+      Modules table, with their flags (`budgets`/`goals`/`debtpayoff` · `insurance` · `retirement`)
+- [ ] T165 [P] Rewrite all three module READMEs — `feature/plan/planning/`, `feature/plan/insurance/`,
+      `feature/plan/retirement/` — with real screens, ViewModels, repositories and flag keys. Name
+      which of E1–E9 each module owns; the split across three modules is not obvious from the
+      screen ids alone
+- [ ] T166 [P] Add the **root `CHANGELOG.md`** entry: budgets with pace, goals funded by linked
+      holdings, debt payoff with the avalanche/snowball trade-off, insurance with the cover
+      rule-of-thumb, and the retirement projection. Note that **goal linking never moves or locks
+      money** (BR-E1) — the single most likely thing for a reader to assume wrongly
+- [ ] T167 [P] Update the **spec-kit tracking table** (implementation plan §7) — Phase 4 to *shipped*
+- [ ] T168 [P] Add every `NavTarget` case and route this phase introduced to surface registry §1 in
+      the same change, including the E3 → filtered-ledger case (T147) and `OpenBudget`

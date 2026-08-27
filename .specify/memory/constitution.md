@@ -58,12 +58,64 @@ Enforcement: `ConsentInterceptor` + unit test, ADR-0014 §7, ADR-0029.
 Enum constants persisted as TEXT are append-only — never rename a shipped constant. ADRs in
 `platform/DECISIONS.md` are ACCEPTED and append-only; a changed decision is a new ADR or a dated
 note, never an edit to prior ADR body text.
-Enforcement: migration review checklist; `platform/DECISIONS.md` governance rule.
+
+**A table that is append-only has SELECT and INSERT policies only — no UPDATE, no DELETE, and a
+grant of only `select, insert`.** That absence is the guarantee; it is what makes "history is never
+overwritten" true at the database layer instead of by client discipline.
+
+**Corollary, and the reason this paragraph exists:** a correction to such a table is a
+`security definer` RPC, never a client write. Soft-deleting a row means setting `deleted_at`, which
+*is* an UPDATE — so a spec that says "append-only, and the client marks the wrong row deleted" is
+self-contradictory. That exact contradiction shipped into three documents, each citing the missing
+UPDATE policy as the guarantee for an operation the missing UPDATE policy forbade. Adding an UPDATE
+policy to make it work is never the fix: it makes the table ordinarily mutable and destroys the
+article.
+Enforcement: migration review checklist; `platform/DECISIONS.md` governance rule; ADR-0029
+decision 4.
+
+### IXa. Authorization Is Server-Side
+Every table has RLS enabled and scoped to `auth.uid()`, directly or transitively through its parent.
+**Every view carries `security_invoker = on`** — a Postgres 15+ view otherwise executes as its owner,
+bypasses RLS on the underlying tables, and returns every user's rows to every signed-in caller
+through PostgREST. **Every `security definer` function performs its own explicit ownership check**
+and sets `search_path`, because `security definer` is precisely the thing that turns RLS off.
+
+Custom-schema objects need explicit `GRANT`s; `supabase db diff` emits neither the grants nor the
+`security_invoker` clause, so both are hand-appended to the generated migration and verified by
+reading it.
+
+Client-side filtering is never authorization. A query that omits a user filter must return nothing,
+not everything.
+Enforcement: per-phase RLS test asserting a second user reads **zero rows from every table and every
+view**; `platform/skills/dhruv-supabase-object`; ADR-0029, ADR-0033.
 
 ### X. Coverage Ratchets, Never Regresses
 The JaCoCo line-coverage floor in the root `build.gradle.kts` only moves up, at a stated checkpoint,
 never ahead of landed tests.
 Enforcement: `./gradlew regressionCheck`, ADR-0013.
+
+### Xa. Documentation Tracks Reality
+A spec describes what will be built **until it is built**, and what *was* built from then on. When a
+phase ships, its `spec.md` gains an **Implementation record** stating what actually landed, what
+deviated from the spec and why, and what was deferred — deferrals with a stated reason, never
+silently dropped scope.
+
+**This obligation does not end at the checkpoint.** Any later change to shipped behaviour — a defect
+fix, a functional change, a schema migration, a removed feature — updates the owning spec's
+Implementation record in the **same change** that alters the behaviour, plus `CHANGELOG.md`, plus
+any registry row it touches. A bug fix names the FR whose stated behaviour was not actually
+delivered; that is what separates a fix from an undocumented behaviour change.
+
+The failure this article exists to prevent is well attested here: an SDD claimed certificate pins
+the code never used and a component that never existed; three design documents each claimed
+authority while two described a UI that was never built (ADR-0030); a spec asserted a correction
+path its own RLS forbade. **A confidently wrong document is worse than a missing one**, because it
+is trusted.
+
+If a change makes a doc wrong and there is no time to fix it properly, say so in the doc — a dated
+"known stale" line is honest; leaving the false statement standing is not.
+Enforcement: per-spec closure tasks; the PR template checklist; `scripts/ci/doc_link_check.py`;
+code review.
 
 ### XI. Stack Is Fixed
 Kotlin + Jetpack Compose + Koin (DI) + Coroutines/Flow only. No Hilt (AGP 9 incompatible, ADR-0010).

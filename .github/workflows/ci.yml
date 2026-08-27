@@ -265,6 +265,17 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3
 
+      # The guard platform/DECISIONS.md's 2026-08-15 doc-retirement note already promised
+      # ("fails CI on any new such reference") but which did not actually exist until
+      # 2026-08-23. Two checks: every relative markdown link resolves, and nothing
+      # references the retired P1-P6 / R0-R11 spec families.
+      #
+      # In Gate 2 for the same reason as the two steps above: this is the only job that
+      # runs on EVERY pull request including docs-only ones, and a docs-only PR is
+      # precisely the PR that breaks a docs link. Pure-Python, no dependencies, ~1s.
+      - name: Documentation link check
+        run: python3 scripts/ci/doc_link_check.py
+
   # ── Gate 3: Tests ─────────────────────────────────────────────────────────
   tests:
     name: "Gate 3+4 · Tests + ArchUnit + Coverage + Build"

@@ -61,7 +61,7 @@ Three things to confirm, in order:
    Compose screen files the JVM gate never executes; the meaningful figure for this phase is
    coverage of the repository/ViewModel logic in `:apps:finance:data`'s `tracker/repo` and the
    module's ViewModels. Record the module total and the logic total side by side in the QA
-   catalog's §13 summary — reporting one and implying the other is how a coverage number stops
+   catalog's §14 summary — reporting one and implying the other is how a coverage number stops
    meaning anything.
 
 Expected: all green. Every test cites an `MNY-*` scenario ID from

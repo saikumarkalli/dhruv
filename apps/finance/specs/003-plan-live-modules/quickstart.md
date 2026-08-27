@@ -79,7 +79,7 @@ Four things to confirm, in order:
    the JVM gate sees completely.
 4. **Both numbers are recorded**, not one. A feature module's own percentage is dragged down by
    Compose screen files the JVM gate never executes; record the module total and the engine/ViewModel
-   logic total side by side in the QA catalog's §13 summary.
+   logic total side by side in the QA catalog's §14 summary.
 
 Expected: all green. Every test cites a `PLN-*`, `INS-*` or `RET-*` scenario ID from
 `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §5–§7 — a test with no

@@ -326,7 +326,9 @@ intent **rows** live in that app's surface registry; the conventions below are g
 - **Notifications** — sentence case, ≤1 line collapsed (≤2 expanded; `BigTextStyle` only for
   genuinely long-form content). Never more than **two** action buttons. Never a policy/account
   number. Never an account name and an amount in the same line under privacy mode. Every channel
-  has exactly one Settings row — the channel registry and the settings tree stay 1:1.
+  has exactly one control in Settings, owned by the module that defines the channel — channel
+  registry and controls stay 1:1. An app-wide notification master switch and the system
+  permission state are app-level and never duplicate a per-channel control.
 - **Widget (Glance)** — theme mapped from the same day/night roles; compact money only;
   `contentDescription` on the root; defines its own value / masked / signed-out / disabled states.
 - **PDF export** — same type hierarchy mapped to `PdfDocument` text sizes; **full** money format,

@@ -18,6 +18,9 @@ security definer
 set search_path = public
 as $$
 begin
+    delete from finance.liabilities_meta
+    where holding_id in (select id from finance.holdings where user_id = auth.uid());
+
     delete from finance.valuations
     where holding_id in (select id from finance.holdings where user_id = auth.uid());
 

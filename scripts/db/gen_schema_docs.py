@@ -66,8 +66,15 @@ class Column:
     type: str
     constraints: str
 
-    def key(self) -> tuple[str, str, str]:
-        return (self.name, _normalize_sql(self.type), _normalize_constraints(self.constraints))
+    def key(self) -> tuple[str, str]:
+        # Name + type only. Constraint TEXT is deliberately excluded: the same constraint is
+        # legitimately spelled two ways depending on which side declares it —
+        #   declarative:  invested_paise bigint check (invested_paise >= 0)
+        #   migration:    alter table ... add constraint x check (invested_paise >= 0)
+        # Comparing the raw strings would fail forever on a schema that is in fact identical, and a
+        # guard that cries wolf is worse than one with a documented gap. CHECK expressions are
+        # instead compared per-table as a normalized set (see Table.checks).
+        return (self.name, _normalize_sql(self.type))
 
 
 @dataclass
@@ -83,12 +90,18 @@ class Table:
     indexes: list[str] = field(default_factory=list)
     rls_enabled: bool = False
     policies: list[Policy] = field(default_factory=list)
+    checks: set[str] = field(default_factory=set)
 
     def signature(self):
         return (
-            tuple(c.key() for c in self.columns),
+            # Order-insensitive. Postgres column order carries no semantics, and a
+            # `db diff`-generated migration APPENDS new columns while the declarative file
+            # declares them in place — so the two sides routinely differ in order while being
+            # identical schemas.
+            frozenset(c.key() for c in self.columns),
             self.rls_enabled,
             tuple(sorted((p.name, p.command) for p in self.policies)),
+            frozenset(self.checks),
         )
 
 
@@ -154,6 +167,30 @@ def _strip_comments(sql: str) -> str:
     return sql
 
 
+def _extract_checks(fragment: str) -> list[str]:
+    """Pull every CHECK expression out of a DDL fragment, normalized for comparison.
+
+    Balanced-paren scan rather than a regex, because a CHECK body routinely contains nested
+    parens — `check (sector in ('BANK', 'GOLD'))`, `check (length(btrim(name)) between 1 and 120)`.
+    The constraint NAME is deliberately not captured: the declarative side spells these inline and
+    unnamed, the migration side names them, and they describe the same rule either way.
+    """
+    checks: list[str] = []
+    for match in re.finditer(r"\bcheck\s*\(", fragment, re.IGNORECASE):
+        start = match.end() - 1  # position of the opening paren
+        depth = 0
+        for i in range(start, len(fragment)):
+            char = fragment[i]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    checks.append(_normalize_sql(fragment[start + 1 : i]))
+                    break
+    return checks
+
+
 SCHEMA_CREATE_RE = re.compile(
     r"create schema if not exists\s+(\w+)",
     re.IGNORECASE,
@@ -173,6 +210,19 @@ RLS_RE = re.compile(
 SET_SCHEMA_RE = re.compile(
     r"alter table\s+(?:(\w+)\.)?(\w+)\s+set schema\s+(\w+)",
     re.IGNORECASE,
+)
+# A migration extends an existing table in place; the declarative file declares the column inside
+# `create table`. Without these two rules the executed side simply never sees the column and every
+# extended table reads as permanent drift. ADR-0033 hit the same class of gap and resolved it the
+# same way, by teaching this parser the statement it did not know.
+ADD_COLUMN_RE = re.compile(
+    r"alter table\s+(?:if exists\s+)?(?:(\w+)\.)?(\w+)\s+"
+    r"add column\s+(?:if not exists\s+)?(\w+)\s+([^;]+);",
+    re.IGNORECASE | re.DOTALL,
+)
+ADD_TABLE_CONSTRAINT_RE = re.compile(
+    r"alter table\s+(?:if exists\s+)?(?:(\w+)\.)?(\w+)\s+add constraint\s+\w+\s+([^;]+);",
+    re.IGNORECASE | re.DOTALL,
 )
 POLICY_RE = re.compile(
     r'create policy\s+"([^"]+)"\s+on\s+(?:(\w+)\.)?(\w+)\s+for\s+(select|insert|update|delete)',
@@ -203,6 +253,9 @@ def parse_sql(sql: str, schema: Schema) -> None:
         qualified = _qualify(schema_name, name)
         table = schema.tables.setdefault(qualified, Table(qualified_name=qualified))
         table.columns = []
+        # Covers both spellings inside a create-table body: inline column CHECKs and a table-level
+        # `constraint <name> check (...)` row.
+        table.checks.update(_extract_checks(body))
         for col_def in _split_top_level_commas(body):
             tokens = col_def.split(None, 1)
             if not tokens:
@@ -255,6 +308,31 @@ def parse_sql(sql: str, schema: Schema) -> None:
             existing = Table(qualified_name=new_qualified)
         existing.qualified_name = new_qualified
         schema.tables[new_qualified] = existing
+
+    # Must run AFTER both TABLE_RE (which resets a table's column list) and SET_SCHEMA_RE (which
+    # re-keys a moved table), so an ALTER lands on the table entry those two just established.
+    for match in ADD_COLUMN_RE.finditer(sql):
+        schema_name, table_name, col_name, rest = match.groups()
+        qualified = _qualify(schema_name, table_name)
+        table = schema.tables.setdefault(qualified, Table(qualified_name=qualified))
+        if any(c.name == col_name for c in table.columns):
+            continue  # `add column if not exists` replayed; not a second column
+        constraint_kw = re.search(
+            r"\b(not null|default|references|primary key|check|unique)\b", rest, re.IGNORECASE
+        )
+        col_type = rest[: constraint_kw.start()].strip() if constraint_kw else rest.strip()
+        constraints = rest[constraint_kw.start():].strip() if constraint_kw else ""
+        table.columns.append(Column(col_name, col_type, constraints))
+        table.checks.update(_extract_checks(rest))
+
+    for match in ADD_TABLE_CONSTRAINT_RE.finditer(sql):
+        schema_name, table_name, body = match.groups()
+        qualified = _qualify(schema_name, table_name)
+        table = schema.tables.setdefault(qualified, Table(qualified_name=qualified))
+        # Only CHECKs are compared — see Column.key(). A named UNIQUE/PK/FK added by ALTER has no
+        # comparable inline spelling on the declarative side, so folding it in would reintroduce
+        # exactly the false positives this change removes.
+        table.checks.update(_extract_checks(body))
 
     for match in POLICY_RE.finditer(sql):
         policy_name, schema_name, table_name, command = (
@@ -451,6 +529,15 @@ def cmd_equiv() -> int:
 
 
 def main() -> int:
+    # This script prints ✅/❌. A Windows console defaults to cp1252, which cannot encode them, so
+    # the script used to do all its work, write SCHEMA.md, and THEN die on the final print with
+    # UnicodeEncodeError — reporting failure for a run that had actually succeeded. That is worse
+    # than a plain crash: it trains people to distrust the guard. Callers should not have to know
+    # to set PYTHONIOENCODING.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "mode",

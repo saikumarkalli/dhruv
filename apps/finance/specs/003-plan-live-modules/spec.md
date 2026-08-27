@@ -525,3 +525,55 @@ with the Plan tab still selected.
   of scope; the design specifies a calendar month and the pace rule depends on it.
 - **One budget per category per month**. Sub-category budgets, envelope rollover of unspent amounts,
   and shared or household budgets are out of scope for this feature.
+
+---
+
+## Implementation record
+
+> **Status: NOT YET IMPLEMENTED.** This section is filled in when {phase} ships, and is
+> **maintained for the life of the feature** thereafter — see constitution Article Xa
+> ("Documentation Tracks Reality"). Everything above this line describes what *will* be built;
+> everything below describes what *was*.
+>
+> Module(s): {module}.
+
+### As built
+
+*(Fill on completion. What actually shipped, per user story. Keep it short — the tasks list the
+work, this records the outcome.)*
+
+| Story / FR | Shipped | Notes |
+|---|---|---|
+| | | |
+
+### Deviations from this spec
+
+*(Anything built differently from what is specified above, and **why**. A deviation recorded here is
+a decision; a deviation left unrecorded is drift, and this repo has been burned by it — see
+ADR-0030.)*
+
+| Spec says | Built as | Reason |
+|---|---|---|
+| | | |
+
+### Deferred
+
+*(Scope named in this spec that did **not** ship, with a reason and an owner. Never silently drop
+scope — an audit found several screens quietly reduced to a subset with no deferral recorded.)*
+
+| Item | Deferred to | Reason |
+|---|---|---|
+| | | |
+
+### Change log for this feature
+
+Every later change to shipped behaviour lands a row here **in the same PR that changes the
+behaviour** — defect fixes, functional changes, schema migrations, removals.
+
+A defect row names the **FR whose stated behaviour was not actually delivered**. That is what
+separates a bug fix from an undocumented behaviour change, and it is how the next reader learns the
+spec was once wrong rather than assuming the code is.
+
+| Date | Change | Type | FR affected | PR |
+|---|---|---|---|---|
+| | | fix / change / removal | | |

@@ -288,15 +288,58 @@ minor version in `platform/versions.json`.
 into spec-kit `spec.md`/`plan.md`/`tasks.md`, the mapping is recorded here — check this table before
 creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`.
 
+> **Audit gate (2026-08-22).** A multi-agent review of all six generated spec-kit phases against
+> this plan, the functional spec, the surface registries and `platform/DESIGN-SYSTEM.md` produced
+> `../reviews/2026-08-22-spec-phase-gap-register.md`. Findings are folded into each phase's own
+> `tasks.md` as a trailing **"Gap remediation"** block; the security and build blockers were
+> corrected **in place** in the tasks a developer actually runs, not deferred to that block.
+>
+> **Nothing is safely implementable until two things land**, both in Phase 2 (001):
+> 1. **`security_invoker = on` on every planned view** across 001/002/003. A Postgres 15+ view runs
+>    as its owner and bypasses RLS on the underlying table; PostgREST exposes all 8 planned views,
+>    so without the clause each returns **every user's rows to every signed-in caller**. Fixed in
+>    001 T004, 002 T007, 003 T017/T019a.
+> 2. **001's three build/merge blockers** — the missing `projectDir` remap (Gradle configuration
+>    fails), the hand-written migration with no declarative twin (ADR-0032's PR equivalence guard
+>    fails), and the missing ADR-0033 grants. Fixed in 001 T001/T004/T004a/T004b.
+>
+> Three Phase 2 product decisions (001 T045–T047 — cost basis, net-worth history source,
+> `liabilities_meta`'s schema) block work in 001, 003 and 005 and are the correct next action.
+> Cross-cutting items with no owner anywhere — **undo** (binding in DESIGN-SYSTEM §8, specified in
+> zero phases), **Trash**, **Profile**, **Custom fields**, the **credit-card screens**, **`NxTabs`**,
+> the **Glance widget** and three registry intents — are enumerated in the register's §1 and §4f.
+>
+> **Readiness pass (2026-08-23).** Those open questions are now answered in
+> `../specs/2026-08-23-phase-readiness-architecture-decisions.md` — the SA decision record covering
+> DB, Backend and UI for all six phases. Its §0 lists the **six product calls** taken as
+> reversible defaults and flagged for the maintainer (cost basis · net-worth history · credit-card
+> screens · custom fields · Trash · widget); everything else in it is technical and determined by an
+> existing ADR.
+>
+> **Phase 2's DB layer is authored**, not just specified: `finance.liabilities_meta`, three
+> `security_invoker` views (including the new `v_net_worth_history` that gives Home's delta a
+> source), and the two RPCs that make FR-004's correction and FR-002's atomicity possible at all —
+> `correct_valuation()` and `create_holding_with_value()`, the first of which ADR-0029 decision 4
+> named and assigned to this phase two versions ago. Declarative files under
+> `supabase/schemas/finance/`, migration `20260823094500_networth_phase2.sql`.
+> **It has not been executed** — hand-authored because the Supabase CLI/Docker stack is not
+> installed (ADR-0033's own migration records the same), so its first run is its first verification
+> (001 T078). The CI equivalence guard was **structurally unable to pass** for any table extended in place;
+> `scripts/db/gen_schema_docs.py` now understands `ALTER TABLE … ADD COLUMN`/`ADD CONSTRAINT` and is
+> green (001 T079, done 2026-08-23), along with its Windows console crash (T080). Full state and the maintenance conventions
+> every later phase inherits: `../../../specs/001-net-worth-tracker/data-model.md` § "DB readiness".
+
 | Phase | Spec-kit directory | Status |
 |---|---|---|
 | 0 — Shell foundation | — (shipped before spec-kit was installed; not retrofitted) | shipped |
 | 1 — Identity & consent | — (shipped before spec-kit was installed; not retrofitted) | shipped |
-| 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | spec + plan + tasks (44, T001–T044) done, ready for `/speckit-implement` |
+| 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | spec + plan + tasks (44, T001–T044) done. **NOT ready for `/speckit-implement` as of the 2026-08-22 audit** — T001/T004/T004a/T004b carry corrected build + RLS blockers, and T045–T047 (cost basis, net-worth history source, `liabilities_meta` schema) are product decisions that must be answered before US1 starts. Gap-remediation block adds T045–T061. Every other phase depends on this one |
 | 3 — Money tab | [`apps/finance/specs/002-money-tab/`](../../../specs/002-money-tab/) | spec + plan + research + data-model + routes + quickstart + tasks (83, T001–T083) done, ready for `/speckit-implement` |
 | 4 — Plan live modules | [`apps/finance/specs/003-plan-live-modules/`](../../../specs/003-plan-live-modules/) | spec + plan + research + data-model + routes + quickstart + tasks (134, T001-T134) done (2026-08-19), ready for `/speckit-implement` |
-| 5–7 | not yet created | — |
-| — Settings (cross-phase surface, not a numbered phase) | [`apps/finance/specs/004-settings/`](../../../specs/004-settings/) | spec + requirements checklist done (2026-08-19); blocked on a `SET-*` QA catalog module before `/speckit-tasks` — see that checklist's coverage section |
+| 5 — Insights | [`apps/finance/specs/005-insights/`](../../../specs/005-insights/) | spec + requirements checklist done (2026-08-21); clarified 2026-08-22 (4 Q&A, checklist 24/24). Scope settled: one period model across the whole tab, balance sheet carries an overridable date, F5 ships the XIRR and tax-summary reports, monthly-summary alert stores its preference here and is **delivered** in Phase 6 (the 003 precedent). plan + research + data-model + 2 contracts + quickstart done 2026-08-22. **Split into 6 sub-phases 5a–5f** (foundation+F1 · cashflow · balance sheet · P&L · reports+export · gated "More" reports), each independently shippable and green on `regressionCheck`. tasks (175, T001–T175) done 2026-08-22. **Ready for `/speckit-implement` on 5a–5e (T001–T146); 5f (T147–T163) blocked** on an accepted decision record fixing the investment-returns calculation (functional spec open item §8.6) — research R8 lists what it must settle, and T147 is writing it. Also depends on Phases 2 and 3 shipping first. **Four corrections to this plan** to fold into §5.4/§6 on implementation: reporting is parameterised `finance` functions, not the `v_cashflow`/`v_pnl`/`v_balance_sheet` views §5.4 names (a view cannot take a period); as-at position derives from "latest valuation ≤ date"; net worth (holdings) and cashflow balances (accounts) are two different money universes and are not required to agree; tax relevance is a user-set `categories.tax_section` column |
+| 6 — Search & notifications | [`apps/finance/specs/006-search-notifications/`](../../../specs/006-search-notifications/) | spec + requirements checklist done (2026-08-22), clarified in the same session (2 Q&A, checklist 24/24). Scope settled: B3 global search over transactions/holdings/policies/goals, B2 notification centre as the app's **own durable record** (an alert is recorded whether or not the OS displayed it), and delivery of the **five ready alert types** — budget threshold, instalment due, policy renewal, value-update overdue, monthly summary — each driven by the preference an earlier phase already stored. Transactions-to-review is **not** delivered here (its review queue is Phase 7's G2); `daily_rates`/`app_updates` stay with the currency and app-details modules. Depends on Phases 2–5 shipping. plan + research (R1–R10) + data-model + 3 contracts + quickstart done 2026-08-22. **Split into 6 sub-phases 6a–6f** (search · notification centre · pipeline+budget arm · obligation arms · periodic arms · controls/masking/closure), each independently shippable and green on `regressionCheck`. **Three corrections to this plan** to fold in on implementation: §5.5's flag list gains `search` and `alerts` (neither was reserved); §6 correctly assigns B2/B3 to `:apps:finance:app`, so this phase adds **no** Gradle module; and the DB footprint is **two functions, zero tables** — the alert log is device-local Room (v5→v6), not Supabase, so `delete_my_data()` is untouched. Adds one dependency (`androidx.work`, already named in PLATFORM.md §3/§5) and **zero** new `NavTarget` cases — it is the first consumer of five existing ones, including the `OpenBudget` Phase 4 added speculatively for it. Next: `/speckit-tasks` |
+| 7 — Automation (G1–G3) | [`apps/finance/specs/007-automation/`](../../../specs/007-automation/) | spec + requirements checklist done (2026-08-23), clarified in the same session (**7 Q&A**, checklist 24/24). Created **early, before Phase 3's checkpoint**, per the readiness record §5.4 — Phase 3 (D9) defers the shared review queue here and Phase 6 defers transactions-to-review here, so G2 is a live dependency of two shipping phases, not a future nicety. Scope settled: G2 as the one queue every source feeds, G1 hub with per-source scope statements and learned rules, on-device bank-SMS parsing behind its own consent class, duplicate detection, the entries-waiting alert (discharging 006's deferral), and G3's consent statement. **Clarification 1 — the price feed proposes, it does not write:** a fetched gold/silver/currency price arrives as a **proposed value update in the review queue**, so G1's "every source only suggests" header is true without exception; BR-G1 only forbids automated writes to the *ledger*, so a direct valuation write would have been legal but would have made the hub's own promise false. Consequence: **the queue carries two proposal kinds** (proposed transaction · proposed value update). **Clarification 2 — CSV import is out of scope**; A4's CTA stays present and disabled with copy naming that it arrives later, since the functional spec's open item records the column-mapping step has no design at all. **Three corrections folded in:** the proposal store is owned by Phase 3 (002 `plan.md:38`) — this row's former "`suggestions`, `automation_rules` schema" would have re-created a shipped table, and only `automation_rules` is new; **Trash / Recently deleted is NOT this phase** (readiness §5.2 moved it to Phase 0b), so surface registry §4's Automation line listing it is stale and is corrected at this phase's closure; the **`REVIEW_INBOX`** intent is this phase's, its destination being G2. **Five further clarifications shape the build and are not in the design:** ignored proposals go to a restorable **Ignored** list and are never re-proposed; withdrawing SMS consent **freezes** that source's unreviewed proposals (read-only, delete-all or re-enable) rather than purging them; messages are read on a **periodic background scan** (~1h, best-effort) — open-only reading was rejected because it would make the entries-waiting alert unable to announce anything; **accept-all takes confidently-parsed transactions with no duplicate warning only**, reporting what it skipped and why; and the price feed proposes **on a move past a user-set threshold (default 5%)**, not on a clock. Terminology: the spec says **proposal** where the design and catalog say *suggestion* — same entity, mapped in its Key Entities note. plan + research (R1–R16) + data-model + 4 contracts + quickstart done 2026-08-23. **Split into 7 sub-phases 7a–7g** (queue+Ignored · hub+G3+module · SMS source · duplicates · rules · price feed · alert+erasure+closure), each independently shippable and green on `regressionCheck`. **Two further corrections found while planning, both verified against code:** the `automation` flag key is **genuinely absent** from `platform/feature-flags/dhruv-finance.json` (§5.5 reserved the name but it was never applied — this phase applies it, `enabled: false`); and `NavTarget` today has only `SelectTab`/`OpenPlanTool`, so this phase adds **zero** cases — G1–G3 are shell detail routes like Settings/Ask, per that sealed type's own doc comment. **One shipped-document contradiction resolved:** Phase 3 reserved `finance.suggestions.raw_text` for this phase's SMS source, but `AUT-BR-002` forbids raw message text in any outbound Supabase payload — resolved by keeping bank-message proposals **entirely device-local** (Room v6→v7), leaving that column permanently unwritten. DB footprint: **one table** (`finance.automation_rules`, deliberately mutable, not append-only), one `security invoker` function, one `holdings` column, `delete_my_data()` extended. **Zero new dependencies** (SMS via platform `ContentResolver`; scheduling reuses Phase 6's `androidx.work`). Adds **one** Gradle module, `:apps:finance:feature:automation`. Depends on Phases 1–6. Next: `/speckit-tasks` |
+| 0b — Settings control plane (shell foundation, **runs before Phase 2**) | [`apps/finance/specs/004-settings/`](../../../specs/004-settings/) | spec + clarifications + plan + research + data-model + 2 contracts + quickstart + QA catalog §13 `SET-*` (50 rows) + surface registry §4 rewritten to the control-plane model + tasks — all done (2026-08-19). **Split into five independently shippable sub-phases 0b.1–0b.5 (118 tasks, T001–T118) on 2026-08-22**: 0b.1 control plane + Appearance · 0b.2 account & identity · 0b.3 app lock & privacy · 0b.4 module conventions, assistant, app details · 0b.5 feature-level verification. `0b.1 → {0b.2, 0b.3, 0b.4} → 0b.5`; each ends green on `regressionCheck`, closes its own `SET-*` rows and merges separately. Ready for `/speckit-implement`. Carries the three-tier control plane (Account · App · Modules), the mechanism modules use to declare their own settings entry, the app-wide lock checkpoint, and three shipped-surface defect fixes. **Every later phase ships its module's settings entry with the module** — enabling the module enables its entry; no phase edits a central list |
 
 ### 7.0 How every phase is executed (binding — see the module-standard doc §4 for the full process)
 
@@ -381,7 +424,7 @@ means a breaking migration. SA owns closing this before step 1 below starts.
 | 7 | Checkpoint | cold install → Google sign-in → consent → empty start; declining sync leaves calculators usable; zero network before consent; `delete_my_account()` verified against a dev project; `checkTrackerMoneyPrecision` and the DTO ArchUnit guard both green |
 
 ### Phase 2 — Net worth + real Home *(C1–C7, 01)*
-**Catalog modules:** `NW` (§3, 14 rows — corrected count, see the §13 coverage-summary note), `HOM`
+**Catalog modules:** `NW` (§3, 14 rows — corrected count, see the §14 coverage-summary note), `HOM`
 (§12, new — added in the 2026-08-09 re-validation pass).
 
 **Scoped dependency (found by re-validation):** Home's (01) "UPCOMING" list shows both a loan-EMI
@@ -402,7 +445,7 @@ added as an explicit Phase 3 follow-up task (below), not silently missing.
 
 ### Phase 3 — Money tab *(D1–D9)*
 **Catalog modules:** `MNY` (now 20 rows after the re-validation pass added D4/D8/D9 coverage — see
-catalog §4/§13).
+catalog §4/§14).
 
 **Scoped dependencies (found by re-validation):** (a) this phase's Backend step 1 also delivers
 Phase 2's deferred credit-card-bill row on Home (accounts now exists). (b) D4's "budget impact"
@@ -474,13 +517,13 @@ no server scheduler).
 
 | Step | Role | Work |
 |---|---|---|
-| 1 | SA | `suggestions`, `automation_rules` schema; SMS-permission + AA-consent design |
+| 1 | SA | `automation_rules` schema **only** — `suggestions` is Phase 3's and already exists (see the tracking-table row above); SMS-permission + AA-consent design; the review queue's second proposal kind (proposed value update, from the price feed) |
 | 2 | QA | write/review `AUT-*` rows — **done**, see catalog §9 |
 | 3 | Backend | RED: on-device SMS parsing (no raw SMS leaves device, `AUT-BR-002`), suggestion-only writes (`AUT-BR-001`) → GREEN → REFACTOR |
 | 4 | Android | RED: G1–G3 review-queue UI + duplicate detection tests citing `AUT-UI-*`/`AUT-FLOW-*` → GREEN → REFACTOR |
 | 5 | QA | close rows |
 | 6 | Sec | full DPDP pass — this phase requests SMS/AA permissions; flag stays `enabled: false` until this checkpoint passes |
-| 7 | Checkpoint | no automated source ever writes directly to the ledger; review queue + duplicate detection work end-to-end |
+| 7 | Checkpoint | no automated source ever writes directly to the ledger **or changes a recorded valuation**; review queue + duplicate detection work end-to-end; surface registry §4's stale *Recently deleted* line under Automation corrected (that surface is Phase 0b's) |
 
 ### Parallel · Web
 `web/` already mirrors the tokens and shares the schema. Web work follows Android **one phase
