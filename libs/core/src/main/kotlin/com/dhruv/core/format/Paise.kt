@@ -56,17 +56,22 @@ object Paise {
         val rupees = BigDecimal(magnitude).movePointLeft(2)
         val sign = if (paise < 0) "-" else ""
 
-        val (divisor, suffix) =
+        val divisorAndSuffix =
             when {
                 magnitude >= CRORE_PAISE -> CRORE_PAISE to "Cr"
                 magnitude >= LAKH_PAISE -> LAKH_PAISE to "L"
                 magnitude >= THOUSAND_PAISE -> THOUSAND_PAISE to "K"
-                else -> return "$sign$SYMBOL${rupees.setScale(0, RoundingMode.DOWN)}"
+                else -> null
             }
 
-        val scaled = rupees.divide(BigDecimal(divisor).movePointLeft(2), 1, RoundingMode.DOWN)
-        val trimmed = scaled.stripTrailingZeros().toPlainString()
-        return "$sign$SYMBOL$trimmed$suffix"
+        return if (divisorAndSuffix == null) {
+            "$sign$SYMBOL${rupees.setScale(0, RoundingMode.DOWN)}"
+        } else {
+            val (divisor, suffix) = divisorAndSuffix
+            val scaled = rupees.divide(BigDecimal(divisor).movePointLeft(2), 1, RoundingMode.DOWN)
+            val trimmed = scaled.stripTrailingZeros().toPlainString()
+            "$sign$SYMBOL$trimmed$suffix"
+        }
     }
 
     private const val THOUSAND_PAISE = 1_000_00L

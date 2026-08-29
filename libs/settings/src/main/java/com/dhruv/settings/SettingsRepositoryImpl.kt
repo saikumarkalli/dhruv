@@ -159,54 +159,63 @@ class SettingsRepositoryImpl(
             val current = observe().first()
             val updated = current.block()
 
-            // Write plain preferences
-            context.appDataStore.edit { prefs ->
-                if (current.theme != updated.theme) {
-                    prefs[SettingsKeys.DARK_MODE] =
-                        when (updated.theme) {
-                            AppTheme.DARK -> "always_dark"
-                            AppTheme.LIGHT -> "always_light"
-                            AppTheme.SYSTEM -> "system"
-                        }
-                }
-                if (current.accentColorHex != updated.accentColorHex) {
-                    prefs[SettingsKeys.ACCENT_COLOR_HEX] = updated.accentColorHex
-                }
-                if (current.fontFamily != updated.fontFamily) {
-                    prefs[SettingsKeys.FONT_FAMILY] = updated.fontFamily.name
-                }
-                if (current.biometricEnabled != updated.biometricEnabled) {
-                    prefs[SettingsKeys.BIOMETRIC_ENABLED] = updated.biometricEnabled
-                }
-                if (current.appLockTimeout != updated.appLockTimeout) {
-                    prefs[SettingsKeys.APP_LOCK_TIMEOUT] = updated.appLockTimeout
-                }
-                if (current.hideAmounts != updated.hideAmounts) {
-                    prefs[SettingsKeys.HIDE_AMOUNTS] = updated.hideAmounts
-                }
-                if (current.notificationsMaster != updated.notificationsMaster) {
-                    prefs[SettingsKeys.NOTIFICATIONS_MASTER] = updated.notificationsMaster
-                }
-                if (current.syncEnabled != updated.syncEnabled) {
-                    prefs[SettingsKeys.SYNC_ENABLED] = updated.syncEnabled
-                }
-                if (current.assistantConsentGranted != updated.assistantConsentGranted) {
-                    prefs[SettingsKeys.ASSISTANT_CONSENT_GRANTED] = updated.assistantConsentGranted
-                }
-            }
+            context.appDataStore.edit { prefs -> writePlainPreferenceDiffs(current, updated, prefs) }
 
-            // Write encrypted preference (Gemini key)
             if (current.geminiApiKey != updated.geminiApiKey) {
-                secureStore.edit { prefs ->
-                    if (updated.geminiApiKey != null) {
-                        prefs[SettingsKeys.GEMINI_API_KEY] = updated.geminiApiKey
-                    } else {
-                        prefs.remove(SettingsKeys.GEMINI_API_KEY)
-                    }
-                }
+                secureStore.edit { prefs -> writeGeminiKeyDiff(updated.geminiApiKey, prefs) }
             }
         } catch (e: Exception) {
             crashReporter.recordException(e)
+        }
+    }
+
+    private fun writePlainPreferenceDiffs(
+        current: AppSettings,
+        updated: AppSettings,
+        prefs: MutablePreferences,
+    ) {
+        if (current.theme != updated.theme) {
+            prefs[SettingsKeys.DARK_MODE] =
+                when (updated.theme) {
+                    AppTheme.DARK -> "always_dark"
+                    AppTheme.LIGHT -> "always_light"
+                    AppTheme.SYSTEM -> "system"
+                }
+        }
+        if (current.accentColorHex != updated.accentColorHex) {
+            prefs[SettingsKeys.ACCENT_COLOR_HEX] = updated.accentColorHex
+        }
+        if (current.fontFamily != updated.fontFamily) {
+            prefs[SettingsKeys.FONT_FAMILY] = updated.fontFamily.name
+        }
+        if (current.biometricEnabled != updated.biometricEnabled) {
+            prefs[SettingsKeys.BIOMETRIC_ENABLED] = updated.biometricEnabled
+        }
+        if (current.appLockTimeout != updated.appLockTimeout) {
+            prefs[SettingsKeys.APP_LOCK_TIMEOUT] = updated.appLockTimeout
+        }
+        if (current.hideAmounts != updated.hideAmounts) {
+            prefs[SettingsKeys.HIDE_AMOUNTS] = updated.hideAmounts
+        }
+        if (current.notificationsMaster != updated.notificationsMaster) {
+            prefs[SettingsKeys.NOTIFICATIONS_MASTER] = updated.notificationsMaster
+        }
+        if (current.syncEnabled != updated.syncEnabled) {
+            prefs[SettingsKeys.SYNC_ENABLED] = updated.syncEnabled
+        }
+        if (current.assistantConsentGranted != updated.assistantConsentGranted) {
+            prefs[SettingsKeys.ASSISTANT_CONSENT_GRANTED] = updated.assistantConsentGranted
+        }
+    }
+
+    private fun writeGeminiKeyDiff(
+        newKey: String?,
+        prefs: MutablePreferences,
+    ) {
+        if (newKey != null) {
+            prefs[SettingsKeys.GEMINI_API_KEY] = newKey
+        } else {
+            prefs.remove(SettingsKeys.GEMINI_API_KEY)
         }
     }
 
