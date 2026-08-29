@@ -15,76 +15,122 @@ whether the implementation works.
 
 ## App-lock requirement completeness
 
-- [ ] CHK001 Are the app-lock states enumerated exhaustively, with no third state left implicit between LOCKED and UNLOCKED? [Completeness, Gate §1]
-- [ ] CHK002 Is the set of auto-lock timeout options fixed and enumerated in the requirements, rather than left to implementation choice? [Clarity, Spec §FR-024, Data-model §3]
-- [ ] CHK003 Are the requirements explicit that authentication accepts device credential as well as biometric, and is the reason recorded? [Completeness, Gate §2 rule 8]
-- [ ] CHK004 Does the spec define what happens to lock state when the user disables app lock while the app is currently locked? [Edge Case, Gate §1 rule 4]
-- [ ] CHK005 Are requirements defined for the case where the user removes their device credential after enabling app lock — specifically that they must not be permanently locked out of their own data? [Edge Case, Spec §Edge Cases]
-- [ ] CHK006 Is the interaction between app lock and the legacy calculator history lock specified in both directions, or only for enabling app lock? [Completeness, Spec §FR-028, Gate §4 rule 17]
-- [ ] CHK007 Are requirements defined for what the locked surface itself may display — whether any content, notification preview or account identity is visible before authentication? [Gap]
+- [x] CHK001 Are the app-lock states enumerated exhaustively, with no third state left implicit between LOCKED and UNLOCKED? [Completeness, Gate §1]
+  Satisfied — `LockState` is a two-value enum (LOCKED, UNLOCKED; data-model.md §5), and `appLockState(...)` is total over its inputs. No transitional/"authenticating" state is modeled, but that is a UI concern layered on top (content stays LOCKED throughout), not a third state of the decision function.
+- [x] CHK002 Is the set of auto-lock timeout options fixed and enumerated in the requirements, rather than left to implementation choice? [Clarity, Spec §FR-024, Data-model §3]
+  Satisfied — data-model.md §3 enumerates `immediate`/`after_1_min`/`after_5_min`/`after_15_min` as append-only option ids; FR-024 requires a fixed set including an immediate option.
+- [x] CHK003 Are the requirements explicit that authentication accepts device credential as well as biometric, and is the reason recorded? [Completeness, Gate §2 rule 8]
+  Satisfied — gate §2 rule 8 states it explicitly; research.md R3 records the reason (a user whose biometric fails or is unenrolled must still reach their own data) and names the rejected alternative (biometric-only).
+- [x] CHK004 Does the spec define what happens to lock state when the user disables app lock while the app is currently locked? [Edge Case, Gate §1 rule 4]
+  Satisfied by construction, not by a dedicated narrative — gate §1 rule 4 ("`enabled = false` is always UNLOCKED... never leaves a stale locked state") is stated generically enough to cover this transition, and the transition itself is not reachable through the UI (Settings cannot be reached while LOCKED — see CHK007's note on rule 6), so a scenario-specific callout isn't load-bearing.
+- [x] CHK005 Are requirements defined for the case where the user removes their device credential after enabling app lock — specifically that they must not be permanently locked out of their own data? [Edge Case, Spec §Edge Cases]
+  **Resolved 2026-08-29.** Was a real gap — gate §2 rule 10 only prevented *enabling* without a credential, saying nothing about one removed after. Fixed: gate §1 rule 5 (new) makes `hasEnrolledCredential = false` always resolve to UNLOCKED regardless of `enabled`; §2 rule 12 (new) additionally resets `biometric_enabled` and shows a one-time notice so the fall-open isn't silent.
+- [x] CHK006 Is the interaction between app lock and the legacy calculator history lock specified in both directions, or only for enabling app lock? [Completeness, Spec §FR-028, Gate §4 rule 17]
+  Satisfied — gate §4 rule 17's "Both may be on" is symmetric; the two locks are independent by construction (different keys, different UI rows), so the reverse direction (history lock does not affect app lock) follows from the same sentence rather than needing separate text.
+- [x] CHK007 Are requirements defined for what the locked surface itself may display — whether any content, notification preview or account identity is visible before authentication? [Gap]
+  **Resolved 2026-08-29.** Gate §2 rule 7 (was rule 6) now states the lock surface shows only static app chrome (wordmark/logo) and the unlock affordance — explicitly no session-derived data (name, avatar, email) before authentication succeeds.
 
 ## App-lock requirement measurability
 
-- [ ] CHK008 Is "no content is composed or drawn" stated precisely enough to be objectively verified, and is the distinction from dimming/blurring explicit? [Measurability, Gate §2 rule 6]
+- [x] CHK008 Is "no content is composed or drawn" stated precisely enough to be objectively verified, and is the distinction from dimming/blurring explicit? [Measurability, Gate §2 rule 6]
+  Satisfied — "Not dimmed, not blurred — absent" is an explicit, binary, screenshot-verifiable distinction.
 - [ ] CHK009 Can "no flash of unlocked content" be objectively evaluated, or does it need a stated observation method and threshold? [Measurability, Gate §2 rule 7, Spec §SC-009]
-- [ ] CHK010 Is "no exempt surface" defined by enumeration (every tab, every detail route, every sheet) rather than by a general statement a future screen could fall outside? [Clarity, Spec §FR-021]
-- [ ] CHK011 Are the timeout boundary semantics unambiguous — is the lock condition stated as elapsed ≥ timeout or elapsed > timeout? [Ambiguity, Gate §1 rule 2]
-- [ ] CHK012 Is "current foreground session" defined precisely enough that its start and end are not open to interpretation? [Clarity, Gate §1 rule 3]
+  **Partial.** quickstart.md §4 gives an observation method (screen recording, step through frame by frame) but that method lives in the verification doc, not in the requirement itself (gate §2 rule 7 / SC-009), and no frame-count or timing threshold is stated. "Zero frames of unlocked content" is the natural binary criterion and is implicitly what's meant, but it is not written down as such next to the requirement.
+- [x] CHK010 Is "no exempt surface" defined by enumeration (every tab, every detail route, every sheet) rather than by a general statement a future screen could fall outside? [Clarity, Spec §FR-021]
+  Satisfied, and by a stronger mechanism than enumeration — the gate contract places the wrapper at the **root** of the content tree ("above the pager, above the detail-route overlay, above every tab including Calc"), which is a structural guarantee: a future screen cannot fall outside it without being added outside `MainActivity`'s wrapped tree entirely, which is a much larger and more visible change than being left off a list.
+- [x] CHK011 Are the timeout boundary semantics unambiguous — is the lock condition stated as elapsed ≥ timeout or elapsed > timeout? [Ambiguity, Gate §1 rule 2]
+  **Resolved 2026-08-29.** Gate §1 rule 2 now states the boundary explicitly in the contract itself (was previously only in `tasks.md`'s paraphrase): `elapsedSinceBackground >= timeout`, inclusive.
+- [x] CHK012 Is "current foreground session" defined precisely enough that its start and end are not open to interpretation? [Clarity, Gate §1 rule 3]
+  **Resolved 2026-08-29.** Gate §1 rule 3 now pins "foreground session" to `ProcessLifecycleOwner`'s `ON_START`→`ON_STOP` interval (whole-process signal, immune to per-Activity rotation churn) rather than leaving the boundary open to interpretation.
 
 ## Held-intent and deep-link requirements
 
-- [ ] CHK013 Are the requirements for a link arriving while locked complete across all four outcomes — held, dispatched, replaced, and cleared? [Completeness, Gate §3]
-- [ ] CHK014 Is the decision that held targets are never persisted across process death stated as a requirement with its security rationale, not only as a design note? [Traceability, Data-model §5]
-- [ ] CHK015 Are requirements defined for a held target that names a resource the user no longer has access to after unlocking (deleted, foreign, or erased)? [Edge Case, Gate §3 rule 15]
-- [ ] CHK016 Does the spec define whether notification *content* already delivered to the system tray is subject to any masking requirement independent of the lock? [Gap]
+- [x] CHK013 Are the requirements for a link arriving while locked complete across all four outcomes — held, dispatched, replaced, and cleared? [Completeness, Gate §3]
+  Satisfied — held (rule 11), dispatched exactly once (rule 12), retained across a cancelled unlock / cleared on process death (rule 13), replaced by a second arrival (rule 14) — all four named explicitly.
+- [x] CHK014 Is the decision that held targets are never persisted across process death stated as a requirement with its security rationale, not only as a design note? [Traceability, Data-model §5]
+  Satisfied — data-model.md §5 states the rationale directly: persisting would mean "a link the user never authenticated for is waiting after a cold start, which contradicts the gate's rule 1" (cold start always locks) — i.e. persisting would function as an authentication bypass. That is a security rationale, even though the word "security" isn't used verbatim.
+- [x] CHK015 Are requirements defined for a held target that names a resource the user no longer has access to after unlocking (deleted, foreign, or erased)? [Edge Case, Gate §3 rule 15]
+  Satisfied — rule 15's "unknown or foreign id resolves to the normal not-found state after unlock, never a crash" is general enough to cover a target that was valid and became invalid while locked (erased, deleted elsewhere), not only one that was never valid.
+- [x] CHK016 Does the spec define whether notification *content* already delivered to the system tray is subject to any masking requirement independent of the lock? [Gap]
+  Satisfied, via a different requirement than the lock gate — FR-025/hide-amounts explicitly names "notifications" as one of the three surfaces that must mask money, and gate §4 rule 16 states hide-amounts is independent of lock state. The lock gate itself (rule 18) is correctly silent on tray content since that is hide-amounts' concern, not the gate's — worth a cross-reference note in the gate contract for a future reader, but not a missing requirement.
 
 ## Consent requirement quality (DPDP)
 
-- [ ] CHK017 Are the requirements explicit that every consent the app collects — not only the three currently defined — must appear in Settings and be revocable? [Completeness, Spec §FR-014]
+- [x] CHK017 Are the requirements explicit that every consent the app collects — not only the three currently defined — must appear in Settings and be revocable? [Completeness, Spec §FR-014]
+  Satisfied — FR-014 says "every consent the app collects," not scoped to the three named switches; forward-covers consents added by later phases.
 - [ ] CHK018 Is "takes effect immediately on withdrawal" defined with an observable boundary, i.e. whether an in-flight request may complete? [Ambiguity, Spec §FR-014]
-- [ ] CHK019 Is the requirement that assistant consent must be persisted stated as a correctness requirement with the current defect named, so it cannot be read as a nice-to-have? [Clarity, Spec §FR-036]
-- [ ] CHK020 Are the consent requirements consistent between this spec's Account tier and the onboarding consent step — same purposes, same scope statements, same granularity? [Consistency, Spec §FR-014, ONB-BR-005]
-- [ ] CHK021 Is the device-local scope of consent stated as an explicit requirement boundary rather than only as an out-of-scope note, so a reader does not assume cross-device sync? [Clarity, Spec §Scope Boundaries, Functional spec §8.7]
-- [ ] CHK022 Are requirements defined for a module entry whose controls need an ungranted consent — specifically what must be stated to the user and what must not be operable? [Completeness, Spec §FR-035]
+  **Gap, real.** FR-014 states immediacy but does not say whether a request already in flight when withdrawal happens is allowed to complete or must be aborted. Low severity today (Settings' own network surface is limited to sign-in and the two erasure RPCs, neither gated by the consent switches this FR is about), but worth a one-line clarification before a later phase's request volume makes the ambiguity matter.
+- [x] CHK019 Is the requirement that assistant consent must be persisted stated as a correctness requirement with the current defect named, so it cannot be read as a nice-to-have? [Clarity, Spec §FR-036]
+  Satisfied — User Story 6's "Why this priority" names the defect explicitly: "held in memory and forgotten on every restart, so the user is re-asked forever."
+- [x] CHK020 Are the consent requirements consistent between this spec's Account tier and the onboarding consent step — same purposes, same scope statements, same granularity? [Consistency, Spec §FR-014, ONB-BR-005]
+  Satisfied structurally — the spec's "Rows reused, not restated" table cites `ONB-BR-004`/`ONB-BR-005` by id rather than restating them, and 0b.1's `SettingsAccountBody` was built reusing the exact label/scope copy from `OnboardingConfig` (held locally per `SET-ARCH-003`, not imported, but byte-identical text) — consistency is enforced by shared-source-of-copy, not by two independently-maintained descriptions drifting apart.
+- [x] CHK021 Is the device-local scope of consent stated as an explicit requirement boundary rather than only as an out-of-scope note, so a reader does not assume cross-device sync? [Clarity, Spec §Scope Boundaries, Functional spec §8.7]
+  Satisfied — Scope Boundaries uses "MUST NOT be resolved incidentally by this work," a requirement-level statement, not merely a note.
+- [x] CHK022 Are requirements defined for a module entry whose controls need an ungranted consent — specifically what must be stated to the user and what must not be operable? [Completeness, Spec §FR-035]
+  Satisfied — FR-035 requires stating which consent is needed and offering the grant route "rather than showing inert controls," which reads as controls being replaced by the consent-needed state, not shown-but-disabled.
 - [ ] CHK023 Does the spec state a requirement that no network call may originate from Settings other than the enumerated exceptions, or is that only inferable from the constitution? [Gap, Constitution VIII]
+  **Gap, real.** This constraint currently lives only in `plan.md`'s Constraints section ("no network call from Settings other than the already-permitted GoTrue sign-in and the erasure RPCs") — a *how* document per the constitution's own spec/plan split. `spec.md`'s FRs have no equivalent statement. Since this is a genuine security requirement (not an implementation detail), it should be promoted into spec.md as its own FR, or cross-reference plan.md explicitly so it isn't only inferable from constitution Article VIII.
 
 ## Erasure and account-lifecycle requirements
 
-- [ ] CHK024 Are the two erasure actions' scopes defined disjointly enough that a reader cannot confuse what each destroys? [Clarity, Spec §FR-015]
-- [ ] CHK025 Is "names its exact consequence" specified with enough precision to be reviewable, or does it leave the required copy to the implementer? [Measurability, Spec §FR-015, §FR-045]
+- [x] CHK024 Are the two erasure actions' scopes defined disjointly enough that a reader cannot confuse what each destroys? [Clarity, Spec §FR-015]
+  Satisfied — data-erasure leaves the account intact; account-erasure is data-erasure plus the account row; the second is a strict superset of the first, stated plainly.
+- [x] CHK025 Is "names its exact consequence" specified with enough precision to be reviewable, or does it leave the required copy to the implementer? [Measurability, Spec §FR-015, §FR-045]
+  Satisfied via a stated copy pattern — design system §10 gives the template ("This permanently deletes all your tracker data. This cannot be undone.") a reviewer can check dialog copy against, even though the literal string necessarily varies per action.
 - [ ] CHK026 Are the requirements for a failed erasure complete — reported as failed, no success claimed, action still available — and do they cover partial failure as well as total failure? [Completeness, Spec §FR-016, §Edge Cases]
+  **Partial.** User-facing messaging for a "fails midway" case is covered (Edge Cases: reported as failed, action stays available, no success ever claimed). What is **not** addressed: the data-state left behind by a partial failure (some rows deleted, some not) and whether retry is safe/idempotent against that partial state. Since the actual erasure mechanism is inherited unchanged from Phase 1/ADR-0029 (this feature only relocates the UI), this may already be answered elsewhere (the security-definer RPCs) — but it is not answered *in this spec*, so a reader of this document alone cannot confirm retry safety.
 - [ ] CHK027 Is the post-erasure state specified as a requirement ("no residual account state"), and is "residual" defined well enough to review? [Clarity, Spec §FR-017]
-- [ ] CHK028 Are sign-out's requirements explicit about what is *not* destroyed, so the boundary between signing out and erasing is unambiguous? [Clarity, Spec §FR-013]
-- [ ] CHK029 Does the spec define whether erasure requirements are reachable and correct while signed out, or only while a session exists? [Edge Case, Spec §Edge Cases]
-- [ ] CHK030 Is the DPDP statutory erasure window referenced anywhere in this feature's requirements, or is compliance assumed to be inherited from the phase that built the erasure calls? [Traceability, Gap, ADR-0014 §7]
+  **Gap, real.** "No residual account state" is not enumerated (session token, cached identity/avatar, any locally-cached profile fields, feature-flag consent-granted flags). A reviewer cannot mechanically check this FR against an implementation without that list. Compare to FR-038's more precise enumeration for the AI key (CHK031) — FR-017 should get the same treatment.
+- [x] CHK028 Are sign-out's requirements explicit about what is *not* destroyed, so the boundary between signing out and erasing is unambiguous? [Clarity, Spec §FR-013]
+  Satisfied — FR-013 explicitly states calculator data is untouched by sign-out.
+- [x] CHK029 Does the spec define whether erasure requirements are reachable and correct while signed out, or only while a session exists? [Edge Case, Spec §Edge Cases]
+  Satisfied — Edge Cases states erasure rows show "their signed-out state rather than acting on a session that is not there" while signed out.
+- [x] CHK030 Is the DPDP statutory erasure window referenced anywhere in this feature's requirements, or is compliance assumed to be inherited from the phase that built the erasure calls? [Traceability, Gap, ADR-0014 §7]
+  Satisfied — the spec is explicit that this is inherited, not re-decided: the Assumptions section states "Erasure already works: both erasure actions exist and are correct today; this feature moves and labels them and does not redesign what they delete," and the header cites ADR-0014 §7/ADR-0029 §5 by name. That is a real (if indirect) traceability statement, not a silent omission.
 
 ## Secret-handling requirements
 
-- [ ] CHK031 Is "never displayed in full after entry" specified for every surface a value can reach — screen, log, export, diagnostic, crash report — as an enumerated list rather than a general statement? [Completeness, Spec §FR-038]
-- [ ] CHK032 Is the storage requirement for the personal AI key stated (encrypted store, not plaintext) as a requirement rather than only as a plan-level decision? [Traceability, Data-model §1]
-- [ ] CHK033 Are requirements defined for a stored key that has become invalid — specifically that the failure must be distinguishable from a lack of consent? [Edge Case, Spec §Edge Cases]
-- [ ] CHK034 Does the spec define whether the masked representation itself may leak information (length, prefix, last characters)? [Gap, Ambiguity]
+- [x] CHK031 Is "never displayed in full after entry" specified for every surface a value can reach — screen, log, export, diagnostic, crash report — as an enumerated list rather than a general statement? [Completeness, Spec §FR-038]
+  Satisfied across FR-038 + SC-014 together — FR-038 names display/export/diagnostic/crash-report; SC-014 additionally names "log" explicitly. Combined, all five surfaces from the checklist item are enumerated somewhere in this spec.
+- [x] CHK032 Is the storage requirement for the personal AI key stated (encrypted store, not plaintext) as a requirement rather than only as a plan-level decision? [Traceability, Data-model §1]
+  **Resolved 2026-08-29.** FR-038 now states the encrypted-storage requirement directly ("stored encrypted... never a plaintext preference"), not only in data-model.md §1.
+- [x] CHK033 Are requirements defined for a stored key that has become invalid — specifically that the failure must be distinguishable from a lack of consent? [Edge Case, Spec §Edge Cases]
+  Satisfied — Edge Cases states this explicitly.
+- [x] CHK034 Does the spec define whether the masked representation itself may leak information (length, prefix, last characters)? [Gap, Ambiguity]
+  **Resolved 2026-08-29.** FR-038 now requires a fixed-width placeholder token — never a partial reveal or a length-matched mask — closing the leak this item flagged, ahead of T097 building the masked-key row.
 
 ## Privacy-mode (hide amounts) requirements
 
-- [ ] CHK035 Is the set of surfaces hide-amounts must cover enumerated (screens, widget, notifications) and closed, so a future surface is not silently exempt? [Completeness, Spec §FR-025]
-- [ ] CHK036 Is what remains readable under masking specified positively — counts, dates, percentages — rather than only stating what is hidden? [Clarity, Spec §FR-025]
-- [ ] CHK037 Is the export exemption from masking stated together with its user-notification requirement, so the exemption cannot be implemented silently? [Consistency, Spec §FR-025, §FR-018]
-- [ ] CHK038 Are hide-amounts and app lock stated as independent requirements, with the independence explicit rather than assumed? [Consistency, Gate §4 rule 16]
+- [x] CHK035 Is the set of surfaces hide-amounts must cover enumerated (screens, widget, notifications) and closed, so a future surface is not silently exempt? [Completeness, Spec §FR-025]
+  Satisfied, and closed by mechanism as well as enumeration — R5's decision routes all masking through the shared money-formatting helpers, so a new surface inherits masking automatically rather than needing to be added to a maintained list.
+- [x] CHK036 Is what remains readable under masking specified positively — counts, dates, percentages — rather than only stating what is hidden? [Clarity, Spec §FR-025]
+  Satisfied — FR-025 states this positively in the same sentence as what's masked.
+- [x] CHK037 Is the export exemption from masking stated together with its user-notification requirement, so the exemption cannot be implemented silently? [Consistency, Spec §FR-025, §FR-018]
+  Satisfied — both requirements (exempt + must say so) are in the same FR-025 sentence.
+- [x] CHK038 Are hide-amounts and app lock stated as independent requirements, with the independence explicit rather than assumed? [Consistency, Gate §4 rule 16]
+  Satisfied — gate §4 rule 16 states this explicitly, including that unlocking does not unmask.
 
 ## Export and data-egress requirements
 
-- [ ] CHK039 Is the export's contents defined by inclusion *and* exclusion, so "financial records only" cannot be read as including preferences or history? [Clarity, Spec §FR-018]
+- [x] CHK039 Is the export's contents defined by inclusion *and* exclusion, so "financial records only" cannot be read as including preferences or history? [Clarity, Spec §FR-018]
+  Satisfied — FR-018 states both inclusion (every financial record owned) and exclusion (calculator history, as tool output) explicitly.
 - [ ] CHK040 Is the requirement that the export must state its own scope at the point of export measurable — is the required disclosure content specified? [Measurability, Spec §FR-018]
+  **Gap, real.** FR-018 requires the export to "state its own scope" but does not specify what that disclosure must actually say (e.g. must it name "financial records only, calculator history excluded" verbatim, or is a generic "this file contains your tracker data" sufficient?). Not blocking today since the export row is deferred past 0b (R7), but should be tightened before whichever phase builds it (Phase 2+).
 - [ ] CHK041 Are requirements defined for where the export file goes and who can read it once written, or does the spec stop at "produces a file"? [Gap]
-- [ ] CHK042 Is the rule that the export row must not appear before it can produce a file stated in a way that also governs later phases adding it? [Coverage, Spec §FR-018]
+  **Gap, real, explicitly flagged as such by its own tag.** The spec stops at "produces a file" — no requirement for destination (device storage vs. share-sheet vs. app-private directory), retention, or read-access boundary once written. Same deferred-to-later-phase status as CHK040; tracked here so it isn't rediscovered from scratch when that phase starts.
+- [x] CHK042 Is the rule that the export row must not appear before it can produce a file stated in a way that also governs later phases adding it? [Coverage, Spec §FR-018]
+  Satisfied — FR-018's "MUST NOT appear until it can produce that file" is phrased as a standing rule, not scoped to this phase only.
 
 ## Cross-cutting consistency and traceability
 
 - [ ] CHK043 Do the security requirements in spec.md and the two contracts agree without conflict, and is the precedence stated if they ever disagree? [Consistency, Conflict]
-- [ ] CHK044 Are the security-relevant scenarios in QA catalog §13 traceable back to a numbered requirement in this spec, with no orphan scenarios and no untested requirements? [Traceability, Catalog §13.3, §13.4]
-- [ ] CHK045 Is every security requirement in this spec assigned to a phase, so none is left implicitly deferred without a stated reason? [Coverage, Spec §Scope Boundaries]
-- [ ] CHK046 Does the spec state a requirement that a contributed module cannot weaken any of the above — i.e. that the security surface is shell-owned and not delegable to a contribution? [Gap, Contract §2]
+  **Partial.** No live conflict was found between spec.md and the two 004 contracts during 0b.1's implementation. However, no explicit precedence rule exists **for this feature's own documents** if one is ever found — the constitution states a repo-wide precedence (DECISIONS.md/DESIGN-SYSTEM.md win over the constitution) but says nothing about spec.md vs. this feature's own `contracts/*.md`. Low risk, cheap to fix: one line in spec.md's header stating the contracts are authoritative for mechanism, spec.md for behaviour/business rule, would close this.
+- [x] CHK044 Are the security-relevant scenarios in QA catalog §13 traceable back to a numbered requirement in this spec, with no orphan scenarios and no untested requirements? [Traceability, Catalog §13.3, §13.4]
+  Satisfied — verified directly while closing 0b.1's `SET-*` rows: every row in §13.1–§13.5 cites either a `004 FR-*`/`SC-*` id or a contract section/rule number; no orphans found.
+- [x] CHK045 Is every security requirement in this spec assigned to a phase, so none is left implicitly deferred without a stated reason? [Coverage, Spec §Scope Boundaries]
+  Satisfied — Scope Boundaries names what ships in 0b vs. later phases with reasons (e.g. the export row's R7 citation); the sub-phase table further assigns app-lock/hide-amounts to 0b.3 specifically.
+- [x] CHK046 Does the spec state a requirement that a contributed module cannot weaken any of the above — i.e. that the security surface is shell-owned and not delegable to a contribution? [Gap, Contract §2]
+  **Resolved 2026-08-29.** FR-046 (spec.md) states the requirement; contract §2 rule 10 (settings-contribution.md) states the mechanism. Enforced for real by `DependencyRulesTest.a SettingsContribution package must not reach shell-owned security surfaces directly` (0b.4 T106) — non-vacuous against the four real contributions (`calculator`/`currency`/`unit`/`assistant`), asserted the same way `SET-ARCH-004`'s own rule guards against passing vacuously.
 
 ## Notes
 

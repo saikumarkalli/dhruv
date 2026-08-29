@@ -39,10 +39,12 @@ val coveredModules =
   )
 
 // Global LINE-coverage floor for the merged report. A non-regression ratchet: it sits just under the
-// current measured coverage and is bumped as tests land. Baseline was ~6.7%; with the data / core /
-// assistant / date tests it is ~9.9%, so the floor is 0.09. Most of the remaining uncovered code is
-// Compose UI, which the JVM gate does not exercise. (Per-module floors are a later-phase refinement.)
-val globalLineFloor = "0.09".toBigDecimal()
+// current measured coverage and is bumped as tests land. Baseline was ~6.7%; 0.09 held through the
+// data/core/assistant/date tests. Raised to 0.14 at the 004-settings 0b.5 checkpoint (T117) — merged
+// coverage measured at 14.91% (:libs:settings 38.38%, :libs:core 15.02%) after 0b.1-0b.5. Most of the
+// remaining uncovered code is Compose UI, which the JVM gate does not exercise. (Per-module floors
+// are a later-phase refinement.)
+val globalLineFloor = "0.14".toBigDecimal()
 
 // Generated / non-logic classes excluded from the coverage denominator.
 val coverageExcludes =

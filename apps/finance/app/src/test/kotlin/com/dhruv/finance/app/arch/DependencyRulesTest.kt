@@ -1,5 +1,6 @@
 package com.dhruv.finance.app.arch
 
+import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.base.DescribedPredicate.alwaysTrue
 import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
 import com.tngtech.archunit.core.importer.ClassFileImporter
@@ -18,8 +19,27 @@ import org.junit.Test
 class DependencyRulesTest {
     private val classes by lazy {
         ClassFileImporter()
-            .withImportOption(ImportOption.DoNotIncludeTests())
+            .withImportOption(excludeTestClasses)
             .importPackages("com.dhruv")
+    }
+
+    companion object {
+        /**
+         * Replaces `ImportOption.DoNotIncludeTests()`, found (2026-08-27, adding `SET-ARCH-003`)
+         * to silently never exclude anything on this build: it checks for a literal `/test/` path
+         * segment, but this project's Kotlin/AGP unit-test class output is
+         * `build/tmp/kotlin-classes/debugUnitTest/…` — one camelCase `debugUnitTest` segment, not
+         * `debug/test/`. Every existing rule below has therefore been importing test classes all
+         * along; it only surfaced once a test class (`ModuleEntryIsolationTest`,
+         * `ContributionValidityTest`) happened to violate one (`settings package must not
+         * reference a feature-module type`, testing exactly the cross-module contribution helpers
+         * these tests legitimately import). This predicate matches the real output layout instead.
+         */
+        private val excludeTestClasses =
+            ImportOption { location ->
+                val path = location.toString()
+                !path.contains("UnitTest") && !path.contains("/test/") && !path.contains("androidTest")
+            }
     }
 
     /**
@@ -105,6 +125,83 @@ class DependencyRulesTest {
             .haveNameMatching(".*Dao|.*Dto")
             .because("feature code must access data only through Repository classes")
             .allowEmptyShould(true)
+            .check(classes)
+    }
+
+    /**
+     * `SET-ARCH-003` (004-settings contract §5, FR-004): Settings must never hardcode a specific
+     * module — the modules tier is *assembled* from `SettingsContribution`s resolved by type
+     * ([com.dhruv.settings.contribution.SettingsRegistry]), never by importing a feature module's
+     * own screen/viewmodel/config class into the shell's Settings package. `:apps:finance:data`
+     * (repository layer) is not a feature module and is excluded, matching the sibling rule above.
+     */
+    @Test
+    fun `settings package must not reference a feature-module type`() {
+        noClasses()
+            .that()
+            .resideInAPackage("com.dhruv.finance.app.ui.settings..")
+            .should()
+            .dependOnClassesThat(
+                resideInAPackage("com.dhruv.finance..")
+                    .and(DescribedPredicate.not(resideInAPackage("com.dhruv.finance.data..")))
+                    .and(DescribedPredicate.not(resideInAPackage("com.dhruv.finance.app..")))
+                    .and(DescribedPredicate.not(resideInAPackage("com.dhruv.finance.mocks.."))),
+            ).because("Settings must assemble modules by type, never hardcode one (FR-004)")
+            .check(classes)
+    }
+
+    /**
+     * `SET-ARCH-004` (contract §2 rule 3, §5): a `SettingsContribution` factory must stay
+     * declarative data — no Compose type. Contributions are plain functions returning
+     * `SettingsContribution` (e.g. `calculatorSettingsContribution()`), each living in its
+     * feature's own `<feature>.settings` package by convention (T033–T035), so that package
+     * pattern is what this rule targets. `allowEmptyShould` is deliberately **not** set — T036
+     * (analysis finding U1) requires this rule to be authored only after real contributions exist,
+     * specifically so it cannot pass vacuously; the explicit assertion below is the second guard.
+     */
+    @Test
+    fun `a SettingsContribution factory must not reference a Compose type`() {
+        val contributionClasses = classes.filter { it.packageName.matches(Regex("""com\.dhruv\.finance\.\w+\.settings""")) }
+        org.junit.Assert.assertTrue(
+            "expected at least one <feature>.settings package (T033-T035) — found none, so this rule would pass vacuously",
+            contributionClasses.isNotEmpty(),
+        )
+
+        noClasses()
+            .that()
+            .resideInAPackage("com.dhruv.finance.*.settings")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("androidx.compose..")
+            .because("a SettingsContribution must stay declarative data (contract §2 rule 3)")
+            .check(classes)
+    }
+
+    /**
+     * `FR-046` / contract §2 rule 10 / security checklist CHK046 (0b.4, T106's Sec pass): a
+     * `SettingsContribution`'s own package must not reach the shell-owned security surfaces
+     * directly — app lock and the secret-key store (`com.dhruv.core.security..`, which is where
+     * both `AppLockDecision` and `EncryptedDataStoreFactory` live) and tracker consent
+     * (`com.dhruv.finance.data.tracker.auth..`, where `ConsentRepository` lives). A contribution's
+     * only sanctioned path to any of these is through `SettingsRepository`'s own public API — this
+     * rule is what makes that a structural guarantee instead of a code-review convention.
+     * Non-vacuous today: `calculator`/`currency`/`unit`/`assistant` settings packages all exist.
+     */
+    @Test
+    fun `a SettingsContribution package must not reach shell-owned security surfaces directly`() {
+        val contributionClasses = classes.filter { it.packageName.matches(Regex("""com\.dhruv\.finance\.\w+\.settings""")) }
+        org.junit.Assert.assertTrue(
+            "expected at least one <feature>.settings package — found none, so this rule would pass vacuously",
+            contributionClasses.isNotEmpty(),
+        )
+
+        noClasses()
+            .that()
+            .resideInAPackage("com.dhruv.finance.*.settings")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("com.dhruv.core.security..", "com.dhruv.finance.data.tracker.auth..")
+            .because("a contribution reaches app lock/secrets/consent only through SettingsRepository (FR-046)")
             .check(classes)
     }
 

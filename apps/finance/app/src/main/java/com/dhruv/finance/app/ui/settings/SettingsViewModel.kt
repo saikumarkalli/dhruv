@@ -26,13 +26,17 @@ class SettingsViewModel(
         crashReporter.setModule("settings")
     }
 
+    // initialValue is the real synchronous snapshot, not a blank AppSettings() — MainActivity reads
+    // biometricEnabled off this StateFlow to resolve the app-lock gate on the very first frame
+    // (0b.3, contracts/app-lock-gate.md §2 rule 8); a blank default would flash UNLOCKED for a
+    // frame before the async DataStore read caught up.
     val settings: StateFlow<AppSettings> =
         settingsRepository
             .observe()
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = AppSettings(),
+                initialValue = settingsRepository.currentSnapshot(),
             )
 
     fun setTheme(theme: AppTheme) = update { copy(theme = theme) }

@@ -54,6 +54,10 @@ fun NxTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     singleLine: Boolean = true,
+    /** Design system §5.3's built-but-narrower gap, closed here (T097): non-null renders in
+     * [com.dhruv.core.ui.theme.DhruvNextColors.neg] below the field and switches the border to it,
+     * same visual language [SettingsRowRenderer]'s row-level error text already uses. */
+    errorMessage: String? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
@@ -62,7 +66,12 @@ fun NxTextField(
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(CornerRadius)
 
-    val borderColor = if (isFocused) colors.acc else colors.line
+    val borderColor =
+        when {
+            errorMessage != null -> colors.neg
+            isFocused -> colors.acc
+            else -> colors.line
+        }
     val textStyle =
         TextStyle(
             color = colors.tx,
@@ -142,6 +151,15 @@ fun NxTextField(
                     )
                 }
             }
+        }
+
+        if (errorMessage != null) {
+            Spacer(Modifier.padding(top = LabelBottomSpacing))
+            Text(
+                text = errorMessage,
+                color = colors.neg,
+                fontSize = LabelSize,
+            )
         }
     }
 }

@@ -9,12 +9,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.dhruv.core.ui.components.ConfirmDangerDialog
+import com.dhruv.finance.app.R
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+
+/** The exact string a user must type to confirm account erasure (design system §5.1: "account-level
+ * deletions use type-to-confirm", `SET-BR-021`). */
+const val DELETE_MY_ACCOUNT_CONFIRM_TEXT = "DELETE"
 
 @Composable
 fun LocaleFormatDialog(
@@ -128,39 +135,24 @@ fun DeleteMyDataDialog(
     )
 }
 
-/** Confirmation for "Delete my account" (ONB-BR-009) — unlike [DeleteMyDataDialog], this also
- * forces sign-out and sends the user back through onboarding on next launch, so the copy says so
- * explicitly rather than only describing the data that's erased. */
+/** Confirmation for "Delete my account" (ONB-BR-009, `SET-BR-021`) — unlike [DeleteMyDataDialog],
+ * this also forces sign-out and sends the user back through onboarding on next launch, so the copy
+ * says so explicitly rather than only describing the data that's erased. Requires typing
+ * [DELETE_MY_ACCOUNT_CONFIRM_TEXT] — the highest-severity deletion in this app (design system
+ * §5.1), via [ConfirmDangerDialog]'s `typeToConfirmText` rather than a bespoke dialog (Article VI).
+ */
 @Composable
 fun DeleteMyAccountDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val colors = LocalDhruvNextColors.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete my account?", fontWeight = FontWeight.Bold) },
-        text = {
-            Text(
-                "This permanently erases all your tracker data and your account, then signs you out. " +
-                    "You'll go through setup again the next time you open the app.",
-                fontSize = DhruvNextType.cardTitle,
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.neg),
-            ) {
-                Text("Delete account")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        shape = RoundedCornerShape(DhruvNextRadii.card),
+    ConfirmDangerDialog(
+        title = stringResource(R.string.settings_delete_my_account_confirm_title),
+        body = stringResource(R.string.settings_delete_my_account_confirm_body, DELETE_MY_ACCOUNT_CONFIRM_TEXT),
+        confirmLabel = stringResource(R.string.settings_delete_my_account_confirm_action),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        typeToConfirmText = DELETE_MY_ACCOUNT_CONFIRM_TEXT,
     )
 }
 

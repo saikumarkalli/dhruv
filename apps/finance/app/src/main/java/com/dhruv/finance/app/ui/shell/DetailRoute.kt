@@ -14,6 +14,15 @@ package com.dhruv.finance.app.ui.shell
 sealed interface DetailRoute {
     data object Settings : DetailRoute
 
+    /** Settings sub-routes (004-settings T012) — one back step to [Settings], one more to the tab. */
+    data object SettingsAccount : DetailRoute
+
+    data object SettingsApp : DetailRoute
+
+    data class SettingsModule(
+        val moduleKey: String,
+    ) : DetailRoute
+
     data object Ask : DetailRoute
 
     data object Currency : DetailRoute

@@ -396,6 +396,11 @@ restart, and confirm it is retained but never shown in full.
   state pointing back to the setting that hid it.
 - **FR-035**: A module entry whose controls require a consent the user has not granted MUST state
   which consent is needed and offer the route to grant it, rather than showing inert controls.
+- **FR-046**: A contributed row's `onChange`/`onInvoke` MUST read and write only that module's own
+  preference keys. It MUST NOT read, write or otherwise reach app lock, consent, or the secret-key
+  store — those stay shell-owned regardless of which tier renders the control (resolved 2026-08-29,
+  security checklist CHK046 — the contract governed row *shape*, not row *behaviour*, leaving
+  nothing structural stopping a module's own row from weakening the app's security surface).
 
 **Assistant**
 
@@ -403,8 +408,13 @@ restart, and confirm it is retained but never shown in full.
   re-ask a user who has already answered.
 - **FR-037**: Users MUST be able to view assistant consent status and withdraw it; withdrawal MUST
   return the assistant to its consent gate before its next request.
-- **FR-038**: A user-supplied AI key MUST be stored so it is never displayed in full after entry,
-  never included in an export, diagnostic or crash report, and removable in one action.
+- **FR-038**: A user-supplied AI key MUST be stored **encrypted** (the existing `secure_settings`
+  EncryptedDataStore surface, never a plaintext preference) so it is never displayed in full after
+  entry, never included in an export, diagnostic or crash report, and removable in one action. Its
+  masked on-screen representation MUST NOT leak the real value's length or any of its characters —
+  a fixed-width placeholder token, not a partial reveal (prefix/suffix) or a length-matched mask,
+  since either narrows a brute-force or social-engineering search space (resolved 2026-08-29,
+  security checklist CHK032/CHK034 — was a plan/data-model-only decision with no FR statement).
 
 **App details**
 
@@ -518,7 +528,10 @@ a setting.
   export (for reading, not portability) stays a reporting concern.
 - **App-lock credential**: the device's own authentication (biometric or device PIN/pattern/password)
   rather than an app-specific secret, so a user who can unlock their phone can always reach their own
-  data. This also settles the "user removed their credential" edge case.
+  data. The "user removed their credential" edge case is settled concretely by
+  `contracts/app-lock-gate.md` §1 rule 5 / §2 rule 12 (added 2026-08-29, security checklist `CHK005`):
+  the gate falls open to UNLOCKED and resets the preference, with a one-time notice, rather than
+  permanently excluding the user from their own Settings.
 - **Retired phase annotations**: the surface registry's tree and channel registry annotate rows with
   `R3`/`R4`/`R5b`/`R6`/`R7`/`R8`/`P4`, pointing at roadmaps deleted on 2026-08-15. They are read as
   "the phase that ships the underlying feature"; mapping each to a design-v1 phase is `plan.md` work.
@@ -534,50 +547,184 @@ a setting.
 
 ## Implementation record
 
-> **Status: NOT YET IMPLEMENTED.** This section is filled in when {phase} ships, and is
-> **maintained for the life of the feature** thereafter — see constitution Article Xa
-> ("Documentation Tracks Reality"). Everything above this line describes what *will* be built;
-> everything below describes what *was*.
+> **Status: ALL FIVE SUB-PHASES IMPLEMENTED (0b.1 2026-08-27; 0b.3/0b.4 2026-08-29; 0b.2/0b.5
+> 2026-08-29).** 0b.3 and 0b.4 were implemented ahead of 0b.2 at the maintainer's explicit request
+> (both only depend on 0b.1, spec §"Why this is split", tasks.md lines 189/224); 0b.5 was then run
+> once 0b.2 closed the last dependency it needed (tasks.md line 273). This section is
+> **maintained for the life of the feature** — see constitution Article Xa ("Documentation Tracks
+> Reality"). Everything above this line describes what *will* be built; everything below describes
+> what *was*, sub-phase by sub-phase.
 >
-> Module(s): {module}.
+> Module(s): `:libs:settings`, `:libs:core`, `:apps:finance:app`, plus one `settings/` package each
+> in `:apps:finance:feature:calculator`, `:currency`, `:unit`, `:assistant`.
 
-### As built
-
-*(Fill on completion. What actually shipped, per user story. Keep it short — the tasks list the
-work, this records the outcome.)*
+### As built — 0b.1 (US1: control plane + Appearance)
 
 | Story / FR | Shipped | Notes |
 |---|---|---|
-| | | |
+| FR-001, FR-004, contract §1–§4 | Contribution contract (`SettingsContribution`/`SettingsGroup`/`SettingsRow`), `SettingsRegistry`, `SettingsRowRenderer`, `ModuleSettingsScreen` | Registration requires a Koin qualifier per `moduleKey` — an unqualified `single` collides across modules (see Deviations) |
+| FR-001, FR-002, FR-009 | `SettingsScreen` top level: quick rows → Account entry → App entry → modules tier, via `SettingsAccount`/`SettingsApp`/`SettingsModule` sub-routes layered on `MainActivity`'s existing detail-route state | — |
+| FR-019, FR-020 | Appearance area in `AppSettingsScreen` (theme, accent, disabled wallpaper row); `ThemeWriteSiteTest` proves Settings is the only theme-write site | — |
+| FR-006, FR-007, SC-004 | Modules tier assembles calculator/currency/unit contributions with zero Settings-file edits; verified live (T040) with a throwaway fourth contribution | — |
+| FR-011, SC-001 | All 19 pre-existing rows reachable at their new homes: calculator rows → `CalculatorSettingsContribution`; theme/accent/wallpaper → Appearance; identity/consent/erasure → `SettingsAccountBody`; history-lock/PIN/about → `AppSettingsScreen`'s temporary Legacy section | Baseline recorded from shipped defaults, not a live device (T002) |
+| SET-ARCH-003/004 | Two new ArchUnit rules: no feature-module type in `ui.settings`, no Compose type in a `SettingsContribution` factory | Both proved non-vacuous against real code, not just passing by construction (see Deviations) |
+
+### As built — 0b.3 (US3: App lock & privacy)
+
+| Story / FR | Shipped | Notes |
+|---|---|---|
+| FR-021, FR-022, FR-023, gate §1–§3 | Real enforcing app lock: pure `appLockState()` decision (`libs/core`) + `AppLockGate` effect (`BiometricPrompt` Class 3 + device-credential fallback) wrapping the entire content tree above the pager, above the detail-route overlay, above every tab including Calc | `MainActivity` migrated `ComponentActivity` → `FragmentActivity` (`BiometricPrompt` requirement) |
+| FR-022, gate §1 rule 5, §2 rule 12 | Credential-absent handling: refuses to enable with no enrolled credential; falls open and resets the preference with a one-time notice if a credential later disappears | Added mid-implementation as a security.md-review fix (CHK005) before any code was written — see Deviations |
+| FR-024 | Auto-lock timeout (`Immediate`/1 min/5 min/15 min) as a `SegmentedRow`, shown only when app lock is on | Boundary is inclusive (`elapsedSinceBackground >= timeout`) per the CHK011 contract fix |
+| FR-023, SET-FLOW-001/002 | Hold-and-dispatch for links/notifications/shortcuts arriving while locked — `HeldTargetStore`, plain in-memory, dispatched once after unlock, cleared for free on process death | — |
+| FR-025, SC-010 | Hide-amounts wired at the shared money path: `Paise.MASKED_TOKEN`/`format(masked=…)`, `MoneyText` via a new `LocalHideAmounts` composition local provided at `DhruvTheme` root, `CurrencyFormatter.MASKED_TOKEN` | Screen surface only — widget/notification surfaces don't exist yet (see Deferred) |
+| FR-026, FR-027, FR-030 (partial), SET-UI-012 | Notifications area: app-wide master switch, permission-denied banner routing to system settings via `NotificationManagerCompat` | No per-channel rows — none exist yet (contract §3 rule 10) |
+| FR-028, SET-BR-020 | Legacy history-lock/PIN rows migrated into Security, unchanged behaviour, relabelled superseded | — |
+| SET-BR-008 | App-lock quick row now calls the same credential-checked `AppSettingsViewModel.setAppLockEnabled()` as the Security row, not a direct preference write | Completes the "all three quick rows enforce" requirement first partially shipped in 0b.1 |
+
+### As built — 0b.2 (US2: Account & identity)
+
+| Story / FR | Shipped | Notes |
+|---|---|---|
+| FR-012, SC-008, SET-FLOW-003 | Real sign-in: `AccountSettingsScreen` wired directly to `AuthRepository.signInWithGoogleIdToken()` — the Credential Manager call is duplicated here (same shape as `SignInScreen.kt`), never shared with `com.dhruv.finance.onboarding` (research R6, `SET-ARCH-003`) | New `androidx.credentials`/`androidx.credentials.play.services.auth`/`googleid` dependencies added to `:apps:finance:app` |
+| FR-013, SET-FLOW-004 | Real sign-out: `AccountSettingsViewModel.signOut()` calls only `SessionStore.clear()` — holds no reference to Room/`HistoryRepository` at all, so calculator history survival is structural, not a runtime check | — |
+| FR-015, SET-BR-021 | Type-to-confirm on account erasure (`DELETE_MY_ACCOUNT_CONFIRM_TEXT = "DELETE"`) | `ConfirmDangerDialog` (`:libs:core`) extended with an optional `typeToConfirmText` param (Article VI) rather than a bespoke dialog |
+| FR-016, SET-BR-022 | Both erasure actions return the repository's `Result` unchanged — no fabricated success, no internal "completed" flag blocking retry | Unchanged from 0b.1's carried-forward code, now behind `AccountSettingsViewModel` |
+| FR-017, SET-BR-021/022 | Post-erasure state (no residual account state) | Satisfied by construction — `TrackerAccountRepositoryImpl.deleteMyAccount()` already forced sign-out + `hasCompletedOnboarding` reset before this sub-phase touched anything |
+| FR-014, FR-018, SET-BR-023 | Consent switches migrated unchanged; "Export my data" placeholder row removed outright (not conditionally hidden) | `PlaceholderRow` composable deleted (`SettingsRows.kt`) — its only call site |
+
+### As built — 0b.4 (US4: module conventions; US5: App details; US6: assistant)
+
+| Story / FR | Shipped | Notes |
+|---|---|---|
+| FR-032, SET-BR-005 | Generic module on/off: `SettingsRepository.isModuleEnabled`/`setModuleEnabled` (`module_enabled_<moduleKey>`), a `ModuleEnableRow` shown at the top of every `ModuleSettingsScreen` | See Deviations — the entry stays in the modules tier when off, rather than leaving it (needed to stay reachable) |
+| FR-034, SET-UI-011 | Hidden-content empty state: when a module is off, `ModuleSettingsScreen` shows `EmptyStateCard` in place of its groups, with the on/off toggle itself staying visible directly above as the way back | — |
+| FR-035, SET-UI-008 | Consent-gated module entries: `SettingsContribution` gained `consentGranted: Flow<Boolean>` + `consentRequiredMessage: Int?` (additive); `ModuleSettingsScreen` shows `ConsentNeededRow` instead of the module's rows when `resolver.requiresConsent(moduleKey) && !granted` | `resolver.requiresConsent` only answers *whether* a gate applies — the *current grant state* has no generic cross-module source, so each gated contribution states its own |
+| FR-030, FR-031, SET-BR-006 | First real alert control: `daily_rates` — `NotificationChannelRegistry` (`:libs:core`), currency's `alert_daily_rates` `Toggle` + delivery-time `Choice`, `alertChannelCoverageIsOneToOne` proving the 1:1 mapping | Metals-rates deliberately absent (FR-031) — designed, not built (currency-metals-notification plan) |
+| FR-033, SET-UI-010 | `PrimaryDestinationTest` — no registered `moduleKey` collides with a `TabKey` name | Guard test, not new runtime logic — nothing today needs a runtime check since the namespaces don't overlap |
+| Article VI (T092) | `LabeledSettingsGroup` extracted into `SettingsRowRenderer.kt`, adopted by `ModuleSettingsScreen` and `AppSettingsScreen`'s three sections | `SettingsAccountBody.kt` left unchanged — out of scope for this pass |
+| FR-036, SET-BR-011 | Durable assistant consent: `AssistantViewModel` reads `assistantConsentGranted` from `SettingsRepository` at construction, plus a reactive observer for an already-open instance | Bug found and fixed during implementation — see Deviations |
+| FR-037, SET-FLOW (DAT-BR-001 reuse) | `withdrawConsent()` returns to `ConsentNeeded`; `AssistantScreen` already collects `uiState` reactively, no change needed there | — |
+| FR-038, SET-BR-012 | `assistantSettingsContribution` (consent `Toggle` + Gemini key `SecretText`); new `SettingsRow.SecretText` row type; masked representation is a fixed constant string, never computed from the real value | See Deviations — save-then-persist entry, not persist-immediately |
+| FR-039, FR-040, FR-041, FR-043 | `AppDetailsSection` replaces the temporary Legacy section: version+build, privacy policy/licences/source (real GitHub links), pluggable `AppDetailsViewModel`/`UpdateChecker` | Update check and replay-intro are absent, not inert — no update channel or on-demand onboarding-replay route exists yet |
+| FR-046 (new FR, security checklist CHK046) | `DependencyRulesTest.a SettingsContribution package must not reach shell-owned security surfaces directly` — non-vacuous ArchUnit rule | Written as part of 0b.4's pre-code security.md re-review, not deferred |
+
+### As built — 0b.5 (feature-level verification & ratchet — no new behaviour)
+
+| Task | Finding / outcome | Notes |
+|---|---|---|
+| T110, SC-005 orphan-preference audit | 9 dead preference keys found and deleted (5 per-section accent colors, 4 per-tab enable flags — both retired by ADR-0024, zero consumers anywhere, verified by full-repo grep); 1 real gap found and tracked, not fixed (`font_family` — consumed but no row); `sync_enabled` already self-documented | `SettingsRepository`/`SettingsRepositoryImpl`/`SettingsKeys` shrunk; `SettingsKeyPreservationTest` updated to reflect the intentional removal, not a silent drop |
+| T111, SC-002 tap-depth | Quick rows: 0 navigation taps. Every other setting: 2 navigation taps (well under the 3-tap ceiling) | Confirmed by inspection, no device |
+| T112, SC-011 inert-row review | No row found that appears operable while changing nothing | `quickstart.md` §7 turned out to already be the orphan-key audit (T110's), not an inert-row review — new §7a written |
+| T115, catalog closure audit | Found and closed `SET-BR-010` — its logic was proven correct since 0b.3 (T063) but never marked closed in the catalog | Exactly the class of drift this task exists to catch |
+| T116/T117, coverage | Merged 14.91% (`:libs:settings` 38.38%, `:libs:core` 15.02%), up from 13.2% at the 0b.1 baseline; `globalLineFloor` raised 0.09 → 0.14 | Per-module numbers computed from the aggregated JaCoCo XML (no separate per-module report exists) |
+| T109/T113/T114 | Not performed — no physical device or emulator available in this implementation session | Closed **deferred** in catalog §13/§14, not silently skipped |
+
+### Post-implementation review pass (2026-08-29, SA + QA, whole feature 0b.1–0b.5)
+
+A five-axis review of the merged change set. Findings and their fixes, most severe first — all
+landed in the same pass, `regressionCheck` green after:
+
+| Severity | Finding | Fix |
+|---|---|---|
+| **Critical** | `ModuleSettingsScreen` invoked `collectAsState` — a `@Composable` — *inside* a `when` branch condition, behind a short-circuiting `&&`. Its invocation count varied between recompositions (module toggled off, or a module that doesn't require consent), which corrupts the slot table. `ModuleConsentGateTest` never combined module-disabled with consent-gated, so nothing caught it | Both reads hoisted above the `when`; added `a disabled module that also needs consent…` driving the off→on transition that used to change the call count |
+| **Critical** | `AppDetailsViewModel` extends `ViewModel` but was built with `remember {}` — never entered a `ViewModelStore`, so `onCleared()` never ran and `viewModelScope` was never cancelled. Dormant only because the shipped `updateChecker` is `null`; wiring a real one made it a live coroutine leak | Registered in `appModule`, resolved via `koinViewModel()` like every sibling; `PackageInfo` read moved into the Koin definition so the ViewModel stays Context-free |
+| Required | `generateRawNonce()`/`sha256Hex()` — a security primitive on the auth path — duplicated verbatim between `SignInScreen` (onboarding) and `AccountSettingsScreen`, with no test on either copy. `SET-ARCH-003` forbids Settings referencing a *feature-module type*; it does not license duplicating pure crypto helpers both modules could share | Extracted to `com.dhruv.core.security.SignInNonce` (`:libs:core`, which both already depend on); both call sites consume it; new `SignInNonceTest` pins the raw-vs-hashed distinction, length, hex-ness and non-reuse — the swap failure is otherwise silent (picker still shows, GoTrue rejects afterwards) |
+| Required | `trackerAccountRepository`/`sessionStore` threaded through four signatures (`MainActivity` → `AppShell` → `TabsScaffold` → `DetailRouteContent` → `SettingsDetailContent`) and used nowhere after 0b.2 replaced `SettingsAccountBody`. Originally left in place with a comment rationalising it as "avoiding churn" — that is how dead threading survives | Removed from all four signatures, their call sites, the two now-unused `koinInject()`s and imports |
+| Required | Hardcoded user-visible strings in **new** code, against design system §10 / FR-043 ("every string a resource from birth"): the entire app-lock surface (`AppLockGate`'s prompt title, retry copy, action), the credential-loss Toast, `DeleteMyAccountDialog`'s rewritten copy, and the relocated `Lock history`/`Change PIN` rows | 11 new string resources; all call sites converted. The locked screen in particular had no translatable string at all |
+| Required | Gate §2 rule 12's "one-time" notice fired on *every* resolve until the async preference write landed — a quick background/foreground cycle re-showed it. Separately, `resolveLockState` was a query that wrote a preference and showed a Toast | Split into a pure `resolveLockState` and an effectful `applyLockState`; the notice is latched on `credentialLossNotified` rather than on the not-yet-persisted flag |
+| Required | Four tests asserted implementation details or passed vacuously: two reflected over member/constructor **names** (`…never depends on onboarding module types`, `…no export-shaped property`); `PrimaryDestinationTest` used a hand-typed key set a fifth module would never join; `AlertControlCoverageTest`'s two "real" cases built **fabricated** contributions, so dropping currency's real `alert_daily_rates` toggle would not have failed them | The two reflection tests deleted, each replaced by a comment naming the stronger guard that already covers it (`DependencyRulesTest`) or why the assertion isn't yet possible (`SET-BR-023`). New `realSettingsContributions()` helper builds contributions from the actual feature-module factories; `ContributionValidityTest`, `AlertControlCoverageTest` and `PrimaryDestinationTest` all consume it, with the residual hand-maintenance stated in its doc |
+| Required | `ConfirmDangerDialog`'s new `typeToConfirmText` — the guard on the single most destructive action in the app — shipped untested; `SET-BR-021` closed on "verified by reading the composable" | New `DeleteMyAccountDialogTest` (3 cases) against the real shipped dialog: tap-alone never erases, near-miss stays disabled, exact word enables and fires once. `SET-BR-021`'s catalog citation updated to the test |
+
+Also found, deliberately **not** changed: `CurrencyFormatter.format` is still called directly by the
+four calculator screens, bypassing hide-amounts — that is the documented 0b.3 scope decision
+(calculator output is not personal financial data), re-confirmed here rather than silently widened.
+No settings file exceeds 392 lines, so no decomposition was warranted.
+
+One process note worth keeping: the first version of the new `ModuleConsentGateTest` case drove
+state through the repository's `suspend` setter with `runBlocking`, which deadlocks against
+`waitForIdle` on Robolectric's single main thread — the test still passed, but took **25 minutes**.
+`FakeSettingsRepository.moduleEnabledMap` is now public so Compose tests write it synchronously; the
+same case runs in ~16s. A test that passes slowly enough is a broken gate.
+
+### Edge-case & scenario gap pass (2026-08-29, whole feature)
+
+Walked this spec's own **Edge Cases** list and each FR against the shipped code, asking "is this
+actually reachable and does it actually do what the FR says" rather than "does a test pass". Four
+requirements were **stated as delivered but were not**:
+
+| Severity | Gap | Resolution |
+|---|---|---|
+| **Critical** | **FR-032 had no consumer.** `isModuleEnabled` was read in exactly one place — `ModuleSettingsScreen`, for its own empty state. Turning a module off did **not** remove it from navigation or content, so the toggle wrote a preference nothing acted on: precisely SC-011's "a row that appears operable and changes nothing". The 0b.5 inert-row review (T112) missed it by asking "does this row write?" rather than "does the write have a reader" | Gated the three optional modules' routes through `FeatureHost` — a turned-off module now renders `FeatureDisabledCard`, the same treatment a flag-disabled one already gets (PLATFORM.md §4), rather than a second bespoke "off" state |
+| **Critical** | **FR-033 hazard: the on/off control was offered for every contribution**, including `calculator` — which *is* the Calc tab's content. `PrimaryDestinationTest` passed throughout because `"calculator"` collides with no `TabKey` **name**; the name check is a weaker proxy than it appeared. Once FR-032 gained a real consumer, this would have let the user hide a primary destination | `SettingsContribution.optional` (defaults **false** — a module is hideable only by declaring itself so); `ModuleSettingsScreen` offers the control only for optional modules. Two tests now pin it: `calculator` must not be optional, and `currency`/`unit`/`assistant` must be |
+| Required | **Notification permission state was computed once and never refreshed** (`remember {}`, no key). The denied banner's own CTA sends the user to system settings to change exactly that value — so on the single journey the banner exists to support, it showed stale state on return. Named verbatim in this spec's Edge Cases | Re-read on every `ON_RESUME` via a lifecycle observer |
+| Required | **Erasure rows acted while signed out.** Both `DangerRow`s rendered unconditionally, outside the `when (sessionState)` block, so a signed-out user could invoke `auth.uid()`-scoped RPCs and get a failure Toast that reads like a server fault. Edge Cases requires they "show their signed-out state rather than acting on a session that is not there" | Disabled and relabelled while signed out (`settings_erasure_signed_out`) |
+| Required | **The personal AI key row promised behaviour the app does not have.** `GeminiRepository` is a singleton constructed with `BuildConfig.GEMINI_API_KEY`; a user-saved key is stored encrypted, masked and removable — and never read. The row said it "bypasses the shared quota" | Copy corrected to state what it actually does today (stored, not yet used) under FR-043's preference-only rule — the same pattern app lock shipped under in 0b.1 before 0b.3 made it enforcing. Consumption is ADR-0002's BYO-override and belongs to the AI feature, not this control plane; recorded in Deferred |
+
+Confirmed handled, checked rather than assumed: consent withdrawn while a module entry is open
+(now reactive on both sides); a module removed from a future release (the registry only enumerates
+Koin-resolved contributions, so a stale `module_enabled_*` key has nothing to attach to); erasure
+failing midway; app lock with the device credential removed; a row moving between tiers
+(`SettingsKeyPreservationTest`); every optional module turned off (the tier keeps the entry, which
+is what makes the "way back" reachable — the FR-032 deviation below is load-bearing for it).
+
+One self-inflicted find worth recording: the first cut of the FR-032 route gate put
+`rememberModuleEnabled(...)` behind a short-circuiting `&&`, reintroducing the exact conditional-
+`@Composable` defect the review pass above had just fixed in `ModuleSettingsScreen`. Caught before
+the gate ran; both call sites now hoist the read.
 
 ### Deviations from this spec
 
-*(Anything built differently from what is specified above, and **why**. A deviation recorded here is
-a decision; a deviation left unrecorded is drift, and this repo has been burned by it — see
-ADR-0030.)*
-
 | Spec says | Built as | Reason |
 |---|---|---|
-| | | |
+| Contract §1: "modules register their `SettingsContribution` as a Koin definition bound to that type" | `single(qualifier = named(moduleKey)) { ... }` — qualifier required | Verified during implementation (T010): an unqualified `single` for the same concrete type collides across Koin modules — the second registration silently overwrote the first, and `getAll<SettingsContribution>()` returned only one. Contract §1 and research.md R1 updated in place with the finding |
+| T033/T035: calculator ships "history preview/export/clear"; currency/unit ship contributions with unspecified content | Calculator ships format/precision/preview/angle-mode/clear-history only (matches data-model.md §2's actual pre-existing rows — no history-preview/export row ever existed). Currency/unit ship one real static `Info` row each (supported-currency count; per-category unit count from the same enums the converters use) rather than an invented toggle | Neither module has a persisted preference today; inventing one would violate SC-011 (no row that appears operable and changes nothing) |
+| T029: "AppSettingsScreen.kt with its Appearance area only" | Appearance area plus a temporary "Legacy" section (history-lock/PIN, about-version) | Without it, those pre-existing rows would be unreachable between 0b.1 and 0b.3/0b.4 (which build their real Security/App-details areas), regressing FR-011/SC-001 mid-phase. Removed when 0b.3/0b.4 land their real areas |
+| T021/T022 file paths (implied Compose/Robolectric infra, never used before in this repo) | Confirmed working; two real bugs found and fixed along the way: `SwitchRow`'s outer `Row` isn't itself clickable (tests must target `isToggleable()`, not the label text), and two `fillMaxSize()` screens stacked in an unweighted `Column` push the second one outside the visible bounds | First Compose UI tests in this codebase — recorded so the next one doesn't rediscover these |
+| (pre-existing latent gap, not this spec's scope, fixed as a blocker) | `DependencyRulesTest`'s `ImportOption.DoNotIncludeTests()` never matched this project's actual `debugUnitTest` output path — every ArchUnit rule had been silently importing test classes all along. Replaced with a working exclusion predicate | Surfaced only because `SET-ARCH-003`'s new rule happened to be the first one a test class actually violated; left broken would have made the new rule non-functional |
+| `checklists/security.md` — read-only reviewer artifact, not an implementation input | Reviewed against spec.md/contracts/data-model.md before 0b.3 code was written, at the maintainer's explicit direction; 35/46 items flipped `[x]`, 11 left `[ ]` with findings (non-blocking) | 4 of the findings (CHK005, CHK007, CHK011, CHK012) would have produced a wrong or ambiguous app-lock gate if coded as originally specified — the maintainer chose to fix `contracts/app-lock-gate.md`/spec.md first rather than implement around them |
+| gate contract: original rule numbering (§1–§4, sequential but not renumbered for insertions) | Fully renumbered 1–20 across §1–§4 after inserting rule 5 (§1, credential-absent) and rule 12 (§2, credential re-check) | An earlier in-place insertion produced a duplicate "rule 6" across two sections; caught before merge and fixed by rewriting the whole file with consistent numbering |
+| (found during implementation, not stated anywhere) | `SettingsRepository` gained `currentSnapshot(): AppSettings` — a synchronous read used as both settings ViewModels' `stateIn` initial value | Without it, the lock-state `StateFlow`'s async default (`AppSettings()`, `biometricEnabled=false`) would show a few frames of unlocked content on cold start before the real DataStore value arrived — a defect this spec's own SC-009/gate rule 8 exists to prevent. Found by reasoning about the existing repository architecture, not by a failing test |
+| FR-032: "turning one off MUST remove it... and remove its entry from the modules tier" | The entry stays visible in the modules tier when off — its content collapses to the empty state (FR-034) instead | The spec edge case "every optional module turned off — the tier states that and offers the way back, never renders as an empty list" requires *some* reachable path to re-enable a module; removing the entry from the tier entirely would make it unreachable. Keeping the entry (showing its off-state) is the "way back," and is a stronger reading of the edge case than the literal FR-032 sentence — recorded as a deliberate interpretation, not an oversight |
+| `checklists/security.md` — read-only reviewer artifact | Re-reviewed against 0b.4's actual scope before its code was written (same pattern as 0b.3): 4 more items resolved (CHK032, CHK034, CHK046 fully; CHK018 judged not directly blocking 0b.4's scope and left as-is) | CHK032/034 (AI key storage/masking) and CHK046 (module security-boundary) are exactly what 0b.4 builds (T097, T106) — same "fix the requirement before coding the thing it governs" pattern as 0b.3's CHK005/007/011/012 |
+| tasks.md T093's stated path (`apps/finance/data/.../AssistantConsentTest.kt`) | Written at `apps/finance/feature/shell/assistant/src/test/.../AssistantConsentTest.kt` | `AssistantViewModel` — the class actually holding the FR-036 defect — lives in `:apps:finance:feature:assistant`, not `:apps:finance:data`; the test is written where the behaviour is |
+| tasks.md T103's stated file (`SettingsScreen.kt`) | The "About Dhruv Finance" row was actually in `AppSettingsScreen.kt`'s temporary Legacy section | Same path-naming looseness already noted for T093; `SettingsScreen.kt` never held this row |
+| FR-042: "no save action anywhere in Settings" | `SettingsRow.SecretText`'s unset-state entry is save-then-persist (an explicit "Save" button), not persist-on-every-keystroke | Persisting an encrypted secret character-by-character on every keystroke is a worse property than one explicit confirm — judged the one row type this rule shouldn't apply to literally. `SettingsRow.SecretText`'s own doc comment states this |
+| (found during implementation, not stated anywhere) | `AssistantViewModel` gained a reactive `settingsRepository.observe()` collector (in `init`, `.drop(1)` to skip its own replay) alongside the construction-time read | Without it, an assistant screen instance already alive when consent is withdrawn elsewhere in Settings would keep showing `Idle` — FR-037's guarantee only held for a freshly-constructed instance. Found the hard way: the fix's first version raced against `grantConsent()`'s own in-flight persist write and broke a pre-existing test (`blank prompt after consent stays Idle`) before `.drop(1)` fixed it |
+| (found during implementation, not stated anywhere) | `ModuleToggleTest`'s Robolectric tests each use a unique `moduleKey` per test method | The `app_settings` `preferencesDataStore` file is not reset between test methods in the same Robolectric test class (keyed by file path, not by `Context` instance) — a shared moduleKey across tests in that file caused order-dependent failures. First real instance of this in the codebase (no prior test constructed `SettingsRepositoryImpl` directly) |
 
 ### Deferred
 
-*(Scope named in this spec that did **not** ship, with a reason and an owner. Never silently drop
-scope — an audit found several screens quietly reduced to a subset with no deferral recorded.)*
+> **Cross-phase items are also registered outside this spec.** Four of the rows below are consumers
+> this control plane cannot own — a shipped phase's spec is the last place the engineer who needs
+> them will look. They are enumerated with recommended owners in
+> `apps/finance/docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md` §5.5,
+> which the design-v1 implementation plan already points at for cross-cutting unowned work:
+> the `daily_rates` delivery pipeline (recommended: Phase 6), BYO AI-key consumption (the Ask Dhruv
+> work, per ADR-0024 decision 4), hiding launcher entries for turned-off modules, and `font_family`'s
+> missing row (a DESIGN-SYSTEM decision first). Rows below that are purely 004's own — the device
+> passes, the export row, the `toString()` risk — stay here only.
 
 | Item | Deferred to | Reason |
 |---|---|---|
-| | | |
+| Account tier's real sign-in/sign-out/consent/erasure screen (`AccountSettingsScreen.kt`) | 0b.2 (T046) | `SettingsAccountBody` is 0b.1's zero-regression stand-in behind the same route; 0b.2 replaces it |
+| A contribution with zero groups/rows has no defined empty state in `ModuleSettingsScreen` | Whichever sub-phase first ships one | None of 0b.1's three real contributions is empty; recorded in quickstart.md §9 |
+| `SelectionSheet` component for `Choice` rows with >3 options | Design system batch B9 (planned, not built) | None of 0b.1's `Choice` rows exceed 3 options; renderer falls back to a plain `ListGroupRow` list in the meantime |
+| T077 manual device pass (app lock table, quickstart.md §4) — cold start, cancel, timeout, Calc tab, notification-while-locked, held-target scenarios, credential removed/absent | Next session with a physical device or emulator available | No device was attached to the 0b.3 implementation environment; the decision logic is unit-tested (`AppLockDecisionTest`) but the actual on-screen no-unlocked-frame guarantee needs a real device pass |
+| Hide-amounts on the widget and notification surfaces (FR-025/SC-010's other two-thirds) | Whichever phase first builds the widget (Glance, not yet implemented) or posts a real notification | `CurrencyFormatter.MASKED_TOKEN` exists as the capability; nothing exists yet to wire it into. Recorded in quickstart.md §10, not silently dropped |
+| Per-channel notification rows / notification-channel registry parity check for the other 7 named channels (`app_updates`, `recurring_review`, `budget_alerts`, `emi_reminders`, `renewal_reminders`, `stale_valuations`, `monthly_digest`) | Phase 6 (006-search-notifications) delivers five of them; the rest follow their owning module | `daily_rates` (currency, T090) is the only one with a shipped owning module today; `SET-BR-006`'s 1:1 rule already holds for it. Readiness register §3.3 already flags the inverse problem — four of Phase 6's five channels are owned by modules planning no settings entry |
+| The real currency/metals daily-rates delivery pipeline (WorkManager job fetching rates and posting the notification) | **Unowned — recommended Phase 6.** Registered in readiness §5.5 item 1 | T090 shipped the real Android notification channel + Settings control only, establishing the convention — nothing posts to the channel yet. Phase 6 explicitly disclaims this channel ("`daily_rates`/`app_updates` stay with the currency and app-details modules") and the currency module plans no such work, so it has no owner today. Phase 6 builds the app's only `androidx.work` scheduling, so a second scheduler for one channel would be waste |
+| Update-check `UpdateChecker` real implementation | Whichever phase connects a real update source | No update channel exists — distribution is a signed APK via GitHub Releases (ADR-0008); `AppDetailsViewModel` is fully built and tested against the pluggable interface, ready to receive one |
+| On-demand "replay intro" route in the shell's `DetailRoute`/`NavTarget` system | Whichever phase adds it | No such route exists today; App details' "Replay intro" row is absent rather than wired to nothing (FR-043) |
+| `ConsentNeededRow`'s single-row shape (no full `not-configured`/`disabled` screen-state variant) | Whichever phase first gates several groups behind different consents in one entry | Only `assistant` gates its own single consent today; recorded in quickstart.md §9 |
+| `AppSettings.toString()` could leak `geminiApiKey` in plaintext if any future code logs the whole object | Whichever change first needs to log `AppSettings` | No call site does this today (grepped, T106's Sec pass); recorded as a residual risk, not fixed, since fixing a plain `data class`'s `toString()` pre-emptively for a call site that doesn't exist would be speculative |
+| **Consuming** the user's personal AI key (ADR-0002's BYO-key override) | **Unowned — the Ask Dhruv work** (ADR-0024 decision 4 says this plumbing lands alongside it; no phase in the design-v1 plan §7 table owns Ask Dhruv). Registered in readiness §5.5 item 2 | `GeminiRepository` is a Koin singleton built once with `BuildConfig.GEMINI_API_KEY`, and `currentSnapshot()` deliberately skips the encrypted read — so honouring a user key means a key-provider indirection in `:apps:finance:data`, not a settings change. FR-038 requires the key be *stored* safely (done); it does not require it be used. The row now says so (FR-043) instead of promising otherwise |
+| Hiding the **launcher entry points** (the Calc-tab converter tiles, the Ask pill) for a turned-off optional module | **Unowned — whichever phase next revisits those surfaces.** Registered in readiness §5.5 item 3 | The route gate added in the gap pass makes a turned-off module render `FeatureDisabledCard` — content genuinely removed, matching how flag-disabled modules already behave. The tile still being present is the same behaviour a flag-disabled module has today, so this is a consistency gap in the existing pattern rather than one this feature introduced |
 
 ### Change log for this feature
 
-Every later change to shipped behaviour lands a row here **in the same PR that changes the
-behaviour** — defect fixes, functional changes, schema migrations, removals.
-
-A defect row names the **FR whose stated behaviour was not actually delivered**. That is what
-separates a bug fix from an undocumented behaviour change, and it is how the next reader learns the
-spec was once wrong rather than assuming the code is.
-
 | Date | Change | Type | FR affected | PR |
 |---|---|---|---|---|
-| | | fix / change / removal | | |
+| 2026-08-27 | 0b.1 shipped: control plane, contribution mechanism, Appearance, calculator/currency/unit module entries | change | FR-001–FR-011, FR-019, FR-020, FR-029, FR-032 (partial — module-tier assembly only, on/off toggle itself is 0b.4), FR-042, FR-043 | — |
+| 2026-08-29 | 0b.3 shipped: enforcing app lock (BiometricPrompt gate over the whole app), auto-lock timeout, hide-amounts (screen surface), notifications master switch; `contracts/app-lock-gate.md` renumbered with 2 new rules (credential-absent fallback, credential re-check) from a pre-implementation security.md review | change | FR-021–FR-028, FR-024, SC-009, SC-010 (partial — screen surface only) | — |
+| 2026-08-29 | 0b.4 shipped: module on/off convention, consent-gated module entries, first real alert control (currency daily-rates), durable assistant consent (fixes the in-memory-flag defect), personal AI key row (new `SettingsRow.SecretText`), App details (version/privacy/licences/source, pluggable update check); new FR-046 + a non-vacuous ArchUnit rule closing security checklist CHK046; `settings-contribution.md` gained rule 10 | change | FR-030–FR-041, FR-043, FR-046 (new), SC-006, SC-014 | — |

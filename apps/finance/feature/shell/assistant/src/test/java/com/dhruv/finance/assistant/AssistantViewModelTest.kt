@@ -29,7 +29,8 @@ import org.junit.Test
 class AssistantViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
-    private fun newVm() = AssistantViewModel(GeminiRepository(apiKey = ""), NoOpCrashReporter, NoOpPerformanceTracer)
+    private fun newVm() =
+        AssistantViewModel(GeminiRepository(apiKey = ""), NoOpCrashReporter, NoOpPerformanceTracer, FakeSettingsRepository())
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)

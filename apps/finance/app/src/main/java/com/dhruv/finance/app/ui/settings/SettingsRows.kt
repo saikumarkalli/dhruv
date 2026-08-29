@@ -25,12 +25,15 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dhruv.core.ui.components.SegmentedRow
+import com.dhruv.core.ui.components.SwitchRow
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.app.R
 
 // Reusable DhruvNext-styled row primitives for the Settings screen (replaces the old
 // SettingsCategory/SettingsClickableItem/SettingsToggleItem/SettingsSegmentedControlItem
@@ -40,34 +43,6 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 /** Disabled/greyed alpha for not-yet-built rows — matches [com.dhruv.core.ui.components.QuickActionTile]'s convention. */
 internal const val SETTINGS_DISABLED_ALPHA = 0.55f
-
-/**
- * A neutral placeholder row for a feature that isn't built yet (e.g. "Export my data").
- * Non-interactive by design — do not wire [onClick]-shaped behaviour to anything that pretends
- * this works.
- */
-@Composable
-fun PlaceholderRow(
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalDhruvNextColors.current
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .alpha(SETTINGS_DISABLED_ALPHA)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = colors.tx, fontWeight = FontWeight.Medium, fontSize = DhruvNextType.cardTitle)
-            Text(text = subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
-        }
-        Text(text = "Soon", color = colors.tx3, fontSize = DhruvNextType.meta, fontWeight = FontWeight.Bold)
-    }
-}
 
 /**
  * A destructive-styled row (title tinted [com.dhruv.core.ui.theme.DhruvNextColors.neg]).
@@ -132,6 +107,27 @@ fun DisabledSwitchRow(
         }
         Switch(checked = false, onCheckedChange = null, enabled = false)
     }
+}
+
+/**
+ * The app-lock quick row (FR-002, top-level quick rows). Real and enforcing since 0b.3 (T072) —
+ * mirrors Security's own row (`SET-BR-008`), including the same credential-check failure message
+ * via [errorMessage] when set.
+ */
+@Composable
+fun AppLockQuickRow(
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
+) {
+    SwitchRow(
+        label = stringResource(R.string.settings_app_lock_quick_row_label),
+        description = errorMessage ?: stringResource(R.string.settings_app_lock_description),
+        checked = enabled,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+    )
 }
 
 /** A label above a full-width [SegmentedRow] — "Theme", "Angle mode", any single-choice preference. */

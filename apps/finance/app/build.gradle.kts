@@ -78,6 +78,13 @@ dependencies {
     // Settings' Account card renders the signed-in user's real Google profile photo
     // (SessionState.Active.avatarUrl) — first real consumer of this already-catalogued dependency.
     implementation(libs.coil.compose)
+    // AccountSettingsScreen's own Google sign-in (0b.2, research R6/SET-ARCH-003): the Credential
+    // Manager call is duplicated here rather than reusing onboarding's SignInScreen — Settings must
+    // not reference a feature-module type (contract §5), same reasoning as SettingsAccountBody's
+    // locally-held consent copy.
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Core
     implementation(libs.androidx.core.ktx)
@@ -86,6 +93,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // ProcessLifecycleOwner (0b.3 app-lock gate — gate contract §1 rule 3's foreground-session
+    // definition; ON_START/ON_STOP are whole-process, immune to per-Activity rotation churn).
+    implementation(libs.androidx.lifecycle.process)
+    // BiometricPrompt host for the app-lock gate (contracts/app-lock-gate.md §2).
+    implementation(libs.androidx.biometric)
     implementation(libs.androidx.navigation.compose)
 
     // Moshi — used by FeatureFlagAssetLoader to parse platform/feature-flags/*.json.

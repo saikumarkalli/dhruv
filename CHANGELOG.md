@@ -10,6 +10,87 @@ web SPA. Each component versions **independently**: a web-only release does not 
 version. The heading for a release is injected by CI; the prose underneath is written by hand.
 See [`platform/VERSIONING.md`](platform/VERSIONING.md).
 
+## [Unreleased]
+
+### Added
+- Settings control plane, sub-phase 0b.1 (`apps/finance/specs/004-settings/`): a declarative
+  `SettingsContribution` contract (`:libs:settings`) modules register into by Koin qualifier, a
+  `SettingsRegistry` resolving/filtering/ordering them, and a shell renderer
+  (`SettingsRowRenderer`/`ModuleSettingsScreen`) building every row from existing `:libs:core`
+  components. Settings' top level now shows quick rows (theme/accent/app-lock) → Account → App →
+  a modules tier assembled with zero Settings-file edits per new module (verified live).
+- Calculator, currency and unit each ship their first `SettingsContribution`, reachable from the
+  new modules tier.
+- Two new ArchUnit rules (`DependencyRulesTest`): Settings may not reference a feature-module type;
+  a `SettingsContribution` factory may not reference a Compose type.
+- Settings control plane, sub-phase 0b.3 (`apps/finance/specs/004-settings/`): a real, enforcing
+  app lock — a `BiometricPrompt` (Class 3, device-credential fallback) gate wrapping the entire
+  app above the pager and every tab, resolved before the first content frame so no unlocked frame
+  ever appears on cold start. Auto-lock timeout (Immediate/1/5/15 min). Hide-amounts masking at the
+  shared money-formatting path (`Paise`, `MoneyText`, `CurrencyFormatter`) — screen surface only for
+  now. An app-wide notifications master switch with a system-permission-denied banner. Links,
+  notification taps and shortcuts arriving while locked are held and dispatched once after unlock.
+  `MainActivity` migrated `ComponentActivity` → `FragmentActivity` for `BiometricPrompt`.
+- Settings control plane, sub-phase 0b.4 (`apps/finance/specs/004-settings/`): every optional
+  module now offers a real on/off control (`module_enabled_<moduleKey>`) that retains its other
+  stored preferences when off. A module whose controls need an ungranted consent states which one
+  and offers the route to grant it, instead of showing inert controls. The currency converter ships
+  the first real notification alert control (daily rates, plus its own Android notification
+  channel) — a new `NotificationChannelRegistry` (`:libs:core`) keeps the channel-to-control mapping
+  1:1. The assistant gets its own Settings entry: consent status/re-consent, and a personal Gemini
+  API key row (`SettingsRow.SecretText`, a new closed row type) that's always shown masked and
+  removable in one action — the masked value is a fixed constant, never derived from the real key,
+  so it structurally cannot leak length or characters. App details replaces the old "About Dhruv
+  Finance" row: version + build number, privacy policy/licences/source (linking this now-public
+  repo's real files), and a pluggable update-check surface (no update channel is wired yet, so the
+  row is absent, not inert). A new ArchUnit rule enforces that a module's own Settings row can never
+  reach app lock, consent or the secret-key store directly — only through `SettingsRepository`.
+- Settings control plane, sub-phase 0b.2 (`apps/finance/specs/004-settings/`): Account now has a
+  real, working sign-in (Google, via Credential Manager, wired directly to the auth repository —
+  never through first-run onboarding) and a real sign-out, fixing the two defects this sub-phase
+  existed for (sign-in previously only lived inside first-run setup; there was no sign-out at all).
+  Account erasure now requires typing "DELETE" to confirm (`ConfirmDangerDialog` gained a
+  `typeToConfirmText` option). The non-functional "Export my data" placeholder row is gone entirely
+  — no financial-records repository exists yet to export from.
+- Settings control plane, sub-phase 0b.5 (`apps/finance/specs/004-settings/`): a repo-wide
+  preference audit found and removed 9 orphaned `SettingsKeys` (5 per-section accent colors and 4
+  per-tab enable flags, both retired when the design system moved to a single global accent and a
+  4/5-tab shell — zero consumers remained anywhere in the app). The merged JVM test-coverage floor
+  was raised from 9% to 14% to match measured coverage (`:libs:settings` 38%, `:libs:core` 15%).
+
+### Fixed
+- The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no
+  app behaviour at all. It is now a real, enforcing gate (see Added, sub-phase 0b.3).
+- A module's Settings entry could corrupt Compose's slot table: the consent flag was read by a
+  `@Composable` call placed inside a `when` branch condition behind a short-circuiting `&&`, so it
+  was invoked a different number of times depending on whether the module was turned off. Both
+  reads are now hoisted above the branch.
+- `AppDetailsViewModel` was constructed with `remember {}` rather than resolved as a ViewModel, so
+  its `viewModelScope` was never cancelled — a coroutine leak the moment a real update-checker is
+  wired. It is now provided by Koin.
+- The "app lock turned off — no screen lock is set" notice could repeat on a quick
+  background/foreground cycle, because the condition guarding it read a preference whose reset was
+  still in flight.
+- Google Sign-In nonce generation was duplicated between first-run sign-in and Settings › Account.
+  Both now share one implementation in `:libs:core`, with tests pinning the raw-vs-SHA-256
+  distinction that silently breaks the token exchange when inverted.
+- Turning a module off did nothing beyond changing its own settings screen — the preference had no
+  reader, so the module stayed in the app. A turned-off module is now genuinely removed from
+  content. The control is also no longer offered for the calculator, which is the Calc tab's own
+  content and must not be user-hideable.
+- The "notifications are turned off in system settings" banner never refreshed after the user
+  followed it to system settings and came back — the one journey it exists to support.
+- "Delete my data" / "Delete my account" were tappable while signed out, producing a failure that
+  looked like a server problem. They now show a signed-out state instead.
+- The personal AI key row claimed it "bypasses the shared quota"; the saved key is stored securely
+  but not yet used by the assistant. The row now says so rather than promising otherwise.
+- `DependencyRulesTest`'s test-class exclusion (`ImportOption.DoNotIncludeTests()`) never matched
+  this project's actual unit-test output path — every existing ArchUnit rule had silently been
+  importing test classes all along. Replaced with a working exclusion predicate.
+- The assistant's DPDP consent flag was held in memory only and forgotten on every restart, so
+  users were re-asked forever. It now persists through `SettingsRepository` and survives a
+  force-stop (sub-phase 0b.4).
+
 ## [finance-2.0.4] - 2026-08-16
 
 ### Changed

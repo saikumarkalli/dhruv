@@ -30,6 +30,18 @@ modules in Koin 3.5.6. If it does not behave as expected, the fallback is a sing
 per feature collected by qualifier — same property, marginally more ceremony. This is the one
 mechanism assumption worth proving in the first RED test rather than at integration time.
 
+**Verified 2026-08-27 (0b.1 T010) — the fallback is required, not optional.**
+`ContributionResolutionProbeTest` caught this on the first run: an **unqualified**
+`single { SettingsContribution(...) }` collides across modules — Koin 3.5.6 keys its definition
+registry by `(type, qualifier)`, so two modules each registering the bare type both land on
+`(SettingsContribution, null)` and the second silently overwrites the first (`getAll` returned only
+the last-loaded contribution, not both). `getAll<T>()` does **not** filter by qualifier, so the fix
+is exactly R1's stated fallback: every contribution's `single` is qualified by its own `moduleKey`
+(`single(qualifier = named(moduleKey)) { ... }`). This is now the binding registration convention
+for every `SettingsContribution` (contract §1, T033 onward) — an unqualified registration is a
+wiring bug that makes a second module's entry silently disappear, exactly the class of failure
+`SET-ARCH-001`/`SET-BR-003` guard against.
+
 ---
 
 ## R2 — What a module is allowed to contribute

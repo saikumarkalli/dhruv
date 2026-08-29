@@ -11,4 +11,24 @@
     <string name="calc_pill_tag">Tag</string>
     <string name="calc_pill_save">Save</string>
     <string name="calc_pill_saved">Saved</string>
+
+    <!-- Settings contribution (004-settings T033) -->
+    <string name="settings_calculator_title">Calculator</string>
+    <string name="settings_calculator_summary">Number format, decimal precision, angle mode, history</string>
+    <string name="settings_calculator_format_label">Number format</string>
+    <string name="settings_calculator_format_description">How large numbers are grouped and separated</string>
+    <string name="settings_calculator_format_international">International (1,000,000)</string>
+    <string name="settings_calculator_format_indian">Indian (10,00,000)</string>
+    <string name="settings_calculator_precision_label">Decimal precision</string>
+    <string name="settings_calculator_precision_description">How many digits after the decimal point</string>
+    <string name="settings_calculator_precision_preview_label">Preview</string>
+    <string name="settings_calculator_angle_mode_label">Angle mode</string>
+    <string name="settings_calculator_angle_mode_description">Used by trigonometric functions</string>
+    <string name="settings_calculator_angle_deg">DEG</string>
+    <string name="settings_calculator_angle_rad">RAD</string>
+    <string name="settings_calculator_clear_history_label">Clear history</string>
+    <string name="settings_calculator_clear_history_description">Permanently wipe saved calculator results</string>
+    <string name="settings_calculator_clear_history_confirm_title">Clear history?</string>
+    <string name="settings_calculator_clear_history_confirm_body">This permanently deletes saved calculation logs on this device.</string>
+    <string name="settings_calculator_clear_history_confirm_action">Clear</string>
 </resources>

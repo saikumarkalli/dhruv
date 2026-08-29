@@ -97,6 +97,18 @@ Named scale — read via `DhruvNextType.*`, never a raw `.sp` literal:
 Keypad glyphs scale separately (`DhruvNextKeypad.*`) — they are fixed-grid button glyphs, not
 content text, and sizing them on the content scale looks disproportionate.
 
+**Open (found 2026-08-29, 004-settings 0b.5's orphan-preference audit): is the font user-selectable
+or not?** This section specifies a fixed three-family system and lists no font-picker in §5's
+component table or any app's screen inventory — but `DhruvFont` ships four variants
+(`DEFAULT`/`MONO`/`ROUNDED`/`BRAND_SERIF`), `DhruvTheme` actively branches on them, and a
+`font_family` preference is persisted. So the preference is **live but unreachable**: no Settings
+row anywhere changes it, which is an FR-003 violation in 004's terms ("every persisted key has
+exactly one row"). 0b.5 deliberately did not resolve it — inventing a picker is unspecified UI
+scope, and deleting the non-default variants removes shipped capability. **This document owns the
+call**; whichever phase implements the answer follows it. Tracked in
+`apps/finance/docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md` §5.5
+item 4 and `apps/finance/specs/004-settings/quickstart.md` §7.
+
 **Money is always tabular numerals, and never ellipsised** — wrap or switch to compact format
 (`₹4.8L` / `₹1.25Cr`) instead. Full format in lists, sheets, history and PDF; compact on cards and
 widgets.
@@ -209,9 +221,11 @@ micro-frontend rule forbids).
 | Component | Has | Design also draws | Impact |
 |---|---|---|---|
 | `NxButton` | 5 variants (Primary/Soft/Outline/Ghost/Destructive), `enabled` | **Sizes** (Small / Medium), **Loading** state, **Block** (full-width) treatment | Sheets need the full-width primary (§8); forms need in-flight disable + spinner |
-| `NxTextField` | label, prefix/suffix, placeholder, `singleLine`, read-only | **Error state with message** ("Enter a valid amount"), **helper/supporting text** | Every validated form field; currently no way to show a field error through the system |
 | `CountBadge` | numeric count, "99+" cap | **Status dot** variants (success / warning / error / accent) | Status indicators fall back to ad-hoc dots |
 | `Chip` / `Pill` | selected, filled, strong, leading icon | **Removable** input chip (trailing `×`) | Filter/tag removal UI |
+
+Closed since the last pass: `NxTextField` gained an `errorMessage` param (red border + message text
+below the field) — 004-settings 0b.4 T097, first consumed by the assistant's personal-key row.
 
 Closing a §5.3 row means **extending the existing component**, never adding a parallel one — two
 button components is precisely the fragmentation this library exists to prevent.

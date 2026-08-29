@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
+import com.dhruv.core.ui.components.LocalHideAmounts
 
 @Composable
 fun Modifier.appGradientBackground(): Modifier {
@@ -92,6 +93,7 @@ fun DhruvTheme(
     theme: AppTheme = AppTheme.SYSTEM,
     accentColorHex: String? = null,
     font: DhruvFont = DhruvFont.DEFAULT,
+    hideAmounts: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -163,6 +165,7 @@ fun DhruvTheme(
         LocalDhruvNextRadiiValues provides nextTokens.radii,
         LocalDhruvNextTypeScale provides nextTokens.type,
         LocalDhruvNextKeypadScale provides nextTokens.keypad,
+        LocalHideAmounts provides hideAmounts,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
