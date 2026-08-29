@@ -14,10 +14,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dhruv.core.ui.components.ConfirmDangerDialog
-import com.dhruv.finance.app.R
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.app.R
 
 /** The exact string a user must type to confirm account erasure (design system §5.1: "account-level
  * deletions use type-to-confirm", `SET-BR-021`). */

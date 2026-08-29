@@ -19,10 +19,11 @@ import org.robolectric.annotation.Config
 /**
  * `SET-BR-007` / FR-042 / contract §2 rule 9: a row write persists immediately with no save
  * action, and a failing write reverts the displayed value and states why.
+ *
+ * `application = Application::class` — the real `CalculatorApplication`'s `startKoin()` collides
+ * across Robolectric test classes in the same JVM fork (`KoinAppAlreadyStartedException`); this
+ * test doesn't need the real DI graph. See `ModuleEntryIsolationTest`'s identical note.
  */
-// application = Application::class — the real CalculatorApplication's startKoin() collides across
-// Robolectric test classes in the same JVM fork (KoinAppAlreadyStartedException); this test
-// doesn't need the real DI graph. See ModuleEntryIsolationTest's identical note.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class SettingsRowWriteTest {

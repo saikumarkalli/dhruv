@@ -48,8 +48,7 @@ class AccountSettingsViewModel(
     suspend fun onGoogleIdTokenReceived(
         idToken: String,
         rawNonce: String,
-    ): Result<Unit> =
-        authRepository.signInWithGoogleIdToken(idToken, rawNonce).onFailure { crashReporter.recordException(it) }
+    ): Result<Unit> = authRepository.signInWithGoogleIdToken(idToken, rawNonce).onFailure { crashReporter.recordException(it) }
 
     /** `SET-FLOW-004`: clears the session/credentials only — never touches Room-backed calculator
      * data, because nothing here has a reference to it. */
@@ -58,11 +57,9 @@ class AccountSettingsViewModel(
     /** `SET-BR-022`: returns the repository's [Result] unchanged — a failure is never swallowed
      * into a fabricated success, and this function does not track a "completed" flag that would
      * make the action unavailable for retry. */
-    suspend fun deleteMyData(): Result<Unit> =
-        trackerAccountRepository.deleteMyData().onFailure { crashReporter.recordException(it) }
+    suspend fun deleteMyData(): Result<Unit> = trackerAccountRepository.deleteMyData().onFailure { crashReporter.recordException(it) }
 
     /** `SET-BR-021`/`SET-BR-022`: same shape as [deleteMyData]. The typed-confirmation requirement
      * (`DELETE_MY_ACCOUNT_CONFIRM_TEXT`) is enforced by the dialog before this is ever called. */
-    suspend fun deleteMyAccount(): Result<Unit> =
-        trackerAccountRepository.deleteMyAccount().onFailure { crashReporter.recordException(it) }
+    suspend fun deleteMyAccount(): Result<Unit> = trackerAccountRepository.deleteMyAccount().onFailure { crashReporter.recordException(it) }
 }

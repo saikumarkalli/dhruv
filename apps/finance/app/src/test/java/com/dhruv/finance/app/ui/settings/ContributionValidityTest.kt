@@ -19,8 +19,17 @@ class ContributionValidityTest {
     // Mirrors platform/feature-flags/dhruv-finance.json's key set — kept in sync manually.
     private val knownFlagKeys =
         setOf(
-            "calculator", "loans", "investments", "tax", "everyday",
-            "currency", "unit", "date", "time", "assistant", "networth",
+            "calculator",
+            "loans",
+            "investments",
+            "tax",
+            "everyday",
+            "currency",
+            "unit",
+            "date",
+            "time",
+            "assistant",
+            "networth",
         )
 
     @Test

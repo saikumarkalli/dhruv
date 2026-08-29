@@ -10,8 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-private fun toggle(key: String) =
-    SettingsRow.Toggle(key = key, label = 1, description = 2, value = flowOf(false), onChange = {})
+private fun toggle(key: String) = SettingsRow.Toggle(key = key, label = 1, description = 2, value = flowOf(false), onChange = {})
 
 private fun contributionWithAlerts(
     moduleKey: String,

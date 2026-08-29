@@ -20,10 +20,11 @@ import org.robolectric.annotation.Config
  * `AppearanceThemeRow` composable bound to the same [FakeSettingsRepository] — this proves that
  * shared binding, not a separate copy of the value (FR-002's "never a second copy" rule), by
  * rendering two independent instances side by side against one repository.
+ *
+ * `application = Application::class` — the real `CalculatorApplication`'s `startKoin()` collides
+ * across Robolectric test classes in the same JVM fork (`KoinAppAlreadyStartedException`); this
+ * test doesn't need the real DI graph. See `ModuleEntryIsolationTest`'s identical note.
  */
-// application = Application::class — the real CalculatorApplication's startKoin() collides across
-// Robolectric test classes in the same JVM fork (KoinAppAlreadyStartedException); this test
-// doesn't need the real DI graph. See ModuleEntryIsolationTest's identical note.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class QuickRowMirrorTest {

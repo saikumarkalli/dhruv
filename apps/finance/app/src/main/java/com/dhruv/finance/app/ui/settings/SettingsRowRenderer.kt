@@ -336,7 +336,10 @@ private fun SecretTextRow(
         } else {
             NxTextField(
                 value = draft,
-                onValueChange = { draft = it; errorMessage = null },
+                onValueChange = {
+                    draft = it
+                    errorMessage = null
+                },
                 placeholder = stringResource(R.string.settings_secret_placeholder),
                 errorMessage = errorMessage,
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),

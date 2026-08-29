@@ -22,10 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.dhruv.core.security.LockState
-import com.dhruv.finance.app.R
 import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.NxButton
 import com.dhruv.core.ui.theme.DhruvBrand
+import com.dhruv.finance.app.R
 
 private const val ALLOWED_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -107,7 +107,8 @@ private fun promptBiometric(
             }
         }
     val promptInfo =
-        BiometricPrompt.PromptInfo.Builder()
+        BiometricPrompt.PromptInfo
+            .Builder()
             .setTitle(activity.getString(R.string.app_lock_prompt_title))
             .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
             // No setNegativeButtonText: mutually exclusive with DEVICE_CREDENTIAL in the allowed

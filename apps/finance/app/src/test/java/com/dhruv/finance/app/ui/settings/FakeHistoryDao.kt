@@ -9,7 +9,9 @@ class FakeHistoryDao : HistoryDao {
     private val all = MutableStateFlow<List<HistoryEntity>>(emptyList())
 
     override fun getActiveHistory() = all
+
     override fun getRecycleBinHistory() = all
+
     override fun getAllHistory() = all
 
     override suspend fun insertHistory(history: HistoryEntity) {

@@ -37,6 +37,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.dhruv.core.security.SignInNonce
 import com.dhruv.core.ui.components.InitialsTile
 import com.dhruv.core.ui.components.ListGroup
 import com.dhruv.core.ui.components.NxButton
@@ -47,7 +48,6 @@ import com.dhruv.core.ui.components.SwitchRow
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
-import com.dhruv.core.security.SignInNonce
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.app.BuildConfig
 import com.dhruv.finance.app.R

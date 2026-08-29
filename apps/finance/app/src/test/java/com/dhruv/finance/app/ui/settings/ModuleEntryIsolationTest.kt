@@ -9,8 +9,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.dhruv.core.observability.NoOpCrashReporter
-import com.dhruv.finance.calculator.R as CalculatorR
-import com.dhruv.finance.currency.R as CurrencyR
 import com.dhruv.settings.contribution.SettingsContribution
 import com.dhruv.settings.contribution.SettingsGroup
 import com.dhruv.settings.contribution.SettingsRow
@@ -20,6 +18,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.dhruv.finance.calculator.R as CalculatorR
+import com.dhruv.finance.currency.R as CurrencyR
 
 /**
  * `SET-ARCH-007` / contract §4 rule 12 / constitution IV: a contribution that throws while
@@ -28,11 +28,13 @@ import org.robolectric.annotation.Config
  * during collection (`SettingsRowRenderer`'s `onError` → `ModuleSettingsScreen`'s `FeatureHost`) —
  * since `SettingsContribution` is a plain data class with no lazy computation of its own for a
  * "contribution that throws" to mean anything else.
+ *
+ * `application = Application::class`: these tests don't need the real DI graph, and the real
+ * `CalculatorApplication.onCreate()` calls `startKoin()` — Robolectric re-instantiates the
+ * Application per test class within the same JVM fork, so the real Application collides across
+ * test classes with `KoinAppAlreadyStartedException` (found running this suite; see also
+ * `QuickRowMirrorTest`).
  */
-// application = Application::class: these tests don't need the real DI graph, and the real
-// CalculatorApplication.onCreate() calls startKoin() — Robolectric re-instantiates the Application
-// per test class within the same JVM fork, so the real Application collides across test classes
-// with KoinAppAlreadyStartedException (found running this suite; see also QuickRowMirrorTest).
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class ModuleEntryIsolationTest {

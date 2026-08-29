@@ -112,10 +112,6 @@ fun SettingsDetailContent(
 }
 
 /**
- * D7-bridge: wires the existing [AssistantScreen] so the floating "Ask Dhruv" pill has a real
- * destination today. A DhruvNext-styled chat screen replaces this content in a later phase (D7).
- */
-/**
  * FR-032's actual enforcement point: a module the user turned off (`module_enabled_<moduleKey>`)
  * is removed from content the same way a flag-disabled one is — `FeatureHost` renders
  * `FeatureDisabledCard` (PLATFORM.md §4), rather than inventing a second "turned off" treatment.
@@ -133,6 +129,10 @@ private fun rememberModuleEnabled(moduleKey: String): Boolean {
     return enabled
 }
 
+/**
+ * D7-bridge: wires the existing [AssistantScreen] so the floating "Ask Dhruv" pill has a real
+ * destination today. A DhruvNext-styled chat screen replaces this content in a later phase (D7).
+ */
 @Composable
 fun AskDetailContent(
     resolver: FeatureFlagResolver,

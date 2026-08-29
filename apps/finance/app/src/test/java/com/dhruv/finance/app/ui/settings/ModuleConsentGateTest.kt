@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.dhruv.core.flags.FeatureFlagResolver
 import com.dhruv.core.observability.NoOpCrashReporter
-import com.dhruv.finance.assistant.R as AssistantR
 import com.dhruv.settings.contribution.SettingsContribution
 import com.dhruv.settings.contribution.SettingsGroup
 import com.dhruv.settings.contribution.SettingsRow
@@ -17,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.dhruv.finance.assistant.R as AssistantR
 
 private val requiresConsentResolver =
     object : FeatureFlagResolver {
@@ -124,7 +124,8 @@ class ModuleConsentGateTest {
         // note: `runBlocking` here deadlocks against `waitForIdle`).
         repository.moduleEnabledMap.value = mapOf("gated_module" to false)
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("This module is turned off. Turn it back on above to see its settings again.")
+        composeTestRule
+            .onNodeWithText("This module is turned off. Turn it back on above to see its settings again.")
             .assertIsDisplayed()
 
         // Back on — the consent gate is now what shows. Recomposing across this transition is

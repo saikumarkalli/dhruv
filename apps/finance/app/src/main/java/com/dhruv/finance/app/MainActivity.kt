@@ -140,13 +140,14 @@ internal fun shouldShowOnboarding(
  * goes straight to [AppShell] exactly as before this change; everyone else sees
  * `com.dhruv.finance.app.ui.onboarding.OnboardingHost` instead — full-frame, no tab bar, no top
  * bar, same as the branded splash overlay already renders bare on top of either one.
+ *
+ * `MainActivity` is a `FragmentActivity` (extends `ComponentActivity`), not a plain
+ * `ComponentActivity`: androidx.biometric's `BiometricPrompt` constructor requires a
+ * `FragmentActivity` or `Fragment` host (0b.3, contracts/app-lock-gate.md §2) — it hosts an
+ * invisible worker Fragment internally to survive configuration changes across the async
+ * biometric flow. `setContent` (a `ComponentActivity` extension) still works unchanged on a
+ * `FragmentActivity` instance.
  */
-
-// FragmentActivity (extends ComponentActivity), not plain ComponentActivity: androidx.biometric's
-// BiometricPrompt constructor requires a FragmentActivity or Fragment host (0b.3,
-// contracts/app-lock-gate.md §2) — it hosts an invisible worker Fragment internally to survive
-// configuration changes across the async biometric flow. setContent (a ComponentActivity
-// extension) still works unchanged on a FragmentActivity instance.
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

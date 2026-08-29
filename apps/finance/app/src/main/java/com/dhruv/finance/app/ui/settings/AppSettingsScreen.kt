@@ -2,7 +2,6 @@ package com.dhruv.finance.app.ui.settings
 
 import android.content.Intent
 import android.os.Build
-import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +26,6 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dhruv.core.security.LockTimeout
-import com.dhruv.core.ui.components.ListGroup
 import com.dhruv.core.ui.components.ListGroupRow
 import com.dhruv.core.ui.components.SectionLabel
 import com.dhruv.core.ui.components.SegmentedRow
@@ -40,6 +38,7 @@ import com.dhruv.settings.AppSettings
 import com.dhruv.settings.SettingsRepository
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import android.provider.Settings as AndroidSettings
 
 /**
  * Settings › App tier (FR-001). Appearance (0b.1, T029), Security and Notifications (0b.3, T070/
