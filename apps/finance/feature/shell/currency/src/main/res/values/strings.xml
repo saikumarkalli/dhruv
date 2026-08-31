@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings contribution (004-settings T035) -->
+    <string name="settings_currency_title">Currency converter</string>
+    <string name="settings_currency_summary">Live currency conversion rates</string>
+    <string name="settings_currency_supported_label">Supported currencies</string>
+    <string name="settings_currency_supported_description">Live rates, refreshed automatically</string>
+
+    <!-- Daily-rates alert control (004-settings T090) — establishes the alert convention SET-BR-006
+         measures; metals-rates deliberately absent, not shipped yet (FR-031). -->
+    <string name="settings_currency_daily_rates_label">Daily rates alert</string>
+    <string name="settings_currency_daily_rates_description">A once-a-day notification with the currencies you track</string>
+    <string name="settings_currency_daily_rates_time_label">Delivery time</string>
+    <string name="settings_currency_daily_rates_time_description">When the daily rates notification arrives</string>
+    <string name="settings_currency_time_7am">7 AM</string>
+    <string name="settings_currency_time_9am">9 AM</string>
+    <string name="settings_currency_time_8pm">8 PM</string>
+</resources>

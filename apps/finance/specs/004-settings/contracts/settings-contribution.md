@@ -31,6 +31,14 @@ SettingsGroup
   rows  : List<SettingsRow>
 ```
 
+**Registration**: `single(qualifier = named(moduleKey)) { SettingsContribution(...) }` in that
+module's own Koin module — **the qualifier is required, not optional**. Verified during
+implementation (research.md R1, 2026-08-27): Koin 3.5.6 keys `single` definitions by `(type,
+qualifier)`, so two modules each registering an *unqualified* `SettingsContribution` collide on the
+same key and the second silently overwrites the first — `getAll<SettingsContribution>()` then
+returns only the last-loaded contribution. Qualifying by `moduleKey` gives each definition a
+distinct key; `getAll` does not filter by qualifier, so every one is still returned.
+
 **Rules**
 
 1. `moduleKey` MUST be a key that exists in the app's feature-flag file. An unknown key resolves to
@@ -70,6 +78,12 @@ Every row carries: `key` (stable preference key, append-only), `label` (string r
    `Choice` with one option or an `Action` that opens a dialog it drew itself.
 9. Writes are `suspend` and the renderer applies them immediately — there is no save action anywhere in
    Settings (FR-042). A write that throws reverts the displayed value and shows why.
+10. A row's `onChange`/`onInvoke` MUST touch only that module's own preference keys. It MUST NOT read
+    or write app lock (`AppLockDecision`/the `biometric_*`/`app_lock_*` keys), consent
+    (`ConsentRepository`), or the secret-key store (`secure_settings`) — those are shell-owned
+    security surfaces, not a module's to reach around Settings' own UI path for them (FR-046,
+    resolved 2026-08-29, security checklist CHK046). Enforced by an ArchUnit rule (§5): no
+    `SettingsContribution` implementation package references those types directly.
 
 ---
 
@@ -78,10 +92,10 @@ Every row carries: `key` (stable preference key, append-only), `label` (string r
 A module that defines notification channels contributes one `Toggle` per channel, plus any threshold or
 delivery-time rows as `Choice`/`Stepper` in the same group.
 
-10. Every channel in the app's notification channel registry MUST have exactly one control, in the
+11. Every channel in the app's notification channel registry MUST have exactly one control, in the
     module that owns the channel. No alert control may live in the App tier — that tier holds only the
     app-wide master switch and the system-permission state (FR-026, FR-030).
-11. An alert whose source feature has not shipped MUST be absent, not present-and-inert (FR-031).
+12. An alert whose source feature has not shipped MUST be absent, not present-and-inert (FR-031).
 
 ---
 
@@ -94,10 +108,10 @@ The shell's `SettingsRegistry`:
 3. sorts by `order`, then `title`;
 4. renders each entry inside a `FeatureHost` keyed on `moduleKey`.
 
-12. A contribution that throws while producing rows degrades to that module's error card inside
+13. A contribution that throws while producing rows degrades to that module's error card inside
     Settings. The tier and every other entry keep working — Settings never blanks (constitution IV).
-13. Resolution happens once per Settings open, not per recomposition.
-14. When a module is turned off, its entry disappears but its stored preferences are retained, so
+14. Resolution happens once per Settings open, not per recomposition.
+15. When a module is turned off, its entry disappears but its stored preferences are retained, so
     re-enabling restores them (FR-032).
 
 ---
@@ -112,3 +126,4 @@ The shell's `SettingsRegistry`:
 | Channel ↔ control is 1:1 | Unit test comparing the channel registry to the contributed alert toggles (SC-006) |
 | Adding a module changes no Settings file | Verification step: add a throwaway module, diff (SC-004) |
 | Preference keys are append-only | Unit test asserting today's key set is a subset of the shipped set (SC-001, constitution IX) |
+| A contribution's rows don't reach shell-owned security surfaces (rule 10) | ArchUnit: no `SettingsContribution` implementation package references `AppLockDecision`, `ConsentRepository`, or the secure-settings key store types directly |

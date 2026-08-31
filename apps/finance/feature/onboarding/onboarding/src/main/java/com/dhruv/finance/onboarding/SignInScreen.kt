@@ -30,6 +30,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import com.dhruv.core.security.SignInNonce
 import com.dhruv.core.ui.components.NxButton
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
@@ -39,8 +40,6 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import java.security.MessageDigest
-import java.security.SecureRandom
 
 /**
  * A2 — sign-in (functional spec §5 Group A). Bare, full-frame, no chrome (registry §1). Google is
@@ -134,18 +133,18 @@ fun SignInScreen(
                 } else {
                     isSigningIn = true
                     coroutineScope.launch {
-                        // Generated fresh per attempt, never reused. The RAW value goes to GoTrue
-                        // (which hashes it itself to compare against the token's nonce claim); only
-                        // the SHA-256 hash goes to Google via setNonce — Google puts the hash it's
-                        // given verbatim into the id_token, it does not hash it again.
-                        val rawNonce = generateRawNonce()
+                        // Generated fresh per attempt, never reused. See SignInNonce's own doc for
+                        // why the raw value goes to GoTrue and only the SHA-256 hex goes to Google.
+                        // Shared with Settings › Account's sign-in (0b.2) rather than duplicated —
+                        // one implementation of a security primitive, not two.
+                        val nonce = SignInNonce.generate()
                         runCatching {
                             val googleIdOption =
                                 GetGoogleIdOption
                                     .Builder()
                                     .setFilterByAuthorizedAccounts(false)
                                     .setServerClientId(googleSignInConfig.webClientId)
-                                    .setNonce(sha256Hex(rawNonce))
+                                    .setNonce(nonce.sha256Hex)
                                     .build()
                             val request =
                                 GetCredentialRequest
@@ -163,7 +162,7 @@ fun SignInScreen(
                                 // step — a failure here (network, bad SUPABASE_URL, or a nonce
                                 // mismatch) is just as retryable and must not be silently dropped
                                 // nor escalate to a feature crash.
-                                val signInResult = onGoogleIdTokenReceived(idToken, rawNonce)
+                                val signInResult = onGoogleIdTokenReceived(idToken, nonce.raw)
                                 isSigningIn = false
                                 signInResult.onFailure {
                                     showSignInError(
@@ -237,21 +236,6 @@ private fun isDeviceOnline(context: Context): Boolean {
     val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
     return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-}
-
-/** 32 random bytes, hex-encoded — the raw (unhashed) nonce GoTrue expects to receive verbatim. */
-private fun generateRawNonce(): String {
-    val bytes = ByteArray(32)
-    SecureRandom().nextBytes(bytes)
-    return bytes.joinToString(separator = "") { "%02x".format(it) }
-}
-
-/** Google's `GetGoogleIdOption.setNonce` expects the SHA-256 hex digest of the raw nonce, not the
- * raw value itself — Google embeds whatever it's given verbatim into the id_token's nonce claim,
- * so the hash has to happen on this side before the value ever reaches Credential Manager. */
-private fun sha256Hex(value: String): String {
-    val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
-    return digest.joinToString(separator = "") { "%02x".format(it) }
 }
 
 @Preview(showBackground = true, uiMode = UI_MODE_NIGHT_NO)

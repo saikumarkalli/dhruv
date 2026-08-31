@@ -1,7 +1,8 @@
 package com.dhruv.finance.app
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.os.SystemClock
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -52,6 +58,9 @@ import com.dhruv.core.navigation.TabKey
 import com.dhruv.core.navigation.pageIndexFor
 import com.dhruv.core.navigation.resolveBackAction
 import com.dhruv.core.observability.CrashReporter
+import com.dhruv.core.security.LockState
+import com.dhruv.core.security.LockTimeout
+import com.dhruv.core.security.appLockState
 import com.dhruv.core.ui.FeatureHost
 import com.dhruv.core.ui.components.AskPill
 import com.dhruv.core.ui.components.BottomBar
@@ -64,7 +73,10 @@ import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.onboarding.OnboardingHost
 import com.dhruv.finance.app.ui.plan.PlanLauncher
+import com.dhruv.finance.app.ui.settings.AppLockGate
+import com.dhruv.finance.app.ui.settings.HeldTargetStore
 import com.dhruv.finance.app.ui.settings.SettingsViewModel
+import com.dhruv.finance.app.ui.settings.hasEnrolledCredential
 import com.dhruv.finance.app.ui.shell.AppSwitcherSheet
 import com.dhruv.finance.app.ui.shell.AskDetailContent
 import com.dhruv.finance.app.ui.shell.CurrencyDetailContent
@@ -80,8 +92,6 @@ import com.dhruv.finance.calculator.CalculatorScreen
 import com.dhruv.finance.calculator.CalculatorViewModel
 import com.dhruv.finance.calculator.copyResultToClipboard
 import com.dhruv.finance.data.tracker.auth.ConsentRepository
-import com.dhruv.finance.data.tracker.auth.SessionStore
-import com.dhruv.finance.data.tracker.auth.TrackerAccountRepository
 import com.dhruv.finance.everyday.EverydayScreen
 import com.dhruv.finance.everyday.EverydayViewModel
 import com.dhruv.finance.investments.InvestmentsScreen
@@ -91,10 +101,13 @@ import com.dhruv.finance.loans.LoansViewModel
 import com.dhruv.finance.onboarding.OnboardingViewModel
 import com.dhruv.finance.tax.TaxScreen
 import com.dhruv.finance.tax.TaxViewModel
+import com.dhruv.settings.AppSettings
 import com.dhruv.settings.SettingsRepository
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Cold-launch / post-account-deletion onboarding gate (Task 3 decision 2; Fix 4, final
@@ -127,9 +140,15 @@ internal fun shouldShowOnboarding(
  * goes straight to [AppShell] exactly as before this change; everyone else sees
  * `com.dhruv.finance.app.ui.onboarding.OnboardingHost` instead — full-frame, no tab bar, no top
  * bar, same as the branded splash overlay already renders bare on top of either one.
+ *
+ * `MainActivity` is a `FragmentActivity` (extends `ComponentActivity`), not a plain
+ * `ComponentActivity`: androidx.biometric's `BiometricPrompt` constructor requires a
+ * `FragmentActivity` or `Fragment` host (0b.3, contracts/app-lock-gate.md §2) — it hosts an
+ * invisible worker Fragment internally to survive configuration changes across the async
+ * biometric flow. `setContent` (a `ComponentActivity` extension) still works unchanged on a
+ * `FragmentActivity` instance.
  */
-
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -140,8 +159,6 @@ class MainActivity : ComponentActivity() {
             val crashReporter: CrashReporter = koinInject()
             val navigationDispatcher: NavigationDispatcher = koinInject()
             val consentRepository: ConsentRepository = koinInject()
-            val trackerAccountRepository: TrackerAccountRepository = koinInject()
-            val sessionStore: SessionStore = koinInject()
             val settingsViewModel: SettingsViewModel = koinViewModel()
             val calculatorViewModel: CalculatorViewModel = koinViewModel()
             val onboardingViewModel: OnboardingViewModel = koinViewModel()
@@ -152,6 +169,7 @@ class MainActivity : ComponentActivity() {
                 theme = appSettings.theme,
                 accentColorHex = appSettings.accentColorHex,
                 font = appSettings.fontFamily,
+                hideAmounts = appSettings.hideAmounts,
             ) {
                 // The whole app UI is composed immediately and the branded splash is overlaid on
                 // top of it, so the app is fully ready the instant the splash hands off.
@@ -195,15 +213,12 @@ class MainActivity : ComponentActivity() {
                     } else {
                         AppShell(
                             activity = this@MainActivity,
+                            appSettings = appSettings,
                             settingsRepository = settingsRepository,
-                            consentRepository = consentRepository,
-                            trackerAccountRepository = trackerAccountRepository,
-                            sessionStore = sessionStore,
                             resolver = resolver,
                             crashReporter = crashReporter,
                             navigationDispatcher = navigationDispatcher,
                             calculatorViewModel = calculatorViewModel,
-                            onClearHistory = { calculatorViewModel.clearHistory() },
                         )
                     }
 
@@ -218,16 +233,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun AppShell(
-    activity: ComponentActivity,
+    activity: FragmentActivity,
+    appSettings: AppSettings,
     settingsRepository: SettingsRepository,
-    consentRepository: ConsentRepository,
-    trackerAccountRepository: TrackerAccountRepository,
-    sessionStore: SessionStore,
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     navigationDispatcher: NavigationDispatcher,
     calculatorViewModel: CalculatorViewModel,
-    onClearHistory: () -> Unit,
 ) {
     val tabs = TabKey.entries
     val pagerState = rememberPagerState(pageCount = { tabs.size })
@@ -235,16 +247,96 @@ private fun AppShell(
     val planNavController = rememberNavController()
 
     var detailRoute by remember { mutableStateOf<DetailRoute?>(null) }
+    // Settings' own sub-route (SettingsAccount/SettingsApp/SettingsModule, 004-settings T012/T013):
+    // a second layer on top of detailRoute == Settings, so one back-press pops the sub-route to the
+    // Settings top level and a second pops Settings itself — without resolveBackAction growing a
+    // notion of nested detail stacks; CLOSE_DETAIL is simply asked to pop the innermost layer first.
+    var settingsSubRoute by remember { mutableStateOf<DetailRoute?>(null) }
     var showAppSwitcher by remember { mutableStateOf(false) }
 
-    // The only cross-feature/cross-tab navigation mechanism (NAV1/ADR-0024). Nothing in this pass
-    // emits a target yet (D5's Home quick actions are the first real producer), but the shell must
-    // already be listening so a later phase doesn't need to touch MainActivity again to work.
+    // ── App lock (0b.3, contracts/app-lock-gate.md) ─────────────────────────────────────────────
+    // rememberUpdatedState: the ProcessLifecycleOwner observer below is registered once
+    // (DisposableEffect(Unit)) and must never restart on every settings change, but its ON_START
+    // callback still needs the *current* appSettings, not whatever was captured when it was set up.
+    val currentAppSettings by rememberUpdatedState(appSettings)
+    val heldTargetStore = remember { HeldTargetStore() }
+    // null = currently foreground (or never backgrounded this process); non-null = elapsedRealtime
+    // at the last ON_STOP, consumed by the next ON_START to compute elapsedSinceBackground.
+    var backgroundedAtMillis by remember { mutableStateOf<Long?>(null) }
+    var authenticatedThisForeground by remember { mutableStateOf(false) }
+    // Gate §2 rule 12's notice is "one-time" — latched here rather than keyed off
+    // `biometricEnabled` alone, because the reset below is an async DataStore write: until it
+    // lands, the condition still reads true and a second resolve (a quick background/foreground
+    // cycle) would fire the Toast again.
+    var credentialLossNotified by remember { mutableStateOf(false) }
+
+    /** Pure query — no writes, no UI. The fall-open side effects live in [applyLockState]. */
+    fun resolveLockState(
+        elapsedSinceBackground: Duration?,
+        credentialAvailable: Boolean,
+    ): LockState =
+        appLockState(
+            enabled = currentAppSettings.biometricEnabled,
+            timeout = LockTimeout.fromId(currentAppSettings.appLockTimeout),
+            elapsedSinceBackground = elapsedSinceBackground,
+            alreadyAuthenticatedThisForeground = authenticatedThisForeground,
+            hasEnrolledCredential = credentialAvailable,
+        )
+
+    /**
+     * Gate §1 rule 5 + §2 rule 12: resolve, and — when the credential that made app lock enabled
+     * has since been removed — fall open, reset the preference, and say so once. Credential
+     * availability is re-read on every resolve, never cached (§2 rule 12).
+     */
+    fun applyLockState(elapsedSinceBackground: Duration?): LockState {
+        val credentialAvailable = hasEnrolledCredential(activity)
+        if (!credentialAvailable && currentAppSettings.biometricEnabled && !credentialLossNotified) {
+            credentialLossNotified = true
+            coroutineScope.launch { settingsRepository.update { copy(biometricEnabled = false) } }
+            Toast
+                .makeText(activity, R.string.app_lock_disabled_no_credential, Toast.LENGTH_LONG)
+                .show()
+        }
+        return resolveLockState(elapsedSinceBackground, credentialAvailable)
+    }
+
+    // Resolved synchronously at first composition (cold start, gate §2 rule 8: before the first
+    // content frame) — appSettings itself is already the real synchronous snapshot, not a blank
+    // default (SettingsViewModel.settings' initialValue), so this is correct on frame one.
+    var lockState by remember { mutableStateOf(applyLockState(elapsedSinceBackground = null)) }
+
+    DisposableEffect(Unit) {
+        val observer =
+            object : DefaultLifecycleObserver {
+                override fun onStop(owner: LifecycleOwner) {
+                    backgroundedAtMillis = SystemClock.elapsedRealtime()
+                }
+
+                override fun onStart(owner: LifecycleOwner) {
+                    val backgroundedAt = backgroundedAtMillis ?: return
+                    backgroundedAtMillis = null
+                    val elapsed = (SystemClock.elapsedRealtime() - backgroundedAt).milliseconds
+                    val newState = applyLockState(elapsedSinceBackground = elapsed)
+                    lockState = newState
+                    if (newState == LockState.LOCKED) authenticatedThisForeground = false
+                }
+            }
+        ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+        onDispose { ProcessLifecycleOwner.get().lifecycle.removeObserver(observer) }
+    }
+
+    // The only cross-feature/cross-tab navigation mechanism (NAV1/ADR-0024). While LOCKED, a
+    // target is held rather than acted on immediately (gate §3, SET-FLOW-001) — dispatched once
+    // after a successful unlock, below.
     LaunchedEffect(navigationDispatcher) {
         navigationDispatcher.targets.collect { target ->
-            coroutineScope.launch { pagerState.scrollToPage(tabs.pageIndexFor(target)) }
-            if (target is NavTarget.OpenPlanTool) {
-                planNavController.navigate(target.tool.route())
+            if (lockState == LockState.LOCKED) {
+                heldTargetStore.hold(target)
+            } else {
+                coroutineScope.launch { pagerState.scrollToPage(tabs.pageIndexFor(target)) }
+                if (target is NavTarget.OpenPlanTool) {
+                    planNavController.navigate(target.tool.route())
+                }
             }
         }
     }
@@ -263,7 +355,12 @@ private fun AppShell(
                             currentTabIndex = pagerState.currentPage,
                         )
                     ) {
-                        BackAction.CLOSE_DETAIL -> detailRoute = null
+                        BackAction.CLOSE_DETAIL ->
+                            if (settingsSubRoute != null) {
+                                settingsSubRoute = null
+                            } else {
+                                detailRoute = null
+                            }
                         BackAction.POP_NESTED -> planNavController.popBackStack()
                         BackAction.RETURN_TO_FIRST_TAB -> coroutineScope.launch { pagerState.scrollToPage(0) }
                         BackAction.EXIT_APP -> activity.finish()
@@ -274,25 +371,43 @@ private fun AppShell(
         onDispose { callback.remove() }
     }
 
-    TabsScaffold(
-        pagerState = pagerState,
-        resolver = resolver,
-        crashReporter = crashReporter,
-        calculatorViewModel = calculatorViewModel,
-        planNavController = planNavController,
-        detailRoute = detailRoute,
-        settingsRepository = settingsRepository,
-        consentRepository = consentRepository,
-        trackerAccountRepository = trackerAccountRepository,
-        sessionStore = sessionStore,
-        onClearHistory = onClearHistory,
-        onOpenDetail = { detailRoute = it },
-        onDismissDetail = { detailRoute = null },
-        onOpenAppSwitcher = { showAppSwitcher = true },
-    )
+    AppLockGate(
+        activity = activity,
+        lockState = lockState,
+        onAuthenticated = {
+            authenticatedThisForeground = true
+            lockState = LockState.UNLOCKED
+            // Gate §3 rules 13–14: dispatched exactly once, after unlock.
+            heldTargetStore.takeAndClear()?.let { target ->
+                coroutineScope.launch { pagerState.scrollToPage(tabs.pageIndexFor(target)) }
+                if (target is NavTarget.OpenPlanTool) {
+                    planNavController.navigate(target.tool.route())
+                }
+            }
+        },
+    ) {
+        TabsScaffold(
+            pagerState = pagerState,
+            resolver = resolver,
+            crashReporter = crashReporter,
+            calculatorViewModel = calculatorViewModel,
+            planNavController = planNavController,
+            detailRoute = detailRoute,
+            settingsSubRoute = settingsSubRoute,
+            settingsRepository = settingsRepository,
+            onOpenDetail = { detailRoute = it },
+            onDismissDetail = {
+                detailRoute = null
+                settingsSubRoute = null
+            },
+            onOpenSettingsSubRoute = { settingsSubRoute = it },
+            onDismissSettingsSubRoute = { settingsSubRoute = null },
+            onOpenAppSwitcher = { showAppSwitcher = true },
+        )
 
-    if (showAppSwitcher) {
-        AppSwitcherSheet(onDismiss = { showAppSwitcher = false })
+        if (showAppSwitcher) {
+            AppSwitcherSheet(onDismiss = { showAppSwitcher = false })
+        }
     }
 }
 
@@ -305,13 +420,12 @@ private fun TabsScaffold(
     calculatorViewModel: CalculatorViewModel,
     planNavController: NavHostController,
     detailRoute: DetailRoute?,
+    settingsSubRoute: DetailRoute?,
     settingsRepository: SettingsRepository,
-    consentRepository: ConsentRepository,
-    trackerAccountRepository: TrackerAccountRepository,
-    sessionStore: SessionStore,
-    onClearHistory: () -> Unit,
     onOpenDetail: (DetailRoute) -> Unit,
     onDismissDetail: () -> Unit,
+    onOpenSettingsSubRoute: (DetailRoute) -> Unit,
+    onDismissSettingsSubRoute: () -> Unit,
     onOpenAppSwitcher: () -> Unit,
 ) {
     val tabs = TabKey.entries
@@ -378,14 +492,13 @@ private fun TabsScaffold(
             if (detailRoute != null) {
                 DetailRouteContent(
                     route = detailRoute,
+                    settingsSubRoute = settingsSubRoute,
                     resolver = resolver,
                     crashReporter = crashReporter,
                     settingsRepository = settingsRepository,
-                    consentRepository = consentRepository,
-                    trackerAccountRepository = trackerAccountRepository,
-                    sessionStore = sessionStore,
-                    onClearHistory = onClearHistory,
                     onBack = onDismissDetail,
+                    onOpenSettingsSubRoute = onOpenSettingsSubRoute,
+                    onDismissSettingsSubRoute = onDismissSettingsSubRoute,
                 )
             } else {
                 HorizontalPager(
@@ -513,24 +626,27 @@ private fun PlanTab(
 @Composable
 private fun DetailRouteContent(
     route: DetailRoute,
+    settingsSubRoute: DetailRoute?,
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     settingsRepository: SettingsRepository,
-    consentRepository: ConsentRepository,
-    trackerAccountRepository: TrackerAccountRepository,
-    sessionStore: SessionStore,
-    onClearHistory: () -> Unit,
     onBack: () -> Unit,
+    onOpenSettingsSubRoute: (DetailRoute) -> Unit,
+    onDismissSettingsSubRoute: () -> Unit,
 ) {
     when (route) {
-        DetailRoute.Settings ->
+        // SettingsAccount/SettingsApp/SettingsModule are only ever held in settingsSubRoute
+        // (T013), never assigned to detailRoute itself — grouped here only so this `when` stays
+        // exhaustive against DetailRoute's full sealed set.
+        DetailRoute.Settings, DetailRoute.SettingsAccount, DetailRoute.SettingsApp, is DetailRoute.SettingsModule ->
             SettingsDetailContent(
+                subRoute = settingsSubRoute,
+                resolver = resolver,
+                crashReporter = crashReporter,
                 settingsRepository = settingsRepository,
-                consentRepository = consentRepository,
-                trackerAccountRepository = trackerAccountRepository,
-                sessionStore = sessionStore,
-                onClearHistory = onClearHistory,
                 onBack = onBack,
+                onOpenSubRoute = onOpenSettingsSubRoute,
+                onBackFromSubRoute = onDismissSettingsSubRoute,
             )
         DetailRoute.Ask -> AskDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
         DetailRoute.Currency -> CurrencyDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.security.EncryptedDataStoreFactory
@@ -106,27 +107,40 @@ class SettingsRepositoryImpl(
 
     override val historyPinCode: StateFlow<String> = preferenceFlow(SettingsKeys.HISTORY_PIN_CODE, DEFAULT_PIN_CODE)
 
-    override val calculatorColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_CALCULATOR, "cyan")
-
-    override val converterColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_CONVERTER, "purple")
-
-    override val dateColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_DATE, "coral")
-
-    override val financeColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_FINANCE, "amber")
-
     override val formatLocale: StateFlow<String> = preferenceFlow(SettingsKeys.FORMAT_LOCALE, "international")
 
-    override val isConverterEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_CONVERTER_ENABLED, true)
-
-    override val isDateEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_DATE_ENABLED, true)
-
-    override val isFinanceEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_FINANCE_ENABLED, true)
-
-    override val timeColor: StateFlow<String> = preferenceFlow(SettingsKeys.COLOR_TIME, "teal")
-
-    override val isTimeEnabled: StateFlow<Boolean> = preferenceFlow(SettingsKeys.IS_TIME_ENABLED, true)
-
     // ── New Phase-3 API ───────────────────────────────────────────────────────────────────────
+
+    /** Shared by [observe] and [currentSnapshot] — the [geminiApiKey] param lets the synchronous
+     * snapshot path skip a second blocking encrypted-store read (see [currentSnapshot]'s doc). */
+    private fun buildAppSettings(
+        plain: Preferences,
+        geminiApiKey: String?,
+    ): AppSettings {
+        val darkMode = plain[SettingsKeys.DARK_MODE] ?: "system"
+        val theme =
+            when (darkMode) {
+                "always_dark" -> AppTheme.DARK
+                "always_light" -> AppTheme.LIGHT
+                else -> AppTheme.SYSTEM
+            }
+        val fontName = plain[SettingsKeys.FONT_FAMILY] ?: DhruvFont.DEFAULT.name
+        val font = runCatching { DhruvFont.valueOf(fontName) }.getOrDefault(DhruvFont.DEFAULT)
+        return AppSettings(
+            theme = theme,
+            accentColorHex = plain[SettingsKeys.ACCENT_COLOR_HEX] ?: "#F05A28",
+            fontFamily = font,
+            biometricEnabled = plain[SettingsKeys.BIOMETRIC_ENABLED] ?: false,
+            appLockTimeout = plain[SettingsKeys.APP_LOCK_TIMEOUT] ?: "after_1_min",
+            hideAmounts = plain[SettingsKeys.HIDE_AMOUNTS] ?: false,
+            notificationsMaster = plain[SettingsKeys.NOTIFICATIONS_MASTER] ?: true,
+            syncEnabled = plain[SettingsKeys.SYNC_ENABLED] ?: false,
+            assistantConsentGranted = plain[SettingsKeys.ASSISTANT_CONSENT_GRANTED] ?: false,
+            geminiApiKey = geminiApiKey,
+        )
+    }
+
+    override fun currentSnapshot(): AppSettings = buildAppSettings(initialPrefs, geminiApiKey = null)
 
     override fun observe(): Flow<AppSettings> {
         val plainFlow = context.appDataStore.data.catchAndLog()
@@ -136,23 +150,7 @@ class SettingsRepositoryImpl(
                 emit(emptyPreferences())
             }
         return combine(plainFlow, secureFlow) { plain, secure ->
-            val darkMode = plain[SettingsKeys.DARK_MODE] ?: "system"
-            val theme =
-                when (darkMode) {
-                    "always_dark" -> AppTheme.DARK
-                    "always_light" -> AppTheme.LIGHT
-                    else -> AppTheme.SYSTEM
-                }
-            val fontName = plain[SettingsKeys.FONT_FAMILY] ?: DhruvFont.DEFAULT.name
-            val font = runCatching { DhruvFont.valueOf(fontName) }.getOrDefault(DhruvFont.DEFAULT)
-            AppSettings(
-                theme = theme,
-                accentColorHex = plain[SettingsKeys.ACCENT_COLOR_HEX] ?: "#F05A28",
-                fontFamily = font,
-                biometricEnabled = plain[SettingsKeys.BIOMETRIC_ENABLED] ?: false,
-                syncEnabled = plain[SettingsKeys.SYNC_ENABLED] ?: false,
-                geminiApiKey = secure[SettingsKeys.GEMINI_API_KEY],
-            )
+            buildAppSettings(plain, geminiApiKey = secure[SettingsKeys.GEMINI_API_KEY])
         }
     }
 
@@ -161,42 +159,63 @@ class SettingsRepositoryImpl(
             val current = observe().first()
             val updated = current.block()
 
-            // Write plain preferences
-            context.appDataStore.edit { prefs ->
-                if (current.theme != updated.theme) {
-                    prefs[SettingsKeys.DARK_MODE] =
-                        when (updated.theme) {
-                            AppTheme.DARK -> "always_dark"
-                            AppTheme.LIGHT -> "always_light"
-                            AppTheme.SYSTEM -> "system"
-                        }
-                }
-                if (current.accentColorHex != updated.accentColorHex) {
-                    prefs[SettingsKeys.ACCENT_COLOR_HEX] = updated.accentColorHex
-                }
-                if (current.fontFamily != updated.fontFamily) {
-                    prefs[SettingsKeys.FONT_FAMILY] = updated.fontFamily.name
-                }
-                if (current.biometricEnabled != updated.biometricEnabled) {
-                    prefs[SettingsKeys.BIOMETRIC_ENABLED] = updated.biometricEnabled
-                }
-                if (current.syncEnabled != updated.syncEnabled) {
-                    prefs[SettingsKeys.SYNC_ENABLED] = updated.syncEnabled
-                }
-            }
+            context.appDataStore.edit { prefs -> writePlainPreferenceDiffs(current, updated, prefs) }
 
-            // Write encrypted preference (Gemini key)
             if (current.geminiApiKey != updated.geminiApiKey) {
-                secureStore.edit { prefs ->
-                    if (updated.geminiApiKey != null) {
-                        prefs[SettingsKeys.GEMINI_API_KEY] = updated.geminiApiKey
-                    } else {
-                        prefs.remove(SettingsKeys.GEMINI_API_KEY)
-                    }
-                }
+                secureStore.edit { prefs -> writeGeminiKeyDiff(updated.geminiApiKey, prefs) }
             }
         } catch (e: Exception) {
             crashReporter.recordException(e)
+        }
+    }
+
+    private fun writePlainPreferenceDiffs(
+        current: AppSettings,
+        updated: AppSettings,
+        prefs: MutablePreferences,
+    ) {
+        if (current.theme != updated.theme) {
+            prefs[SettingsKeys.DARK_MODE] =
+                when (updated.theme) {
+                    AppTheme.DARK -> "always_dark"
+                    AppTheme.LIGHT -> "always_light"
+                    AppTheme.SYSTEM -> "system"
+                }
+        }
+        if (current.accentColorHex != updated.accentColorHex) {
+            prefs[SettingsKeys.ACCENT_COLOR_HEX] = updated.accentColorHex
+        }
+        if (current.fontFamily != updated.fontFamily) {
+            prefs[SettingsKeys.FONT_FAMILY] = updated.fontFamily.name
+        }
+        if (current.biometricEnabled != updated.biometricEnabled) {
+            prefs[SettingsKeys.BIOMETRIC_ENABLED] = updated.biometricEnabled
+        }
+        if (current.appLockTimeout != updated.appLockTimeout) {
+            prefs[SettingsKeys.APP_LOCK_TIMEOUT] = updated.appLockTimeout
+        }
+        if (current.hideAmounts != updated.hideAmounts) {
+            prefs[SettingsKeys.HIDE_AMOUNTS] = updated.hideAmounts
+        }
+        if (current.notificationsMaster != updated.notificationsMaster) {
+            prefs[SettingsKeys.NOTIFICATIONS_MASTER] = updated.notificationsMaster
+        }
+        if (current.syncEnabled != updated.syncEnabled) {
+            prefs[SettingsKeys.SYNC_ENABLED] = updated.syncEnabled
+        }
+        if (current.assistantConsentGranted != updated.assistantConsentGranted) {
+            prefs[SettingsKeys.ASSISTANT_CONSENT_GRANTED] = updated.assistantConsentGranted
+        }
+    }
+
+    private fun writeGeminiKeyDiff(
+        newKey: String?,
+        prefs: MutablePreferences,
+    ) {
+        if (newKey != null) {
+            prefs[SettingsKeys.GEMINI_API_KEY] = newKey
+        } else {
+            prefs.remove(SettingsKeys.GEMINI_API_KEY)
         }
     }
 
@@ -220,25 +239,7 @@ class SettingsRepositoryImpl(
 
     override fun setHistoryPinCode(pin: String) = setPreference(SettingsKeys.HISTORY_PIN_CODE, pin)
 
-    override fun setCalculatorColor(color: String) = setPreference(SettingsKeys.COLOR_CALCULATOR, color)
-
-    override fun setConverterColor(color: String) = setPreference(SettingsKeys.COLOR_CONVERTER, color)
-
-    override fun setDateColor(color: String) = setPreference(SettingsKeys.COLOR_DATE, color)
-
-    override fun setFinanceColor(color: String) = setPreference(SettingsKeys.COLOR_FINANCE, color)
-
     override fun setFormatLocale(locale: String) = setPreference(SettingsKeys.FORMAT_LOCALE, locale)
-
-    override fun setConverterEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_CONVERTER_ENABLED, enabled)
-
-    override fun setDateEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_DATE_ENABLED, enabled)
-
-    override fun setFinanceEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_FINANCE_ENABLED, enabled)
-
-    override fun setTimeColor(color: String) = setPreference(SettingsKeys.COLOR_TIME, color)
-
-    override fun setTimeEnabled(enabled: Boolean) = setPreference(SettingsKeys.IS_TIME_ENABLED, enabled)
 
     override fun isToolEnabled(
         key: String,
@@ -252,6 +253,38 @@ class SettingsRepositoryImpl(
         key: String,
         enabled: Boolean,
     ) = editPlain { it[booleanPreferencesKey("tool_$key")] = enabled }
+
+    override fun toolStringValue(
+        key: String,
+        defaultValue: String,
+    ): Flow<String> =
+        context.appDataStore.data.catchAndLog().map { prefs ->
+            prefs[stringPreferencesKey("tool_$key")] ?: defaultValue
+        }
+
+    override fun setToolStringValue(
+        key: String,
+        value: String,
+    ) = editPlain { it[stringPreferencesKey("tool_$key")] = value }
+
+    override fun isModuleEnabled(
+        moduleKey: String,
+        defaultValue: Boolean,
+    ): Flow<Boolean> =
+        context.appDataStore.data.catchAndLog().map { prefs ->
+            prefs[SettingsKeys.moduleEnabled(moduleKey)] ?: defaultValue
+        }
+
+    override suspend fun setModuleEnabled(
+        moduleKey: String,
+        enabled: Boolean,
+    ) {
+        try {
+            context.appDataStore.edit { it[SettingsKeys.moduleEnabled(moduleKey)] = enabled }
+        } catch (e: Exception) {
+            crashReporter.recordException(e)
+        }
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────────────────────────
 

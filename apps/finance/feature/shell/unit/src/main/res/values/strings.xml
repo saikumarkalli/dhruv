@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings contribution (004-settings T035) -->
+    <string name="settings_unit_title">Unit converter</string>
+    <string name="settings_unit_summary">Length, mass, temperature, area</string>
+    <string name="settings_unit_category_length">Length</string>
+    <string name="settings_unit_category_mass">Mass</string>
+    <string name="settings_unit_category_temperature">Temperature</string>
+    <string name="settings_unit_category_area">Area</string>
+    <string name="settings_unit_units_available_label">Units available</string>
+    <string name="settings_unit_units_available_description">Conversion options in this category</string>
+</resources>

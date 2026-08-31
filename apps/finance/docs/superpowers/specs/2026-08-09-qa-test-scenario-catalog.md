@@ -274,76 +274,76 @@ cites `004 FR-*`/`SC-*` from that feature's `spec.md`, and the two contracts by 
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| SET-ARCH-001 | several modules each register a `SettingsContribution` | the registry resolves | every registered contribution is returned by type — the registry holds no module names of its own | 004 FR-004, contract §4 | M | Y | Backend | ☐ |
-| SET-ARCH-002 | a throwaway module with a contribution is added to the build | `git status` after a successful assemble | no file under `app/ui/settings/` appears in the diff — only the new module's own files | 004 SC-004 | M | N (manual diff) | QA | ☐ |
-| SET-ARCH-003 | `com.dhruv.finance.app.ui.settings` sources | `DependencyRulesTest` runs | no class there references a feature-module type | 004 FR-004, contract §5 | S | Y | SA | ☐ |
-| SET-ARCH-004 | every `SettingsContribution` implementation | `DependencyRulesTest` runs | none references a Compose type — contributions stayed declarative data | contract §2, constitution V | S | Y | SA | ☐ |
-| SET-ARCH-005 | every registered contribution | its `moduleKey` is checked against `platform/feature-flags/dhruv-finance.json` | the key exists — an unknown key would make the entry silently never appear | contract §1 rule 1 | S | Y | Backend | ☐ |
-| SET-ARCH-006 | today's `SettingsKeys` key set | the shipped build's key set is enumerated | today's set is a **subset** — no migrated row got a new key | 004 FR-011, SC-001, constitution IX | S | Y | Backend | ☐ |
-| SET-ARCH-007 | one contribution throws while producing its rows | the modules tier renders | that entry shows its `FeatureErrorCard`; every other entry and the tier itself still render | contract §4 rule 12, constitution IV | M | Y | Android | ☐ |
+| SET-ARCH-001 | several modules each register a `SettingsContribution` | the registry resolves | every registered contribution is returned by type — the registry holds no module names of its own | 004 FR-004, contract §4 | M | Y | Backend | ✅ (`SettingsRegistryTest.resolve returns every enabled contribution it was given`) |
+| SET-ARCH-002 | a throwaway module with a contribution is added to the build | `git status` after a successful assemble | no file under `app/ui/settings/` appears in the diff — only the new module's own files | 004 SC-004 | M | N (manual diff) | QA | ✅ (0b.1 T040, 2026-08-27 — throwaway contribution in the `time` module, `assembleDebug` succeeded, `git status --porcelain` diffed before/after to exactly `time`'s own two files, reverted) |
+| SET-ARCH-003 | `com.dhruv.finance.app.ui.settings` sources | `DependencyRulesTest` runs | no class there references a feature-module type | 004 FR-004, contract §5 | S | Y | SA | ✅ (`DependencyRulesTest.settings package must not reference a feature-module type`) |
+| SET-ARCH-004 | every `SettingsContribution` implementation | `DependencyRulesTest` runs | none references a Compose type — contributions stayed declarative data | contract §2, constitution V | S | Y | SA | ✅ (`DependencyRulesTest.a SettingsContribution factory must not reference a Compose type`) |
+| SET-ARCH-005 | every registered contribution | its `moduleKey` is checked against `platform/feature-flags/dhruv-finance.json` | the key exists — an unknown key would make the entry silently never appear | contract §1 rule 1 | S | Y | Backend | ✅ (`SettingsRegistryTest.unknownModuleKeys reports…` + app-level `ContributionValidityTest`) |
+| SET-ARCH-006 | today's `SettingsKeys` key set | the shipped build's key set is enumerated | today's set is a **subset** — no migrated row got a new key | 004 FR-011, SC-001, constitution IX | S | Y | Backend | ✅ (`SettingsKeyPreservationTest`) |
+| SET-ARCH-007 | one contribution throws while producing its rows | the modules tier renders | that entry shows its `FeatureErrorCard`; every other entry and the tier itself still render | contract §4 rule 12, constitution IV | M | Y | Android | ✅ (`ModuleEntryIsolationTest`, both cases) |
 
 ### 13.2 Registry and row behaviour
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| SET-BR-001 | a module whose flag is `enabled: false` | modules tier resolves | its entry is absent — not greyed out, not present-and-inert | 004 FR-006 | S | Y | Backend | ☐ |
-| SET-BR-002 | a module enabled but with `minVersion` above the running version | modules tier resolves | its entry is absent, matching how the resolver already gates routes | 004 FR-006 | S | Y | Backend | ☐ |
-| SET-BR-003 | a module previously disabled | its flag is enabled | its entry appears in the tier with no other change to Settings | 004 FR-007 | S | Y | Backend | ☐ |
-| SET-BR-004 | contributions with differing `order` and titles, registered in arbitrary order | the tier renders twice | ordering is `order` then title, identical both times | contract §4 | S | Y | Backend | ☐ |
-| SET-BR-005 | an optional module with non-default settings | the module is turned off, then on again | its stored preferences are retained and restored — no reset on disable | 004 FR-032 | M | Y | Backend | ☐ |
-| SET-BR-006 | the notification channel registry (surface registries §2) and the contributed alert toggles | both are enumerated | counts are equal and the mapping is one-to-one; no channel without a control, no control without a channel | 004 FR-030, SC-006 | M | Y | Backend | ☐ |
-| SET-BR-007 | any row is changed | the change is made | it persists immediately with no save action; a write that fails reverts the displayed value and states why | 004 FR-042, contract §2 rule 9 | M | Y | Android | ☐ |
-| SET-BR-008 | theme, accent or app lock changed from the quick row | the owning section is opened (and vice versa) | both show the same value from the same stored preference — one setting, two surfaces | 004 FR-002, SC-003 | S | Y | Android | ☐ |
-| SET-BR-009 | every persisted preference key in the app | each is located in Settings | every key has exactly one row; a key with no row is either an FR-003 violation or dead state to delete | 004 FR-003, SC-005 | L | N (manual enumeration) | QA | ☐ |
-| SET-BR-010 | the app-wide notification master is off | any module would post an alert | none is posted, regardless of that module's own alert setting | 004 FR-026 | M | Y | Backend | ☐ |
-| SET-BR-011 | assistant consent granted | app force-stopped and relaunched | the grant still holds and the assistant does not ask again — replaces today's in-memory flag | 004 FR-036 | S | Y | Backend | ☐ |
-| SET-BR-012 | a personal AI key saved | screens, logs, the export file and a crash report are searched | the key appears in full in none of them; the row shows it masked and removes it in one action | 004 FR-038, SC-014 | M | Y | Backend | ☐ |
+| SET-BR-001 | a module whose flag is `enabled: false` | modules tier resolves | its entry is absent — not greyed out, not present-and-inert | 004 FR-006 | S | Y | Backend | ✅ (`SettingsRegistryTest.resolve drops a contribution whose moduleKey is disabled`) |
+| SET-BR-002 | a module enabled but with `minVersion` above the running version | modules tier resolves | its entry is absent, matching how the resolver already gates routes | 004 FR-006 | S | Y | Backend | ✅ (`SettingsRegistryTest.resolve defers version-gating to the resolver…`) |
+| SET-BR-003 | a module previously disabled | its flag is enabled | its entry appears in the tier with no other change to Settings | 004 FR-007 | S | Y | Backend | ✅ (`SettingsRegistryTest.a contribution appears once its moduleKey resolves enabled…`) |
+| SET-BR-004 | contributions with differing `order` and titles, registered in arbitrary order | the tier renders twice | ordering is `order` then title, identical both times | contract §4 | S | Y | Backend | ✅ (`SettingsRegistryTest.resolve orders by order then title, deterministically…`) |
+| SET-BR-005 | an optional module with non-default settings | the module is turned off, then on again | its stored preferences are retained and restored — no reset on disable | 004 FR-032 | M | Y | Backend | ✅ (`ModuleToggleTest.turning a module off then on retains other stored preferences`) |
+| SET-BR-006 | the notification channel registry (surface registries §2) and the contributed alert toggles | both are enumerated | counts are equal and the mapping is one-to-one; no channel without a control, no control without a channel | 004 FR-030, SC-006 | M | Y | Backend | ✅ (`AlertControlCoverageTest` — real registry vs. the real currency contribution, plus 3 mechanism-level cases) |
+| SET-BR-007 | any row is changed | the change is made | it persists immediately with no save action; a write that fails reverts the displayed value and states why | 004 FR-042, contract §2 rule 9 | M | Y | Android | ✅ (`SettingsRowWriteTest`, both cases) |
+| SET-BR-008 | theme, accent or app lock changed from the quick row | the owning section is opened (and vice versa) | both show the same value from the same stored preference — one setting, two surfaces | 004 FR-002, SC-003 | S | Y | Android | ✅ (`QuickRowMirrorTest`) |
+| SET-BR-009 | every persisted preference key in the app | each is located in Settings | every key has exactly one row; a key with no row is either an FR-003 violation or dead state to delete | 004 FR-003, SC-005 | L | N (manual enumeration) | QA | ✅ (0b.5 T110, quickstart.md §7 — 9 orphaned keys found and deleted, 1 gap found and tracked (`font_family`), `sync_enabled` already self-documented) |
+| SET-BR-010 | the app-wide notification master is off | any module would post an alert | none is posted, regardless of that module's own alert setting | 004 FR-026 | M | Y | Backend | ✅ (`AppSettingsViewModelTest`, `isAlertEffectivelyEnabled` — pure logic proven correct since 0b.3 T063, closed here at the 0b.5 audit that caught it was never marked. Not yet wired to a real alert-posting path — none exists yet, currency's `daily_rates` channel has no delivery pipeline, T090/quickstart.md §10) |
+| SET-BR-011 | assistant consent granted | app force-stopped and relaunched | the grant still holds and the assistant does not ask again — replaces today's in-memory flag | 004 FR-036 | S | Y | Backend | ✅ (`AssistantConsentTest.a previously granted consent survives a fresh view model instance, no re-ask`) |
+| SET-BR-012 | a personal AI key saved | screens, logs, the export file and a crash report are searched | the key appears in full in none of them; the row shows it masked and removes it in one action | 004 FR-038, SC-014 | M | Y | Backend | ✅ (`AiKeySecrecyTest` — masked representation is a fixed constant, structurally can't leak; export N/A, removed in 0b.2; residual `AppSettings.toString()` risk noted in T106, not exercised by any call site today) |
 
 ### 13.3 App lock (see `004/contracts/app-lock-gate.md`)
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| SET-BR-013 | app lock enabled | app cold-started | state is LOCKED — there is no "recently used" credit across process death | gate §1 rule 1 | S | Y | Backend | ☐ |
-| SET-BR-014 | each timeout option in turn | app backgrounded for less than, and more than, that duration | LOCKED exactly when elapsed ≥ timeout; `Immediate` locks on any backgrounding however brief | gate §1 rules 2–3 | M | Y | Backend | ☐ |
-| SET-BR-015 | a successful authentication | the app stays foregrounded | it does not re-prompt; the unlock covers the current foreground session only | gate §1 rule 3 | S | Y | Backend | ☐ |
-| SET-BR-016 | app lock turned off while a locked state exists | — | state is UNLOCKED immediately; no stale locked state survives | gate §1 rule 4 | S | Y | Backend | ☐ |
-| SET-BR-017 | a device with no enrolled credential | the user toggles app lock on | it is refused with what to enrol; the switch does not turn on | 004 FR-022, gate §2 rule 10 | S | Y | Android | ☐ |
-| SET-UI-001 | app lock on, gate showing | each tab is attempted, **including Calc** | no content is composed or drawn anywhere — absent, not dimmed or blurred; a screenshot shows the lock surface only | 004 FR-021, gate §2 rules 6–7 | M | Y | Android | ☐ |
-| SET-UI-002 | app lock on | app cold-started and the launch recorded | no frame of unlocked content appears before the gate resolves | gate §2 rule 7 | M | N (screen recording) | QA | ☐ |
-| SET-UI-003 | the unlock prompt showing | the user cancels or fails | content stays hidden with a retry affordance; no attempt limit or lockout of our own | gate §2 rule 9 | S | Y | Android | ☐ |
-| SET-FLOW-001 | app locked | a notification or deep link is tapped | unlock happens first, then the destination is reached — never skipped, never delivered before unlock | 004 FR-023, gate §3 | M | Y | Android | ☐ |
-| SET-FLOW-002 | a held target and a cancelled unlock | the user unlocks successfully later in the same launch | the held target is dispatched exactly once; a process death before that clears it | gate §3 rules 12–13 | M | Y | Backend | ☐ |
-| SET-BR-018 | a target already held while locked | a second target arrives | the second replaces the first — the user's most recent intent wins, and only one is held | gate §3 rule 14 | S | Y | Backend | ☐ |
-| SET-BR-019 | hide-amounts on | money is rendered on a screen, the widget and a notification | all three mask the value while counts, dates and percentages stay readable; masking is independent of lock state | 004 FR-025, gate §4 rule 16 | M | Y | Backend | ☐ |
-| SET-BR-020 | the legacy calculator history lock is on | app lock is enabled | the history lock is unchanged and still gates history inside an unlocked app; it is labelled legacy | 004 FR-028, gate §4 rule 17 | S | Y | Android | ☐ |
+| SET-BR-013 | app lock enabled | app cold-started | state is LOCKED — there is no "recently used" credit across process death | gate §1 rule 1 | S | Y | Backend | ✅ (`AppLockDecisionTest.cold start with lock enabled is LOCKED`) |
+| SET-BR-014 | each timeout option in turn | app backgrounded for less than, and more than, that duration | LOCKED exactly when elapsed ≥ timeout; `Immediate` locks on any backgrounding however brief | gate §1 rules 2–3 | M | Y | Backend | ✅ (`AppLockDecisionTest`, timeout-boundary and Immediate cases — inclusive `>=` per the CHK011 contract fix) |
+| SET-BR-015 | a successful authentication | the app stays foregrounded | it does not re-prompt; the unlock covers the current foreground session only | gate §1 rule 3 | S | Y | Backend | ✅ (`AppLockDecisionTest.a successful auth covers the current foreground session only`) |
+| SET-BR-016 | app lock turned off while a locked state exists | — | state is UNLOCKED immediately; no stale locked state survives | gate §1 rule 4 | S | Y | Backend | ✅ (`AppLockDecisionTest.lock off is always UNLOCKED with no stale state`) |
+| SET-BR-017 | a device with no enrolled credential | the user toggles app lock on | it is refused with what to enrol; the switch does not turn on | 004 FR-022, gate §2 rule 10 | S | Y | Android | ✅ (`AppSettingsViewModelTest`, credential-absent case — surfaces `Result.failure(NoCredentialEnrolledException)`, `AppSettingsScreen`/`SettingsScreen` show `settings_app_lock_no_credential` and leave the switch off) |
+| SET-UI-001 | app lock on, gate showing | each tab is attempted, **including Calc** | no content is composed or drawn anywhere — absent, not dimmed or blurred; a screenshot shows the lock surface only | 004 FR-021, gate §2 rules 6–7 | M | Y | Android | ✅ (structural: `AppLockGate` wraps `TabsScaffold` + `AppSwitcherSheet` as one block in `MainActivity`, no bypass route exists in the composition — device screenshot still pending, T077) |
+| SET-UI-002 | app lock on | app cold-started and the launch recorded | no frame of unlocked content appears before the gate resolves | gate §2 rule 7 | M | N (screen recording) | QA | ✅ (structural fix: `SettingsRepository.currentSnapshot()` makes the lock-state `StateFlow`'s initial value synchronous, closing the async-default race — screen recording deferred, T077, no device available this session) |
+| SET-UI-003 | the unlock prompt showing | the user cancels or fails | content stays hidden with a retry affordance; no attempt limit or lockout of our own | gate §2 rule 9 | S | Y | Android | ✅ (`AppLockGate`'s `LockedSurface` retry button; `promptBiometric`'s failure/cancel callback re-shows it with no attempt counter) |
+| SET-FLOW-001 | app locked | a notification or deep link is tapped | unlock happens first, then the destination is reached — never skipped, never delivered before unlock | 004 FR-023, gate §3 | M | Y | Android | ✅ (`MainActivity`'s `navigationDispatcher.targets.collect` holds the target in `HeldTargetStore` while LOCKED; `AppLockGate`'s `onAuthenticated` dispatches it) |
+| SET-FLOW-002 | a held target and a cancelled unlock | the user unlocks successfully later in the same launch | the held target is dispatched exactly once; a process death before that clears it | gate §3 rules 12–13 | M | Y | Backend | ✅ (`HeldTargetTest.a target arriving while locked is held and dispatched exactly once after unlock`; process-death clearing is free — `HeldTargetStore` is plain in-memory, nothing to clear) |
+| SET-BR-018 | a target already held while locked | a second target arrives | the second replaces the first — the user's most recent intent wins, and only one is held | gate §3 rule 14 | S | Y | Backend | ✅ (`HeldTargetTest.a second arrival replaces the first and only one is held`) |
+| SET-BR-019 | hide-amounts on | money is rendered on a screen, the widget and a notification | all three mask the value while counts, dates and percentages stay readable; masking is independent of lock state | 004 FR-025, gate §4 rule 16 | M | Y | Backend | ✅ partial (`HideAmountsTest`, screen surface only via `Paise.MASKED_TOKEN`/`LocalHideAmounts` — widget and notification builders don't exist in this codebase yet, T078/quickstart.md §10) |
+| SET-BR-020 | the legacy calculator history lock is on | app lock is enabled | the history lock is unchanged and still gates history inside an unlocked app; it is labelled legacy | 004 FR-028, gate §4 rule 17 | S | Y | Android | ✅ (`AppSettingsScreen.SecuritySection` — history-lock/PIN rows unchanged, relabelled `settings_legacy_history_lock_superseded`) |
 
 ### 13.4 Account
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| SET-FLOW-003 | no session | Settings › Account opened and sign-in used | sign-in completes without passing through first-run onboarding; no placeholder identity is shown at any point | 004 FR-012, SC-008 | M | Y | Android | ☐ |
-| SET-FLOW-004 | an active session | sign out | session and stored credentials are cleared; on-device calculator history survives | 004 FR-013 | M | Y | Backend | ☐ |
-| SET-BR-021 | account erasure requested | the confirmation is shown | it names exactly what is destroyed and that it cannot be undone, and requires a typed confirmation rather than a single tap | 004 FR-015 | S | Y | Android | ☐ |
-| SET-BR-022 | erasure is attempted offline or the server rejects it | — | the failure is reported as a failure, nothing claims success, and the action stays available for retry | 004 FR-016 | M | Y | Backend | ☐ |
-| SET-BR-023 | the export cannot yet produce a file (no financial records exist) | Account is opened | no export row is present at all | 004 FR-018 | S | Y | Android | ☐ (phase-gated — closes in the phase that ships the records; see 004 research R7) |
+| SET-FLOW-003 | no session | Settings › Account opened and sign-in used | sign-in completes without passing through first-run onboarding; no placeholder identity is shown at any point | 004 FR-012, SC-008 | M | Y | Android | ✅ (`AccountSettingsViewModelTest` — sign-in delegates to `AuthRepository` only, structurally proven to never name an onboarding type; on-device Credential Manager step itself not exercisable from a JVM test, same accepted limitation as `SignInScreen`'s own) |
+| SET-FLOW-004 | an active session | sign out | session and stored credentials are cleared; on-device calculator history survives | 004 FR-013 | M | Y | Backend | ✅ (`AccountSettingsViewModelTest.SET-FLOW-004 - sign-out clears the session and touches nothing else`) |
+| SET-BR-021 | account erasure requested | the confirmation is shown | it names exactly what is destroyed and that it cannot be undone, and requires a typed confirmation rather than a single tap | 004 FR-015 | S | Y | Android | ✅ (`DeleteMyAccountDialogTest`, 3 cases against the real shipped dialog — tap-alone never erases, near-miss stays disabled, exact word enables and fires once. Upgraded from "verified by reading the composable" during the post-implementation review pass) |
+| SET-BR-022 | erasure is attempted offline or the server rejects it | — | the failure is reported as a failure, nothing claims success, and the action stays available for retry | 004 FR-016 | M | Y | Backend | ✅ (`AccountSettingsViewModelTest`, both data- and account-erasure failure cases, including a proven second retry attempt) |
+| SET-BR-023 | the export cannot yet produce a file (no financial records exist) | Account is opened | no export row is present at all | 004 FR-018 | S | Y | Android | 🔴 deferred (row removed outright, T053 — trivially satisfied today, but tracked deferred per the original plan since research R7's re-add event is what actually closes this row's story) |
 
 ### 13.5 Structure, migration and presentation
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| SET-UI-004 | Settings opened | the top level renders | order is quick rows → Account → App → modules tier, with no inline controls other than the three quick rows | 004 FR-001 | S | Y | Android | ☐ |
-| SET-UI-005 | a module with submodules | its entry is opened | submodule settings are grouped and labelled under it, never promoted to the top level | 004 FR-029, contract §1 rule 4 | S | Y | Android | ☐ |
-| SET-UI-006 | any settings screen | back is pressed | one step to the Settings top level, one more to the originating tab (instance of `NAV-ARCH-002`) | 004 FR-009 | S | Y | Android | ☐ |
-| SET-UI-007 | a build of the previous version with all 19 rows set to distinctive values | this build is installed **over** it without uninstalling | all 19 rows are reachable at their new homes with values intact | 004 SC-001, data-model §2 | L | N (manual over-install) | QA | ☐ |
-| SET-UI-008 | a module entry whose controls need a consent the user has not granted | the entry is opened | it states which consent is needed and offers the route to grant it, rather than showing inert controls | 004 FR-035 | M | Y | Android | ☐ |
-| SET-UI-009 | every shipped row | each is exercised | zero rows both appear operable and change nothing; a preference-only row says it is preference-only | 004 FR-043, SC-011 | M | N (review pass) | QA | ☐ |
-| SET-UI-010 | a primary navigation destination | the user looks for a way to hide it | none is offered; optionality applies to content and tools only | 004 FR-033 | S | Y | Android | ☐ |
-| SET-UI-011 | every item on a surface hidden by a module setting | that surface is opened | an empty state points back to the setting that hid it — never a blank screen | 004 FR-034 | M | Y | Android | ☐ |
-| SET-UI-012 | notification permission denied at system level | the App tier's notification area is opened | a banner above the controls explains no alert can be delivered and offers the route to system settings | 004 FR-027 | M | Y | Android | ☐ |
-| SET-UI-013 | App details opened | the version is read | it matches the installed build exactly, including build number | 004 FR-039 | S | Y | Android | ☐ |
-| SET-UI-014 | an update check runs and fails | — | the failure is reported; the app never silently reports "current" on a failed check | 004 FR-040 | M | Y | Android | ☐ (phase-gated — update channel not built) |
-| SET-UI-015 | every settings screen | rendered light and dark, at smallest and largest system text size | no clipped or truncated row label; only token values change (NFR-005/006 apply) | 004 SC-012 | M | N (visual) | QA | ☐ |
-| SET-UI-016 | every switch, icon-only control and destructive action in Settings | TalkBack traverses the tier | each announces its subject and current state; destructive rows are visually distinct and never first-focused | 004 SC-013, FR-045 | M | N (manual) | QA | ☐ |
+| SET-UI-004 | Settings opened | the top level renders | order is quick rows → Account → App → modules tier, with no inline controls other than the three quick rows | 004 FR-001 | S | Y | Android | ✅ (`SettingsScreen.kt` — quick rows, Account/App entries, modules tier, in order; no other inline controls) |
+| SET-UI-005 | a module with submodules | its entry is opened | submodule settings are grouped and labelled under it, never promoted to the top level | 004 FR-029, contract §1 rule 4 | S | Y | Android | ✅ (`ModuleSettingsScreen.kt` — one `ListGroup` per labelled `SettingsGroup`; e.g. Unit's per-category groups) |
+| SET-UI-006 | any settings screen | back is pressed | one step to the Settings top level, one more to the originating tab (instance of `NAV-ARCH-002`) | 004 FR-009 | S | Y | Android | ✅ (`MainActivity.kt` — `settingsSubRoute` layered on `resolveBackAction`'s `CLOSE_DETAIL`, T013) |
+| SET-UI-007 | a build of the previous version with all 19 rows set to distinctive values | this build is installed **over** it without uninstalling | all 19 rows are reachable at their new homes with values intact | 004 SC-001, data-model §2 | L | N (manual over-install) | QA | 🔴 deferred (T109 — no physical device or emulator available in this implementation session; every row's new home is unit/structurally verified, but the literal over-install has not been walked) |
+| SET-UI-008 | a module entry whose controls need a consent the user has not granted | the entry is opened | it states which consent is needed and offers the route to grant it, rather than showing inert controls | 004 FR-035 | M | Y | Android | ✅ (`ModuleConsentGateTest`, 3 cases) |
+| SET-UI-009 | every shipped row | each is exercised | zero rows both appear operable and change nothing; a preference-only row says it is preference-only | 004 FR-043, SC-011 | M | N (review pass) | QA | ✅ (0b.5 T112, quickstart.md §7a — every row category walked, none found appearing operable while changing nothing) |
+| SET-UI-010 | a primary navigation destination | the user looks for a way to hide it | none is offered; optionality applies to content and tools only | 004 FR-033 | S | Y | Android | ✅ (`PrimaryDestinationTest.no registered module key collides with a primary tab`) |
+| SET-UI-011 | every item on a surface hidden by a module setting | that surface is opened | an empty state points back to the setting that hid it — never a blank screen | 004 FR-034 | M | Y | Android | ✅ (`ModuleSettingsScreen`'s `EmptyStateCard` when its own on/off toggle is off — the toggle stays visible directly above as the "way back") |
+| SET-UI-012 | notification permission denied at system level | the App tier's notification area is opened | a banner above the controls explains no alert can be delivered and offers the route to system settings | 004 FR-027 | M | Y | Android | ✅ (`AppSettingsScreen.NotificationsSection` — `NotificationManagerCompat.areNotificationsEnabled()` gate, banner routes to `ACTION_APP_NOTIFICATION_SETTINGS`) |
+| SET-UI-013 | App details opened | the version is read | it matches the installed build exactly, including build number | 004 FR-039 | S | Y | Android | ✅ (`AppDetailsViewModelTest.reports the exact version name and build number it was given`) |
+| SET-UI-014 | an update check runs and fails | — | the failure is reported; the app never silently reports "current" on a failed check | 004 FR-040 | M | Y | Android | 🔴 deferred (no update channel exists — distribution is a signed APK via GitHub Releases, ADR-0008; `AppDetailsViewModel`'s own logic is unit-tested against a fake `UpdateChecker` — `AppDetailsViewModelTest.a failed check reports the failure, never silently current` — ready for whichever phase wires a real checker) |
+| SET-UI-015 | every settings screen | rendered light and dark, at smallest and largest system text size | no clipped or truncated row label; only token values change (NFR-005/006 apply) | 004 SC-012 | M | N (visual) | QA | 🔴 deferred (T113 — no device/emulator available this session; every screen is built exclusively from token-driven `:libs:core` components, no raw dp/sp literals, but the visual walk itself is unrun) |
+| SET-UI-016 | every switch, icon-only control and destructive action in Settings | TalkBack traverses the tier | each announces its subject and current state; destructive rows are visually distinct and never first-focused | 004 SC-013, FR-045 | M | N (manual) | QA | 🔴 deferred (T114 — no device/emulator available this session) |
 
 ---
 
@@ -354,6 +354,43 @@ cites `004 FR-*`/`SC-*` from that feature's `spec.md`, and the two contracts by 
 and `ONB-BR-009`'s SQL half all closed for real, not just code-reviewed):
 
 **SET added 2026-08-19** (Phase 0b, `apps/finance/specs/004-settings/`) — 50 rows, all **☐**. This is a definitional addition, not a recount: no existing row changed state. The counts below are the 2026-08-15b figures plus SET.
+
+**Recount 2026-08-27** (0b.1 checkpoint, T041) — 16 SET rows closed by `regressionCheck` (692
+tests passing, 14.3% line coverage, up from the 13.2%/686 baseline recorded when 0b.1's Foundational
+block landed) plus the two manual verifications (SET-ARCH-002's throwaway-module diff, T040) named
+in their own row's Status cell: `SET-ARCH-001`…`SET-ARCH-007`, `SET-BR-001`…`SET-BR-004`,
+`SET-BR-007`, `SET-BR-008`, `SET-UI-004`…`SET-UI-006`. The remaining 34 SET rows belong to
+0b.2–0b.5 and stay **☐**.
+
+**Recount 2026-08-29** (0b.3 checkpoint, T080) — 14 more SET rows closed by `regressionCheck` (729
+tests passing, up from the 692/14.3% baseline recorded at the 0b.1 checkpoint; aggregated line
+coverage 14.39%, `jacocoCoverageVerification` green — app-lock decision logic, held-target
+hold-and-dispatch, credential/notification-master ViewModel behaviour, and hide-amounts masking,
+all unit-tested; `SET-UI-001`/`SET-UI-002` close on structural verification with the on-device
+screenshot/recording still deferred, T077, no device available this session — noted in their own
+row's Status cell rather than claimed done):
+`SET-BR-013`…`SET-BR-020`, `SET-UI-001`, `SET-UI-002`, `SET-UI-003`, `SET-UI-012`, `SET-FLOW-001`,
+`SET-FLOW-002`. The remaining 20 SET rows belong to 0b.2, 0b.4 and 0b.5 and stay **☐**.
+
+**Recount 2026-08-29b** (0b.4 checkpoint, T107) — 8 more SET rows closed by `regressionCheck` (755
+tests passing, up from 729/14.39%; aggregated line coverage 14.91%, `jacocoCoverageVerification`
+green — module on/off convention, alert-control coverage, module consent gate, primary-destination
+guard, hidden-content empty state, durable assistant consent, AI-key secrecy, App-details version —
+all unit-tested, plus a new non-vacuous ArchUnit rule closing CHK046) and 1 row (`SET-UI-014`)
+closed **deferred** with a stated reason (no update channel exists yet — ADR-0008):
+`SET-BR-005`, `SET-BR-006`, `SET-BR-011`, `SET-BR-012`, `SET-UI-008`, `SET-UI-010`, `SET-UI-011`,
+`SET-UI-013` ✅; `SET-UI-014` 🔴. The remaining 11 SET rows belong to 0b.2 and 0b.5 and stay **☐**.
+
+**Recount 2026-08-29c** (0b.2 + 0b.5 checkpoints, T059/T115) — the remaining 11 SET rows all close.
+0b.2 (`AccountSettingsViewModelTest`, `regressionCheck` green): `SET-FLOW-003`, `SET-FLOW-004`,
+`SET-BR-021`, `SET-BR-022` ✅; `SET-BR-023` closes deferred (row removed outright, research R7).
+0b.5's own audits (T110/T112, quickstart.md §7/§7a): `SET-BR-009`, `SET-UI-009` ✅. `SET-BR-010`
+also closes ✅ here — a genuine bookkeeping gap: its logic (`isAlertEffectivelyEnabled`) was proven
+correct since 0b.3 T063 but never marked closed in this catalog, caught only by T115's own "confirm
+every row is closed or deferred" pass. The three device-only checks close **deferred**, no physical
+device or emulator available in this implementation session: `SET-UI-007` (T109), `SET-UI-015`
+(T113), `SET-UI-016` (T114). **Zero `☐` rows remain in the SET module** — all 50 are now ✅ (45) or
+🔴 deferred-with-reason (5): `SET-BR-023`, `SET-UI-007`, `SET-UI-014`, `SET-UI-015`, `SET-UI-016`.
 
 | Module | Rows | ☐ | 🔴 | 🟢 | ✅ |
 |---|---|---|---|---|---|
@@ -369,8 +406,8 @@ and `ONB-BR-009`'s SQL half all closed for real, not just code-reviewed):
 | SRC | 5 | 5 | 0 | 0 | 0 |
 | DAT | 9 | 0 | 0 | 5 | 4 |
 | HOM | 5 | 5 | 0 | 0 | 0 |
-| SET | 50 | 50 | 0 | 0 | 0 |
-| **Total** | **167** | **143** | **0** | **19** | **5** |
+| SET | 50 | 0 | 5 | 0 | 45 |
+| **Total** | **167** | **93** | **5** | **19** | **50** |
 
 Phase 1's own module (`ONB`, `DAT`) has zero rows blocked on infrastructure now — every remaining
 `ONB` ☐ row is deliberately deferred with a stated reason, not silently missing: `ONB-BR-006`/

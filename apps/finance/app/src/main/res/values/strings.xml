@@ -1,3 +1,116 @@
 <resources>
     <string name="app_name">dhruv finance</string>
+
+    <!-- Settings control plane (004-settings, 0b.1) -->
+    <string name="settings_row_write_failed">Couldn\'t save — try again</string>
+    <string name="settings_row_action_failed">Couldn\'t complete — try again</string>
+
+    <string name="settings_quick_rows_section">Quick settings</string>
+    <string name="settings_app_lock_quick_row_label">App lock</string>
+
+    <string name="settings_account_entry_title">Account</string>
+    <string name="settings_account_entry_subtitle">Sign-in, consent, export, erasure</string>
+    <string name="settings_app_entry_title">App</string>
+    <string name="settings_app_entry_subtitle">Appearance, security, notifications, about</string>
+    <string name="settings_modules_section">Modules</string>
+    <string name="settings_modules_empty">No modules with settings are installed yet.</string>
+
+    <string name="settings_appearance_section">Appearance</string>
+    <string name="settings_wallpaper_colours_label">Use wallpaper colours</string>
+    <string name="settings_wallpaper_colours_description">Match your device\'s Material You palette — coming soon</string>
+
+    <string name="settings_account_local_device">Local device</string>
+    <string name="settings_account_local_device_subtitle">Local device only — no account yet</string>
+    <string name="settings_account_signed_in">Signed in</string>
+    <string name="settings_privacy_data_section">Privacy &amp; data</string>
+
+    <!-- Account sign-in/sign-out (004-settings, 0b.2 T046-T047) -->
+    <string name="settings_account_sign_in">Sign in with Google</string>
+    <string name="settings_account_signing_in">Signing in…</string>
+    <string name="settings_account_sign_out">Sign out</string>
+    <string name="settings_account_sign_in_offline">You\'re offline — connect and try again</string>
+    <string name="settings_account_sign_in_error_backend">Couldn\'t sign in — try again</string>
+    <string name="settings_account_sign_in_error_wrong_account">Wrong account type — try again</string>
+    <string name="settings_account_sign_in_error_cancelled">Sign-in cancelled</string>
+    <string name="settings_account_sign_in_error_generic">Something went wrong — try again</string>
+
+    <string name="settings_consent_sync_label">Sync my financial records</string>
+    <string name="settings_consent_sync_scope">Required for the net worth tracker to work.</string>
+    <string name="settings_consent_sms_label">Read transaction SMS</string>
+    <string name="settings_consent_sms_scope">Parsed on device. You approve each one.</string>
+    <string name="settings_consent_ask_dhruv_label">Ask Dhruv about my money</string>
+    <string name="settings_consent_ask_dhruv_scope">Anonymised summaries only — never your account numbers.</string>
+
+    <!-- "Export my data" removed outright (0b.2 T053, research R7) — no financial records
+         repository exists yet to export from (FR-018 forbids an empty export). Reinstated once
+         Phase 2's accounts/holdings repository lands. -->
+
+    <string name="settings_erasure_signed_out">Sign in first — there\'s nothing on the server to erase</string>
+
+    <string name="settings_delete_my_data_title">Delete my data</string>
+    <string name="settings_delete_my_data_subtitle">Erase your net worth holdings and valuations from the server</string>
+    <string name="settings_delete_my_data_success">Your data has been deleted</string>
+    <string name="settings_delete_my_data_failure">Couldn\'t delete your data — try again</string>
+
+    <string name="settings_delete_my_account_title">Delete my account</string>
+    <string name="settings_delete_my_account_subtitle">Erase everything and sign out — you\'ll set up again next time</string>
+    <string name="settings_delete_my_account_success">Your account has been deleted</string>
+    <string name="settings_delete_my_account_failure">Couldn\'t delete your account — try again</string>
+
+    <!-- Security & Notifications (004-settings, 0b.3) -->
+    <string name="settings_security_section">Security</string>
+    <string name="settings_app_lock_label">App lock</string>
+    <string name="settings_app_lock_description">Require your device unlock to open Dhruv Finance</string>
+    <string name="settings_app_lock_no_credential">Set a screen lock on this device first (Settings › Security)</string>
+    <string name="settings_auto_lock_timeout_label">Auto-lock after</string>
+    <string name="settings_auto_lock_timeout_description">How long you can leave the app before it locks again</string>
+    <string name="settings_timeout_immediate">Immediately</string>
+    <string name="settings_timeout_after_1_min">1 minute</string>
+    <string name="settings_timeout_after_5_min">5 minutes</string>
+    <string name="settings_timeout_after_15_min">15 minutes</string>
+    <string name="settings_hide_amounts_label">Hide amounts</string>
+    <string name="settings_hide_amounts_description">Mask money on screens, the widget and notifications</string>
+    <string name="settings_legacy_history_lock_superseded">Superseded by App lock above — still works independently</string>
+
+    <string name="settings_notifications_section">Notifications</string>
+    <string name="settings_notifications_master_label">Allow notifications</string>
+    <string name="settings_notifications_master_description">Turning this off suppresses every module\'s alerts</string>
+    <string name="settings_notifications_permission_denied_banner">Notifications are turned off in system settings — nothing below can be delivered</string>
+    <string name="settings_notifications_permission_denied_action">Open system settings</string>
+
+    <!-- Module conventions, assistant, app details (004-settings, 0b.4) -->
+    <string name="settings_module_enable_label">Enable this module</string>
+    <string name="settings_module_enable_description">Turn off to remove it from the app — your settings for it are kept</string>
+    <string name="settings_module_disabled_empty">This module is turned off. Turn it back on above to see its settings again.</string>
+    <string name="settings_module_consent_needed_title">Consent needed</string>
+
+    <!-- SecretText row chrome (SettingsRowRenderer.kt) — never the row's own content, just the
+         renderer's own UI tokens for masking/removing/saving a secret (T097). -->
+    <string name="settings_secret_masked">••••••••</string>
+    <string name="settings_secret_remove">Remove</string>
+    <string name="settings_secret_placeholder">Paste your key</string>
+    <string name="settings_secret_save">Save</string>
+
+    <!-- App lock gate surface (0b.3). Design system §10: every user-visible string is a resource
+         from birth — the locked screen is no exception. -->
+    <string name="app_lock_prompt_title">Unlock Dhruv Finance</string>
+    <string name="app_lock_retry_message">Authentication needed to continue</string>
+    <string name="app_lock_retry_action">Unlock</string>
+    <string name="app_lock_disabled_no_credential">App lock was turned off — no screen lock is set on this device</string>
+
+    <string name="settings_legacy_history_lock_label">Lock history</string>
+    <string name="settings_legacy_change_pin_label">Change PIN</string>
+    <string name="settings_legacy_pin_masked">••••</string>
+
+    <string name="settings_delete_my_account_confirm_title">Delete my account?</string>
+    <string name="settings_delete_my_account_confirm_body">This permanently erases all your tracker data and your account, then signs you out. You\'ll go through setup again the next time you open the app. Type %1$s to confirm.</string>
+    <string name="settings_delete_my_account_confirm_action">Delete account</string>
+
+    <string name="settings_app_details_section">About</string>
+    <string name="settings_app_details_version_label">Version</string>
+    <string name="settings_app_details_version_value">%1$s (build %2$d)</string>
+    <string name="settings_app_details_update_check_label">Check for updates</string>
+    <string name="settings_app_details_privacy_policy">Privacy policy</string>
+    <string name="settings_app_details_licences">Third-party licences</string>
+    <string name="settings_app_details_source">Source</string>
 </resources>

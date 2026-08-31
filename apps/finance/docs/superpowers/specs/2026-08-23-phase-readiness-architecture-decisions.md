@@ -426,6 +426,26 @@ Phase 7 step 1 would re-create an existing table.
 descope the design explicitly draws as a day-one escape hatch, so it is **deferred, not cancelled** —
 Phase 7 owns it alongside the other ingestion paths.
 
+### 5.5 `[SA]` Unowned work surfaced by Phase 0b shipping (added 2026-08-29)
+
+Phase 0b (004-settings) is **shipped**. Building it real, and then auditing it against its own FRs,
+surfaced four items 0b **cannot** own — each is a *consumer* that 0b's control plane now has a
+control for, and each currently has no phase. Recorded here rather than only in 004's Deferred
+table, because the engineer who needs them is the one starting Phase 6 or the Ask Dhruv work, and
+they will never open a shipped phase's spec. 004's Deferred table cross-references this section.
+
+| # | Unowned item | What 0b shipped | Why 0b cannot own it | Recommended owner |
+|---|---|---|---|---|
+| 1 | **`daily_rates` delivery pipeline** | The real Android notification channel, the `alert_daily_rates` toggle, a delivery-time `Choice`, and `NotificationChannelRegistry` — the first entry, which makes `SET-BR-006`'s 1:1 channel↔control rule non-vacuous | 0b is the control plane; it owns *the control*, never the alert-posting job. **Nothing posts to this channel today.** Phase 6 explicitly disclaims it — its scope note reads "`daily_rates`/`app_updates` stay with the currency and app-details modules", and neither module plans that work. This is the exact inverse of the gap §3.3 already names (there, controls nobody built; here, a control with no producer) | **Phase 6**, alongside its five alert arms — it builds the only `androidx.work` scheduling in the app, and a second scheduler for one channel is waste. Otherwise it needs a stated owner before 0b's toggle stops being honest |
+| 2 | **BYO AI-key consumption** (ADR-0002's override) | FR-038's storage half: encrypted in `secure_settings`, fixed-token masking that cannot leak length or characters, one-action removal, `SettingsRow.SecretText` | FR-038 requires the key be *stored* safely — it does not require it be *used*, and using it is an AI-path change in `:apps:finance:data`, not a settings one. `GeminiRepository` is a Koin singleton built once from `BuildConfig.GEMINI_API_KEY`, and `currentSnapshot()` deliberately skips the encrypted read, so honouring a user key needs a key-provider indirection | **The Ask Dhruv work** — ADR-0024 decision 4 already says this plumbing "is tracked and lands alongside it". No phase in §7's table owns Ask Dhruv; that is the real gap. Until then the row states it is stored-not-used (FR-043), the same way app lock shipped preference-only in 0b.1 |
+| 3 | **Hiding launcher entry points** for a module the user turned off | FR-032's enforcement: `SettingsContribution.optional`, the on/off control for the three optional modules, and route gating so a turned-off module renders `FeatureDisabledCard` | Content removal is done and is the load-bearing half. The remaining half — hiding the Calc-tab converter tiles and the Ask pill — lives in `CalculatorScreen` (a feature module) and the shell's pill logic, neither of which 0b owns | **Whichever phase next revisits those surfaces.** Low urgency by design: a still-present tile leading to `FeatureDisabledCard` is *exactly* how a flag-disabled module already behaves, so this is a pre-existing consistency gap in that pattern, not one 0b introduced |
+| 4 | **`font_family` has no Settings row** | 0b.5's `SET-BR-009`/SC-005 orphan-preference audit found it and deleted the 9 keys that were genuinely dead | This one is **not** dead: `DhruvTheme` actively branches on `DhruvFont`, so the preference is live and simply unreachable — a real FR-003 violation ("every persisted key has exactly one row"). 0b did not invent a font picker to fix it because DESIGN-SYSTEM §2 specifies a fixed three-family system and lists no font-picker in its component or screen inventory; adding one is unspecified UI scope, and deleting font support is a design decision | **A DESIGN-SYSTEM decision first** (add a picker, or drop `DhruvFont`'s non-default variants), then whichever phase implements the answer. Recorded in 004's `quickstart.md` §7 with the same reasoning |
+
+Two of these (1 and 2) are the same shape and worth naming as a pattern: **0b's control plane can
+ship an honest control faster than the feature can ship its consumer.** FR-043's preference-only
+labelling is the designed release valve and both use it — but a control that stays labelled
+"not in use yet" indefinitely eventually reads as broken, so each needs an owner, not just a label.
+
 ---
 
 ## 6. Readiness by discipline

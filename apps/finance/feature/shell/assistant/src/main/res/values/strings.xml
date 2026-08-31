@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings contribution (004-settings, 0b.4 T096) -->
+    <string name="settings_assistant_title">Assistant</string>
+    <string name="settings_assistant_summary">Consent and personal AI key</string>
+    <string name="settings_assistant_consent_label">Ask Dhruv about my money</string>
+    <string name="settings_assistant_consent_description">Anonymised summaries only — never your account numbers</string>
+    <string name="settings_assistant_consent_needed_message">Requires the \'Ask Dhruv about my money\' consent</string>
+    <string name="settings_assistant_key_label">Personal AI key</string>
+    <!-- FR-043: says what it actually does today. `GeminiRepository` is built once with
+         BuildConfig.GEMINI_API_KEY, so a saved key is stored encrypted but not yet consumed —
+         claiming it "bypasses the shared quota" would promise behaviour the app does not have.
+         Same preference-only pattern app lock shipped under in 0b.1 before 0b.3 made it enforcing.
+         Reword when ADR-0002's BYO-key override is actually wired. -->
+    <string name="settings_assistant_key_description">Stored securely for when Ask Dhruv supports your own key — not in use yet</string>
+</resources>

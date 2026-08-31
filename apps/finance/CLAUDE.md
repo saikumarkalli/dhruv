@@ -46,6 +46,13 @@ is where the actual detail lives (screens, ViewModels, data deps, flag keys) —
 2. **The module's own `README.md`** — drop the "not yet created" preamble, write the real screens,
    ViewModels, data dependencies and flag key. Detail lives only there, never copied back into
    FEATURES.md (that duplication was removed in 2026-08-09 because it drifted).
+2a. **The module's `SettingsContribution`** — a module that registers a feature flag ships its own
+   Settings entry with it (`specs/004-settings/contracts/settings-contribution.md`, FR-003/FR-004).
+   Phase 0b's control plane assembles the Modules tier purely from registered contributions, so a
+   module without one is simply **absent from Settings** — silently, with no error and nothing to
+   notice in review. That is the failure this line exists to prevent: the 2026-08-22 spec audit
+   found four planned phases (001, 002, 003, 006) with no contribution at all. Registration is
+   `single(qualifier = named(moduleKey)) { … }` — the qualifier is required, not optional.
 3. **Root [`CHANGELOG.md`](../../CHANGELOG.md)** — an entry under the `finance-*` release heading.
    CI injects the heading; the prose under it is hand-written.
 
@@ -108,3 +115,21 @@ intent/settings registries are `docs/superpowers/specs/2026-08-09-finance-surfac
 ## Phase
 Phase 4 complete — feature split done. DhruvNext design system overhaul complete (all 17 production
 screen files migrated to tokens + components). All modules + app build; unit tests + ArchUnit green.
+
+Phase 0b (Settings control plane, [004-settings](specs/004-settings/)) — **all five sub-phases
+shipped (0b.1-0b.5)**. 0b.1: control plane, contribution mechanism, Appearance, calculator/currency/
+unit module entries. 0b.3 and 0b.4 were implemented ahead of 0b.2 at the maintainer's request (both
+only depend on 0b.1). 0b.3: a real enforcing app lock (`BiometricPrompt` gate over the whole app,
+not just a preference), auto-lock timeout, hide-amounts (screen surface; widget/notification
+surfaces deferred — nothing to mask there yet), and the app-wide notifications master switch. 0b.4:
+module on/off convention, consent-gated module entries, the first real alert control (currency
+daily-rates), durable assistant consent (fixes the old in-memory-flag defect), a personal AI key
+row, and App details (version/privacy/licences/source, pluggable update check — no update channel
+wired yet). 0b.2: the real Account screen — sign-in/sign-out wired directly to `AuthRepository`
+(never onboarding, `SET-ARCH-003`), the three consent switches, erasure with type-to-confirm on
+account deletion; replaces 0b.1's `SettingsAccountBody` stand-in (deleted). 0b.5: verification pass
+— found and removed 9 orphaned preference keys (per-section accent colors and per-tab enable flags,
+both retired by ADR-0024, zero consumers); coverage floor raised 0.09 → 0.14 (measured merged
+14.91%, `:libs:settings` 38.38%, `:libs:core` 15.02%). SC-001's on-device migration check and the
+theming/TalkBack passes remain deferred — no physical device or emulator was available in the
+implementation session; see spec.md's Implementation record.
