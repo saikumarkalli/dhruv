@@ -58,7 +58,12 @@ fun SettingsScreen(
     val contributionSource: SettingsContributionSource = koinInject()
     val registry: SettingsRegistry = koinInject()
     val context = LocalContext.current
-    // Contract §4 rule 13: resolved once per Settings open, not per recomposition.
+
+    // Contract §4 rule 13: resolved once per Settings open, not per recomposition — the resolver
+    // callback takes an arbitrary Int id from any registered module's contribution, so it can't be
+    // a compile-time stringResource() call; a config change (e.g. locale) while this screen stays
+    // open won't re-localize until it's reopened, an accepted trade-off of the "resolve once" rule.
+    @Suppress("LocalContextGetResourceValueCall")
     val contributions =
         remember {
             registry.resolve(contributionSource.resolve(), resolver) { id -> context.getString(id) }

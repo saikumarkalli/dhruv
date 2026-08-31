@@ -84,6 +84,7 @@ fun AccountSettingsScreen(
     val consentState by viewModel.consentState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val colors = LocalDhruvNextColors.current
+    val offlineErrorText = stringResource(R.string.settings_account_sign_in_offline)
 
     var isSigningIn by remember { mutableStateOf(false) }
     var signInErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -131,7 +132,7 @@ fun AccountSettingsScreen(
                         onClick = {
                             signInErrorMessage = null
                             if (!isDeviceOnline(context)) {
-                                signInErrorMessage = context.getString(R.string.settings_account_sign_in_offline)
+                                signInErrorMessage = offlineErrorText
                             } else {
                                 isSigningIn = true
                                 coroutineScope.launch {
