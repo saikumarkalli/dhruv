@@ -155,6 +155,21 @@ not budget for it.
 
 ### 1. Supabase — set environment secrets
 
+**Confirmed still not done, 2026-08-31.** `apply-dev` (`supabase-migrate.yml`, triggered by the
+2026-08-27 `develop` push, run `33080504883` / job `98546096527`) failed:
+
+```
+supabase link --project-ref ""
+Cannot find project ref. Have you run supabase link?
+```
+
+`gh api repos/saikumarkalli/dhruv/environments/dev/secrets` returns `{"total_count":0,"secrets":[]}`
+— the `dev` Environment has **zero** secrets, confirming `SUPABASE_ACCESS_TOKEN`,
+`SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` were never actually set there despite this section
+already existing. The same push also tripped `branch-guard.yml` (see the note below) — unrelated
+cause, same commit. Re-run `apply-dev` after completing this step to confirm it's clean; it will
+keep failing on every `develop` push carrying a `supabase/**` change until then.
+
 Run **yourself**, in your own terminal (it prompts for real credentials — never paste secret
 values into a chat session, including this one):
 
@@ -242,3 +257,20 @@ gh variable list --repo saikumarkalli/dhruv
 Then open a small PR touching `supabase/**` to see `verify` run, merge to `develop` to see
 `apply-dev` run, and — when ready — merge `develop → main` to see `release-approval` /
 `prod-plan` → `prod-approval` open their GitHub issues.
+
+## Historical note: one direct push to `develop` (2026-08-27)
+
+`branch-guard.yml`'s `Guard · Direct push to protected branch` failed on the same 2026-08-27 push
+(run `33080504999`):
+
+```
+Commit 686a2b3 ('feat: initialize finance app architecture, Supabase schema modules, and phase 2
+tracker database migrations') was pushed directly to 'develop' — no merged pull request contains
+it.
+```
+
+That commit is already in `develop`'s history (merged transitively via PR #43's later merge commit
+`ee1c143`), so this is a **retroactive flag, not an open item** — nothing to fix, no action
+possible without a history rewrite. Recorded here only so a future read of failing `develop` runs
+doesn't re-investigate it: it is the guard correctly doing its job on a one-time bypass, not a bug
+in the guard or a sign the hook (`scripts/hooks/pre-push`) isn't working now.
