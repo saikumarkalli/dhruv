@@ -56,3 +56,25 @@ data class ValuationDto(
     @param:Json(name = "as_of") val asOf: String,
     @param:Json(name = "source") val source: String,
 )
+
+/** Wire shape of a plain (non-RPC) `finance.valuations` insert — an ordinary new value
+ * (BR-C1's append path, never a correction; [source] must not be `"CORRECTION"`, which is
+ * reserved for [CorrectValuationRequestDto]'s RPC). */
+@JsonClass(generateAdapter = true)
+data class RecordValuationRequestDto(
+    @param:Json(name = "holding_id") val holdingId: String,
+    @param:Json(name = "value_paise") val valuePaise: Long,
+    @param:Json(name = "as_of") val asOf: String,
+    @param:Json(name = "source") val source: String,
+    @param:Json(name = "request_id") val requestId: String? = null,
+)
+
+/** Wire shape of a `finance.correct_valuation(...)` RPC request body (data-model.md) — the only
+ * path by which a valuation row is ever amended (NW-BR-002/NW-BR-003). */
+@JsonClass(generateAdapter = true)
+data class CorrectValuationRequestDto(
+    @param:Json(name = "p_valuation_id") val valuationId: String,
+    @param:Json(name = "p_value_paise") val valuePaise: Long,
+    @param:Json(name = "p_as_of") val asOf: String,
+    @param:Json(name = "p_note") val note: String? = null,
+)

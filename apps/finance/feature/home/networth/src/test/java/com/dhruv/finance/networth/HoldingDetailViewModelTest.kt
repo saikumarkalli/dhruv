@@ -42,6 +42,21 @@ private class FakeHoldingDetailValuationRepository(
     private val result: Result<List<ValuationHistoryEntry>>,
 ) : ValuationRepository {
     override suspend fun listHistory(holdingId: String): Result<List<ValuationHistoryEntry>> = result
+
+    override suspend fun recordValue(
+        holdingId: String,
+        valuePaise: Long,
+        asOf: String,
+        sourceCode: String,
+        requestId: String?,
+    ): Result<String> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun correctValue(
+        valuationId: String,
+        valuePaise: Long,
+        asOf: String,
+        note: String?,
+    ): Result<String> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

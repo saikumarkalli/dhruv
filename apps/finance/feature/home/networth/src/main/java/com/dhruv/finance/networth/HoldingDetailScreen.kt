@@ -23,6 +23,8 @@ import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
 import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxButtonSize
+import com.dhruv.core.ui.components.NxButtonVariant
 import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.NxTopBar
 import com.dhruv.core.ui.components.PeriodChipRow
@@ -45,16 +47,19 @@ private val TREND_RANGE_LABELS = listOf("3M", "6M", "1Y", "All")
 private val TREND_RANGES = listOf(TrendRange.THREE_MONTHS, TrendRange.SIX_MONTHS, TrendRange.ONE_YEAR, TrendRange.ALL)
 
 /**
- * C3 — holding detail (spec.md Story 2). [onUpdateValue] is a placeholder hook: C5 (`AddValuationSheet`,
- * Phase 2 User Story 3) is what this button actually opens, and doesn't exist yet — wired to a
- * no-op by [NetWorthFeatureRoot] until Phase 5 lands, not silently omitted. Link-to-goal is left
- * out entirely — goals don't exist in this design-v1 phase at all.
+ * C3 — holding detail (spec.md Story 2). [onUpdateValue] opens C5 (`AddValuationSheet`) to append
+ * an ordinary new value, given the current value to preview the delta against.
+ * [onCorrectEntry] opens the same sheet in correction mode for one specific history row (id +
+ * its own value) — spec.md Story 3's "realize it's wrong -> add a corrected value" path
+ * (NW-BR-002/NW-BR-003). Link-to-goal is left out entirely — goals don't exist in this design-v1
+ * phase at all.
  */
 @Composable
 fun HoldingDetailScreen(
     viewModel: HoldingDetailViewModel,
     onBack: () -> Unit,
-    onUpdateValue: () -> Unit,
+    onUpdateValue: (currentValuePaise: Long?) -> Unit,
+    onCorrectEntry: (valuationId: String, valuePaise: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
@@ -87,6 +92,7 @@ fun HoldingDetailScreen(
                         holding = holding,
                         uiState = uiState,
                         onUpdateValue = onUpdateValue,
+                        onCorrectEntry = onCorrectEntry,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -100,7 +106,8 @@ private fun HoldingDetailContent(
     viewModel: HoldingDetailViewModel,
     holding: Holding,
     uiState: HoldingDetailViewModel.UiState,
-    onUpdateValue: () -> Unit,
+    onUpdateValue: (Long?) -> Unit,
+    onCorrectEntry: (String, Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
@@ -154,7 +161,7 @@ private fun HoldingDetailContent(
             }
         }
 
-        NxButton(text = "Update value", onClick = onUpdateValue, block = true)
+        NxButton(text = "Update value", onClick = { onUpdateValue(currentValuePaise) }, block = true)
 
         NxCard {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -164,7 +171,7 @@ private fun HoldingDetailContent(
                     EmptyStateCard(message = "No values recorded yet.")
                 } else {
                     uiState.history.forEachIndexed { index, entry ->
-                        HistoryRow(entry)
+                        HistoryRow(entry, onCorrect = { onCorrectEntry(entry.valuation.id, entry.valuation.valuePaise) })
                         if (index != uiState.history.lastIndex) {
                             Spacer(Modifier.height(DhruvNextSpacing.inputGroupGap))
                         }
@@ -176,7 +183,10 @@ private fun HoldingDetailContent(
 }
 
 @Composable
-private fun HistoryRow(entry: ValuationHistoryEntry) {
+private fun HistoryRow(
+    entry: ValuationHistoryEntry,
+    onCorrect: () -> Unit,
+) {
     val colors = LocalDhruvNextColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -206,6 +216,13 @@ private fun HistoryRow(entry: ValuationHistoryEntry) {
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
+            NxButton(
+                text = "Fix",
+                onClick = onCorrect,
+                variant = NxButtonVariant.Ghost,
+                size = NxButtonSize.Small,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

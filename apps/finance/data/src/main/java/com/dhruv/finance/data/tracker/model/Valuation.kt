@@ -1,7 +1,18 @@
 package com.dhruv.finance.data.tracker.model
 
 /** The four frozen valuation sources (BR-C3) — mirrors `finance.valuations`' CHECK constraint. */
-enum class ValuationSource { MANUAL, STATEMENT, IMPORT, CORRECTION }
+enum class ValuationSource {
+    MANUAL,
+    STATEMENT,
+    IMPORT,
+    CORRECTION,
+    ;
+
+    companion object {
+        /** Validates a raw source code, same fixed-set discipline as [Sector.fromCode]. */
+        fun fromCode(code: String): ValuationSource? = entries.find { it.name == code }
+    }
+}
 
 data class Valuation(
     val id: String,

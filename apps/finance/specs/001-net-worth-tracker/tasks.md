@@ -230,21 +230,46 @@ still visible in history, unaltered.
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Correction test — wrong entry soft-deleted (`deleted_at` set) + new entry
-      appended, no UPDATE ever issued against `value_paise`, citing NW-BR-002/NW-BR-003, in
-      `ValuationRepositoryTest.kt` (same file as T021)
+- [X] T025 [P] [US3] **DONE (2026-09-01).** Correction test — a correction is exactly one RPC call
+      (the soft-delete-old + append-corrected transaction happens entirely server-side in
+      `finance.correct_valuation`; the client never issues two calls, never an UPDATE against
+      `value_paise` — there is no UPDATE policy to call even if it tried), citing
+      NW-BR-002/NW-BR-003, in `ValuationRepositoryTest.kt` (same file as T021). Also added
+      `recordValue()`'s own test coverage (plain-append call count, `CORRECTION` rejected as a
+      user-selectable source, unknown source rejected) alongside it
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Implement `ValuationRepository.recordValue()` + `.correctValue()` (soft-delete +
-      append, never UPDATE — enforced by T004's RLS having no UPDATE policy at all, this is the
-      client-side half of that guarantee), citing NW-BR-002/NW-BR-003, in
-      `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/ValuationRepository.kt`
-- [ ] T027 [US3] Build `AddValuationSheet` (C5) — last value + date shown, live delta preview as the
-      user types (amount + %, before submit), date + source picker, citing NW-UI-003, in
-      `apps/finance/feature/home/networth/AddValuationSheet.kt`
+- [X] T026 [US3] **DONE (2026-09-01).** Implement `ValuationRepository.recordValue()` +
+      `.correctValue()` — `recordValue()` is a plain PostgREST insert (`Prefer:
+      return=representation` added since PostgREST's default insert response is empty and Moshi
+      needs a body); `correctValue()` calls the `finance.correct_valuation` RPC. Neither ever
+      issues a client-side UPDATE — enforced by `finance.valuations` having no UPDATE policy at all
+      (T004), this is the client-side half of that guarantee. Citing NW-BR-002/NW-BR-003, in
+      `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/ValuationRepository.kt`.
+      Also added `HoldingApi`/`ValuationApi` methods, `RecordValuationRequestDto`,
+      `CorrectValuationRequestDto`, and `ValuationSource.fromCode()` (mirroring `Sector.fromCode`)
+      as prerequisites this task needed
+- [X] T027 [US3] **DONE (2026-09-01).** Build `AddValuationSheet` (C5) — last value shown, live
+      delta preview (amount + %) computed from whatever is currently typed, before submit
+      (NW-UI-003), source picker (`SegmentedRow`: Manual/Statement/Import), in
+      `apps/finance/feature/home/networth/AddValuationSheet.kt`. **Scope addition beyond the
+      literal task**: the sheet also serves as the correction UI — when opened with a specific
+      `valuationId` (a new "Fix" action added to each `HoldingDetailScreen` history row), the title
+      switches to "Correct this value", the source picker is hidden (`correct_valuation` always
+      writes `source = 'CORRECTION'` server-side, nothing to choose), and `save()` calls
+      `correctValue()` instead of `recordValue()`. Without this, `correctValue()` would have been
+      unreachable dead code with no UI path, and spec.md Story 3's own independent test
+      ("realize it's wrong -> add a corrected value") would not be satisfiable end to end.
+      **Deviation, same as prior phases**: date is fixed to "today" — no date picker component
+      exists yet. Wired from `HoldingDetailScreen`'s "Update value" button and each history row's
+      new "Fix" button, through `NetWorthFeatureRoot`'s local `NavHost`
+      (`addValuation/{holdingId}?correcting={id}&last={value}`), not `NavTarget` — same reasoning
+      as T019/T024
 
-**Checkpoint**: Stories 1–3 independently functional.
+**Checkpoint (2026-09-01)**: Stories 1–3 independently functional at the Compose/Kotlin level —
+`regressionCheck` green (including `checkTrackerMoneyPrecision`), ArchUnit green. Same live-database
+caveat as Phases 2–4: nothing here has made a real Supabase call yet (T005/T078).
 
 ---
 

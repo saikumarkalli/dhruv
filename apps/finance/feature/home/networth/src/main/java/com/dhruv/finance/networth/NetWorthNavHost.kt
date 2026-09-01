@@ -22,8 +22,11 @@ private const val ROUTE_OVERVIEW = "overview"
 private const val ROUTE_ASSETS = "assets/{sector}"
 private const val ROUTE_ADD_HOLDING = "addHolding"
 private const val ROUTE_HOLDING_DETAIL = "holding/{holdingId}"
+private const val ROUTE_ADD_VALUATION = "addValuation/{holdingId}?correcting={correcting}&last={last}"
 private const val ARG_SECTOR = "sector"
 private const val ARG_HOLDING_ID = "holdingId"
+private const val ARG_CORRECTING = "correcting"
+private const val ARG_LAST = "last"
 
 /**
  * Owns C1-C7's intra-module navigation. `NavTarget` (`libs/core/.../navigation/NavTarget.kt`) is
@@ -80,9 +83,43 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
                 HoldingDetailScreen(
                     viewModel = vm,
                     onBack = { navController.popBackStack() },
-                    // C5 (AddValuationSheet) doesn't exist until Phase 5 (User Story 3) —
-                    // no-op placeholder, not silently omitted (see HoldingDetailScreen's KDoc).
-                    onUpdateValue = { },
+                    onUpdateValue = { lastValuePaise ->
+                        navController.navigate("addValuation/$holdingId?last=${lastValuePaise ?: ""}")
+                    },
+                    onCorrectEntry = { valuationId, valuePaise ->
+                        navController.navigate("addValuation/$holdingId?correcting=$valuationId&last=$valuePaise")
+                    },
+                )
+            }
+        }
+        composable(
+            route = ROUTE_ADD_VALUATION,
+            arguments =
+                listOf(
+                    navArgument(ARG_HOLDING_ID) { type = NavType.StringType },
+                    navArgument(ARG_CORRECTING) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument(ARG_LAST) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+        ) { backStackEntry ->
+            val vm: AddValuationViewModel = koinViewModel()
+            val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
+            val correcting = backStackEntry.arguments?.getString(ARG_CORRECTING)
+            val last = backStackEntry.arguments?.getString(ARG_LAST)?.toLongOrNull()
+            LaunchedEffect(holdingId, correcting, last) { vm.start(holdingId, last, correcting) }
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                AddValuationSheet(
+                    viewModel = vm,
+                    onSaved = { navController.popBackStack() },
+                    onDismissRequest = { navController.popBackStack() },
                 )
             }
         }
