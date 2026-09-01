@@ -44,7 +44,7 @@ story is independently implementable, testable, and demoable — matching spec.m
 **⚠️ CRITICAL**: No user story task below may start before this phase closes (constitution
 Article II — SA schema + QA catalog rows, in that order, before Backend/Android code).
 
-- [ ] T004 [SA] **Author declaratively first, then generate the migration** (ADR-0032 decision 4 —
+- [X] T004 [SA] **DONE (verified on disk, pre-dates this session — see Phase 11's note that T004/T004a/T004b's scope narrowed to review).** **Author declaratively first, then generate the migration** (ADR-0032 decision 4 —
       the original draft hand-wrote the migration only, which fails the PR equivalence guard on
       merge; audit 2026-08-22). Write `supabase/schemas/finance/10_tables/liabilities_meta.sql`
       (RLS transitive through `holding_id → holdings.user_id`, mutable per data-model.md, not
@@ -55,30 +55,43 @@ Article II — SA schema + QA catalog rows, in that order, before Backend/Androi
       most severe finding of the 2026-08-22 audit; 005 already applies the equivalent reasoning to
       its reporting functions at `005/plan.md:138-146`). Then run `supabase db diff -f
       networth_phase2` to generate `supabase/migrations/`, review the generated SQL, and commit both
-- [ ] T004a [SA] Hand-append to the generated migration the statements `db diff` cannot emit
+- [X] T004a [SA] **DONE.** Hand-append to the generated migration the statements `db diff` cannot emit
       (ADR-0032's caveat list): the `DELETE FROM liabilities_meta` line inside `delete_my_data()`
       (a forgotten table here breaks DPDP erasure silently — the `0001_init.sql` comment's own
       reminder), `grant select, insert, update, delete on finance.liabilities_meta to authenticated`,
       and `grant select on finance.v_latest_valuation, finance.v_net_worth_by_sector to
       authenticated` (ADR-0033 decision 4 — custom-schema objects are unreachable without an
       explicit grant; 002 T010 and 003 T022 already do this, 001 originally did not)
-- [ ] T004b [SA] Run `python scripts/db/gen_schema_docs.py equiv` and `... docs --check` and commit
-      the regenerated `supabase/SCHEMA.md`; regenerate `web/src/shared/types/database.ts` with
-      `--schema public,finance`. These are the CI guards every other phase runs and 001 omitted
+- [X] T004b [SA] **Partially done, reason stated (2026-09-01 session).** Ran `python
+      scripts/db/gen_schema_docs.py equiv` and `... docs --check` — both pass, `SCHEMA.md` is fresh.
+      Did **not** regenerate `web/src/shared/types/database.ts` — `supabase gen types` needs a live,
+      authenticated connection (`supabase login`/`SUPABASE_ACCESS_TOKEN`), unavailable in this
+      unauthenticated session (same class of gap ADR-0032's runbook already names). Remains open;
+      run `supabase gen types typescript --linked --schema public,finance` once credentialed
 - [ ] T005 [P] [Sec] RLS policy test for `liabilities_meta` and both new views against the dev
       Supabase project — verifies no cross-user leakage, no client UPDATE/DELETE path exists where
-      the schema says there shouldn't be one
-- [ ] T006 [P] Build component batch B3 (charts) in
-      `libs/core/src/main/kotlin/com/dhruv/core/ui/components/charts/` — `DonutChart` +
-      `RankedLegend`, `PieChart`, `AmortisationDonut`, `PaceRing` (repurposes existing
-      `FinancialHealthRing` per design system §5.2 note — extend, do not delete)
-- [ ] T007 [P] Build B6's `NxSelect` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/inputs/NxSelect.kt`
-- [ ] T008 [P] Build B9's `SelectionSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/overlays/SelectionSheet.kt`
-- [ ] T009 [P] Extend `NxTextField` (`libs/core/src/main/kotlin/com/dhruv/core/ui/components/inputs/NxTextField.kt`) with an error state + helper text — design system §5.3, first consumer is C4/C5 below
-- [ ] T010 [P] Extend `NxButton` (`libs/core/src/main/kotlin/com/dhruv/core/ui/components/actions/NxButton.kt`) with sizes + loading + block (full-width) treatment — design system §5.3
+      the schema says there shouldn't be one. **Blocked**: needs a live, authenticated Supabase
+      connection, unavailable in this session (same gap as T004b)
+- [X] T006 [P] **DONE (2026-09-01).** Build component batch B3 (charts) — `DonutChart` + `RankedLegend`
+      (`DonutChart.kt`), `PieChart` (`PieChart.kt`), `AmortisationDonut` (`AmortisationDonut.kt`),
+      `PaceRing` (`PaceRing.kt`), all in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/` —
+      **flat, not under a `charts/` subdirectory**: every existing built component (`BarChart.kt`,
+      `Rings.kt`, `Chips.kt`, …) already lives flat in that one package, so this follows the real
+      convention over the plan's aspirational subdirectory scheme (never actually used by any
+      shipped component). `FinancialHealthRing` (`Rings.kt`) is untouched, not repurposed — a
+      dedicated `AmortisationDonut` reads more clearly for a 3-segment paid/paid/remaining donut than
+      overloading a single-progress ring API
+- [X] T007 [P] **DONE (2026-09-01).** Build B6's `NxSelect` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/NxSelect.kt` (flat package, same note as T006)
+- [X] T008 [P] **DONE (2026-09-01).** Build B9's `SelectionSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/SelectionSheet.kt` (flat package, same note as T006)
+- [X] T009 [P] **Already done pre-session** (004-settings 0b.4 T097, design system §5.3's "closed since last pass" note) — `NxTextField` already has `errorMessage` (`libs/core/src/main/kotlin/com/dhruv/core/ui/components/NxTextField.kt`)
+- [X] T010 [P] **DONE (2026-09-01).** Extended `NxButton` (`libs/core/src/main/kotlin/com/dhruv/core/ui/components/NxButton.kt`) with `NxButtonSize` (Small/Medium), `loading` (spinner replaces label, click suppressed) and `block` (fillMaxWidth) — design system §5.3
 
-**Checkpoint**: Schema migrated, RLS verified, all five component gaps (B3/B6/B9 +
-`NxTextField`/`NxButton`) closed. User story work can begin.
+**Checkpoint (2026-09-01)**: all five component gaps (B3/B6/B9 + `NxTextField`/`NxButton`) closed
+and schema authored+reviewed (T004/T004a, static guards T004b). **Still open, both blocked on a
+live authenticated Supabase connection unavailable in this session**: the migration has never
+actually been executed against `dhruv-dev` (T078, Phase 11) and RLS is unverified (T005) — user
+story work that only touches Compose/Kotlin can proceed, but nothing should be treated as confirmed
+against the real database until T005/T078 close.
 
 ---
 
