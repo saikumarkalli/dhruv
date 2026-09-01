@@ -21,7 +21,9 @@ import org.koin.compose.koinInject
 private const val ROUTE_OVERVIEW = "overview"
 private const val ROUTE_ASSETS = "assets/{sector}"
 private const val ROUTE_ADD_HOLDING = "addHolding"
+private const val ROUTE_HOLDING_DETAIL = "holding/{holdingId}"
 private const val ARG_SECTOR = "sector"
+private const val ARG_HOLDING_ID = "holdingId"
 
 /**
  * Owns C1-C7's intra-module navigation. `NavTarget` (`libs/core/.../navigation/NavTarget.kt`) is
@@ -59,7 +61,29 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
             LaunchedEffect(sectorArg) { vm.setSectorFilter(sectorArg?.let(Sector::fromCode)) }
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
-                AssetsScreen(viewModel = vm, onBack = { navController.popBackStack() })
+                AssetsScreen(
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                    onOpenHolding = { holdingId -> navController.navigate("holding/$holdingId") },
+                )
+            }
+        }
+        composable(
+            route = ROUTE_HOLDING_DETAIL,
+            arguments = listOf(navArgument(ARG_HOLDING_ID) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val vm: HoldingDetailViewModel = koinViewModel()
+            val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
+            LaunchedEffect(holdingId) { vm.load(holdingId) }
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                HoldingDetailScreen(
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                    // C5 (AddValuationSheet) doesn't exist until Phase 5 (User Story 3) —
+                    // no-op placeholder, not silently omitted (see HoldingDetailScreen's KDoc).
+                    onUpdateValue = { },
+                )
             }
         }
         composable(ROUTE_ADD_HOLDING) {

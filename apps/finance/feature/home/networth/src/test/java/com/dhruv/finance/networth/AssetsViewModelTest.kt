@@ -28,6 +28,9 @@ private class FakeAssetsHoldingRepository(
         throw UnsupportedOperationException("not exercised by this test")
 
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> = listResult
+
+    override suspend fun get(holdingId: String): Result<Holding> =
+        throw UnsupportedOperationException("not exercised by this test")
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

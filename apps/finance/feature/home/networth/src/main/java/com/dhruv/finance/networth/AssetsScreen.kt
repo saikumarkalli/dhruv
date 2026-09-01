@@ -1,6 +1,7 @@
 package com.dhruv.finance.networth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import com.dhruv.finance.data.tracker.model.Sector
 fun AssetsScreen(
     viewModel: AssetsViewModel,
     onBack: () -> Unit,
+    onOpenHolding: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
@@ -96,7 +98,9 @@ fun AssetsScreen(
                         contentPadding = PaddingValues(DhruvNextSpacing.screenGutter),
                         verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
                     ) {
-                        items(filtered, key = { it.holding.id }) { item -> AssetRow(item) }
+                        items(filtered, key = { it.holding.id }) { item ->
+                            AssetRow(item, onClick = { onOpenHolding(item.holding.id) })
+                        }
                     }
                 }
             }
@@ -105,9 +109,12 @@ fun AssetsScreen(
 }
 
 @Composable
-private fun AssetRow(item: HoldingWithValue) {
+private fun AssetRow(
+    item: HoldingWithValue,
+    onClick: () -> Unit,
+) {
     val colors = LocalDhruvNextColors.current
-    NxCard(modifier = Modifier.fillMaxWidth()) {
+    NxCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

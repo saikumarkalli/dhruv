@@ -182,21 +182,41 @@ trend, and a newest-first history list all render.
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] History-ordering test — entries newest-first, each with its delta vs the
+- [X] T021 [P] [US2] **DONE (2026-09-01).** History-ordering test — entries newest-first, each with its delta vs the
       previous entry, citing NW-UI-002, in
-      `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/ValuationRepositoryTest.kt`
+      `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/ValuationRepositoryTest.kt`.
+      **Deviation**: delta is `deltaPercentBps: Int` (basis points), not a `Double` percent — the
+      `checkTrackerMoneyPrecision` gate (Article VII/DAT-BR-008) forbids floating-point types
+      anywhere under this module's tracker path; basis points is the same convention
+      `liabilities_meta.rate_bps` already uses. A caller divides by 100 to display a percentage
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement `HoldingDetailViewModel` (C3) — history query + trend range filtering,
-      citing NW-UI-002, in `apps/finance/feature/home/networth/HoldingDetailViewModel.kt`
-- [ ] T023 [US2] Build `HoldingDetailScreen` (C3) — value + %, trend chart with 3M/6M/1Y/All range
-      chips, INVESTED · GAIN · simple-return% stats (FR-006a — placeholder %, not IRR, per spec.md
-      Assumptions), VALUATION HISTORY list (dated, sourced, delta-vs-previous), *Update value* /
-      *Link to goal* actions, in `apps/finance/feature/home/networth/HoldingDetailScreen.kt`
-- [ ] T024 [US2] Wire C2/C6 → C3 navigation via `NavTarget` (`OpenHolding`/`OpenLiability`)
+- [X] T022 [US2] **DONE (2026-09-01).** Implement `HoldingDetailViewModel` (C3) — history query + trend range filtering,
+      citing NW-UI-002, in `apps/finance/feature/home/networth/HoldingDetailViewModel.kt`. Also
+      added (prerequisite this task needed, not separately scheduled): `HoldingRepository.get(id)`
+      (single-holding read, new `HoldingApi.getById`) and `ValuationRepository` itself
+      (`ValuationApi.listHistory`, `ValuationDto`, `Valuation`/`ValuationHistoryEntry` models) — none
+      of C3's reads existed before this phase
+- [X] T023 [US2] **DONE (2026-09-01).** Build `HoldingDetailScreen` (C3) — value + %, trend chart
+      (`TrendSparkline`) with 3M/6M/1Y/All range chips (`PeriodChipRow`), INVESTED · GAIN ·
+      simple-return% stats (`ThreeUpStatRow`, shown only when `investedPaise` is present — never a
+      fabricated zero), VALUATION HISTORY list (dated, sourced, delta-vs-previous via
+      `StatDeltaChip`), in `apps/finance/feature/home/networth/HoldingDetailScreen.kt`.
+      **Deviations**: *Update value* renders as a button wired to a no-op — its destination, C5
+      (`AddValuationSheet`), is Phase 5's (User Story 3) deliverable and doesn't exist yet; *Link to
+      goal* is omitted entirely — goals don't exist anywhere in this design-v1 phase. Both are
+      documented in the screen's own KDoc, not silently dropped
+- [X] T024 [US2] **DONE, with the same scope correction as T019 (2026-09-01).** Wired C2 → C3
+      navigation, but through `NetWorthFeatureRoot`'s local `NavHost` (`holding/{holdingId}` route),
+      not `NavTarget` — `OpenHolding`/`OpenLiability` cases still don't exist on `NavTarget`, and
+      T019's reasoning for why they shouldn't (intra-module drill-down, not cross-tab dispatch)
+      applies identically here. C6 → C3 is Phase 6's job (liabilities don't exist yet); only C2 → C3
+      is in scope this phase. `AssetsScreen`'s rows are now clickable (`onOpenHolding` callback)
 
-**Checkpoint**: Stories 1–2 both independently functional.
+**Checkpoint (2026-09-01)**: Stories 1–2 both independently functional at the Compose/Kotlin level
+— `regressionCheck` green (including `checkTrackerMoneyPrecision`), ArchUnit green. Same live-database
+caveat as Phases 2–3: nothing here has made a real Supabase call yet (T005/T078).
 
 ---
 

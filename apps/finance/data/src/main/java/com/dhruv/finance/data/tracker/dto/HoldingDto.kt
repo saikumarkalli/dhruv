@@ -45,3 +45,14 @@ data class NetWorthBySectorRowDto(
     @param:Json(name = "holding_count") val holdingCount: Int,
     @param:Json(name = "value_paise") val valuePaise: Long,
 )
+
+/** Wire shape of a full `finance.valuations` row (C3's history list — every column, unlike
+ * [LatestValuationRowDto]'s two-column projection off the latest-only view). */
+@JsonClass(generateAdapter = true)
+data class ValuationDto(
+    @param:Json(name = "id") val id: String,
+    @param:Json(name = "holding_id") val holdingId: String,
+    @param:Json(name = "value_paise") val valuePaise: Long,
+    @param:Json(name = "as_of") val asOf: String,
+    @param:Json(name = "source") val source: String,
+)

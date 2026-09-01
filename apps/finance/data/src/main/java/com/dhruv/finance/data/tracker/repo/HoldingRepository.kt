@@ -3,6 +3,7 @@ package com.dhruv.finance.data.tracker.repo
 import com.dhruv.finance.data.tracker.dto.CreateHoldingWithValueRequestDto
 import com.dhruv.finance.data.tracker.mapper.toDomain
 import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
+import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.Sector
@@ -26,6 +27,11 @@ interface HoldingRepository {
     /** Holdings of [kind] merged with their current value from `v_latest_valuation` — never a
      * client-side sum over raw valuation history (NFR-8). */
     suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>>
+
+    /** A single holding by id (C3's detail screen). Fails with [NoSuchElementException] if the id
+     * doesn't exist or doesn't belong to the signed-in user (RLS returns zero rows either way, so
+     * the two cases are indistinguishable here — same as everywhere else in this codebase). */
+    suspend fun get(holdingId: String): Result<Holding>
 }
 
 class HoldingRepositoryImpl(
@@ -83,6 +89,21 @@ class HoldingRepositoryImpl(
                     )
                 }
             Result.success(result)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun get(holdingId: String): Result<Holding> =
+        try {
+            val holding = holdingApi.getById(idFilter = "eq.$holdingId").firstOrNull()
+            if (holding == null) {
+                Result.failure(NoSuchElementException("No holding with id $holdingId"))
+            } else {
+                Result.success(holding.toDomain())
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -3,6 +3,7 @@ package com.dhruv.finance.networth
 import com.dhruv.core.observability.NoOpCrashReporter
 import com.dhruv.core.observability.NoOpPerformanceTracer
 import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
+import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
@@ -32,6 +33,9 @@ private class FakeAddEditHoldingRepository(
     }
 
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> =
+        throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun get(holdingId: String): Result<Holding> =
         throw UnsupportedOperationException("not exercised by this test")
 }
 

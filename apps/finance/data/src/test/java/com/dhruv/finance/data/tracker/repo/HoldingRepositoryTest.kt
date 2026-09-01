@@ -13,6 +13,7 @@ import java.io.IOException
 
 private class FakeHoldingApi(
     private val onCreate: (CreateHoldingWithValueRequestDto) -> String = { "holding-id" },
+    private val byId: Map<String, HoldingDto> = emptyMap(),
 ) : HoldingApi {
     var createCallCount = 0
         private set
@@ -30,10 +31,24 @@ private class FakeHoldingApi(
         notDeleted: String,
         order: String,
     ): List<HoldingDto> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun getById(
+        idFilter: String,
+        notDeleted: String,
+    ): List<HoldingDto> {
+        val id = idFilter.removePrefix("eq.")
+        return listOfNotNull(byId[id])
+    }
 }
 
 private class FakeValuationApi : ValuationApi {
     override suspend fun listLatestValuations(): List<LatestValuationRowDto> = emptyList()
+
+    override suspend fun listHistory(
+        holdingIdFilter: String,
+        notDeleted: String,
+        order: String,
+    ): List<com.dhruv.finance.data.tracker.dto.ValuationDto> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 class HoldingRepositoryTest {
@@ -107,5 +122,30 @@ class HoldingRepositoryTest {
 
             assertTrue(result.isFailure)
             assertEquals(1, api.createCallCount)
+        }
+
+    @Test
+    fun `get returns the mapped holding when it exists`() =
+        runTest {
+            val dto = HoldingDto(id = "h1", name = "HDFC Savings", kind = "ASSET", sector = "BANK")
+            val api = FakeHoldingApi(byId = mapOf("h1" to dto))
+            val repo: HoldingRepository = HoldingRepositoryImpl(api, FakeValuationApi())
+
+            val result = repo.get("h1")
+
+            assertTrue(result.isSuccess)
+            assertEquals("HDFC Savings", result.getOrNull()?.name)
+        }
+
+    @Test
+    fun `get fails with NoSuchElementException when the holding doesn't exist`() =
+        runTest {
+            val api = FakeHoldingApi()
+            val repo: HoldingRepository = HoldingRepositoryImpl(api, FakeValuationApi())
+
+            val result = repo.get("missing")
+
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is NoSuchElementException)
         }
 }
