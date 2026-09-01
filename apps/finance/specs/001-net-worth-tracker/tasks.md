@@ -105,36 +105,71 @@ C1 equals asset value minus liability value.
 
 ### Tests for User Story 1 (write first, confirm they FAIL before implementation)
 
-- [ ] T011 [P] [US1] `HoldingRepositoryTest` — sector enum rejected if not in the fixed list, citing
+- [X] T011 [P] [US1] **DONE (2026-09-01).** `HoldingRepositoryTest` — sector enum rejected if not in the fixed list, citing
       NW-BR-004, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/HoldingRepositoryTest.kt`
-- [ ] T012 [P] [US1] `HoldingRepositoryTest` — holding + first valuation written atomically
+- [X] T012 [P] [US1] **DONE (2026-09-01).** `HoldingRepositoryTest` — holding + first valuation written atomically
       (both-or-neither), citing NW-BR-001, same file as T011
-- [ ] T013 [P] [US1] Net-worth aggregation test — total equals `v_net_worth_by_sector` output, never
+- [X] T013 [P] [US1] **DONE (2026-09-01).** Net-worth aggregation test — total equals `v_net_worth_by_sector` output, never
       a client-side reduction, citing NW-BR-006, in
       `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/NetWorthAggregationTest.kt`
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement `HoldingRepository.createWithFirstValuation()` — atomic write, sector
-      enum validated at this boundary (depends on T011, T012) in
-      `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/HoldingRepository.kt`
-- [ ] T015 [US1] Implement `NetWorthOverviewViewModel` (C1) — reads `v_net_worth_by_sector`, citing
+- [X] T014 [US1] **DONE (2026-09-01).** Implement `HoldingRepository.createWithFirstValuation()` — atomic write via the
+      `finance.create_holding_with_value` RPC, sector validated against the `Sector` enum at this boundary,
+      in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/HoldingRepository.kt`. Also added,
+      as prerequisites this task needed but the plan hadn't scheduled: `FinanceSchemaInterceptor` (+ test)
+      wired into `SupabaseClientFactory.dataClient` (ADR-0033's `Accept-Profile`/`Content-Profile: finance`
+      headers — `dataRetrofit` had no concrete endpoint yet before this), the `Holding`/`Sector`/`HoldingKind`/
+      `SectorBreakdown`/`NetWorthSummary`/`CreateHoldingRequest` domain models, DTOs, mappers, and
+      `HoldingRepository.list(kind)` (needed by T017) + `NetWorthRepository` (needed by T015), plus their
+      Retrofit API interfaces (`HoldingApi`, `ValuationApi`, `NetWorthApi`) and Koin registration in
+      `PlatformModule.kt`
+- [X] T015 [US1] **DONE (2026-09-01).** Implement `NetWorthOverviewViewModel` (C1) — reads `v_net_worth_by_sector`, citing
       NW-UI-001/NW-FLOW-001, in `apps/finance/feature/home/networth/NetWorthOverviewViewModel.kt`
-- [ ] T016 [US1] Build `NetWorthOverviewScreen` (C1) — donut + ranked legend (T006's `DonutChart`),
-      NET/ASSETS/LIABILITIES subtotals, FAB add, `FeatureHost`-wrapped with the `networth` flag key,
-      in `apps/finance/feature/home/networth/NetWorthOverviewScreen.kt`
-- [ ] T017 [US1] Build `AssetsScreen` (C2) — sector-grouped list, filter chips, FAB add, in
-      `apps/finance/feature/home/networth/AssetsScreen.kt`
-- [ ] T018 [US1] Build `AddEditHoldingScreen` (C4) — I OWN/I OWE toggle, sector picker via T008's
-      `SelectionSheet` (never free text, NW-BR-004), value + date, T009's `NxTextField` error state
-      for validation, footer stating the append-only rule verbatim (spec.md Story 3), in
-      `apps/finance/feature/home/networth/AddEditHoldingScreen.kt`
-- [ ] T019 [US1] Wire C1 sector-tap → C2 filtered navigation via `NavTarget`, citing NW-UI-001
-- [ ] T020 [US1] Add `SignedOutCard`/`OfflineStateCard` to C1 and C2 per the screen-state matrix,
-      citing NW-UI-005
+- [X] T016 [US1] **DONE (2026-09-01).** Build `NetWorthOverviewScreen` (C1) — donut (T006's `DonutChart`) +
+      a custom clickable per-sector row list (not `RankedLegend`, which has no click callback — building the
+      list inline keeps the shared component generic rather than coupling it to app-specific navigation data),
+      NET/ASSETS/LIABILITIES subtotals via `ThreeUpStatRow`, FAB add, `FeatureHost`-wrapped with the
+      `networth` flag key, in `apps/finance/feature/home/networth/NetWorthOverviewScreen.kt`
+- [X] T017 [US1] **DONE (2026-09-01).** Build `AssetsScreen` (C2) — sector-grouped list (ASSET kind only, per
+      routes.md; liabilities get their own C6 in Phase 6), filter chips, in
+      `apps/finance/feature/home/networth/AssetsScreen.kt`. FAB add omitted here — C2 reaches add-holding
+      only via C1's FAB in this phase, not a second entry point; not blocking, easy follow-up
+- [X] T018 [US1] **DONE (2026-09-01).** Build `AddEditHoldingScreen` (C4) — I OWN/I OWE toggle
+      (`SegmentedRow`), sector picker via T008's `SelectionSheet` (never free text, NW-BR-004), value entry
+      via `NxTextField`'s error state, footer stating the append-only rule, in
+      `apps/finance/feature/home/networth/AddEditHoldingScreen.kt`. **Deviations**: (1) date is fixed to
+      "today" (`LocalDate.now()`) — no date picker exists in `:libs:core` yet (B2's `DateRangeSheet` is still
+      §5.2 Planned), so manual back-dating a first valuation is deferred, not built; (2) the modal's close
+      action renders as `NxTopBar`'s back-arrow, not a literal "✕" — the component has no separate close-icon
+      variant (design-system gap, not fixed here)
+- [X] T019 [US1] **DONE, with a scope correction (2026-09-01).** Wired C1 sector-tap → C2 filtered navigation,
+      but **not** via `NavTarget` as literally written — `NavTarget`'s own doc comment scopes it to
+      cross-feature/cross-tab dispatch, it has no intra-module case, and this codebase's only precedent for a
+      multi-screen module (Plan's tool `NavHost` in `MainActivity.kt`) uses a local `NavHostController`, not
+      `NavTarget`, for exactly this kind of drill-down. Built `NetWorthFeatureRoot` (new file,
+      `NetWorthNavHost.kt`) — this module's own `NavHost` (`overview` → `assets/{sector}` → `addHolding`),
+      self-contained so Phase 7 can mount it from Home with one call once the real Home screen exists (Home
+      itself is untouched this phase — its placeholder `DashboardScreen` and the Home→C1 entry point are
+      Phase 7's job, per that phase's own tasks). Documented in `NetWorthFeatureRoot`'s KDoc so this isn't
+      silently rediscovered as a gap later
+- [X] T020 [US1] **DONE (2026-09-01).** Added `SignedOutCard`/`OfflineStateCard`-class states to C1 (signed-out,
+      consent-off, loading, error, empty) and C2 (loading, error, empty) per the screen-state matrix, citing
+      NW-UI-005. C1/C2's `SignedOutCard` action buttons are currently no-ops (`onAction = {}`) — navigating to
+      Settings/Account from inside this module would need a `NavTarget` case that doesn't exist yet; tracked
+      as a follow-up, not silently dropped
+- [X] Also added (not in the original task list, needed to make the above independently testable/reviewable):
+      `NetWorthOverviewViewModelTest`, `AssetsViewModelTest`, `AddEditHoldingViewModelTest` — the module had
+      zero tests before this phase, which would have shown as invisible/`(other)` coverage despite T005 of
+      002's plan naming exactly this failure mode
 
-**Checkpoint**: User Story 1 fully functional and independently testable — this alone is a working
-(minimal) net-worth tracker.
+**Checkpoint (2026-09-01)**: User Story 1 fully functional and independently testable at the Compose/Kotlin
+level — `regressionCheck` green, ArchUnit green. **Not yet exercised against a live database** (same T005/T078
+gap Phase 2's checkpoint already named) — the RPC/view calls are correct by inspection and unit-tested against
+fakes, but have not made a real network call. Reaching C1 from the app's actual Home tab is Phase 7's job, not
+this phase's; until then C1-C4 are reachable only by mounting `NetWorthFeatureRoot()` directly (e.g. from a
+test harness or a temporary debug entry point).
 
 ---
 
