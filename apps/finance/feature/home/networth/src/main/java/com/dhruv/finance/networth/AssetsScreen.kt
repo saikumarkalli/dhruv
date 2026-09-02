@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,20 +56,20 @@ fun AssetsScreen(
     val consentState by viewModel.consentState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = "Assets", onBack = onBack)
+        NxTopBar(title = stringResource(R.string.c2_title), onBack = onBack)
 
         when {
             sessionState !is SessionState.Active ->
                 SignedOutCard(
-                    message = "Sign in to see your assets.",
-                    actionLabel = "Go to Account",
+                    message = stringResource(R.string.c2_signed_out_message),
+                    actionLabel = stringResource(R.string.networth_action_go_to_account),
                     onAction = {},
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
             !consentState.syncFinancialRecords ->
                 SignedOutCard(
-                    message = "Turn on “Sync my financial records” in Settings to use the tracker.",
-                    actionLabel = "Go to Settings",
+                    message = stringResource(R.string.networth_consent_off_message),
+                    actionLabel = stringResource(R.string.networth_action_go_to_settings),
                     onAction = {},
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
@@ -78,7 +79,7 @@ fun AssetsScreen(
                 }
             uiState.errorMessage != null && uiState.holdings.isEmpty() ->
                 OfflineStateCard(
-                    message = uiState.errorMessage ?: "Couldn't load your assets.",
+                    message = uiState.errorMessage ?: stringResource(R.string.c2_error_message),
                     onRetry = viewModel::load,
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
@@ -92,7 +93,7 @@ fun AssetsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Chip(
-                        label = "All",
+                        label = stringResource(R.string.c2_filter_all),
                         selected = uiState.selectedSectorFilter == null,
                         onClick = { viewModel.setSectorFilter(null) },
                     )
@@ -111,7 +112,7 @@ fun AssetsScreen(
                     }
                 if (filtered.isEmpty()) {
                     EmptyStateCard(
-                        message = "No assets in this category yet.",
+                        message = stringResource(R.string.c2_empty_message),
                         modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                     )
                 } else {
@@ -160,7 +161,11 @@ private fun AssetRow(
             } else {
                 // Cannot actually happen for a holding created via createWithFirstValuation
                 // (BR-C2 guarantees one) — defensive fallback only, never a fabricated ₹0.
-                Text(text = "—", color = colors.tx3, fontSize = DhruvNextType.cardTitle)
+                Text(
+                    text = stringResource(R.string.networth_value_placeholder_dash),
+                    color = colors.tx3,
+                    fontSize = DhruvNextType.cardTitle,
+                )
             }
         }
     }

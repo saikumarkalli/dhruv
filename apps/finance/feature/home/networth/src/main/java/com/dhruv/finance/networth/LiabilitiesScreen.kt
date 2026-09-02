@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -16,6 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,20 +61,20 @@ fun LiabilitiesScreen(
     val consentState by viewModel.consentState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = "Liabilities", onBack = onBack)
+        NxTopBar(title = stringResource(R.string.c6_title), onBack = onBack)
 
         when {
             sessionState !is SessionState.Active ->
                 SignedOutCard(
-                    message = "Sign in to see your liabilities.",
-                    actionLabel = "Go to Account",
+                    message = stringResource(R.string.c6_signed_out_message),
+                    actionLabel = stringResource(R.string.networth_action_go_to_account),
                     onAction = {},
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
             !consentState.syncFinancialRecords ->
                 SignedOutCard(
-                    message = "Turn on “Sync my financial records” in Settings to use the tracker.",
-                    actionLabel = "Go to Settings",
+                    message = stringResource(R.string.networth_consent_off_message),
+                    actionLabel = stringResource(R.string.networth_action_go_to_settings),
                     onAction = {},
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
@@ -80,13 +84,13 @@ fun LiabilitiesScreen(
                 }
             uiState.errorMessage != null && uiState.rows.isEmpty() ->
                 OfflineStateCard(
-                    message = uiState.errorMessage ?: "Couldn't load your liabilities.",
+                    message = uiState.errorMessage ?: stringResource(R.string.c6_error_message),
                     onRetry = viewModel::load,
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
             uiState.rows.isEmpty() ->
                 EmptyStateCard(
-                    message = "Add a loan, card, or BNPL line to track what you owe.",
+                    message = stringResource(R.string.c6_empty_message),
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
             else ->
@@ -109,6 +113,7 @@ private fun LiabilitiesContent(
 ) {
     val debtFreeBy = viewModel.debtFreeBy(uiState)
     val grouped = viewModel.groupedByType(uiState)
+    val otherLabel = stringResource(R.string.c6_other_group_label)
 
     LazyColumn(
         modifier = modifier,
@@ -120,11 +125,18 @@ private fun LiabilitiesContent(
                 ThreeUpStatRow(
                     items =
                         listOf(
-                            StatItem(label = "Outstanding", value = Paise.formatCompact(viewModel.totalOutstandingPaise(uiState))),
-                            StatItem(label = "Monthly outgo", value = Paise.formatCompact(viewModel.monthlyOutgoPaise(uiState))),
                             StatItem(
-                                label = "Debt-free by",
-                                value = debtFreeBy?.format(DEBT_FREE_DATE_FORMAT) ?: "—",
+                                label = stringResource(R.string.c6_stat_outstanding),
+                                value = Paise.formatCompact(viewModel.totalOutstandingPaise(uiState)),
+                            ),
+                            StatItem(
+                                label = stringResource(R.string.c6_stat_monthly_outgo),
+                                value = Paise.formatCompact(viewModel.monthlyOutgoPaise(uiState)),
+                            ),
+                            StatItem(
+                                label = stringResource(R.string.c6_stat_debt_free_by),
+                                value = debtFreeBy?.format(DEBT_FREE_DATE_FORMAT)
+                                    ?: stringResource(R.string.networth_value_placeholder_dash),
                             ),
                         ),
                 )
@@ -133,7 +145,7 @@ private fun LiabilitiesContent(
 
         grouped.forEach { (type, rows) ->
             item(key = "header-${type?.name ?: "other"}") {
-                SectionLabel(text = type?.let { liabilityTypeLabel(it.name) } ?: "Other")
+                SectionLabel(text = type?.let { liabilityTypeLabel(it.name) } ?: otherLabel)
             }
             items(rows, key = { it.holdingWithValue.holding.id }) { row ->
                 LiabilityRowCard(
@@ -161,7 +173,13 @@ private fun LiabilityRowCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (progress != null) {
-                    ProgressRing(progress = progress)
+                    // Phase 10, T069: chart contentDescription — previously absent.
+                    val progressDescription =
+                        stringResource(R.string.c6_payoff_progress_description, (progress * 100).toInt())
+                    ProgressRing(
+                        progress = progress,
+                        modifier = Modifier.size(24.dp).semantics { contentDescription = progressDescription },
+                    )
                 }
                 Column(modifier = Modifier.padding(start = if (progress != null) 12.dp else 0.dp)) {
                     Text(
@@ -172,8 +190,11 @@ private fun LiabilityRowCard(
                     )
                     val meta = row.meta
                     if (meta != null) {
-                        val rateLabel = "%.2f%% p.a.".format(Locale.US, meta.rateBps / 100.0)
-                        val emiLabel = meta.emiPaise?.let { " · ${Paise.formatCompact(it)}/mo" }.orEmpty()
+                        val rateLabel = stringResource(R.string.c6_rate_format, "%.2f".format(Locale.US, meta.rateBps / 100.0))
+                        val emiLabel =
+                            meta.emiPaise?.let {
+                                stringResource(R.string.c6_emi_suffix_format, Paise.formatCompact(it))
+                            }.orEmpty()
                         Text(
                             text = rateLabel + emiLabel,
                             color = colors.tx3,
@@ -186,7 +207,11 @@ private fun LiabilityRowCard(
             if (currentValuePaise != null) {
                 MoneyText(paise = currentValuePaise, variant = MoneyTextVariant.Row)
             } else {
-                Text(text = "—", color = colors.tx3, fontSize = DhruvNextType.cardTitle)
+                Text(
+                    text = stringResource(R.string.networth_value_placeholder_dash),
+                    color = colors.tx3,
+                    fontSize = DhruvNextType.cardTitle,
+                )
             }
         }
     }

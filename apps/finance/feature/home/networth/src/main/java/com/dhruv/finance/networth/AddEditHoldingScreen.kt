@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +61,10 @@ fun AddEditHoldingScreen(
     }
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = if (uiState.isEditing) "Edit holding" else "Add holding", onBack = onClose)
+        NxTopBar(
+            title = stringResource(if (uiState.isEditing) R.string.c4_title_edit else R.string.c4_title_add),
+            onBack = onClose,
+        )
 
         if (uiState.isLoadingForEdit) {
             Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
@@ -79,7 +83,7 @@ fun AddEditHoldingScreen(
         ) {
             if (!uiState.isEditing) {
                 SegmentedRow(
-                    options = listOf("I own this", "I owe this"),
+                    options = listOf(stringResource(R.string.c4_segment_own), stringResource(R.string.c4_segment_owe)),
                     selectedIndex = if (uiState.kind == HoldingKind.ASSET) 0 else 1,
                     onSelected = { index ->
                         viewModel.onKindChange(if (index == 0) HoldingKind.ASSET else HoldingKind.LIABILITY)
@@ -89,31 +93,29 @@ fun AddEditHoldingScreen(
             NxTextField(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
-                label = "Name",
-                placeholder = "e.g. HDFC Savings",
+                label = stringResource(R.string.c4_name_label),
+                placeholder = stringResource(R.string.c4_name_placeholder),
                 errorMessage = uiState.nameError,
             )
             NxSelect(
                 value = uiState.sectorCode?.let { sectorLabel(it) },
                 onClick = { sheetOpen = true },
-                label = "Category",
-                placeholder = "Choose a category",
+                label = stringResource(R.string.c4_category_label),
+                placeholder = stringResource(R.string.c4_category_placeholder),
                 errorMessage = uiState.sectorError,
             )
             if (!uiState.isEditing) {
                 NxTextField(
                     value = uiState.amountText,
                     onValueChange = viewModel::onAmountChange,
-                    label = "Current value",
+                    label = stringResource(R.string.c4_current_value_label),
                     prefix = "₹",
                     placeholder = "0",
                     errorMessage = uiState.amountError,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 Text(
-                    text =
-                        "Every value you save stays in the app's history — you can add a corrected " +
-                            "value later, but this one is never edited or removed.",
+                    text = stringResource(R.string.c4_value_history_disclaimer),
                     color = colors.tx3,
                     fontSize = DhruvNextType.meta,
                 )
@@ -121,39 +123,39 @@ fun AddEditHoldingScreen(
             NxTextField(
                 value = uiState.investedAmountText,
                 onValueChange = viewModel::onInvestedAmountChange,
-                label = "Invested amount (optional)",
+                label = stringResource(R.string.c4_invested_label),
                 prefix = "₹",
-                placeholder = "What this originally cost you",
+                placeholder = stringResource(R.string.c4_invested_placeholder),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
             NxTextField(
                 value = uiState.notesText,
                 onValueChange = viewModel::onNotesChange,
-                label = "Notes (optional)",
-                placeholder = "e.g. Joint account with spouse",
+                label = stringResource(R.string.c4_notes_label),
+                placeholder = stringResource(R.string.c4_notes_placeholder),
             )
 
             if (!uiState.isEditing && uiState.kind == HoldingKind.LIABILITY) {
                 NxSelect(
                     value = uiState.liabilityTypeCode?.let { liabilityTypeLabel(it) },
                     onClick = { liabilityTypeSheetOpen = true },
-                    label = "Liability type",
-                    placeholder = "Choose a type",
+                    label = stringResource(R.string.c4_liability_type_label),
+                    placeholder = stringResource(R.string.c4_liability_type_placeholder),
                     errorMessage = uiState.liabilityTypeError,
                 )
                 NxTextField(
                     value = uiState.rateText,
                     onValueChange = viewModel::onRateChange,
-                    label = "Interest rate",
-                    placeholder = "e.g. 8.5",
-                    suffix = "% p.a.",
+                    label = stringResource(R.string.c4_rate_label),
+                    placeholder = stringResource(R.string.c4_rate_placeholder),
+                    suffix = stringResource(R.string.c4_rate_suffix),
                     errorMessage = uiState.rateError,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 NxTextField(
                     value = uiState.emiText,
                     onValueChange = viewModel::onEmiChange,
-                    label = "Monthly payment (optional)",
+                    label = stringResource(R.string.c4_emi_label),
                     prefix = "₹",
                     placeholder = "0",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -161,8 +163,8 @@ fun AddEditHoldingScreen(
                 NxTextField(
                     value = uiState.tenureMonthsText,
                     onValueChange = viewModel::onTenureMonthsChange,
-                    label = "Tenure in months (optional)",
-                    placeholder = "e.g. 240",
+                    label = stringResource(R.string.c4_tenure_label),
+                    placeholder = stringResource(R.string.c4_tenure_placeholder),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             }
@@ -172,7 +174,7 @@ fun AddEditHoldingScreen(
             }
 
             NxButton(
-                text = "Save",
+                text = stringResource(R.string.networth_action_save),
                 onClick = viewModel::save,
                 loading = uiState.isSaving,
                 block = true,
@@ -182,7 +184,7 @@ fun AddEditHoldingScreen(
 
     if (sheetOpen) {
         SelectionSheet(
-            title = "Choose a category",
+            title = stringResource(R.string.c4_choose_category_title),
             options = SectorLabels.map { (code, label) -> SelectionOption(id = code, label = label) },
             selectedId = uiState.sectorCode,
             onSelect = { option ->
@@ -195,7 +197,7 @@ fun AddEditHoldingScreen(
 
     if (liabilityTypeSheetOpen) {
         SelectionSheet(
-            title = "Choose a liability type",
+            title = stringResource(R.string.c4_choose_liability_type_title),
             options = LiabilityTypeLabels.map { (code, label) -> SelectionOption(id = code, label = label) },
             selectedId = uiState.liabilityTypeCode,
             onSelect = { option ->

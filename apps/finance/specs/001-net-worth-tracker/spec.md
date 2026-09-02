@@ -287,6 +287,94 @@ work, this records the outcome.)*
 |---|---|---|
 | | | |
 
+**Known gap (Phase 10, T076):** this table, and the Deviations/Deferred tables below it, were never
+populated as Phases 3–9 shipped — the "Status: NOT YET IMPLEMENTED" banner above is stale despite
+substantial real implementation across those phases. Backfilling nine phases of As-built/Deviations/
+Deferred rows is out of Phase 10's bounded scope (T062–T077); recorded here as a known, named gap
+rather than silently left unnoticed. Phase 10 adds only the SC-citation content below, which is what
+T076 actually asks for.
+
+### Success criteria verification (Phase 10, T076)
+
+T076 found this phase citing 0 of 5 SC ids anywhere in tasks.md. Verified against shipped code:
+
+- **SC-001** (no manual refresh) — satisfied by the `LifecycleResumeEffect` reload wiring in
+  `NetWorthNavHost.kt` (Phase 8): returning to overview/assets/holding-detail after a write
+  re-triggers that screen's `load()`. See T075's invalidation-model note in `data-model.md` for the
+  full mechanism.
+- **SC-002** (no prior value ever disappears on correction) — satisfied structurally by
+  `finance.correct_valuation()` (soft-delete + append, never an UPDATE of the original row — see
+  `data-model.md`'s Functions section) plus `HoldingDetailScreen`'s valuation-history list rendering
+  every non-deleted row, corrected ones included.
+- **SC-003** (0% blank/permanently-loading sessions across signed-out/offline/loaded) — this is a
+  **code-review gate, not an instrumented metric**: no session-level telemetry exists to measure a
+  literal 0% in production, and none is planned (matching the 004-settings precedent of deferring
+  verification that needs a device/telemetry pipeline this session doesn't have). Verified by review
+  instead: every C1–C7 screen's `when` block on `sessionState`/`consentState`/`uiState` covers
+  signed-out (`SignedOutCard`), offline (`OfflineStateCard`), loading (`SkeletonBlock`), error
+  (`RetryErrorCard`) and empty (`EmptyStateCard`) per `platform/DESIGN-SYSTEM.md` §7's matrix
+  (Phase 8/9 closed the two screens — C2, C6 — that originally lacked this).
+- **SC-004** (< 2 minutes, first holding to a complete net-worth total) — not instrumented (no
+  timing telemetry); reviewed as a walkthrough instead: C1's empty state → FAB → C4 (name, kind,
+  sector, first value) → save is 4–5 form fields and one submit, well inside 2 minutes for a single
+  holding. Restated as a reviewed-plausible claim, not a measured one.
+- **SC-005** (loan-payoff hypothetical without leaving liability detail) — satisfied by C7
+  (`LiabilityDetailScreen`) rendering the prepay projection inline via `AmortisationMath.kt`, no
+  navigation away from the screen.
+
+### Component-choice decisions (Phase 10, T074)
+
+Deliberate, not oversights — recorded so a later phase doesn't "fix" any of these by picking a
+different component:
+
+- **C4 uses `SelectionSheet` (B9, built), not `EnumPickerGrid` (B2, planned/unbuilt)** for sector
+  and liability-type selection. `SelectionSheet` already ships and satisfies the same
+  pick-one-of-N-enum-values need `EnumPickerGrid` would; building a second selection component with
+  no functional difference for this screen would be exactly the fragmentation
+  `platform/DESIGN-SYSTEM.md` §5.3's closing rule warns against.
+- **01/C2/C3 use `TrendSparkline` (built), not an area chart** (the design draws area charts on
+  those three; `:libs:core` has no area-chart component, planned or otherwise). A sparkline conveys
+  trend direction adequately at card scale; building a new chart primitive is out of this
+  gap-remediation phase's scope. Tracked as an open design-system gap, not resolved here.
+- **`PieChart` (built, `:libs:core`, DESIGN-SYSTEM §5.1) is not dropped**, despite having no
+  consumer in any shipped phase (001–009). Removing a working, tested shared-library component
+  solely for lack of a *current* consumer risks a later phase re-authoring it from scratch; left in
+  place as a known "built but unused" fact rather than deleted.
+
+### Theming and responsiveness verification (Phase 10, T071)
+
+No physical device or emulator is available in this implementation session (the same limitation
+0b.5's own Implementation record already disclosed for its theming/TalkBack passes) — verified by
+code review instead of an instrumented render test:
+
+- **Nav law N7** ("every screen renders light and dark from the same tokens"): every C1–C7 screen
+  and the Home additions in this phase read colour exclusively via `LocalDhruvNextColors.current`
+  (`colors.tx`/`colors.tx3`/`colors.bg`/…) — never a raw `Color(0x...)` literal or
+  `MaterialTheme.colorScheme` (now structurally enforced by T072's `checkDesignTokenUsage` gate).
+  Since `LocalDhruvNextColors` itself resolves to `DhruvNextLightColors`/`DhruvNextDarkColors` by
+  theme, every screen this phase touches renders correctly in both themes *by construction* — there
+  is no per-screen theme branch to get wrong.
+- **Responsive tiers** (`calculateDhruvNextResponsiveTokens` — phone / tablet ≥600dp / small
+  <360dp): no C1–C7 screen reads a hardcoded `dp`/`sp` literal for spacing — all use
+  `DhruvNextSpacing.*`/`DhruvNextType.*`, which already resolve per-tier. No screen in this phase
+  hardcodes a fixed width/height that would break at the small tier; scrollable columns
+  (`verticalScroll`/`LazyColumn`) are used throughout rather than fixed-height layouts. Not
+  exercised on an actual small/tablet-width device or a Compose UI test with varied
+  `LocalConfiguration` — reviewed as low-risk given zero literal-dp usage, not measured.
+
+### Motion standard (Phase 10, T073)
+
+No FR, task or QA row in any of Phases 3–9 named a motion standard, and this phase's four chart
+surfaces (`DonutChart` C1, `TrendSparkline` C3/Home, `ProgressRing` C6, `AmortisationDonut` C7) all
+render as a single static `Canvas` draw with no `Animatable`/`animate*AsState`/`tween` anywhere in
+`:feature:networth` or these `HomeScreen.kt` additions — there is currently nothing "animating in on
+every recomposition" to fix, because nothing animates at all. Recorded here as the standard for
+whoever adds the first chart entrance animation to one of these screens:
+`platform/DESIGN-SYSTEM.md` §8's `cubic-bezier(.16, 1, .3, 1)` easing, and "charts animate in once,
+not on every recomposition" — meaning the animation must key off first-composition (e.g.
+`LaunchedEffect(Unit)` driving an `Animatable`, not a bare `animateFloatAsState` recomputed from a
+value that changes on every recomposition of the parent).
+
 ### Deviations from this spec
 
 *(Anything built differently from what is specified above, and **why**. A deviation recorded here is

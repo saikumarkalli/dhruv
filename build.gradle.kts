@@ -125,57 +125,98 @@ val jacocoCoverageVerification =
     }
   }
 
-// ── Tracker money-precision guard (DAT-BR-008) ────────────────────────────────
-// tracker/** must use Long paise everywhere for money — zero Double/Float (PLATFORM.md §5,
-// ADR-0014 §4, ADR-0029). A plain regex scan (not a compiler plugin) keeps this cheap and
-// dependency-free; it is not a type-system guarantee, just a fast, obvious tripwire.
+// ── Text-pattern guards (DAT-BR-008, NFR-5) ───────────────────────────────────
+// One reusable task type backs both a money-precision guard and a design-token-bypass guard —
+// deliberately ONE custom task class, not two: this build environment's Kotlin-DSL script
+// compiler was found (Phase 10, T072) to silently fail to register ANY task declared after a
+// SECOND top-level `abstract class : DefaultTask()` in this script (no compile error, no
+// configuration-cache problem reported — every task named after the second class definition,
+// including unrelated ones added purely to test this, simply doesn't exist afterward). A single
+// parameterised class sidesteps it entirely; verified minimal repro isolated to "≥2 custom task
+// classes in this one script file", not to either class's own content.
 //
 // Implemented as a real Task subclass, not a `doLast { ... }` lambda — any lambda literal written
 // directly in this script (even a "top-level" one assigned to a val) captures the build script
 // instance as a synthetic `this$0` field, which the configuration-cache serializer rejects
 // ("cannot serialize Gradle script object references", config_cache:requirements:disallowed_types).
 // A task class's @TaskAction is a plain method with no such capture, and its only state is the
-// two Gradle-managed properties below (ConfigurableFileCollection / DirectoryProperty), both of
-// which are natively configuration-cache-safe.
-abstract class CheckTrackerMoneyPrecisionTask : DefaultTask() {
+// Gradle-managed properties below (ConfigurableFileCollection / DirectoryProperty / ListProperty /
+// Property), all natively configuration-cache-safe.
+abstract class TextPatternGuardTask : DefaultTask() {
   @get:InputFiles
   @get:PathSensitive(PathSensitivity.RELATIVE)
-  abstract val trackerSources: ConfigurableFileCollection
+  abstract val sources: ConfigurableFileCollection
 
   @get:Internal
   abstract val scanRootDir: DirectoryProperty
 
+  @get:Input
+  abstract val patterns: ListProperty<String>
+
+  @get:Input
+  abstract val violationMessage: Property<String>
+
   @TaskAction
   fun check() {
-    val moneyTypePattern = Regex("\\b(Double|Float)\\b")
+    val regexes = patterns.get().map { Regex(it) }
     val root = scanRootDir.get().asFile
     val offenders = mutableListOf<String>()
-    trackerSources.files.sortedBy { it.path }.forEach { f ->
+    sources.files.sortedBy { it.path }.forEach { f ->
       f.readLines().forEachIndexed { index, line ->
-        if (moneyTypePattern.containsMatchIn(line)) {
-          offenders += "${f.relativeTo(root)}:${index + 1}: ${line.trim()}"
+        regexes.forEach { regex ->
+          if (regex.containsMatchIn(line)) {
+            offenders += "${f.relativeTo(root)}:${index + 1}: ${line.trim()}"
+          }
         }
       }
     }
     if (offenders.isNotEmpty()) {
-      throw GradleException(
-        "DAT-BR-008 violation — Double/Float found under tracker/** (money must be Long paise):\n" +
-          offenders.joinToString("\n"),
-      )
+      throw GradleException("${violationMessage.get()}:\n" + offenders.joinToString("\n"))
     }
   }
 }
 
 val checkTrackerMoneyPrecision =
-  tasks.register<CheckTrackerMoneyPrecisionTask>("checkTrackerMoneyPrecision") {
+  tasks.register<TextPatternGuardTask>("checkTrackerMoneyPrecision") {
     group = "verification"
     description = "DAT-BR-008: fails if Double/Float appears under apps/finance/data/**/tracker/**/*.kt."
-    trackerSources.from(
+    sources.from(
       fileTree("apps/finance/data/src/main") {
         include("**/tracker/**/*.kt")
       },
     )
     scanRootDir.set(layout.projectDirectory)
+    patterns.set(listOf("\\b(Double|Float)\\b"))
+    violationMessage.set("DAT-BR-008 violation — Double/Float found under tracker/** (money must be Long paise)")
+  }
+
+// 001-net-worth-tracker Phase 10, T072: `platform/DESIGN-SYSTEM.md`'s "zero
+// `MaterialTheme.colorScheme`/`.typography` and zero raw hex in screen files" rule (NFR-5) was
+// enforced by nothing — no detekt rule, no ArchUnit test (ArchUnit reasons about bytecode
+// dependencies, not raw source literals, so it cannot see this class of violation at all). Scoped
+// to `apps/finance/feature/**` (screen files) — raw `dp`/`sp` literals are deliberately NOT
+// scanned: many legitimate one-off layout constants (divider thickness, icon padding) have no
+// corresponding token and scanning them would produce noise, not a real gate.
+val checkDesignTokenUsage =
+  tasks.register<TextPatternGuardTask>("checkDesignTokenUsage") {
+    group = "verification"
+    description = "NFR-5: fails on MaterialTheme.colorScheme/.typography or raw hex Color(0x in apps/finance/feature/**/*.kt."
+    sources.from(
+      fileTree("apps/finance/feature") {
+        include("**/*.kt")
+      },
+    )
+    scanRootDir.set(layout.projectDirectory)
+    patterns.set(
+      listOf(
+        "MaterialTheme\\.colorScheme",
+        "MaterialTheme\\.typography",
+        "Color\\(0x",
+      ),
+    )
+    violationMessage.set(
+      "NFR-5 violation — raw token bypass found under apps/finance/feature/** (platform/DESIGN-SYSTEM.md §5)",
+    )
   }
 
 // ── Pre-merge regression suite ────────────────────────────────────────────────
@@ -188,4 +229,5 @@ tasks.register("regressionCheck") {
   dependsOn(jacocoAggregatedReport)
   dependsOn(jacocoCoverageVerification)
   dependsOn(checkTrackerMoneyPrecision)
+  dependsOn(checkDesignTokenUsage)
 }

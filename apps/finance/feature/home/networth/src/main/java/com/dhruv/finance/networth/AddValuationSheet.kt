@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,7 +32,6 @@ import java.util.Locale
 import kotlin.math.abs
 
 private val SELECTABLE_SOURCES = listOf(ValuationSource.MANUAL, ValuationSource.STATEMENT, ValuationSource.IMPORT)
-private val SOURCE_LABELS = listOf("Manual", "Statement", "Import")
 
 /**
  * C5 — add a value, or (when [AddValuationViewModel.UiState.correctingValuationId] is set)
@@ -60,7 +60,10 @@ fun AddValuationSheet(
             verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
         ) {
             Text(
-                text = if (uiState.correctingValuationId != null) "Correct this value" else "Add a value",
+                text =
+                    stringResource(
+                        if (uiState.correctingValuationId != null) R.string.c5_title_correct else R.string.c5_title_add,
+                    ),
                 color = colors.tx,
                 fontWeight = FontWeight.Bold,
                 fontSize = DhruvNextType.title,
@@ -69,7 +72,14 @@ fun AddValuationSheet(
             uiState.lastValuePaise?.let { last ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        text = if (uiState.correctingValuationId != null) "Current (wrong) value" else "Last value",
+                        text =
+                            stringResource(
+                                if (uiState.correctingValuationId != null) {
+                                    R.string.c5_current_wrong_value
+                                } else {
+                                    R.string.c5_last_value
+                                },
+                            ),
                         color = colors.tx3,
                         fontSize = DhruvNextType.meta,
                     )
@@ -80,7 +90,7 @@ fun AddValuationSheet(
             NxTextField(
                 value = uiState.amountText,
                 onValueChange = viewModel::onAmountChange,
-                label = "New value",
+                label = stringResource(R.string.c5_new_value_label),
                 prefix = "₹",
                 placeholder = "0",
                 errorMessage = uiState.amountError,
@@ -90,27 +100,38 @@ fun AddValuationSheet(
             viewModel.previewDelta(uiState)?.let { (deltaPaise, deltaBps) ->
                 val deltaPercent = deltaBps / 100.0
                 StatDeltaChip(
-                    text = "${Paise.formatCompact(abs(deltaPaise))} (%.1f%%)".format(Locale.US, abs(deltaPercent)),
+                    text =
+                        stringResource(
+                            R.string.c5_delta_format,
+                            Paise.formatCompact(abs(deltaPaise)),
+                            "%.1f".format(Locale.US, abs(deltaPercent)),
+                        ),
                     isPositive = deltaPaise >= 0,
                 )
             }
 
             if (uiState.correctingValuationId == null) {
+                val sourceLabels =
+                    listOf(
+                        stringResource(R.string.c5_source_manual),
+                        stringResource(R.string.c5_source_statement),
+                        stringResource(R.string.c5_source_import),
+                    )
                 SegmentedRow(
-                    options = SOURCE_LABELS,
+                    options = sourceLabels,
                     selectedIndex = SELECTABLE_SOURCES.indexOfFirst { it.name == uiState.sourceCode }.coerceAtLeast(0),
                     onSelected = { index -> viewModel.onSourceChange(SELECTABLE_SOURCES[index].name) },
                 )
             }
 
             Text(
-                text = "Dated today — back-dating a value isn't supported yet.",
+                text = stringResource(R.string.c5_dated_today_note),
                 color = colors.tx3,
                 fontSize = DhruvNextType.meta,
             )
 
             NxButton(
-                text = "Save",
+                text = stringResource(R.string.networth_action_save),
                 onClick = viewModel::save,
                 loading = uiState.isSaving,
                 block = true,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,7 +59,7 @@ fun LiabilityDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = uiState.holding?.name ?: "Liability", onBack = onBack)
+        NxTopBar(title = uiState.holding?.name ?: stringResource(R.string.c7_default_title), onBack = onBack)
 
         when {
             uiState.isLoading && uiState.holding == null ->
@@ -64,7 +68,7 @@ fun LiabilityDetailScreen(
                 }
             uiState.errorMessage != null && uiState.holding == null ->
                 RetryErrorCard(
-                    message = uiState.errorMessage ?: "Couldn't load this liability.",
+                    message = uiState.errorMessage ?: stringResource(R.string.c7_error_message),
                     onRetry = { },
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
@@ -72,7 +76,7 @@ fun LiabilityDetailScreen(
                 val holding = uiState.holding
                 if (holding == null) {
                     EmptyStateCard(
-                        message = "This liability couldn't be found.",
+                        message = stringResource(R.string.c7_not_found_message),
                         modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                     )
                 } else {
@@ -105,16 +109,21 @@ private fun LiabilityDetailContent(
     ) {
         NxCard {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "Outstanding", color = colors.tx3, fontSize = DhruvNextType.meta)
+                Text(text = stringResource(R.string.c7_outstanding_label), color = colors.tx3, fontSize = DhruvNextType.meta)
                 MoneyText(paise = uiState.outstandingPaise ?: 0L, variant = MoneyTextVariant.Hero)
 
                 if (split != null) {
                     Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
+                    val remainingSuffix = stringResource(R.string.c7_remaining_suffix)
+                    // Phase 10, T069: chart contentDescription — previously absent.
+                    val amortisationDescription =
+                        stringResource(R.string.c7_amortisation_chart_description, Paise.formatCompact(split.remainingPaise))
                     AmortisationDonut(
                         principalPaidPaise = split.principalPaidPaise.coerceAtLeast(0L),
                         interestPaidPaise = split.interestPaidPaise.coerceAtLeast(0L),
                         remainingPaise = split.remainingPaise.coerceAtLeast(0L),
-                        centerLabel = Paise.formatCompact(split.remainingPaise) + " left",
+                        centerLabel = Paise.formatCompact(split.remainingPaise) + remainingSuffix,
+                        modifier = Modifier.size(160.dp).semantics { contentDescription = amortisationDescription },
                     )
                 }
             }
@@ -125,45 +134,66 @@ private fun LiabilityDetailContent(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     SectionLabel(text = liabilityTypeLabel(meta.liabilityType.name))
                     Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
-                    DetailRow(label = "Interest rate", value = "%.2f%% p.a.".format(Locale.US, meta.rateBps / 100.0))
-                    meta.emiPaise?.let { DetailRow(label = "Monthly payment", value = Paise.formatCompact(it)) }
-                    meta.debitDay?.let { DetailRow(label = "Debit day", value = "$it of every month") }
-                    meta.tenureMonths?.let { DetailRow(label = "Tenure", value = "$it months (${meta.paidMonths} paid)") }
-                    meta.collateral?.let { DetailRow(label = "Collateral", value = it) }
+                    DetailRow(
+                        label = stringResource(R.string.c7_label_rate),
+                        value = stringResource(R.string.c7_rate_format, "%.2f".format(Locale.US, meta.rateBps / 100.0)),
+                    )
+                    meta.emiPaise?.let {
+                        DetailRow(label = stringResource(R.string.c7_label_emi), value = Paise.formatCompact(it))
+                    }
+                    meta.debitDay?.let {
+                        DetailRow(
+                            label = stringResource(R.string.c7_label_debit_day),
+                            value = stringResource(R.string.c7_debit_day_format, it),
+                        )
+                    }
+                    meta.tenureMonths?.let {
+                        DetailRow(
+                            label = stringResource(R.string.c7_label_tenure),
+                            value = stringResource(R.string.c7_tenure_format, it, meta.paidMonths),
+                        )
+                    }
+                    meta.collateral?.let { DetailRow(label = stringResource(R.string.c7_label_collateral), value = it) }
                 }
             }
 
             NxCard {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    SectionLabel(text = "Pay extra now")
+                    SectionLabel(text = stringResource(R.string.c7_pay_extra_label))
                     Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
                     NxTextField(
                         value = uiState.extraPaymentText,
                         onValueChange = viewModel::onExtraPaymentChange,
-                        label = "Extra payment",
+                        label = stringResource(R.string.c7_extra_payment_label),
                         prefix = "₹",
                         placeholder = "0",
                         errorMessage = uiState.prepayError,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     )
                     Spacer(Modifier.height(DhruvNextSpacing.inputGroupGap))
-                    NxButton(text = "See savings", onClick = viewModel::computePrepay, block = true)
+                    NxButton(text = stringResource(R.string.c7_see_savings_button), onClick = viewModel::computePrepay, block = true)
 
                     uiState.prepayProjection?.let { projection ->
                         Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
                         Text(
-                            text = "Estimated — assumes your rate and payment stay the same.",
+                            text = stringResource(R.string.c7_estimate_disclaimer),
                             color = colors.tx3,
                             fontSize = DhruvNextType.meta,
                         )
                         Spacer(Modifier.height(4.dp))
-                        DetailRow(label = "Interest saved", value = Paise.formatCompact(projection.interestSavedPaise))
-                        DetailRow(label = "Paid off", value = "${projection.monthsSaved} months earlier")
+                        DetailRow(
+                            label = stringResource(R.string.c7_interest_saved_label),
+                            value = Paise.formatCompact(projection.interestSavedPaise),
+                        )
+                        DetailRow(
+                            label = stringResource(R.string.c7_paid_off_label),
+                            value = stringResource(R.string.c7_months_earlier_format, projection.monthsSaved),
+                        )
                     }
 
                     Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
                     NxButton(
-                        text = "Open in loan calculator",
+                        text = stringResource(R.string.c7_open_calculator_button),
                         onClick = onOpenLoanCalculator,
                         variant = NxButtonVariant.Outline,
                         block = true,
@@ -171,7 +201,7 @@ private fun LiabilityDetailContent(
                 }
             }
         } else {
-            EmptyStateCard(message = "No loan details recorded for this liability yet.")
+            EmptyStateCard(message = stringResource(R.string.c7_no_loan_details_message))
         }
     }
 }

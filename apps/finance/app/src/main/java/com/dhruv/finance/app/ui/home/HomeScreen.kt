@@ -21,12 +21,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.navigation.NavTarget
 import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.core.navigation.PlanTool
+import com.dhruv.finance.app.R
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
@@ -111,7 +115,7 @@ fun HomeScreen(
                     onRetry = viewModel::load,
                 )
             else -> {
-                NetWorthHero(uiState)
+                NetWorthHero(uiState, upcomingCount = uiState.upcoming.size)
                 NxButton(
                     text = "View details",
                     onClick = { onOpenDetail(DetailRoute.NetWorth) },
@@ -142,9 +146,26 @@ private fun HomeHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun NetWorthHero(uiState: HomeViewModel.UiState) {
+private fun NetWorthHero(
+    uiState: HomeViewModel.UiState,
+    upcomingCount: Int,
+) {
     NxCard {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            // Phase 10, T074: the design's Home (01) hero carries a one-line status ("everything
+            // on track") this card never had — derived from the same `upcoming` list the section
+            // below already renders, not a new data source.
+            Text(
+                text =
+                    if (upcomingCount == 0) {
+                        stringResource(R.string.home_status_on_track)
+                    } else {
+                        stringResource(R.string.home_status_upcoming_count, upcomingCount)
+                    },
+                color = LocalDhruvNextColors.current.tx3,
+                fontSize = DhruvNextType.meta,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
             MoneyText(paise = uiState.netPaise ?: 0L, variant = MoneyTextVariant.Hero)
             uiState.deltaPercentBps?.let { bps ->
                 Spacer(Modifier.height(DhruvNextSpacing.inputGroupGap))
@@ -156,7 +177,16 @@ private fun NetWorthHero(uiState: HomeViewModel.UiState) {
             }
             if (uiState.trendValuesPaise.size > 1) {
                 Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
-                TrendSparkline(values = uiState.trendValuesPaise.map { it.toFloat() })
+                // Phase 10, T069: chart contentDescription — previously absent.
+                val trendDescription = stringResource(R.string.home_trend_chart_description)
+                TrendSparkline(
+                    values = uiState.trendValuesPaise.map { it.toFloat() },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .semantics { contentDescription = trendDescription },
+                )
             }
         }
     }

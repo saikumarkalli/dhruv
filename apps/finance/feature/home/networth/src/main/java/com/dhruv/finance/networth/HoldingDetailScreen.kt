@@ -22,6 +22,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,6 +76,8 @@ fun HoldingDetailScreen(
     val colors = LocalDhruvNextColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val deletedMessage = stringResource(R.string.c3_deleted_snackbar)
+    val undoLabel = stringResource(R.string.networth_action_undo)
 
     // T053: the undo window IS the recoverable location this phase offers (no Trash screen
     // exists) — dismissing without tapping Undo is the point at which this screen finally leaves.
@@ -80,7 +85,7 @@ fun HoldingDetailScreen(
         val holdingId = uiState.holding?.id
         if (uiState.isDeleted && holdingId != null) {
             val result =
-                snackbarHostState.showSnackbar(message = "Holding deleted", actionLabel = "Undo", duration = SnackbarDuration.Long)
+                snackbarHostState.showSnackbar(message = deletedMessage, actionLabel = undoLabel, duration = SnackbarDuration.Long)
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.undoDelete(holdingId)
             } else {
@@ -91,7 +96,7 @@ fun HoldingDetailScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(colors.bg)) {
-            NxTopBar(title = uiState.holding?.name ?: "Holding", onBack = onBack)
+            NxTopBar(title = uiState.holding?.name ?: stringResource(R.string.c3_default_title), onBack = onBack)
 
             when {
                 uiState.isLoading && uiState.holding == null ->
@@ -100,7 +105,7 @@ fun HoldingDetailScreen(
                     }
                 uiState.errorMessage != null && uiState.holding == null ->
                     RetryErrorCard(
-                        message = uiState.errorMessage ?: "Couldn't load this holding.",
+                        message = uiState.errorMessage ?: stringResource(R.string.c3_error_message),
                         onRetry = { },
                         modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                     )
@@ -108,7 +113,7 @@ fun HoldingDetailScreen(
                     val holding = uiState.holding
                     if (holding == null) {
                         EmptyStateCard(
-                            message = "This holding couldn't be found.",
+                            message = stringResource(R.string.c3_not_found_message),
                             modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                         )
                     } else {
@@ -154,12 +159,30 @@ private fun HoldingDetailContent(
     ) {
         NxCard {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                // Phase 10, T074: the design's C3 header names the sector and the last-valued date
+                // next to the hero figure — this card previously showed neither.
+                val lastValuedAsOf = uiState.history.firstOrNull()?.valuation?.asOf
+                val lastValuedLabel = stringResource(R.string.c3_last_valued_format, lastValuedAsOf.orEmpty())
+                Text(
+                    text =
+                        listOfNotNull(
+                            sectorLabel(holding.sector.name),
+                            lastValuedAsOf?.let { lastValuedLabel },
+                        ).joinToString(" · "),
+                    color = colors.tx3,
+                    fontSize = DhruvNextType.meta,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
                 MoneyText(paise = currentValuePaise ?: 0L, variant = MoneyTextVariant.Hero)
                 uiState.history.firstOrNull()?.deltaPercentBps?.let { bps ->
                     val deltaPercent = bps / 100.0
                     Spacer(Modifier.height(DhruvNextSpacing.inputGroupGap))
                     StatDeltaChip(
-                        text = "%.1f%% since previous value".format(Locale.US, kotlin.math.abs(deltaPercent)),
+                        text =
+                            stringResource(
+                                R.string.c3_delta_since_previous,
+                                "%.1f".format(Locale.US, kotlin.math.abs(deltaPercent)),
+                            ),
                         isPositive = deltaPercent >= 0,
                     )
                 }
@@ -171,7 +194,13 @@ private fun HoldingDetailContent(
                     onSelected = { index -> viewModel.setTrendRange(TREND_RANGES[index]) },
                 )
                 Spacer(Modifier.height(DhruvNextSpacing.inputGroupGap))
-                TrendSparkline(values = viewModel.trendValuesPaise(uiState).map { it.toFloat() })
+                // Phase 10, T069: chart contentDescription — previously absent.
+                val trendDescription = stringResource(R.string.c3_trend_chart_description, holding.name)
+                TrendSparkline(
+                    values = viewModel.trendValuesPaise(uiState).map { it.toFloat() },
+                    modifier =
+                        Modifier.fillMaxWidth().height(56.dp).semantics { contentDescription = trendDescription },
+                )
 
                 val investedPaise = holding.investedPaise
                 if (investedPaise != null && investedPaise > 0 && currentValuePaise != null) {
@@ -181,13 +210,22 @@ private fun HoldingDetailContent(
                     ThreeUpStatRow(
                         items =
                             listOf(
-                                StatItem(label = "Invested", value = com.dhruv.core.format.Paise.formatCompact(investedPaise)),
-                                StatItem(label = "Gain", value = com.dhruv.core.format.Paise.formatCompact(gainPaise)),
-                                StatItem(label = "Return", value = "%.1f%%".format(Locale.US, simpleReturnPercent)),
+                                StatItem(
+                                    label = stringResource(R.string.c3_stat_invested),
+                                    value = com.dhruv.core.format.Paise.formatCompact(investedPaise),
+                                ),
+                                StatItem(
+                                    label = stringResource(R.string.c3_stat_gain),
+                                    value = com.dhruv.core.format.Paise.formatCompact(gainPaise),
+                                ),
+                                StatItem(
+                                    label = stringResource(R.string.c3_stat_return),
+                                    value = "%.1f%%".format(Locale.US, simpleReturnPercent),
+                                ),
                             ),
                     )
                     Text(
-                        text = "Simple return — not annualised (IRR support is a future phase).",
+                        text = stringResource(R.string.c3_simple_return_disclaimer),
                         color = colors.tx3,
                         fontSize = DhruvNextType.meta,
                         modifier = Modifier.padding(top = 4.dp),
@@ -196,19 +234,29 @@ private fun HoldingDetailContent(
             }
         }
 
-        NxButton(text = "Update value", onClick = { onUpdateValue(currentValuePaise) }, block = true)
+        NxButton(text = stringResource(R.string.c3_update_value_button), onClick = { onUpdateValue(currentValuePaise) }, block = true)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
-            NxButton(text = "Edit", onClick = onEdit, variant = NxButtonVariant.Outline, modifier = Modifier.weight(1f))
-            NxButton(text = "Delete", onClick = onDelete, variant = NxButtonVariant.Destructive, modifier = Modifier.weight(1f))
+            NxButton(
+                text = stringResource(R.string.networth_action_edit),
+                onClick = onEdit,
+                variant = NxButtonVariant.Outline,
+                modifier = Modifier.weight(1f),
+            )
+            NxButton(
+                text = stringResource(R.string.networth_action_delete),
+                onClick = onDelete,
+                variant = NxButtonVariant.Destructive,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         NxCard {
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionLabel(text = "Valuation history")
+                SectionLabel(text = stringResource(R.string.c3_valuation_history_label))
                 Spacer(Modifier.height(DhruvNextSpacing.interCardGap))
                 if (uiState.history.isEmpty()) {
-                    EmptyStateCard(message = "No values recorded yet.")
+                    EmptyStateCard(message = stringResource(R.string.c3_no_values_message))
                 } else {
                     uiState.history.forEachIndexed { index, entry ->
                         HistoryRow(entry, onCorrect = { onCorrectEntry(entry.valuation.id, entry.valuation.valuePaise) })
@@ -257,7 +305,7 @@ private fun HistoryRow(
                 )
             }
             NxButton(
-                text = "Fix",
+                text = stringResource(R.string.c3_fix_button),
                 onClick = onCorrect,
                 variant = NxButtonVariant.Ghost,
                 size = NxButtonSize.Small,

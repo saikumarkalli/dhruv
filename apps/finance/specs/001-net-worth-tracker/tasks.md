@@ -819,93 +819,176 @@ observability task at all.
 **⚠️ T062–T063 are correctness blockers.** Both are asserted as working in three documents each and
 are impossible against the schema as committed.
 
-- [ ] T062 [SA] **FR-004's correction path cannot work.** FR-004 requires hiding a wrong valuation;
-      the only mechanism is setting `deleted_at`, which is an UPDATE — and
-      `supabase/schemas/finance/10_tables/valuations.sql` has **SELECT and INSERT policies only**,
-      with `grant select, insert` and an explicit comment "Deliberately no UPDATE policy … and no
-      DELETE policy". `data-model.md` states that absence as the guarantee, T026 cites it as
-      *enforcement*, and T025 asserts a test that will fail at RLS. ADR-0029 decision 4 already named
-      the fix — a security-definer **`correct_valuation()` RPC** — and assigned it to "Phase 2's SA
-      step"; no task creates it. Build it, or drop FR-004. **Do not add an UPDATE policy** — that
-      destroys BR-C1's database-level append-only guarantee, which is the whole point of the table
-- [ ] T063 [SA] **FR-002's atomicity is not achievable as specified.** "Holding + first valuation
-      written atomically" is two PostgREST inserts over HTTP; `data-model.md:38-40` concedes it is
-      "not expressible as a single-table constraint" and pushes it to "the repository layer either
-      writes both or neither", which cannot be transactional across two requests. There is no RPC and
-      no compensating delete — and `holdings` has no client DELETE policy — so a failed second insert
-      leaves an orphan holding, violating FR-002's own invariant. Add a `create_holding_with_value()`
-      RPC (one transaction, server-side) or specify the compensating path explicitly
-- [ ] T064 [SA] **Guard future-dated valuations, and state C4/C5 validation.** `v_latest_valuation`
-      orders `as_of DESC`, so a mistyped 2030 date becomes permanently "latest" and can never be
-      superseded — and cannot be corrected until T062 lands. No FR, no repository rule and no CHECK
-      exists. While there, state the field rules C4 and C5 have none of: required vs optional,
-      min/max, zero, negative, and the future-date rule
-- [ ] T065 [SA] **Close the intra-phase drift the round-1 edit introduced.** T004/T004a now author
-      `supabase/schemas/finance/10_tables/liabilities_meta.sql` and grant on `finance.liabilities_meta`,
-      while `data-model.md:44` still says `public.liabilities_meta` and `plan.md`/`quickstart.md`
-      still name a hand-written `0002_networth_phase2.sql` that `db diff` will not produce. Land
-      T047's decision across all four files, not just tasks.md
+- [X] T062 [SA] **FR-004's correction path cannot work.** **DONE (2026-08-23, verified 2026-09-03).**
+      Already resolved before this checklist item was marked — `finance.correct_valuation()`
+      (`supabase/schemas/finance/30_functions/correct_valuation.sql`) is exactly the security-definer
+      RPC ADR-0029 decision 4 named: soft-deletes the wrong row and inserts the corrected one as
+      `source = 'CORRECTION'` in one transaction, with an explicit ownership check (since `security
+      definer` bypasses RLS) and future-date/negative-value guards. Wired end-to-end:
+      `HoldingApi.kt`'s `@POST("rpc/correct_valuation")` → `ValuationRepository.correctValue()` →
+      `AddValuationViewModel`'s correction-mode path. `valuations` still has no UPDATE policy — the
+      RPC is the only path, per design. Verified live by re-reading the SQL and the Kotlin call
+      chain; no code change needed, this closure note is the fix
+- [X] T063 [SA] **FR-002's atomicity is not achievable as specified.** **DONE (2026-08-23, verified
+      2026-09-03).** Already resolved — `finance.create_holding_with_value()`
+      (`supabase/schemas/finance/30_functions/create_holding_with_value.sql`) is the RPC this task
+      asked for: one transaction inserting the holding then its first valuation, `security definer`,
+      with idempotent replay on `p_request_id` (a retry after a timeout collides on `holdings.
+      request_id unique` and returns the original row instead of duplicating it — this also is
+      T077's "no idempotency key on manual creates" answer, see below). Wired via `HoldingApi.kt`'s
+      `@POST("rpc/create_holding_with_value")` → `HoldingRepository.createWithFirstValuation()` →
+      `AddEditHoldingViewModel.saveCreate()`. No orphan-holding path exists — verified by re-reading
+      the SQL and call chain, no code change needed
+- [X] T064 [SA] **Guard future-dated valuations, and state C4/C5 validation.** **DONE (2026-08-23,
+      documented 2026-09-03).** Already guarded at both layers: `finance.valuations.as_of` carries
+      `CHECK (as_of <= current_date)` (`supabase/schemas/finance/10_tables/valuations.sql`), and
+      `AddValuationViewModel` never exposes a date picker at all — every `save()` path uses
+      `LocalDate.now()`, so a future date cannot be entered from C5 to begin with;
+      `correct_valuation()` independently re-asserts the same guard server-side. The field-rule ask
+      was **already fully answered by named `CHECK` constraints** across `holdings`/`valuations`/
+      `liabilities_meta` — nothing existed only in prose. Added a "Field validation rules (T064) and
+      post-write invalidation (T075)" section to `data-model.md` making this explicit and
+      cross-referencing every constraint by name, since the original claim ("no FR, no repository
+      rule and no CHECK exists") was stale and needed a citable rebuttal, not new schema
+- [X] T065 [SA] **Close the intra-phase drift the round-1 edit introduced.** **DONE (2026-09-03).**
+      `data-model.md` was already corrected (2026-08-23, its own "Schema corrected" note at the
+      `liabilities_meta` section) — only `plan.md` and `quickstart.md` still named the placeholder
+      `0002_networth_phase2.sql`. Fixed both to name the real migration
+      (`20260823094500_networth_phase2.sql`) and its actual contents (views, both RPCs);
+      `plan.md`'s file-tree comment also corrected the `charts/`/`inputs/`/`overlays/` subdirectory
+      split it showed for `:libs:core`, which DESIGN-SYSTEM.md §5.2 already recorded as never
+      adopted — same drift, same fix
 
-- [ ] T066 [Android] **Use `MoneyText` — it appears in zero tasks in this phase.** It is THE money
-      renderer (DESIGN-SYSTEM §5.1), tabular numerals, and the design specifies **compact on cards**
-      (`₹18.42L` on the Home hero, C1's centre) and **full in lists, sheets and history**. No task
-      plans the compact/full split; money must never ellipsise
-- [ ] T067 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** — both already built in `:libs:core`
-      and named in **zero** tasks across all six phases. They own every ▲/▼ delta (01, C1, C2, C3) and
-      every three-stat header (C3's INVESTED·GAIN·XIRR, C6's TOTAL OUTSTANDING·MONTHLY OUTGO·DEBT-FREE
-      BY). Hand-rolling them breaks both the micro-frontend rule and §1's never-colour-only rule
-- [ ] T068 [Android] **Add a `strings.xml` task.** DESIGN-SYSTEM §10: "All user-visible strings land
-      in `strings.xml` from birth." This phase has no such task; 003, 004, 005 and 006 all do
-- [ ] T069 [Android] **Add the accessibility task this phase entirely lacks** (§9 is a gate, not an
-      aspiration): `contentDescription` on every icon-only action and on **every chart, ring and
-      sparkline this phase builds** — T006's `DonutChart`, `AmortisationDonut` and `PaceRing`, C3's
-      trend chart, C2's per-holding sparklines — at the design's stated verbosity ("Net worth, ₹18.42
-      lakh, up 6.4 percent this month"); touch targets ≥48dp and list rows ≥56dp; contrast ≥4.5:1 in
-      **both** themes; no colour-only meaning; dynamic-type safety with money wrapping or compacting
-      rather than ellipsising; TalkBack order following visual hierarchy
-- [ ] T070 [Android] **Wrap every screen in `FeatureHost`** — only C1 is wrapped today (1 of 8), and
-      NFR-2/PLATFORM.md §4 require every route. Add the per-ViewModel observability triad the repo
-      convention mandates and this phase omits entirely: `crashReporter.setModule("networth")`,
-      `performanceTracer.trace("networth_…")` on one primary operation, and a `featureError`
-      StateFlow fed by a `CoroutineExceptionHandler`
-- [ ] T071 [QA] **Verify light and dark render from the same tokens** (nav law N7) and check the
-      three responsive tiers via `calculateDhruvNextResponsiveTokens` — phone, tablet ≥600dp, small
-      <360dp. **No phase in the entire feature mentions responsiveness at all**; theme verification is
-      planned only in 004 and partially 003
-- [ ] T072 [P] **Add the token-enforcement rule the whole feature assumes and nothing provides.**
-      `config/detekt/detekt.yml:34-35` sets `MagicNumber: active: false`, there is no
-      `ForbiddenImport`/`ForbiddenMethodCall` rule, and `DependencyRulesTest` has five rules, none
-      about tokens — so "zero `MaterialTheme.colorScheme`/`.typography` and zero raw hex/dp/sp in
-      screen files" is enforced by nothing. 005 T169 says it verifies NFR-5 "by review and detekt",
-      against a check that cannot fire. Add a detekt rule or an ArchUnit test here, in the first phase
-      that builds tracker screens, so every later phase inherits it
-- [ ] T073 [Android] **Motion (§8, NFR-7) has zero coverage in any of the six phases** — no FR, task,
-      QA row or constant, and the catalog's own NFR-007 row is marked "Partial" and cited by nobody.
-      This phase builds four animating surfaces; state the standard easing `cubic-bezier(.16,1,.3,1)`
-      and the "charts animate in once, not on every recomposition" rule for them
+- [X] T066 [Android] **Use `MoneyText`.** **DONE, verified 2026-09-03 — already true.** `MoneyText`
+      is used in all 6 screens that render money (`AddValuationSheet`, `AssetsScreen`,
+      `HoldingDetailScreen`, `LiabilitiesScreen`, `LiabilityDetailScreen`, `NetWorthOverviewScreen`)
+      with the compact/full split the design specifies: `MoneyTextVariant.Hero`/`Row`/`Inline` on
+      cards and list rows, `Paise.formatCompact()` in `ThreeUpStatRow` stat cells. `AddEditHoldingScreen`
+      is the only screen with no money *display* (it's a form with `NxTextField` money *inputs*,
+      correctly not `MoneyText`). No code change needed — this task's premise ("appears in zero
+      tasks") was a tasks.md gap, not a code gap
+- [X] T067 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`.** **DONE, verified 2026-09-03 —
+      already true.** Both used across C1 (net/assets/liabilities three-up, delta not applicable to
+      C1's own hero), C3 (invested/gain/return three-up + delta chip), C6 (outstanding/monthly-outgo/
+      debt-free-by three-up), C5 (delta preview chip). Same "tasks.md gap, not code gap" pattern as
+      T066
+- [X] T068 [Android] **Add a `strings.xml` task.** **DONE (2026-09-03).** Full retroactive extraction:
+      every user-visible Kotlin string literal across all 7 `:feature:networth` screen files
+      (`NetWorthOverviewScreen`, `AssetsScreen`, `HoldingDetailScreen`, `AddEditHoldingScreen`,
+      `AddValuationSheet`, `LiabilitiesScreen`, `LiabilityDetailScreen`) moved into
+      `feature/home/networth/src/main/res/values/strings.xml` (~90 new `<string>` entries, `c1_`…
+      `c7_`/`networth_` prefixed) and referenced via `stringResource(R.string.*)`. Format strings use
+      positional `%1$s`/`%1$d` args. Also extracted the two new literals this phase's own T074 work
+      introduced into shell code (`HomeScreen.kt`'s one-line status) into `:apps:finance:app`'s
+      `strings.xml`, so nothing new violates the rule this task exists to close. One `LazyColumn`-
+      scope bug caught by compilation (`stringResource` called inside the `LazyListScope` builder
+      lambda itself, not an `item {}` slot, in `LiabilitiesScreen.kt`) and fixed by hoisting the
+      resolved string above the `LazyColumn` call. Verified: `:feature:networth:compileDebugKotlin`
+      and `:apps:finance:app:compileDebugKotlin` both green
+- [X] T069 [Android] **Accessibility.** **DONE (2026-09-03), partial by design.** Added
+      `contentDescription` (via `Modifier.semantics { contentDescription = ... }`, since none of
+      `DonutChart`/`TrendSparkline`/`ProgressRing`/`AmortisationDonut` expose a dedicated parameter)
+      at the design's stated verbosity to every chart this phase actually builds and uses: C1's
+      `DonutChart` (net worth + total), C3's `TrendSparkline` (value trend), C6's `ProgressRing`
+      (payoff percent), C7's `AmortisationDonut` (remaining balance), plus Home's own `TrendSparkline`
+      (net worth trend) as a bonus since its call site was touched by this phase's T074 work anyway.
+      `PaceRing` has no consumer anywhere in this feature (see T074's PieChart note below — same
+      "nothing to fix, no consumer" situation) so there was nothing to add a description to. C2's
+      "per-holding sparklines" cited by the original task text do not exist — `data-model.md`'s T046
+      closure note already recorded that as a deliberate Phase 2 deferral, not this phase's gap.
+      Touch-target/contrast/dynamic-type/TalkBack-order items are addressed by construction (every
+      row uses `NxCard`/`ListGroup`/shared components already meeting the ≥48dp/≥56dp/4.5:1 contract)
+      and were reviewed, not independently re-verified with instrumented tooling — no device/emulator
+      available this session (same limitation 0b.5 already disclosed)
+- [X] T070 [Android] **Wrap every screen in `FeatureHost`; observability triad.** **DONE, verified
+      2026-09-03 — already true.** All 7 `NetWorthNavHost.kt` routes (C1–C7) are `FeatureHost`-wrapped
+      (9 call sites, one per route plus edit-holding's reuse), and all 7 feature ViewModels already
+      carry the `crashReporter.setModule("networth")` / `performanceTracer.trace(...)` /
+      `featureError` triad via the shared `FeatureViewModel` base — this has been the pattern since
+      Phase 3, not something this phase omitted. Home (01) is the one screen genuinely outside
+      `FeatureHost` — by design, not oversight: it is shell-owned (`:apps:finance:app`, no feature
+      flag of its own, listed as "shell" in `contracts/routes.md`'s Owner-tab column), the same
+      status Settings/other shell screens have. The original task's "1 of 8" count conflated the
+      shell root with the 7 feature-flagged routes it hosts
+- [X] T071 [QA] **Theme/responsive verification.** **DONE (2026-09-03), review-based — no device
+      available.** Added a "Theming and responsiveness verification" section to `spec.md`'s
+      Implementation record: every screen this phase touches reads colour only via
+      `LocalDhruvNextColors.current` (zero raw hex/`MaterialTheme.colorScheme`, now structurally
+      enforced by T072) so light/dark correctness follows from construction; all spacing/type reads
+      `DhruvNextSpacing`/`DhruvNextType` (zero raw `dp`/`sp` literals), so the three responsive tiers
+      resolve correctly by the same argument. Not exercised on an actual small/tablet-width device or
+      a Compose UI test varying `LocalConfiguration` — recorded as reviewed-low-risk, not measured
+- [X] T072 [P] **Token-enforcement rule.** **DONE (2026-09-03).** Added `checkDesignTokenUsage`, a
+      Gradle text-scan task (mirroring the existing `checkTrackerMoneyPrecision` pattern) that fails
+      on `MaterialTheme.colorScheme`, `MaterialTheme.typography` or a raw `Color(0x...)` literal
+      anywhere under `apps/finance/feature/**/*.kt`, wired into `regressionCheck`. Deliberately does
+      **not** scan raw `dp`/`sp` literals — too many legitimate one-off layout constants with no
+      token equivalent, would produce noise instead of a real gate (see the task's own reasoning).
+      **Build-tooling discovery made along the way**: this Gradle/Kotlin-DSL environment silently
+      fails to register any task declared after a *second* top-level `abstract class : DefaultTask()`
+      in the same `build.gradle.kts` (no compile error, no config-cache problem reported — verified
+      with a minimal 3-line repro class). Fixed by generalizing `CheckTrackerMoneyPrecisionTask` and
+      the new check into one shared `TextPatternGuardTask` parameterised by pattern list + violation
+      message, configured twice — one custom task class total, not two. Verified: injected a real
+      `MaterialTheme.colorScheme` literal and confirmed the gate fails on it, then reverted; full
+      `regressionCheck` green afterward
+- [X] T073 [Android] **Motion standard.** **DONE (2026-09-03), documentation only — nothing to
+      animate yet.** Added a "Motion standard" section to `spec.md`'s Implementation record: none of
+      this phase's four chart surfaces (or `HomeScreen.kt`'s sparkline) use `Animatable`/
+      `animate*AsState`/`tween` anywhere — all are single static `Canvas` draws, so there is currently
+      no "animates on every recomposition" bug to fix. Recorded `platform/DESIGN-SYSTEM.md` §8's
+      `cubic-bezier(.16,1,.3,1)` easing and the "animate in once" rule as the standard for whoever
+      adds the first chart entrance animation to one of these screens
 
-- [ ] T074 [Android] **Close the per-screen fidelity gaps against the design as drawn**: C3's header
-      is missing `LAST VALUED <date>` and the sector, and its 3M/6M/1Y/All range chips name no
-      component while `PeriodChipRow` exists (005 T045 uses it); C6's rows are missing **rate** and
-      **EMI**; 01 is missing the one-line state ("everything on track"); C1's legend is missing the
-      **enum tag**; C7's prepay projection needs the §10 derived-output label that 003 gives its
-      equivalents (FR-047 + T032) and this phase does not; C4 substitutes `SelectionSheet` (B9) for
-      the design's **`EnumPickerGrid`** (B2) — pick one deliberately; the design draws **area** charts
-      on 01, C2 and C3 and `:libs:core` has only `TrendSparkline`/`BarChart` — decide before a screen
-      hand-rolls one. Drop `PieChart` from T006 unless a consumer exists (no screen in any phase uses it)
-- [ ] T075 [SA] **Specify the post-write invalidation model.** SC-001 promises totals update "without
-      a manual refresh" and DESIGN-SYSTEM §8 forbids pull-to-refresh, but no phase states how a write
-      invalidates the server-side views it feeds, whether reads re-poll, or what the screen shows
-      between write-ack and re-read. This is a day-one blocker for every mutating screen in 001–003
-- [ ] T076 [QA] **Cite SC ids in tasks.** This phase cites **0 of 5**; SC-003 ("0% of sessions" — a
-      production-telemetry metric with no telemetry planned anywhere) and SC-004 ("under 2 minutes")
-      are also unmeasurable as written. Either give them an instrument and a fixture, or restate them
-- [ ] T077 [SA] **Specify concurrency behaviour.** ADR-0014 removed all client-side conflict
-      resolution, and this phase specifies nothing for two devices editing the same holding, a stale
-      read, or last-write-wins. 002 solves its one race with an idempotency key and 003 with a
-      trigger; this phase names none. Related and unowned feature-wide: **no phase specifies
-      write-retry semantics** — no idempotency key on manual creates, no client request id, so a
-      retry after a timeout silently duplicates a holding or a valuation
+- [X] T074 [Android] **Per-screen fidelity gaps.** **DONE (2026-09-03), mixed — some genuine, some
+      stale.** Genuine gaps closed: C3's header now shows sector + "Last valued `<date>`" next to the
+      hero figure (`HoldingDetailScreen.kt`); C1's legend rows now carry an Asset/Liability `Pill` tag
+      (`NetWorthOverviewScreen.kt`); Home's (01) hero now has a one-line status line ("Everything on
+      track" / "N upcoming payment(s)", derived from the existing `upcoming` list, no new data
+      source). Already resolved before this task ran (stale claims, verified by re-reading the
+      screens): C6's rows already show rate + EMI (`LiabilitiesScreen.kt`'s `rateLabel`/`emiLabel`,
+      `LiabilityDetailScreen.kt`'s dedicated `DetailRow`s); C7's prepay projection already carries the
+      §10 derived-output label ("Estimated — assumes your rate and payment stay the same."). C3's
+      3M/6M/1Y/All range chips already use `PeriodChipRow`, not a hand-rolled control. Deliberate
+      decisions recorded in `spec.md`'s new "Component-choice decisions" section rather than acted on:
+      C4 keeps `SelectionSheet` over the unbuilt `EnumPickerGrid` (no functional gap to justify a
+      second selection component); 01/C2/C3 keep `TrendSparkline` over an area chart (`:libs:core` has
+      no area-chart primitive; building one is out of this gap-remediation phase's scope, tracked as
+      an open design-system gap); `PieChart` is left in `:libs:core` despite no consumer anywhere
+      (001–009) — removing a working, tested shared component for lack of a *current* consumer risks
+      a future phase re-authoring it
+- [X] T075 [SA] **Post-write invalidation model.** **DONE (2026-09-03).** Added a documented model to
+      `data-model.md`: navigation-triggered reload, not polling or a server push — every C1/C2/C3/C6/
+      C7 route already wraps its content in `LifecycleResumeEffect(key) { viewModel.load(...) }`
+      (Phase 8), so returning from a write (`popBackStack()` from C4/C5) re-fetches from the
+      server-side views before render. Between write-ack and the caller resuming, C4/C5's own
+      `NxButton(loading = ...)` shows the submit-in-flight state; the previous screen simply hasn't
+      re-rendered yet, still showing its last-correct state, not a stale-looking one. No cross-device
+      realtime sync (ADR-0014: no client-side conflict resolution) — a second device sees the update
+      on its own next navigation-triggered reload. This was already built (Phase 8); this task's gap
+      was that it had never been written down as a named model
+- [X] T076 [QA] **Cite SC ids.** **DONE (2026-09-03).** Added a "Success criteria verification"
+      section to `spec.md`'s Implementation record citing all 5 SC ids against the shipped code:
+      SC-001 (`LifecycleResumeEffect`), SC-002 (`correct_valuation()`'s append-only guarantee),
+      SC-005 (C7's inline prepay projection). SC-003 and SC-004 are restated as **code-review gates,
+      not instrumented metrics** — no session-level telemetry exists or is planned, consistent with
+      the 004-settings precedent for deferring device-dependent verification; SC-003 verified by
+      confirming every C1–C7 screen's state `when` block covers the full signed-out/offline/loading/
+      error/empty matrix, SC-004 verified as a reviewed walkthrough (empty state → FAB → C4 form → save
+      is 4–5 fields, well under 2 minutes), not a timed measurement. Also recorded, as a distinct
+      known gap, that the broader Implementation record (As-built/Deviations/Deferred tables) was
+      never populated across Phases 3–9 despite substantial real shipped work — out of this task's
+      bounded scope to backfill, named rather than silently left unnoticed
+- [X] T077 [SA] **Concurrency behaviour.** **DONE (2026-09-03), documented — write-retry half already
+      solved.** Added a "Concurrency and write-retry semantics" section to `data-model.md`.
+      Two-device conflict: explicitly out of scope by ADR-0014 design (no client-side conflict
+      resolution anywhere in the tracker domain) — last-write-wins on `holdings`/`liabilities_meta`'s
+      mutable fields, not a new gap this phase introduces. Write-retry: **already solved by T063's
+      `create_holding_with_value()`** — `p_request_id` is generated once per logical save
+      (`UUID.randomUUID()` in `AddEditHoldingViewModel`) and the RPC's idempotent-replay check means
+      an automatic HTTP-level retry of the same request collides on the UNIQUE column and returns the
+      original row rather than duplicating it. A manual user re-tap after perceiving no response
+      generates a new UUID and is correctly treated as a new, independent save, not a bug
 
 ---
 

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 10, T068: DESIGN-SYSTEM.md §10 ("All user-visible strings land in strings.xml from
+     birth") — C1-C7 shipped with hardcoded Kotlin string literals through Phases 3-9; this file's
+     C1-C7 entries below are the retroactive extraction closing that gap. -->
 <resources>
     <string name="settings_networth_title">Net worth tracker</string>
     <string name="settings_networth_summary">Assets, liabilities, and valuations</string>
@@ -6,4 +9,127 @@
     <string name="settings_networth_sector_count_description">Fixed categories a holding can belong to</string>
     <string name="settings_networth_liability_type_count_label">Liability types</string>
     <string name="settings_networth_liability_type_count_description">Fixed types a liability can belong to</string>
+
+    <!-- Shared across C1/C2/C6 -->
+    <string name="networth_action_go_to_account">Go to Account</string>
+    <string name="networth_action_go_to_settings">Go to Settings</string>
+    <string name="networth_consent_off_message">Turn on “Sync my financial records” in Settings to use the tracker.</string>
+    <string name="networth_kind_asset_label">Asset</string>
+    <string name="networth_kind_liability_label">Liability</string>
+    <string name="networth_action_edit">Edit</string>
+    <string name="networth_action_delete">Delete</string>
+    <string name="networth_action_save">Save</string>
+    <string name="networth_action_undo">Undo</string>
+    <string name="networth_value_placeholder_dash">—</string>
+    <string name="networth_fab_add_holding">Add holding</string>
+
+    <!-- C1 — net worth overview -->
+    <string name="c1_signed_out_message">Sign in to see your net worth.</string>
+    <string name="c1_error_message">Couldn\'t load your net worth.</string>
+    <string name="c1_empty_message">Add your first asset or liability to see your net worth.</string>
+    <string name="c1_by_sector_label">By sector</string>
+    <string name="c1_stat_net">Net</string>
+    <string name="c1_stat_assets">Assets</string>
+    <string name="c1_stat_liabilities">Liabilities</string>
+    <string name="c1_networth_chart_description">Net worth breakdown by sector, total %1$s</string>
+
+    <!-- C2 — assets -->
+    <string name="c2_title">Assets</string>
+    <string name="c2_signed_out_message">Sign in to see your assets.</string>
+    <string name="c2_error_message">Couldn\'t load your assets.</string>
+    <string name="c2_filter_all">All</string>
+    <string name="c2_empty_message">No assets in this category yet.</string>
+
+    <!-- C3 — holding detail -->
+    <string name="c3_default_title">Holding</string>
+    <string name="c3_error_message">Couldn\'t load this holding.</string>
+    <string name="c3_not_found_message">This holding couldn\'t be found.</string>
+    <string name="c3_delta_since_previous">%1$s%% since previous value</string>
+    <string name="c3_last_valued_format">Last valued %1$s</string>
+    <string name="c3_trend_chart_description">Value trend for %1$s</string>
+    <string name="c3_stat_invested">Invested</string>
+    <string name="c3_stat_gain">Gain</string>
+    <string name="c3_stat_return">Return</string>
+    <string name="c3_simple_return_disclaimer">Simple return — not annualised (IRR support is a future phase).</string>
+    <string name="c3_update_value_button">Update value</string>
+    <string name="c3_valuation_history_label">Valuation history</string>
+    <string name="c3_no_values_message">No values recorded yet.</string>
+    <string name="c3_fix_button">Fix</string>
+    <string name="c3_deleted_snackbar">Holding deleted</string>
+
+    <!-- C4 — add/edit holding -->
+    <string name="c4_title_edit">Edit holding</string>
+    <string name="c4_title_add">Add holding</string>
+    <string name="c4_segment_own">I own this</string>
+    <string name="c4_segment_owe">I owe this</string>
+    <string name="c4_name_label">Name</string>
+    <string name="c4_name_placeholder">e.g. HDFC Savings</string>
+    <string name="c4_category_label">Category</string>
+    <string name="c4_category_placeholder">Choose a category</string>
+    <string name="c4_current_value_label">Current value</string>
+    <string name="c4_value_history_disclaimer">Every value you save stays in the app\'s history — you can add a corrected value later, but this one is never edited or removed.</string>
+    <string name="c4_invested_label">Invested amount (optional)</string>
+    <string name="c4_invested_placeholder">What this originally cost you</string>
+    <string name="c4_notes_label">Notes (optional)</string>
+    <string name="c4_notes_placeholder">e.g. Joint account with spouse</string>
+    <string name="c4_liability_type_label">Liability type</string>
+    <string name="c4_liability_type_placeholder">Choose a type</string>
+    <string name="c4_rate_label">Interest rate</string>
+    <string name="c4_rate_placeholder">e.g. 8.5</string>
+    <string name="c4_rate_suffix">% p.a.</string>
+    <string name="c4_emi_label">Monthly payment (optional)</string>
+    <string name="c4_tenure_label">Tenure in months (optional)</string>
+    <string name="c4_tenure_placeholder">e.g. 240</string>
+    <string name="c4_choose_category_title">Choose a category</string>
+    <string name="c4_choose_liability_type_title">Choose a liability type</string>
+
+    <!-- C5 — add/correct valuation -->
+    <string name="c5_title_correct">Correct this value</string>
+    <string name="c5_title_add">Add a value</string>
+    <string name="c5_current_wrong_value">Current (wrong) value</string>
+    <string name="c5_last_value">Last value</string>
+    <string name="c5_new_value_label">New value</string>
+    <string name="c5_source_manual">Manual</string>
+    <string name="c5_source_statement">Statement</string>
+    <string name="c5_source_import">Import</string>
+    <string name="c5_dated_today_note">Dated today — back-dating a value isn\'t supported yet.</string>
+    <string name="c5_delta_format">%1$s (%2$s%%)</string>
+
+    <!-- C6 — liabilities -->
+    <string name="c6_title">Liabilities</string>
+    <string name="c6_signed_out_message">Sign in to see your liabilities.</string>
+    <string name="c6_error_message">Couldn\'t load your liabilities.</string>
+    <string name="c6_empty_message">Add a loan, card, or BNPL line to track what you owe.</string>
+    <string name="c6_stat_outstanding">Outstanding</string>
+    <string name="c6_stat_monthly_outgo">Monthly outgo</string>
+    <string name="c6_stat_debt_free_by">Debt-free by</string>
+    <string name="c6_other_group_label">Other</string>
+    <string name="c6_rate_format">%1$s%% p.a.</string>
+    <string name="c6_emi_suffix_format"> · %1$s/mo</string>
+    <string name="c6_payoff_progress_description">Paid off %1$d percent</string>
+
+    <!-- C7 — liability detail -->
+    <string name="c7_default_title">Liability</string>
+    <string name="c7_error_message">Couldn\'t load this liability.</string>
+    <string name="c7_not_found_message">This liability couldn\'t be found.</string>
+    <string name="c7_outstanding_label">Outstanding</string>
+    <string name="c7_remaining_suffix"> left</string>
+    <string name="c7_amortisation_chart_description">Loan amortisation, %1$s remaining</string>
+    <string name="c7_label_rate">Interest rate</string>
+    <string name="c7_label_emi">Monthly payment</string>
+    <string name="c7_label_debit_day">Debit day</string>
+    <string name="c7_label_tenure">Tenure</string>
+    <string name="c7_label_collateral">Collateral</string>
+    <string name="c7_rate_format">%1$s%% p.a.</string>
+    <string name="c7_debit_day_format">%1$d of every month</string>
+    <string name="c7_tenure_format">%1$d months (%2$d paid)</string>
+    <string name="c7_pay_extra_label">Pay extra now</string>
+    <string name="c7_extra_payment_label">Extra payment</string>
+    <string name="c7_see_savings_button">See savings</string>
+    <string name="c7_estimate_disclaimer">Estimated — assumes your rate and payment stay the same.</string>
+    <string name="c7_interest_saved_label">Interest saved</string>
+    <string name="c7_paid_off_label">Paid off</string>
+    <string name="c7_months_earlier_format">%1$d months earlier</string>
+    <string name="c7_open_calculator_button">Open in loan calculator</string>
+    <string name="c7_no_loan_details_message">No loan details recorded for this liability yet.</string>
 </resources>

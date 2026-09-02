@@ -160,6 +160,58 @@ insert against the existing INSERT policy. Delivers FR-002's atomicity server-si
 idempotently: a retry carrying the same `p_request_id` returns the already-created holding instead of
 duplicating it.
 
+## Field validation rules (Phase 10, T064) and post-write invalidation (T075)
+
+**T064 — future-dated valuations and C4/C5 field rules.** Verified already fully guarded, both at
+the DB layer and the client, before this note was added:
+- `finance.valuations.as_of` carries `CHECK (as_of <= current_date)` (line above) — a future date is
+  rejected by Postgres regardless of what the client sends.
+- `AddValuationViewModel` never offers a date picker at all — every `save()` path uses
+  `LocalDate.now().toString()` for `asOf`, so a future date cannot be entered from C5 in the first
+  place. `finance.correct_valuation()` independently re-asserts `p_as_of > current_date` as a guard
+  for its own call site.
+- Every other field rule C4/C5 leave unstated in prose is enforced by a named `CHECK` above:
+  `holdings.name` 1–120 chars, `sector`/`kind` frozen enums, `invested_paise` nullable/`>= 0`,
+  `valuations.value_paise` `>= 0`, `source` frozen enum, `liabilities_meta.rate_bps` 0–10000,
+  `emi_paise` nullable/`>= 0`, `debit_day` 1–31, `tenure_months > 0`, `paid_months >= 0` and
+  `<= tenure_months`. There is no field in C4/C5 with a rule that exists only in prose and not as a
+  `CHECK` — the table above **is** the field-rule specification T064 asked this phase to write down.
+
+**T075 — post-write invalidation model.** SC-001 promises the net-worth total updates "without a
+manual refresh," and `platform/DESIGN-SYSTEM.md` §8 forbids per-feature pull-to-refresh. The model
+this phase actually ships (Phase 8) is **navigation-triggered reload, not polling or a server push**:
+every C1/C2/C3/C6/C7 route in `NetWorthNavHost.kt` wraps its content in
+`LifecycleResumeEffect(key) { viewModel.load(...); onPauseOrDispose { } }`, so returning to a screen
+(via `popBackStack()` from C4/C5's write, or backgrounding and resuming the app) re-fetches from the
+server-side views synchronously before render. Between write-ack and the caller screen resuming,
+C4/C5 themselves show their own submit-in-flight state (`NxButton`'s `loading` param disables the
+button and shows a spinner); there is no intermediate "stale total" frame because the previous
+screen simply hasn't re-rendered yet — it is still showing its last successfully loaded state,
+which was correct at the time it loaded. There is no cross-device realtime sync in this phase
+(ADR-0014: Supabase + RLS is the single source of truth, no client-side conflict resolution) — a
+second device only sees the update on its own next navigation-triggered reload.
+
+## Concurrency and write-retry semantics (Phase 10, T077)
+
+**Two-device conflict**: out of scope by ADR-0014 design, not an oversight of this phase — the
+tracker domain has no client-side conflict resolution at all; Supabase + RLS is the single source of
+truth and the last write physically committed wins. Two devices editing the same holding's mutable
+fields (name, sector, invested amount, or `liabilities_meta`'s EMI/tenure) is the same last-write-
+wins outcome any single-row UPDATE has; `valuations` cannot conflict this way since it is
+insert-only.
+
+**Write-retry / duplicate-submission**: **already solved**, not an open gap — `p_request_id` on both
+`finance.create_holding_with_value()` and (via the `holdings.request_id`/`valuations.request_id`
+UNIQUE columns) is generated client-side once, at the moment `AddEditHoldingViewModel.save()`
+commits (`UUID.randomUUID()`), and reused by the RPC's idempotent-replay check
+(`create_holding_with_value.sql`'s comment: "generated client-side at the moment the user commits
+… so an automatic retry after a timeout reuses it, collides on the UNIQUE column, and returns the
+already-created holding instead of duplicating it"). This covers the case that actually matters — an
+HTTP-level automatic retry of the *same* logical request. A user manually re-tapping "Save" after
+perceiving no response generates a **new** UUID and is treated as a new, independent save — which is
+correct: from the domain's perspective that is a second, deliberate user action, not a duplicate of
+the first.
+
 ## Simple return, not XIRR
 
 `invested_paise` funds `(current − invested) / invested`, which C3 must label **"Simple return"** —
