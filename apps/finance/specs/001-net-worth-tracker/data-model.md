@@ -128,6 +128,14 @@ donut centre, while this phase previously defined only current-state views — t
 and "delta vs *when*" was undefined. Home's delta compares the latest point against the same holding
 set **30 days prior**; C2's per-holding sparkline reads that holding's own valuation rows directly.
 
+**T046 closure note (2026-09-02):** the source above (`v_net_worth_history`, feeding Home's delta
+and sparkline) shipped as designed. C2's own per-holding sparkline/last-updated-date/%-change,
+described in the line above, did **not** ship — `AssetsScreen`'s row only ever showed name/sector/
+current value. This is a deliberate scope deferral, not an oversight rediscovered here: building it
+means either an N+1 per-row valuation-history fetch or a new aggregation view, and no `NW-UI-*` row
+requires it (C2's own rows in the catalog only ever tested the sector filter/list, never a
+sparkline). Tracked as a follow-up for whichever phase next touches C2.
+
 Derivation is **"latest valuation ≤ date"** — deliberately the same rule Phase 5's
 `report_balance_sheet(p_as_of)` uses, so this is not a competing mechanism and 005 may read this view
 rather than re-derive. Cost is O(months × holdings) index lookups served by

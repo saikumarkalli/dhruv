@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.ui.components.NxButton
 import com.dhruv.core.ui.components.NxSelect
@@ -26,17 +27,20 @@ import com.dhruv.core.ui.components.NxTopBar
 import com.dhruv.core.ui.components.SegmentedRow
 import com.dhruv.core.ui.components.SelectionOption
 import com.dhruv.core.ui.components.SelectionSheet
+import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.finance.data.tracker.model.HoldingKind
 
 /**
- * C4 — add a holding, "I own this"/"I owe this" toggle + sector picker (never free text, NW-BR-004)
- * + value entry. [onClose] is this screen's only exit — the design law's "modal (close, not back)"
- * presentation class (`platform/DESIGN-SYSTEM.md` §6); rendered here via [NxTopBar]'s back-arrow
- * slot since the component has no separate close-icon variant yet (a design-system gap, not fixed
- * in this phase).
+ * C4 — add or edit a holding. Add: "I own this"/"I owe this" toggle + sector picker (never free
+ * text, NW-BR-004) + value entry. Edit (Phase 9, T051/T052): name/category/invested amount/notes
+ * only — the current-value field is add-only (recording a new value is C5's job, not an edit), and
+ * liability terms are not editable here (see [AddEditHoldingViewModel.startEditing]'s own doc).
+ * [onClose] is this screen's only exit — the design law's "modal (close, not back)" presentation
+ * class (`platform/DESIGN-SYSTEM.md` §6); rendered here via [NxTopBar]'s back-arrow slot since the
+ * component has no separate close-icon variant yet (a design-system gap, not fixed in this phase).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +60,14 @@ fun AddEditHoldingScreen(
     }
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = "Add holding", onBack = onClose)
+        NxTopBar(title = if (uiState.isEditing) "Edit holding" else "Add holding", onBack = onClose)
+
+        if (uiState.isLoadingForEdit) {
+            Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
+                SkeletonBlock(height = 160.dp)
+            }
+            return@Column
+        }
 
         Column(
             modifier =
@@ -66,13 +77,15 @@ fun AddEditHoldingScreen(
                     .padding(DhruvNextSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap),
         ) {
-            SegmentedRow(
-                options = listOf("I own this", "I owe this"),
-                selectedIndex = if (uiState.kind == HoldingKind.ASSET) 0 else 1,
-                onSelected = { index ->
-                    viewModel.onKindChange(if (index == 0) HoldingKind.ASSET else HoldingKind.LIABILITY)
-                },
-            )
+            if (!uiState.isEditing) {
+                SegmentedRow(
+                    options = listOf("I own this", "I owe this"),
+                    selectedIndex = if (uiState.kind == HoldingKind.ASSET) 0 else 1,
+                    onSelected = { index ->
+                        viewModel.onKindChange(if (index == 0) HoldingKind.ASSET else HoldingKind.LIABILITY)
+                    },
+                )
+            }
             NxTextField(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
@@ -87,24 +100,40 @@ fun AddEditHoldingScreen(
                 placeholder = "Choose a category",
                 errorMessage = uiState.sectorError,
             )
+            if (!uiState.isEditing) {
+                NxTextField(
+                    value = uiState.amountText,
+                    onValueChange = viewModel::onAmountChange,
+                    label = "Current value",
+                    prefix = "₹",
+                    placeholder = "0",
+                    errorMessage = uiState.amountError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Text(
+                    text =
+                        "Every value you save stays in the app's history — you can add a corrected " +
+                            "value later, but this one is never edited or removed.",
+                    color = colors.tx3,
+                    fontSize = DhruvNextType.meta,
+                )
+            }
             NxTextField(
-                value = uiState.amountText,
-                onValueChange = viewModel::onAmountChange,
-                label = "Current value",
+                value = uiState.investedAmountText,
+                onValueChange = viewModel::onInvestedAmountChange,
+                label = "Invested amount (optional)",
                 prefix = "₹",
-                placeholder = "0",
-                errorMessage = uiState.amountError,
+                placeholder = "What this originally cost you",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            Text(
-                text =
-                    "Every value you save stays in the app's history — you can add a corrected " +
-                        "value later, but this one is never edited or removed.",
-                color = colors.tx3,
-                fontSize = DhruvNextType.meta,
+            NxTextField(
+                value = uiState.notesText,
+                onValueChange = viewModel::onNotesChange,
+                label = "Notes (optional)",
+                placeholder = "e.g. Joint account with spouse",
             )
 
-            if (uiState.kind == HoldingKind.LIABILITY) {
+            if (!uiState.isEditing && uiState.kind == HoldingKind.LIABILITY) {
                 NxSelect(
                     value = uiState.liabilityTypeCode?.let { liabilityTypeLabel(it) },
                     onClick = { liabilityTypeSheetOpen = true },

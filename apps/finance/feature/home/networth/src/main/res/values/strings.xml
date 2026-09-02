@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_networth_title">Net worth tracker</string>
+    <string name="settings_networth_summary">Assets, liabilities, and valuations</string>
+    <string name="settings_networth_sector_count_label">Asset categories</string>
+    <string name="settings_networth_sector_count_description">Fixed categories a holding can belong to</string>
+    <string name="settings_networth_liability_type_count_label">Liability types</string>
+    <string name="settings_networth_liability_type_count_description">Fixed types a liability can belong to</string>
+</resources>

@@ -17,6 +17,7 @@ import com.dhruv.finance.data.tracker.model.LiabilityType
 import com.dhruv.finance.data.tracker.model.NetWorthHistoryPoint
 import com.dhruv.finance.data.tracker.model.NetWorthSummary
 import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
 import com.dhruv.finance.data.tracker.repo.LiabilityRepository
@@ -57,6 +58,15 @@ private class FakeHomeHoldingRepository(
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> = Result.success(liabilities)
 
     override suspend fun get(holdingId: String): Result<Holding> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun update(
+        holdingId: String,
+        request: UpdateHoldingRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun softDelete(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun restore(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 private class FakeHomeLiabilityRepository(

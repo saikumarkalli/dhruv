@@ -8,6 +8,8 @@ import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.LiabilityMeta
+import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
 import com.dhruv.finance.data.tracker.repo.LiabilityRepository
@@ -27,8 +29,14 @@ import org.junit.Test
 
 private class FakeAddEditHoldingRepository(
     private val onCreate: (CreateHoldingRequest) -> Result<String> = { Result.success("new-id") },
+    private val onGet: (String) -> Result<Holding> = { throw UnsupportedOperationException("not exercised by this test") },
+    private val onUpdate: (String, UpdateHoldingRequest) -> Result<Unit> = { _, _ -> Result.success(Unit) },
 ) : HoldingRepository {
     var createCallCount = 0
+        private set
+    var updateCallCount = 0
+        private set
+    var lastUpdateRequest: UpdateHoldingRequest? = null
         private set
 
     override suspend fun createWithFirstValuation(request: CreateHoldingRequest): Result<String> {
@@ -39,8 +47,20 @@ private class FakeAddEditHoldingRepository(
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> =
         throw UnsupportedOperationException("not exercised by this test")
 
-    override suspend fun get(holdingId: String): Result<Holding> =
-        throw UnsupportedOperationException("not exercised by this test")
+    override suspend fun get(holdingId: String): Result<Holding> = onGet(holdingId)
+
+    override suspend fun update(
+        holdingId: String,
+        request: UpdateHoldingRequest,
+    ): Result<Unit> {
+        updateCallCount++
+        lastUpdateRequest = request
+        return onUpdate(holdingId, request)
+    }
+
+    override suspend fun softDelete(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun restore(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 private class FakeAddEditLiabilityRepository(
@@ -231,5 +251,62 @@ class AddEditHoldingViewModelTest {
 
             assertEquals("loan-holding-id", vm.uiState.value.savedHoldingId)
             assertNotNull(vm.uiState.value.liabilityMetaError)
+        }
+
+    // Phase 9, T051/T052: C4's edit path — a mistakenly-added holding was previously only
+    // correctable via full-account erasure; startEditing prefills, save() calls update() not
+    // createWithFirstValuation().
+    @Test
+    fun `startEditing prefills state from the existing holding`() =
+        runTest(dispatcher) {
+            val holding = Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, 10_000_00L, "Joint account")
+            val repo = FakeAddEditHoldingRepository(onGet = { Result.success(holding) })
+            val vm = viewModel(repo)
+
+            vm.startEditing("h1")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(true, state.isEditing)
+            assertEquals("HDFC Savings", state.name)
+            assertEquals("BANK", state.sectorCode)
+            assertEquals("10000", state.investedAmountText)
+            assertEquals("Joint account", state.notesText)
+        }
+
+    @Test
+    fun `save in edit mode calls update, never createWithFirstValuation`() =
+        runTest(dispatcher) {
+            val holding = Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, null, null)
+            val repo = FakeAddEditHoldingRepository(onGet = { Result.success(holding) })
+            val vm = viewModel(repo)
+            vm.startEditing("h1")
+            advanceUntilIdle()
+            vm.onNameChange("HDFC Savings (renamed)")
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(0, repo.createCallCount)
+            assertEquals(1, repo.updateCallCount)
+            assertEquals("HDFC Savings (renamed)", repo.lastUpdateRequest?.name)
+            assertEquals("BANK", repo.lastUpdateRequest?.sectorCode)
+            assertEquals("h1", vm.uiState.value.savedHoldingId)
+        }
+
+    @Test
+    fun `save in edit mode rejects an empty name without calling update`() =
+        runTest(dispatcher) {
+            val holding = Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, null, null)
+            val repo = FakeAddEditHoldingRepository(onGet = { Result.success(holding) })
+            val vm = viewModel(repo)
+            vm.startEditing("h1")
+            advanceUntilIdle()
+            vm.onNameChange("")
+
+            vm.save()
+
+            assertEquals(0, repo.updateCallCount)
+            assertNotNull(vm.uiState.value.nameError)
         }
 }

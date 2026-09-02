@@ -29,6 +29,7 @@ import org.koin.compose.koinInject
 private const val ROUTE_OVERVIEW = "overview"
 private const val ROUTE_ASSETS = "assets/{sector}"
 private const val ROUTE_ADD_HOLDING = "addHolding"
+private const val ROUTE_EDIT_HOLDING = "editHolding/{holdingId}"
 private const val ROUTE_HOLDING_DETAIL = "holding/{holdingId}"
 private const val ROUTE_ADD_VALUATION = "addValuation/{holdingId}?correcting={correcting}&last={last}"
 private const val ROUTE_LIABILITIES = "liabilities"
@@ -168,6 +169,7 @@ fun NetWorthFeatureRoot(
                 HoldingDetailScreen(
                     viewModel = vm,
                     onBack = { navController.popBackStack() },
+                    onEdit = { navController.navigate("editHolding/$holdingId") },
                     onUpdateValue = { lastValuePaise ->
                         navController.navigate("addValuation/$holdingId?last=${lastValuePaise ?: ""}")
                     },
@@ -215,6 +217,22 @@ fun NetWorthFeatureRoot(
                 AddEditHoldingScreen(
                     viewModel = vm,
                     onSaved = { navController.popBackStack(ROUTE_OVERVIEW, inclusive = false) },
+                    onClose = { navController.popBackStack() },
+                )
+            }
+        }
+        composable(
+            route = ROUTE_EDIT_HOLDING,
+            arguments = listOf(navArgument(ARG_HOLDING_ID) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val vm: AddEditHoldingViewModel = koinViewModel()
+            val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
+            LaunchedEffect(holdingId) { vm.startEditing(holdingId) }
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                AddEditHoldingScreen(
+                    viewModel = vm,
+                    onSaved = { navController.popBackStack() },
                     onClose = { navController.popBackStack() },
                 )
             }

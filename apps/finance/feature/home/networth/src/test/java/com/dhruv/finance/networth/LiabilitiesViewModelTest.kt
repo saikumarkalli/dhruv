@@ -2,6 +2,12 @@ package com.dhruv.finance.networth
 
 import com.dhruv.core.observability.NoOpCrashReporter
 import com.dhruv.core.observability.NoOpPerformanceTracer
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.ConsentState
+import com.dhruv.finance.data.tracker.auth.SessionState
+import com.dhruv.finance.data.tracker.auth.SessionStore
+import com.dhruv.finance.data.tracker.auth.SessionTokens
+import com.dhruv.finance.data.tracker.dto.GoTrueSessionDto
 import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
 import com.dhruv.finance.data.tracker.model.CreateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.model.Holding
@@ -10,11 +16,14 @@ import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.LiabilityMeta
 import com.dhruv.finance.data.tracker.model.LiabilityType
 import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
 import com.dhruv.finance.data.tracker.repo.LiabilityRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -35,6 +44,15 @@ private class FakeLiabilitiesHoldingRepository(
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> = listResult
 
     override suspend fun get(holdingId: String): Result<Holding> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun update(
+        holdingId: String,
+        request: UpdateHoldingRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun softDelete(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun restore(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 private class FakeLiabilitiesLiabilityRepository(
@@ -51,6 +69,28 @@ private class FakeLiabilitiesLiabilityRepository(
         holdingId: String,
         request: UpdateLiabilityMetaRequest,
     ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+}
+
+private class FakeLiabilitiesSessionStore : SessionStore {
+    override val state: StateFlow<SessionState> = MutableStateFlow(SessionState.Active("u1", "a@b.com", null, null))
+
+    override suspend fun save(session: GoTrueSessionDto) = Unit
+
+    override suspend fun clear() = Unit
+
+    override fun currentTokens(): SessionTokens? = null
+}
+
+private class FakeLiabilitiesConsentRepository : ConsentRepository {
+    override val state: StateFlow<ConsentState> = MutableStateFlow(ConsentState(syncFinancialRecords = true))
+
+    override suspend fun setSyncFinancialRecords(enabled: Boolean) = Unit
+
+    override suspend fun setReadTransactionSms(enabled: Boolean) = Unit
+
+    override suspend fun setAskDhruvAboutMoney(enabled: Boolean) = Unit
+
+    override suspend fun setHasCompletedOnboarding(completed: Boolean) = Unit
 }
 
 private fun liabilityHolding(
@@ -117,6 +157,8 @@ class LiabilitiesViewModelTest {
                 LiabilitiesViewModel(
                     holdingRepository = FakeLiabilitiesHoldingRepository(Result.success(holdings)),
                     liabilityRepository = FakeLiabilitiesLiabilityRepository(Result.success(metas)),
+                    sessionStore = FakeLiabilitiesSessionStore(),
+                    consentRepository = FakeLiabilitiesConsentRepository(),
                     crashReporter = NoOpCrashReporter,
                     performanceTracer = NoOpPerformanceTracer,
                 )
@@ -172,6 +214,8 @@ class LiabilitiesViewModelTest {
                 LiabilitiesViewModel(
                     holdingRepository = FakeLiabilitiesHoldingRepository(),
                     liabilityRepository = FakeLiabilitiesLiabilityRepository(),
+                    sessionStore = FakeLiabilitiesSessionStore(),
+                    consentRepository = FakeLiabilitiesConsentRepository(),
                     crashReporter = NoOpCrashReporter,
                     performanceTracer = NoOpPerformanceTracer,
                 )
@@ -204,6 +248,8 @@ class LiabilitiesViewModelTest {
                 LiabilitiesViewModel(
                     holdingRepository = FakeLiabilitiesHoldingRepository(Result.success(holdings)),
                     liabilityRepository = FakeLiabilitiesLiabilityRepository(Result.success(metas)),
+                    sessionStore = FakeLiabilitiesSessionStore(),
+                    consentRepository = FakeLiabilitiesConsentRepository(),
                     crashReporter = NoOpCrashReporter,
                     performanceTracer = NoOpPerformanceTracer,
                 )

@@ -2,6 +2,7 @@ package com.dhruv.finance.networth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,9 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +41,7 @@ import com.dhruv.core.ui.components.StatDeltaChip
 import com.dhruv.core.ui.components.StatItem
 import com.dhruv.core.ui.components.ThreeUpStatRow
 import com.dhruv.core.ui.components.TrendSparkline
+import com.dhruv.core.ui.components.UndoSnackbarHost
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
@@ -58,46 +65,72 @@ private val TREND_RANGES = listOf(TrendRange.THREE_MONTHS, TrendRange.SIX_MONTHS
 fun HoldingDetailScreen(
     viewModel: HoldingDetailViewModel,
     onBack: () -> Unit,
+    onEdit: (String) -> Unit,
     onUpdateValue: (currentValuePaise: Long?) -> Unit,
     onCorrectEntry: (valuationId: String, valuePaise: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
-        NxTopBar(title = uiState.holding?.name ?: "Holding", onBack = onBack)
+    // T053: the undo window IS the recoverable location this phase offers (no Trash screen
+    // exists) — dismissing without tapping Undo is the point at which this screen finally leaves.
+    LaunchedEffect(uiState.isDeleted) {
+        val holdingId = uiState.holding?.id
+        if (uiState.isDeleted && holdingId != null) {
+            val result =
+                snackbarHostState.showSnackbar(message = "Holding deleted", actionLabel = "Undo", duration = SnackbarDuration.Long)
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoDelete(holdingId)
+            } else {
+                onBack()
+            }
+        }
+    }
 
-        when {
-            uiState.isLoading && uiState.holding == null ->
-                Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
-                    SkeletonBlock(height = 160.dp)
-                }
-            uiState.errorMessage != null && uiState.holding == null ->
-                RetryErrorCard(
-                    message = uiState.errorMessage ?: "Couldn't load this holding.",
-                    onRetry = { },
-                    modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
-                )
-            else -> {
-                val holding = uiState.holding
-                if (holding == null) {
-                    EmptyStateCard(
-                        message = "This holding couldn't be found.",
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().background(colors.bg)) {
+            NxTopBar(title = uiState.holding?.name ?: "Holding", onBack = onBack)
+
+            when {
+                uiState.isLoading && uiState.holding == null ->
+                    Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
+                        SkeletonBlock(height = 160.dp)
+                    }
+                uiState.errorMessage != null && uiState.holding == null ->
+                    RetryErrorCard(
+                        message = uiState.errorMessage ?: "Couldn't load this holding.",
+                        onRetry = { },
                         modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                     )
-                } else {
-                    HoldingDetailContent(
-                        viewModel = viewModel,
-                        holding = holding,
-                        uiState = uiState,
-                        onUpdateValue = onUpdateValue,
-                        onCorrectEntry = onCorrectEntry,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                else -> {
+                    val holding = uiState.holding
+                    if (holding == null) {
+                        EmptyStateCard(
+                            message = "This holding couldn't be found.",
+                            modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
+                        )
+                    } else {
+                        HoldingDetailContent(
+                            viewModel = viewModel,
+                            holding = holding,
+                            uiState = uiState,
+                            onEdit = { onEdit(holding.id) },
+                            onDelete = { viewModel.delete(holding.id) },
+                            onUpdateValue = onUpdateValue,
+                            onCorrectEntry = onCorrectEntry,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
         }
+
+        UndoSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(DhruvNextSpacing.screenGutter),
+        )
     }
 }
 
@@ -106,6 +139,8 @@ private fun HoldingDetailContent(
     viewModel: HoldingDetailViewModel,
     holding: Holding,
     uiState: HoldingDetailViewModel.UiState,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
     onUpdateValue: (Long?) -> Unit,
     onCorrectEntry: (String, Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -162,6 +197,11 @@ private fun HoldingDetailContent(
         }
 
         NxButton(text = "Update value", onClick = { onUpdateValue(currentValuePaise) }, block = true)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DhruvNextSpacing.inputGroupGap)) {
+            NxButton(text = "Edit", onClick = onEdit, variant = NxButtonVariant.Outline, modifier = Modifier.weight(1f))
+            NxButton(text = "Delete", onClick = onDelete, variant = NxButtonVariant.Destructive, modifier = Modifier.weight(1f))
+        }
 
         NxCard {
             Column(modifier = Modifier.fillMaxWidth()) {

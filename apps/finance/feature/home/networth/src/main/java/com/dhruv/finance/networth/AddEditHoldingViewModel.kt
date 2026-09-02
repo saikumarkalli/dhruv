@@ -7,6 +7,7 @@ import com.dhruv.core.observability.PerformanceTracer
 import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
 import com.dhruv.finance.data.tracker.model.CreateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.model.HoldingKind
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
 import com.dhruv.finance.data.tracker.repo.LiabilityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,10 +39,14 @@ class AddEditHoldingViewModel(
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "networth") {
     data class UiState(
+        val editingHoldingId: String? = null,
+        val isLoadingForEdit: Boolean = false,
         val name: String = "",
         val kind: HoldingKind = HoldingKind.ASSET,
         val sectorCode: String? = null,
         val amountText: String = "",
+        val investedAmountText: String = "",
+        val notesText: String = "",
         val liabilityTypeCode: String? = null,
         val rateText: String = "",
         val emiText: String = "",
@@ -54,10 +59,40 @@ class AddEditHoldingViewModel(
         val liabilityMetaError: String? = null,
         val isSaving: Boolean = false,
         val savedHoldingId: String? = null,
-    )
+    ) {
+        val isEditing: Boolean get() = editingHoldingId != null
+    }
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    /** C4's edit path (Phase 9, T051/T052) — prefills from the existing holding. Liability terms
+     * (rate/EMI/tenure/collateral) are deliberately not editable here: this phase never built an
+     * `updateMeta()` UI path, only the repository method (tracked as a known gap, not this task's
+     * scope) — editing a liability holding here only changes its name/sector/invested/notes. The
+     * "current value" field is create-only (recording a new value is C5's job, not an edit). */
+    fun startEditing(holdingId: String) {
+        _uiState.update { it.copy(editingHoldingId = holdingId, isLoadingForEdit = true) }
+        viewModelScope.launch(exceptionHandler) {
+            holdingRepository
+                .get(holdingId)
+                .onSuccess { holding ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingForEdit = false,
+                            name = holding.name,
+                            kind = holding.kind,
+                            sectorCode = holding.sector.name,
+                            investedAmountText = holding.investedPaise?.let(::formatPaiseAsRupeesText) ?: "",
+                            notesText = holding.notes ?: "",
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoadingForEdit = false, nameError = e.message ?: "Couldn't load this holding.") }
+                }
+        }
+    }
 
     fun onNameChange(value: String) {
         _uiState.update { it.copy(name = value, nameError = null) }
@@ -73,6 +108,14 @@ class AddEditHoldingViewModel(
 
     fun onAmountChange(value: String) {
         _uiState.update { it.copy(amountText = value, amountError = null) }
+    }
+
+    fun onInvestedAmountChange(value: String) {
+        _uiState.update { it.copy(investedAmountText = value) }
+    }
+
+    fun onNotesChange(value: String) {
+        _uiState.update { it.copy(notesText = value) }
     }
 
     fun onLiabilityTypeChange(code: String) {
@@ -93,6 +136,47 @@ class AddEditHoldingViewModel(
 
     fun save() {
         val state = _uiState.value
+        if (state.isEditing) {
+            saveEdit(state)
+        } else {
+            saveCreate(state)
+        }
+    }
+
+    /** Edit mode validates only name/sector — the amount/liability fields aren't shown or editable
+     * here (see [startEditing]'s own doc). */
+    private fun saveEdit(state: UiState) {
+        val name = state.name.trim()
+        val sectorCode = state.sectorCode
+        val nameError = if (name.isEmpty()) "Enter a name" else null
+        val sectorError = if (sectorCode == null) "Choose a category" else null
+        if (nameError != null || sectorError != null) {
+            _uiState.update { it.copy(nameError = nameError, sectorError = sectorError) }
+            return
+        }
+
+        performanceTracer.trace("networth_edit_holding") { Unit }
+        viewModelScope.launch(exceptionHandler) {
+            _uiState.update { it.copy(isSaving = true) }
+            holdingRepository
+                .update(
+                    holdingId = state.editingHoldingId!!,
+                    request =
+                        UpdateHoldingRequest(
+                            name = name,
+                            sectorCode = sectorCode!!,
+                            investedPaise = state.investedAmountText.takeIf { it.isNotBlank() }?.let(::parseRupeesToPaise),
+                            notes = state.notesText.trim().ifBlank { null },
+                        ),
+                )
+                .onSuccess { _uiState.update { it.copy(isSaving = false, savedHoldingId = state.editingHoldingId) } }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isSaving = false, nameError = e.message ?: "Couldn't save. Try again.") }
+                }
+        }
+    }
+
+    private fun saveCreate(state: UiState) {
         val name = state.name.trim()
         val sectorCode = state.sectorCode
         val paise = parseRupeesToPaise(state.amountText)
@@ -136,6 +220,8 @@ class AddEditHoldingViewModel(
                     sectorCode = sectorCode,
                     valuePaise = paise,
                     asOf = LocalDate.now().toString(),
+                    investedPaise = state.investedAmountText.takeIf { it.isNotBlank() }?.let(::parseRupeesToPaise),
+                    notes = state.notesText.trim().ifBlank { null },
                     requestId = UUID.randomUUID().toString(),
                 ),
             )
@@ -237,3 +323,11 @@ internal fun parseRupeesToPaise(text: String): Long? =
         .toDoubleOrNull()
         ?.takeIf { it >= 0 }
         ?.let { Math.round(it * 100) }
+
+/** Inverse of [parseRupeesToPaise], for prefilling an edit form from a stored paise value — never
+ * shows trailing ".00" for a whole-rupee amount, since the user almost certainly typed a whole
+ * number originally. */
+internal fun formatPaiseAsRupeesText(paise: Long): String {
+    val rupees = paise / 100.0
+    return if (paise % 100 == 0L) rupees.toLong().toString() else "%.2f".format(java.util.Locale.US, rupees)
+}

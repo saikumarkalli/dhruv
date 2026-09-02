@@ -4,6 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.ConsentState
+import com.dhruv.finance.data.tracker.auth.SessionState
+import com.dhruv.finance.data.tracker.auth.SessionStore
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.LiabilityMeta
@@ -28,10 +32,14 @@ data class LiabilityRow(
 )
 
 /** C6 — liabilities overview, grouped by type with totals and a projected debt-free date
- * (spec.md Story 4 Scenario 1). */
+ * (spec.md Story 4 Scenario 1). [sessionState]/[consentState] (NW-UI-005, added Phase 9 — this
+ * screen previously had no signed-out/consent gating at all, found during the Phase 8 QA pass)
+ * mirror [NetWorthOverviewViewModel]'s exact pattern. */
 class LiabilitiesViewModel(
     private val holdingRepository: HoldingRepository,
     private val liabilityRepository: LiabilityRepository,
+    sessionStore: SessionStore,
+    consentRepository: ConsentRepository,
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "networth") {
@@ -43,6 +51,9 @@ class LiabilitiesViewModel(
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    val sessionState: StateFlow<SessionState> = sessionStore.state
+    val consentState: StateFlow<ConsentState> = consentRepository.state
 
     init {
         load()

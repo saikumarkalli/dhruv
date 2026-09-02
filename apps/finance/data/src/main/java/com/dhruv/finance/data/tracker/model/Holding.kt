@@ -27,6 +27,17 @@ data class CreateHoldingRequest(
     val requestId: String? = null,
 )
 
+/** Request to [com.dhruv.finance.data.tracker.repo.HoldingRepository.update] (Phase 9, T052) — a
+ * full-value replace of the user-editable fields, never a partial merge. [sectorCode] is validated
+ * against [Sector]'s fixed set the same way [CreateHoldingRequest.sectorCode] is. `kind` is not
+ * editable (see `UpdateHoldingRequestDto`'s own doc). */
+data class UpdateHoldingRequest(
+    val name: String,
+    val sectorCode: String,
+    val investedPaise: Long? = null,
+    val notes: String? = null,
+)
+
 /**
  * A holding paired with its current (latest, non-deleted) value from `finance.v_latest_valuation`
  * — [currentValuePaise] is null only when no valuation exists yet, which cannot happen for a

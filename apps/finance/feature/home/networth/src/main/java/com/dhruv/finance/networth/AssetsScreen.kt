@@ -27,16 +27,21 @@ import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
 import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.NxTopBar
+import com.dhruv.core.ui.components.OfflineStateCard
 import com.dhruv.core.ui.components.RetryErrorCard
+import com.dhruv.core.ui.components.SignedOutCard
 import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.data.tracker.auth.SessionState
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.Sector
 
 /** C2 — sector-grouped assets list with filter chips (spec.md Assumptions: this screen lists
- * ASSET-kind holdings only; liabilities have their own C6 screen, out of this phase's scope). */
+ * ASSET-kind holdings only; liabilities have their own C6 screen, out of this phase's scope).
+ * Signed-out/consent-off gating (NW-UI-005, added Phase 9) mirrors [NetWorthOverviewScreen]'s
+ * pattern — this screen had none until found by the Phase 8 QA pass. */
 @Composable
 fun AssetsScreen(
     viewModel: AssetsViewModel,
@@ -46,44 +51,60 @@ fun AssetsScreen(
 ) {
     val colors = LocalDhruvNextColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+    val consentState by viewModel.consentState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
         NxTopBar(title = "Assets", onBack = onBack)
 
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = DhruvNextSpacing.inputGroupGap),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Chip(
-                label = "All",
-                selected = uiState.selectedSectorFilter == null,
-                onClick = { viewModel.setSectorFilter(null) },
-            )
-            Sector.entries.forEach { sector ->
-                Chip(
-                    label = sectorLabel(sector.name),
-                    selected = uiState.selectedSectorFilter == sector,
-                    onClick = { viewModel.setSectorFilter(sector) },
-                )
-            }
-        }
-
         when {
+            sessionState !is SessionState.Active ->
+                SignedOutCard(
+                    message = "Sign in to see your assets.",
+                    actionLabel = "Go to Account",
+                    onAction = {},
+                    modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
+                )
+            !consentState.syncFinancialRecords ->
+                SignedOutCard(
+                    message = "Turn on “Sync my financial records” in Settings to use the tracker.",
+                    actionLabel = "Go to Settings",
+                    onAction = {},
+                    modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
+                )
             uiState.isLoading && uiState.holdings.isEmpty() ->
                 Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
                     SkeletonBlock(height = 64.dp)
                 }
             uiState.errorMessage != null && uiState.holdings.isEmpty() ->
-                RetryErrorCard(
+                OfflineStateCard(
                     message = uiState.errorMessage ?: "Couldn't load your assets.",
                     onRetry = viewModel::load,
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
                 )
             else -> {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = DhruvNextSpacing.inputGroupGap),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Chip(
+                        label = "All",
+                        selected = uiState.selectedSectorFilter == null,
+                        onClick = { viewModel.setSectorFilter(null) },
+                    )
+                    Sector.entries.forEach { sector ->
+                        Chip(
+                            label = sectorLabel(sector.name),
+                            selected = uiState.selectedSectorFilter == sector,
+                            onClick = { viewModel.setSectorFilter(sector) },
+                        )
+                    }
+                }
+
                 val filtered =
                     uiState.holdings.filter {
                         uiState.selectedSectorFilter == null || it.holding.sector == uiState.selectedSectorFilter

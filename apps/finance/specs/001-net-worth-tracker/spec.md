@@ -191,6 +191,24 @@ list all render without navigating elsewhere.
   distinct offline-with-no-cached-data state, never a blank screen or an unresolving spinner.
 - **FR-012**: A category (holding category or liability type) already used by an existing holding
   MUST NOT be renamed or removed once shipped; new categories may be added.
+- **FR-013** *(added Phase 9, T057 — FR-011 covered only signed-out/offline, leaving the other six
+  of DESIGN-SYSTEM §7's eight states with no requirement, even though the design system already
+  makes them binding for every screen)*: every screen in this feature MUST render the applicable
+  states from DESIGN-SYSTEM §7's screen-state matrix (default, loading, empty, error, offline,
+  signed-out, not-configured, disabled), never a blank screen or a spinner that never resolves.
+  **Known gap, recorded rather than silently left**: as of this phase, C1 (Net worth overview) and
+  Home fully satisfy signed-out/offline; C2 (Assets) and C6 (Liabilities) were fixed to match in
+  this same phase; C3/C4/C5/C7 satisfy loading/error/empty but not signed-out/offline (their parent
+  screen already gates entry, so reaching them signed-out is not a normal path, but a killed-and-
+  reopened session could still land there directly via a restored back stack — not verified against
+  that specific case this session).
+- **FR-014** *(added Phase 9, T054 — the design shows fields this spec never wrote a requirement
+  for)*: C4 MUST let users record an optional invested amount and optional notes on a holding.
+  C7 MAY show collateral (free text) when recorded; a liability's payment history and a linked
+  settlement account are **not required by this phase** — no payments/accounts table exists yet
+  (see the register's T055/T054 note in this phase's Implementation record for why "Record payment"
+  itself is out of scope). C2's search, filter chips beyond category, last-updated date and
+  per-holding sparkline are similarly **not required by this phase** (T046's closure note).
 
 ### Key Entities
 
@@ -235,6 +253,12 @@ list all render without navigating elsewhere.
 - "Upcoming obligations" on the home screen in this phase covers loan/EMI-type liabilities only;
   other obligation sources (e.g. credit card bills) depend on data introduced in a later phase and
   are out of scope here.
+- **Cost basis (resolved before implementation — see data-model.md's `invested_paise` entry;
+  T045 closure note added 2026-09-02)**: option (a) was chosen — `holdings.invested_paise` is a
+  real, nullable column, and C3 shows INVESTED/GAIN/simple-return only when it's present. C4 did
+  not actually collect it at creation until Phase 9 (T045/T054) added an "Invested amount
+  (optional)" field to the add/edit form — before that fix, the column existed but nothing in the
+  UI could ever set it.
 - **Returns calculation (resolved 2026-08-16)**: Story 2's return percentage ships this phase as a
   simple absolute return, `(current − invested) / invested`. This is a deliberate placeholder — it
   does not account for the timing of multiple contributions/withdrawals, so it is not comparable

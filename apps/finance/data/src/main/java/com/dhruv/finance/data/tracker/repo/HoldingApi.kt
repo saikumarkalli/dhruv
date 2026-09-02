@@ -7,10 +7,14 @@ import com.dhruv.finance.data.tracker.dto.LatestValuationRowDto
 import com.dhruv.finance.data.tracker.dto.NetWorthBySectorRowDto
 import com.dhruv.finance.data.tracker.dto.NetWorthHistoryRowDto
 import com.dhruv.finance.data.tracker.dto.RecordValuationRequestDto
+import com.dhruv.finance.data.tracker.dto.SoftDeleteHoldingRequestDto
+import com.dhruv.finance.data.tracker.dto.UpdateHoldingRequestDto
 import com.dhruv.finance.data.tracker.dto.ValuationDto
+import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -39,6 +43,38 @@ interface HoldingApi {
     suspend fun getById(
         @Query("id") idFilter: String,
         @Query("deleted_at") notDeleted: String = "is.null",
+    ): List<HoldingDto>
+
+    /** A plain full-value PATCH of the user-editable fields (Phase 9, T052) — never a partial
+     * merge. `kind` is not editable (see [UpdateHoldingRequestDto]'s own doc). */
+    @Headers("Prefer: return=representation")
+    @PATCH("holdings")
+    suspend fun updateHolding(
+        @Query("id") idFilter: String,
+        @Body body: UpdateHoldingRequestDto,
+    ): List<HoldingDto>
+
+    /** Soft-delete (Phase 9, T052) — sets `deleted_at`; the RLS `holdings_update_own` policy
+     * already permits this (no new policy needed, verified against the current schema file). */
+    @Headers("Prefer: return=representation")
+    @PATCH("holdings")
+    suspend fun softDeleteHolding(
+        @Query("id") idFilter: String,
+        @Body body: SoftDeleteHoldingRequestDto,
+    ): List<HoldingDto>
+
+    /** Undo (Phase 9, T053) — clears `deleted_at` back to null. A typed DTO can't express this:
+     * Moshi's default (`serializeNulls = false`) omits a null field from the request body rather
+     * than writing a JSON `null`, so `{"deleted_at": null}` must be sent as a raw body instead of
+     * going through the usual `@Body <Dto>` path — see
+     * [com.dhruv.finance.data.tracker.repo.HoldingRepositoryImpl.RESTORE_BODY]. Turning on
+     * `serializeNulls` globally was rejected: every `Create*RequestDto` in this module relies on a
+     * null field being *omitted* (an unset optional column), which a global flip would break. */
+    @Headers("Prefer: return=representation")
+    @PATCH("holdings")
+    suspend fun restoreHolding(
+        @Query("id") idFilter: String,
+        @Body body: RequestBody,
     ): List<HoldingDto>
 }
 

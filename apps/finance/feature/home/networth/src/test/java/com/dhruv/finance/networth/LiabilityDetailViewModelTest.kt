@@ -10,6 +10,7 @@ import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.LiabilityMeta
 import com.dhruv.finance.data.tracker.model.LiabilityType
 import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.model.Valuation
 import com.dhruv.finance.data.tracker.model.ValuationHistoryEntry
@@ -41,6 +42,15 @@ private class FakeLiabilityDetailHoldingRepository(
         throw UnsupportedOperationException("not exercised by this test")
 
     override suspend fun get(holdingId: String): Result<Holding> = result
+
+    override suspend fun update(
+        holdingId: String,
+        request: UpdateHoldingRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun softDelete(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun restore(holdingId: String): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
 }
 
 private class FakeLiabilityDetailLiabilityRepository(

@@ -25,21 +25,25 @@ import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
 import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.NxTopBar
+import com.dhruv.core.ui.components.OfflineStateCard
 import com.dhruv.core.ui.components.ProgressRing
-import com.dhruv.core.ui.components.RetryErrorCard
 import com.dhruv.core.ui.components.SectionLabel
+import com.dhruv.core.ui.components.SignedOutCard
 import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.components.StatItem
 import com.dhruv.core.ui.components.ThreeUpStatRow
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.data.tracker.auth.SessionState
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val DEBT_FREE_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM yyyy", Locale.US)
 
-/** C6 — liabilities overview, grouped by type (spec.md Story 4 Scenario 1, FR-008). */
+/** C6 — liabilities overview, grouped by type (spec.md Story 4 Scenario 1, FR-008).
+ * Signed-out/consent-off gating (NW-UI-005, added Phase 9) mirrors [NetWorthOverviewScreen]'s
+ * pattern — this screen had none until found by the Phase 8 QA pass. */
 @Composable
 fun LiabilitiesScreen(
     viewModel: LiabilitiesViewModel,
@@ -49,17 +53,33 @@ fun LiabilitiesScreen(
 ) {
     val colors = LocalDhruvNextColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+    val consentState by viewModel.consentState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize().background(colors.bg)) {
         NxTopBar(title = "Liabilities", onBack = onBack)
 
         when {
+            sessionState !is SessionState.Active ->
+                SignedOutCard(
+                    message = "Sign in to see your liabilities.",
+                    actionLabel = "Go to Account",
+                    onAction = {},
+                    modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
+                )
+            !consentState.syncFinancialRecords ->
+                SignedOutCard(
+                    message = "Turn on “Sync my financial records” in Settings to use the tracker.",
+                    actionLabel = "Go to Settings",
+                    onAction = {},
+                    modifier = Modifier.padding(DhruvNextSpacing.screenGutter),
+                )
             uiState.isLoading && uiState.rows.isEmpty() ->
                 Column(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
                     SkeletonBlock(height = 120.dp)
                 }
             uiState.errorMessage != null && uiState.rows.isEmpty() ->
-                RetryErrorCard(
+                OfflineStateCard(
                     message = uiState.errorMessage ?: "Couldn't load your liabilities.",
                     onRetry = viewModel::load,
                     modifier = Modifier.padding(DhruvNextSpacing.screenGutter),

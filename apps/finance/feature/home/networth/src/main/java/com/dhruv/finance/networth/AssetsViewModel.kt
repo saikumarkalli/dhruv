@@ -4,6 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.observability.FeatureViewModel
 import com.dhruv.core.observability.PerformanceTracer
+import com.dhruv.finance.data.tracker.auth.ConsentRepository
+import com.dhruv.finance.data.tracker.auth.ConsentState
+import com.dhruv.finance.data.tracker.auth.SessionState
+import com.dhruv.finance.data.tracker.auth.SessionStore
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.Sector
@@ -14,9 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** C2 — sector-grouped assets list. */
+/** C2 — sector-grouped assets list. [sessionState]/[consentState] (NW-UI-005, added Phase 9 — this
+ * screen previously had no signed-out/consent gating at all, found during the Phase 8 QA pass)
+ * mirror [NetWorthOverviewViewModel]'s exact pattern. */
 class AssetsViewModel(
     private val holdingRepository: HoldingRepository,
+    sessionStore: SessionStore,
+    consentRepository: ConsentRepository,
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "networth") {
@@ -29,6 +37,9 @@ class AssetsViewModel(
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    val sessionState: StateFlow<SessionState> = sessionStore.state
+    val consentState: StateFlow<ConsentState> = consentRepository.state
 
     init {
         load()

@@ -7,6 +7,7 @@ import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
 import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateHoldingRequest
 import com.dhruv.finance.data.tracker.model.Valuation
 import com.dhruv.finance.data.tracker.model.ValuationHistoryEntry
 import com.dhruv.finance.data.tracker.model.ValuationSource
@@ -28,7 +29,14 @@ import org.junit.Test
 
 private class FakeHoldingDetailHoldingRepository(
     private val result: Result<Holding>,
+    private val onSoftDelete: (String) -> Result<Unit> = { Result.success(Unit) },
+    private val onRestore: (String) -> Result<Unit> = { Result.success(Unit) },
 ) : HoldingRepository {
+    var softDeleteCallCount = 0
+        private set
+    var restoreCallCount = 0
+        private set
+
     override suspend fun createWithFirstValuation(request: CreateHoldingRequest): Result<String> =
         throw UnsupportedOperationException("not exercised by this test")
 
@@ -36,6 +44,21 @@ private class FakeHoldingDetailHoldingRepository(
         throw UnsupportedOperationException("not exercised by this test")
 
     override suspend fun get(holdingId: String): Result<Holding> = result
+
+    override suspend fun update(
+        holdingId: String,
+        request: UpdateHoldingRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun softDelete(holdingId: String): Result<Unit> {
+        softDeleteCallCount++
+        return onSoftDelete(holdingId)
+    }
+
+    override suspend fun restore(holdingId: String): Result<Unit> {
+        restoreCallCount++
+        return onRestore(holdingId)
+    }
 }
 
 private class FakeHoldingDetailValuationRepository(
@@ -144,5 +167,73 @@ class HoldingDetailViewModelTest {
             val points = vm.trendValuesPaise(vm.uiState.value)
 
             assertEquals(listOf(100L, 200L, 300L), points)
+        }
+
+    // Phase 9, T051/T052/T053: soft-delete + undo — C4 was titled "Add / edit holding" with no
+    // delete counterpart at all until this phase.
+    @Test
+    fun `delete marks the holding deleted on success`() =
+        runTest(dispatcher) {
+            val holding = Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, null, null)
+            val holdingRepo = FakeHoldingDetailHoldingRepository(Result.success(holding))
+            val vm =
+                HoldingDetailViewModel(
+                    holdingRepository = holdingRepo,
+                    valuationRepository = FakeHoldingDetailValuationRepository(Result.success(emptyList())),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+
+            vm.delete("h1")
+            advanceUntilIdle()
+
+            assertEquals(1, holdingRepo.softDeleteCallCount)
+            assertEquals(true, vm.uiState.value.isDeleted)
+            assertNull(vm.uiState.value.deleteError)
+        }
+
+    @Test
+    fun `delete surfaces a failure without marking the holding deleted`() =
+        runTest(dispatcher) {
+            val holdingRepo =
+                FakeHoldingDetailHoldingRepository(
+                    Result.success(Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, null, null)),
+                    onSoftDelete = { Result.failure(java.io.IOException("down")) },
+                )
+            val vm =
+                HoldingDetailViewModel(
+                    holdingRepository = holdingRepo,
+                    valuationRepository = FakeHoldingDetailValuationRepository(Result.success(emptyList())),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+
+            vm.delete("h1")
+            advanceUntilIdle()
+
+            assertEquals(false, vm.uiState.value.isDeleted)
+            assertNotNull(vm.uiState.value.deleteError)
+        }
+
+    @Test
+    fun `undoDelete clears isDeleted on success`() =
+        runTest(dispatcher) {
+            val holding = Holding("h1", "HDFC Savings", HoldingKind.ASSET, Sector.BANK, null, null)
+            val holdingRepo = FakeHoldingDetailHoldingRepository(Result.success(holding))
+            val vm =
+                HoldingDetailViewModel(
+                    holdingRepository = holdingRepo,
+                    valuationRepository = FakeHoldingDetailValuationRepository(Result.success(emptyList())),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+            vm.delete("h1")
+            advanceUntilIdle()
+
+            vm.undoDelete("h1")
+            advanceUntilIdle()
+
+            assertEquals(1, holdingRepo.restoreCallCount)
+            assertEquals(false, vm.uiState.value.isDeleted)
         }
 }
