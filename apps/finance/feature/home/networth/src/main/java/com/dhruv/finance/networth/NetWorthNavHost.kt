@@ -1,11 +1,14 @@
 package com.dhruv.finance.networth
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,6 +20,7 @@ import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.core.navigation.PlanTool
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
+import com.dhruv.core.ui.components.NxTopBar
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.Sector
 import org.koin.androidx.compose.koinViewModel
@@ -39,41 +43,63 @@ private const val ARG_LAST = "last"
  * deliberately NOT used for C1->C2/C4 — its own doc comment scopes it to cross-feature/cross-tab
  * dispatch, and every existing intra-module drill-down in this codebase (Plan's tool NavHost in
  * `MainActivity.kt`) uses a local `NavHostController`, not `NavTarget`. This composable is this
- * module's equivalent, self-contained rather than living in the app module, since Home's own tab
- * composable doesn't own a NavHost yet (Phase 7 wires this in from Home with a single call once
- * the real Home screen replaces its current placeholder).
+ * module's equivalent, self-contained rather than living in the app module.
  *
  * T032's exception: C7's prepay hand-off to the Plan tab's loan calculator IS genuinely cross-tab
  * (a different Gradle module), so it goes through the injected [NavigationDispatcher] +
  * `NavTarget.OpenPlanTool`, not the local [rememberNavController] used everywhere else in this file.
+ *
+ * [navController]/[onExit] (Phase 8): this composable used to create its own throwaway
+ * `NavHostController` (nothing outside it could reach C1-C7 at all — the whole module was
+ * unmounted dead code until this phase). Home now opens it as a shell-level `DetailRoute`
+ * (`MainActivity.kt`), which owns [navController] so it can also integrate this module's nested
+ * back stack into the hardware back button — same hoisting `PlanTab`'s `planNavController` already
+ * uses. [onExit] is null only in tests/previews that construct this composable standalone; the real
+ * app always supplies it, rendering [ROUTE_OVERVIEW] with a back arrow that leaves this section
+ * (N2) instead of behaving like a tab root with none (N1) — correct here because this is mounted as
+ * a detail route, not a tab.
  */
 @Composable
-fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
+fun NetWorthFeatureRoot(
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    onExit: (() -> Unit)? = null,
+) {
     val resolver: FeatureFlagResolver = koinInject()
     val crashReporter: CrashReporter = koinInject()
     val navigationDispatcher: NavigationDispatcher = koinInject()
-    val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = ROUTE_OVERVIEW, modifier = modifier.fillMaxSize()) {
         composable(ROUTE_OVERVIEW) {
             val vm: NetWorthOverviewViewModel = koinViewModel()
+            LifecycleResumeEffect(Unit) {
+                vm.load()
+                onPauseOrDispose { }
+            }
             val error by vm.featureError.collectAsStateWithLifecycle()
-            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
-                NetWorthOverviewScreen(
-                    viewModel = vm,
-                    onOpenSector = { kind, sector ->
-                        if (kind == HoldingKind.LIABILITY) {
-                            navController.navigate(ROUTE_LIABILITIES)
-                        } else {
-                            navController.navigate("assets/${sector.name}")
-                        }
-                    },
-                    onAddHolding = { navController.navigate(ROUTE_ADD_HOLDING) },
-                )
+            Column(modifier = Modifier.fillMaxSize()) {
+                onExit?.let { NxTopBar(title = "Net worth", onBack = it) }
+                FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                    NetWorthOverviewScreen(
+                        viewModel = vm,
+                        onOpenSector = { kind, sector ->
+                            if (kind == HoldingKind.LIABILITY) {
+                                navController.navigate(ROUTE_LIABILITIES)
+                            } else {
+                                navController.navigate("assets/${sector.name}")
+                            }
+                        },
+                        onAddHolding = { navController.navigate(ROUTE_ADD_HOLDING) },
+                    )
+                }
             }
         }
         composable(ROUTE_LIABILITIES) {
             val vm: LiabilitiesViewModel = koinViewModel()
+            LifecycleResumeEffect(Unit) {
+                vm.load()
+                onPauseOrDispose { }
+            }
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
                 LiabilitiesScreen(
@@ -89,7 +115,12 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
         ) { backStackEntry ->
             val vm: LiabilityDetailViewModel = koinViewModel()
             val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
-            LaunchedEffect(holdingId) { vm.load(holdingId) }
+            // Resume (not LaunchedEffect) — fires on every return to this screen, including from
+            // a prepay hand-off or a future edit flow, not just the first time this route composes.
+            LifecycleResumeEffect(holdingId) {
+                vm.load(holdingId)
+                onPauseOrDispose { }
+            }
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
                 LiabilityDetailScreen(
@@ -106,6 +137,10 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
             val vm: AssetsViewModel = koinViewModel()
             val sectorArg = backStackEntry.arguments?.getString(ARG_SECTOR)
             LaunchedEffect(sectorArg) { vm.setSectorFilter(sectorArg?.let(Sector::fromCode)) }
+            LifecycleResumeEffect(Unit) {
+                vm.load()
+                onPauseOrDispose { }
+            }
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
                 AssetsScreen(
@@ -121,7 +156,13 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
         ) { backStackEntry ->
             val vm: HoldingDetailViewModel = koinViewModel()
             val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
-            LaunchedEffect(holdingId) { vm.load(holdingId) }
+            // Resume, not LaunchedEffect — NW-FLOW-002 needs this screen to reflect a value just
+            // recorded via C5, which returns here via popBackStack (holdingId unchanged, so a
+            // LaunchedEffect keyed on it alone would never re-fire).
+            LifecycleResumeEffect(holdingId) {
+                vm.load(holdingId)
+                onPauseOrDispose { }
+            }
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
                 HoldingDetailScreen(

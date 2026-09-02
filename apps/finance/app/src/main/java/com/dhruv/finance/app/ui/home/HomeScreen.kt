@@ -30,6 +30,8 @@ import com.dhruv.core.navigation.PlanTool
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
+import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxButtonVariant
 import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.OfflineStateCard
 import com.dhruv.core.ui.components.QuickActionTile
@@ -110,6 +112,12 @@ fun HomeScreen(
                 )
             else -> {
                 NetWorthHero(uiState)
+                NxButton(
+                    text = "View details",
+                    onClick = { onOpenDetail(DetailRoute.NetWorth) },
+                    variant = NxButtonVariant.Outline,
+                    block = true,
+                )
                 QuickActionsRow(
                     onOpenLoanEmi = { navigationDispatcher.navigate(NavTarget.OpenPlanTool(PlanTool.LOAN)) },
                     onOpenSip = { navigationDispatcher.navigate(NavTarget.OpenPlanTool(PlanTool.INVEST)) },

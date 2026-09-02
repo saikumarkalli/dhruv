@@ -462,24 +462,80 @@ reason.
 
 **Purpose**: The module-standard doc's steps 5–7 (§4) — QA closes rows, Sec re-passes, merge gate.
 
-- [ ] T038 [P] [QA] Close every `NW-*`/`HOM-*` row in
+- [X] T038 [P] [QA] Close every `NW-*`/`HOM-*` row in
       `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §3/§12 as its
       test lands; update the §14 coverage-summary table. Confirm append-only holds at the SQL layer
       too (no UPDATE policy exists on `valuations`), not just the repository layer
-- [ ] T039 [P] [Sec] Full DPDP/secrets/RLS checklist pass on `liabilities_meta` + the two new views
+      **DONE (2026-09-02).** 13 of 14 `NW-*` rows and all 5 `HOM-*` rows closed (🟢 unit-tested, ✅
+      schema-reviewed, or 🔴 deferred-with-a-stated-reason — see each row's own Status cell for
+      which and why); `NW-BR-007` stays ☐, still blocked on the XIRR ADR, unchanged. §14's table and
+      narrative recount added. Append-only confirmed directly in
+      `supabase/schemas/finance/10_tables/valuations.sql`: only `valuations_select_own`/
+      `_insert_own` policies exist, no UPDATE, no DELETE.
+      **Two real defects found and fixed during this pass, not just written up** (see NW-FLOW-001/
+      NW-FLOW-002 and the design-v1 plan's Phase 2 row for the full account): (1) `NetWorthFeatureRoot`
+      (C1-C7) was never mounted anywhere reachable in the running app — fixed via a new
+      `DetailRoute.NetWorth` + a hoisted `netWorthNavController`, wired the same way
+      `planNavController` already is, plus Home's "View details" button. (2) Screens across this
+      module only loaded their data once (`init`) and never reloaded on returning to them
+      (`popBackStack` doesn't recreate a `NavBackStackEntry`-scoped ViewModel) — fixed by adding
+      `LifecycleResumeEffect` reloads to `NetWorthNavHost.kt`'s overview/assets/holding-detail/
+      liabilities/liability-detail routes. Both required the user's explicit go-ahead before
+      touching `MainActivity.kt`'s shared back-press handling — asked and confirmed before doing it.
+      **Found, not fixed (documented as a gap in NW-UI-005 and the module's own new README):** C2
+      (`AssetsScreen`) and C6 (`LiabilitiesScreen`) don't gate on signed-out/offline state the way C1
+      does.
+- [X] T039 [P] [Sec] Full DPDP/secrets/RLS checklist pass on `liabilities_meta` + the two new views
       (module-standard doc §4 step 6); confirm `delete_my_data()`'s new DELETE line (T004) actually
       removes `liabilities_meta` rows on a dev-project erasure test
-- [ ] T040 Run `./gradlew regressionCheck` — all green, merged JaCoCo floor not regressed
+      **DONE (2026-09-02), against the schema files, not a live dev-project run (no credentials
+      this session — same limitation as every prior phase).** Corrected scope: three views exist
+      today (`v_latest_valuation`, `v_net_worth_by_sector`, `v_net_worth_history`), not the two this
+      task's wording anticipated (`v_net_worth_history` was added by a later readiness decision,
+      after this task was written) — all three checked. All three: `security_invoker = on` present,
+      `grant select … to authenticated` only (no `anon`). `liabilities_meta`: SELECT/INSERT/UPDATE
+      RLS policies transitive via `holding_id → holdings.user_id`, no DELETE policy (matches
+      `valuations`' append-only-adjacent design — rows disappear only via the two erasure functions).
+      `public.delete_my_data()` already contains `delete from finance.liabilities_meta where
+      holding_id in (select id from finance.holdings where user_id = auth.uid())`, ordered before its
+      `valuations`/`holdings` deletes (children before parents) — structurally correct; not
+      re-verified against a live erasure call this session (DAT-FLOW-001's prior live closure covers
+      `holdings`/`valuations` only, predates `liabilities_meta`'s existence, and would need to
+      re-run once a dev project is available — noted, not claimed done).
+- [X] T040 Run `./gradlew regressionCheck` — all green, merged JaCoCo floor not regressed
       (constitution Article X)
-- [ ] T041 Run `./gradlew checkTrackerMoneyPrecision` — confirms no `Double`/`Float` crept into
+      **DONE (2026-09-02).** Green, including after the `DetailRoute.NetWorth`/back-press/
+      `LifecycleResumeEffect` changes above.
+- [X] T041 Run `./gradlew checkTrackerMoneyPrecision` — confirms no `Double`/`Float` crept into
       `liabilities_meta`'s `emi_paise`/`rate_bps` handling (constitution Article VII)
-- [ ] T042 Walk all 6 scenarios in `apps/finance/specs/001-net-worth-tracker/quickstart.md`
+      **DONE (2026-09-02).** Green.
+- [X] T042 Walk all 6 scenarios in `apps/finance/specs/001-net-worth-tracker/quickstart.md`
       end-to-end on a device/emulator
-- [ ] T043 [P] Add `apps/finance/feature/home/networth/README.md` (module index entry, per every
+      **Deferred (2026-09-02) — no physical device or emulator available in this implementation
+      session, same disclosed gap as every prior phase's on-device verification task.** Scenarios 1
+      and 5 specifically exercise the two defects T038 found and fixed (Home's total only updating
+      "on next open", and needing C1-C7 reachable from Home at all) — both are now structurally
+      fixed and covered by unit tests where the logic is unit-testable, but the end-to-end walk
+      itself has not been run on a device. Tracked, not silently skipped.
+- [X] T043 [P] Add `apps/finance/feature/home/networth/README.md` (module index entry, per every
       other feature module's convention) and link it from `apps/finance/FEATURES.md`
-- [ ] T044 Bump the minor version in `platform/versions.json` (new feature module, ADR-0012's
+      **DONE (2026-09-02).** `FEATURES.md`'s row already existed and was already accurate (owner
+      Home, flag `networth`, Phase 2, spec link) — only the README itself needed rewriting, from its
+      pre-module-creation "not yet created" stub to the real screens/ViewModels/data-dependencies/
+      known-gaps content, matching `loans/README.md`'s established format.
+- [X] T044 Bump the minor version in `platform/versions.json` (new feature module, ADR-0012's
       versioning rule); update the implementation plan's §7 tracking table row for Phase 2 to
       "shipped" and mark Phase 2's own checkpoint row (§7) complete
+      **Partially done, one half deliberately not applied (2026-09-02).** The implementation plan's
+      §7 Phase 2 row is updated to "shipped" with a summary of what shipped and what's still open.
+      The version bump is **not applied** — `platform/versions.json`'s own `notes` field states
+      plainly "Do not hand-edit any `version` or `buildNumber` field," and ADR-0025/ADR-0032 make
+      this CI-owned, derived from `feat:` commit types on merge to `main`, not a task a phase
+      performs by hand. This task's cited "ADR-0012" is itself a wrong reference (ADR-0012 is the PR
+      summary bot, not versioning) — a stale instruction from before ADR-0025 existed, same class of
+      drift this register's own numbering-hygiene notes have flagged before. Hand-editing it now
+      would violate the current binding rule and would just be overwritten (or conflict) at merge
+      time regardless. CI bumps this automatically once this branch reaches `main`.
 
 **Checkpoint**: `regressionCheck` green, every catalog row closed or explicitly deferred with a
 stated reason (constitution's Development Workflow step 7) — Phase 2 merge-ready.

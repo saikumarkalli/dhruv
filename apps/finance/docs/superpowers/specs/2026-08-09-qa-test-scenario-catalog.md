@@ -75,19 +75,19 @@ screens instead of every module carrying its own copy.
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| NW-BR-001 | C4 form filled and saved | save completes | one `holdings` row AND its first `valuations` row are written atomically (both-or-neither) | BR-C2 | M | Y | Backend | ☐ |
-| NW-BR-002 | a holding has ≥1 valuation | C5 "Record valuation" is submitted | a **new** `valuations` row is inserted; the previous row is untouched | BR-C1 | S | Y | Backend | ☐ |
-| NW-BR-003 | a wrong valuation exists | user corrects it | old row is soft-deleted (`deleted_at` set) and a new corrected row is appended; no UPDATE occurs on the value | BR-C1 | M | Y | Backend | ☐ |
-| NW-BR-004 | C4 sector field | any value is submitted | only the fixed enum set is accepted; free text is rejected at the repository boundary | C4 | S | Y | Backend | ☐ |
-| NW-BR-005 | a sector/liability-type enum constant has shipped | a future migration is authored | the constant is never renamed/removed (migration-review checklist, not a runtime test) | BR-C3 | S | N | SA | ☐ |
-| NW-BR-006 | assets and liabilities with varying valuation dates | C1 net worth is computed | equals Σ latest asset valuations − Σ latest liability outstandings from `v_net_worth_by_sector`, not a client-side reduction | BR-C4, NFR-8 | M | Y | Backend | ☐ |
-| NW-UI-001 | C1 donut with ≥2 sectors | a sector segment is tapped | C2 opens filtered to that sector | C1 | S | Y | Android | ☐ |
-| NW-UI-002 | a holding with 3+ valuation entries | C3 is opened | entries are ordered newest-first, each shows its delta vs the entry before it | C3 | M | Y | Android | ☐ |
-| NW-UI-003 | a holding's last valuation is known | C5 sheet opened, new value typed | delta (amount + %) updates live against the last recorded value, before submit | C5 | M | Y | Android | ☐ |
-| NW-UI-004 | a liability with principal/interest paid amounts | C7 opened | amortisation donut's three segments (principal paid / interest paid / remaining) sum to total obligation | C7 | M | Y | Android | ☐ |
-| NW-FLOW-001 | C4 opened | holding saved | C1's total updates to include it | F-2 | M | Y | Android | ☐ |
-| NW-FLOW-002 | C3 opened | "Update value" → C5 → Record | C3's chart and XIRR recompute; C1 total updates | F-2 | M | Y | Android | ☐ |
-| NW-UI-005 | session signed out / device offline with nothing cached | C1, C2, or C6 opened | `SignedOutCard` / `OfflineStateCard` renders per NFR-4, not a blank or crashing screen | NFR-4 | M | Y | Android | ☐ |
+| NW-BR-001 | C4 form filled and saved | save completes | one `holdings` row AND its first `valuations` row are written atomically (both-or-neither) | BR-C2 | M | Y | Backend | 🟢 `data/.../tracker/repo/HoldingRepositoryTest.kt` — "writes the holding and its first valuation in a single call" asserts exactly one API call |
+| NW-BR-002 | a holding has ≥1 valuation | C5 "Record valuation" is submitted | a **new** `valuations` row is inserted; the previous row is untouched | BR-C1 | S | Y | Backend | 🟢 `data/.../tracker/repo/ValuationRepositoryTest.kt` ("recordValue inserts a new row with the requested source") + `networth/AddValuationViewModelTest.kt` |
+| NW-BR-003 | a wrong valuation exists | user corrects it | old row is soft-deleted (`deleted_at` set) and a new corrected row is appended; no UPDATE occurs on the value | BR-C1 | M | Y | Backend | 🟢 `ValuationRepositoryTest.kt` ("correctValue calls the RPC exactly once…") for the repository half; the DB-level "no UPDATE occurs" half is DAT-BR-007's own live-verified finding (`valuations` has no UPDATE policy at all) — same fact, not re-proven twice |
+| NW-BR-004 | C4 sector field | any value is submitted | only the fixed enum set is accepted; free text is rejected at the repository boundary | C4 | S | Y | Backend | 🟢 `HoldingRepositoryTest.kt` ("rejects an unknown sector code without calling the API"); the liability-type analogue (Phase 6) is `LiabilityRepositoryTest.kt`'s equivalent case |
+| NW-BR-005 | a sector/liability-type enum constant has shipped | a future migration is authored | the constant is never renamed/removed (migration-review checklist, not a runtime test) | BR-C3 | S | N | SA | ✅ (2026-09-02) reviewed the currently-authored schema files (`holdings.sql`, `liabilities_meta.sql`) — no shipped constant has been renamed or removed by any migration in Phases 1-8's scope; this row re-opens on any future migration touching these constants, same convention as DAT-BR-006 |
+| NW-BR-006 | assets and liabilities with varying valuation dates | C1 net worth is computed | equals Σ latest asset valuations − Σ latest liability outstandings from `v_net_worth_by_sector`, not a client-side reduction | BR-C4, NFR-8 | M | Y | Backend | 🟢 `NetWorthAggregationTest.kt` — "summary total equals assets minus liabilities from the sector view, in one read" |
+| NW-UI-001 | C1 donut with ≥2 sectors | a sector segment is tapped | C2 opens filtered to that sector | C1 | S | Y | Android | 🔴 (2026-09-02) wiring verified by code review (`NetWorthOverviewScreen`'s `SectorRow.onClick` → `AssetsViewModel.setSectorFilter`) — no Compose/instrumented test exists anywhere in this codebase to assert it automatically; deferred for the same reason every on-device row in this catalog is |
+| NW-UI-002 | a holding with 3+ valuation entries | C3 is opened | entries are ordered newest-first, each shows its delta vs the entry before it | C3 | M | Y | Android | 🟢 `ValuationRepositoryTest.kt` ("history is newest-first with each entry's delta computed against the previous value") |
+| NW-UI-003 | a holding's last valuation is known | C5 sheet opened, new value typed | delta (amount + %) updates live against the last recorded value, before submit | C5 | M | Y | Android | 🟢 `AddValuationViewModelTest.kt` — `previewDelta` cases |
+| NW-UI-004 | a liability with principal/interest paid amounts | C7 opened | amortisation donut's three segments (principal paid / interest paid / remaining) sum to total obligation | C7 | M | Y | Android | 🟢 `LiabilityRepositoryTest.kt` — "amortisationSplit sums to the total obligation" |
+| NW-FLOW-001 | C4 opened | holding saved | C1's total updates to include it | F-2 | M | Y | Android | 🔴 (2026-09-02) **was actually broken until this pass**: `NetWorthOverviewScreen`'s ViewModel only loaded once (`init`), and returning from C4 via `popBackStack` doesn't recreate it — the total stayed stale. Fixed by adding a `LifecycleResumeEffect` reload in `NetWorthNavHost.kt`'s `ROUTE_OVERVIEW`. Not covered by an automated test (Compose-lifecycle behaviour, no instrumented test infra) |
+| NW-FLOW-002 | C3 opened | "Update value" → C5 → Record | C3's chart and XIRR recompute; C1 total updates | F-2 | M | Y | Android | 🔴 (2026-09-02) same bug/fix as NW-FLOW-001, applied to `ROUTE_HOLDING_DETAIL` (was keyed only on `holdingId` in a `LaunchedEffect`, which never re-fires on return) and `ROUTE_OVERVIEW`. XIRR itself is out of scope (NW-BR-007, blocked on ADR) |
+| NW-UI-005 | session signed out / device offline with nothing cached | C1, C2, or C6 opened | `SignedOutCard` / `OfflineStateCard` renders per NFR-4, not a blank or crashing screen | NFR-4 | M | Y | Android | 🔴 (2026-09-02) **found, not fixed**: C1 (`NetWorthOverviewScreen`) implements this correctly. C2 (`AssetsScreen`) and C6 (`LiabilitiesScreen`) do not — neither reads `SessionState`/`ConsentState` at all, so both would show a loading/empty state indefinitely while signed out, never `SignedOutCard`. Tracked as a follow-up, not this phase's scope (Phase 8 is polish/closure, not new screen work) |
 | NW-BR-007 | a holding's full valuation-entry set | XIRR is displayed on C3 | computed over that holding's cashflow set per the ADR-reserved XIRR definition (blocked — spec open item §8.6) | C3 | L | N | SA | ☐ (blocked on ADR) |
 
 ---
@@ -237,11 +237,11 @@ not a feature module — see the module-standard doc's `HOM`/`PLN` correction).
 
 | ID | Given | When | Then | Source | Size | Auto | Owner | Status |
 |---|---|---|---|---|---|---|---|---|
-| HOM-UI-001 | net worth data available | Home opened | greeting matches time-of-day, date line renders, net-worth hero shows value + ▲/▼% delta + area sparkline | 01 | M | Y | Android | ☐ |
-| HOM-UI-002 | 4 quick actions defined (Loan EMI/SIP/Currency/GST) | any quick action tapped | navigates to the correct Plan/Calc destination via `NavTarget` | 01 | S | Y | Android | ☐ |
-| HOM-UI-003 | Phase 2: only loan/EMI obligations exist; Phase 3+: card bills also exist | Home opened | UPCOMING shows loan/EMI rows from Phase 2 onward, and additionally shows credit-card-bill rows from Phase 3 onward (see impl plan Phase 2/3 scoped-dependency notes) | 01 | M | Y | Android | ☐ |
-| HOM-FLOW-001 | Home open, session signed out or offline with nothing cached | — | `SignedOutCard`/`OfflineStateCard` renders per NFR-4 instead of the hero card | NFR-4 | M | Y | Android | ☐ |
-| HOM-UI-004 | any tab | Ask pill visibility | Ask pill renders on Home/Plan/Insights per the design, not on Calc/Money | ADR-0024 decision 4 | S | Y | Android | ☐ |
+| HOM-UI-001 | net worth data available | Home opened | greeting matches time-of-day, date line renders, net-worth hero shows value + ▲/▼% delta + area sparkline | 01 | M | Y | Android | 🟢 `app/.../ui/home/HomeViewModelTest.kt` — hero figure/delta cases + `greetingForHour` covered directly; the sparkline is `TrendSparkline` (line, not area — a pre-existing, already-documented library gap, §5.2), rendering itself not instrumented-tested |
+| HOM-UI-002 | 4 quick actions defined (Loan EMI/SIP/Currency/GST) | any quick action tapped | navigates to the correct Plan/Calc destination via `NavTarget` | 01 | S | Y | Android | 🔴 Loan EMI/SIP/GST go via `NavigationDispatcher`/`NavTarget.OpenPlanTool` as specified; Currency deliberately does not (documented Phase 7 deviation — `NavTarget.kt` excludes shell-level routes, no spec ever added a case). Wiring verified by code review only, no instrumented test |
+| HOM-UI-003 | Phase 2: only loan/EMI obligations exist; Phase 3+: card bills also exist | Home opened | UPCOMING shows loan/EMI rows from Phase 2 onward, and additionally shows credit-card-bill rows from Phase 3 onward (see impl plan Phase 2/3 scoped-dependency notes) | 01 | M | Y | Android | 🟢 `HomeViewModelTest.kt` — "UPCOMING only includes liabilities with both an EMI and a debit day" (Phase 2's EMI-only scope); card-bill rows correctly absent until Phase 3's `accounts` table exists |
+| HOM-FLOW-001 | Home open, session signed out or offline with nothing cached | — | `SignedOutCard`/`OfflineStateCard` renders per NFR-4 instead of the hero card | NFR-4 | M | Y | Android | 🔴 implemented in `HomeScreen.kt`'s state `when` block (mirrors `NetWorthOverviewScreen`'s gating, wired for real rather than a stub — Phase 7 note); not covered by an automated test (Composable state branch, no instrumented test infra). "Offline" is modelled as "load failed, nothing cached" — no real connectivity monitor exists in this codebase (same accepted limitation as `NetWorthOverviewScreen`) |
+| HOM-UI-004 | any tab | Ask pill visibility | Ask pill renders on Home/Plan/Insights per the design, not on Calc/Money | ADR-0024 decision 4 | S | Y | Android | 🟢 `HomeViewModelTest.kt` — "shouldShowAskPill renders on Home, Plan and Insights but not Calc or Money". Fixed a real pre-existing bug in the same pass: the inline condition it replaced (`!= TabKey.CALC`) incorrectly showed the pill on Money too |
 
 ---
 
@@ -392,11 +392,29 @@ device or emulator available in this implementation session: `SET-UI-007` (T109)
 (T113), `SET-UI-016` (T114). **Zero `☐` rows remain in the SET module** — all 50 are now ✅ (45) or
 🔴 deferred-with-reason (5): `SET-BR-023`, `SET-UI-007`, `SET-UI-014`, `SET-UI-015`, `SET-UI-016`.
 
+**Recount 2026-09-02** (001-net-worth-tracker Phase 8, T038) — 13 NW rows and all 5 HOM rows close
+(regressionCheck green throughout: `LiabilityRepositoryTest`, `NetWorthAggregationTest`,
+`HomeViewModelTest`, `AmortisationMathTest` and every ViewModel test from Phases 3-7 all pass).
+NW: `NW-BR-001`…`NW-BR-004`, `NW-BR-006`, `NW-UI-002`…`NW-UI-004` close 🟢 on unit-test evidence;
+`NW-BR-005` closes ✅ on schema review. `NW-UI-001`, `NW-FLOW-001`, `NW-FLOW-002`, `NW-UI-005` close
+🔴 (deferred-with-reason, not silently skipped) — see their own Status cells for what was actually
+verified vs. what remains open. `NW-BR-007` stays ☐, still blocked on the XIRR ADR. HOM:
+`HOM-UI-001`, `HOM-UI-003`, `HOM-UI-004` close 🟢; `HOM-UI-002`, `HOM-FLOW-001` close 🔴.
+**Two real defects were found and fixed in this pass, not just documented:** (1) `NetWorthFeatureRoot`
+(C1-C7, built across Phases 3-6) was never mounted anywhere in the running app — `MainActivity.kt`
+had no reference to it at all, so the entire tracker beyond Home's own summary was unreachable.
+Fixed by adding `DetailRoute.NetWorth`, hoisting a `netWorthNavController` the same way
+`planNavController` already works, and wiring Home's new "View details" button to open it — see
+`NW-FLOW-001`'s Status cell for the follow-on staleness bug this reachability fix then exposed.
+(2) The Ask pill's visibility condition (`!= TabKey.CALC`) incorrectly showed it on the Money tab
+too; extracting it into a tested `shouldShowAskPill()` function (HOM-UI-004) fixed it as a side
+effect of making it testable at all.
+
 | Module | Rows | ☐ | 🔴 | 🟢 | ✅ |
 |---|---|---|---|---|---|
 | NAV | 11 | 7 | 0 | 4 | 0 |
 | ONB | 14 | 3 | 0 | 10 | 1 |
-| NW | 14 | 14 | 0 | 0 | 0 |
+| NW | 14 | 1 | 5 | 7 | 1 |
 | MNY | 20 | 20 | 0 | 0 | 0 |
 | PLN | 14 | 14 | 0 | 0 | 0 |
 | INS | 4 | 4 | 0 | 0 | 0 |
@@ -405,9 +423,9 @@ device or emulator available in this implementation session: `SET-UI-007` (T109)
 | AUT | 9 | 9 | 0 | 0 | 0 |
 | SRC | 5 | 5 | 0 | 0 | 0 |
 | DAT | 9 | 0 | 0 | 5 | 4 |
-| HOM | 5 | 5 | 0 | 0 | 0 |
+| HOM | 5 | 0 | 2 | 3 | 0 |
 | SET | 50 | 0 | 5 | 0 | 45 |
-| **Total** | **167** | **93** | **5** | **19** | **50** |
+| **Total** | **167** | **75** | **12** | **29** | **51** |
 
 Phase 1's own module (`ONB`, `DAT`) has zero rows blocked on infrastructure now — every remaining
 `ONB` ☐ row is deliberately deferred with a stated reason, not silently missing: `ONB-BR-006`/
