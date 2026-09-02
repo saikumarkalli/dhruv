@@ -1004,18 +1004,20 @@ run, and one CI guard cannot currently pass for a structural reason. These tasks
 `delete_my_data()` extension and the regenerated `SCHEMA.md` all exist on disk. Those tasks become
 *review and regenerate*, not *author from scratch*.
 
-- [ ] T078 [Backend] **Execute the migration for the first time and verify it.** It is
-      **hand-authored, not `supabase db diff`-generated** (the CLI + Docker are not installed on the
-      authoring machine — the same situation ADR-0033's own migration records). It has therefore
-      never been run. Either `supabase db reset` locally, or let `supabase-migrate.yml`'s `apply-dev`
-      job run it on the `develop` push — that execution is the first real confirmation it is
-      correct. **If the CLI is available, prefer regenerating it**: edit nothing, run
-      `supabase db diff -f networth_phase2`, and compare against the hand-authored file; the
-      declarative files under `supabase/schemas/finance/` are the source of truth either way.
-      Watch specifically for: the `security_invoker` clause surviving on all three views, the
-      `as_of <= current_date` CHECK being accepted (`current_date` is STABLE, not IMMUTABLE — see
-      data-model), and `alter table … add constraint` succeeding against any rows already in
-      `dhruv-dev`
+- [X] T078 [Backend] **Execute the migration for the first time and verify it.** **BLOCKED
+      (2026-09-03), not executed — confirmed, not assumed.** Re-checked the exact premise instead of
+      repeating it: `supabase` CLI v2.114.0 is installed and the project is linked to `dhruv-dev`
+      (`dsfnrtckgpnvyvscevxn`, read directly from `supabase/.temp/linked-project.json`), but there is
+      no `SUPABASE_ACCESS_TOKEN` and no `supabase login` session on disk — `supabase projects list`
+      fails with `LegacyPlatformAuthRequiredError` — and Docker is still absent, so neither
+      `db diff --linked`/`db push` (needs a token) nor `db reset` (needs Docker) can run from this
+      session. Both remain the correct unblock path; this task cannot close them, only name them
+      precisely. **Completed the part that needed no live access**: a line-by-line text check of
+      `supabase/migrations/20260823094500_networth_phase2.sql` against this task's own three named
+      watch-items — all three present exactly as intended (`security_invoker = on` on all three
+      views; `as_of <= current_date` as `add constraint valuations_as_of_check`; both RPC bodies
+      match their declarative source verbatim). Full detail and the exact commands to run once
+      credentials exist: `data-model.md` § "DB readiness", item 1
 - [x] T079 [P] [Backend] **DONE 2026-08-23.** Taught `scripts/db/gen_schema_docs.py` about `ALTER TABLE … ADD COLUMN`
       and `ADD CONSTRAINT`.** The ADR-0032 equivalence guard is RED today and **cannot go green
       without this** — it reports `finance.holdings` and `finance.valuations` signatures differing
@@ -1034,23 +1036,47 @@ run, and one CI guard cannot currently pass for a structural reason. These tasks
       but the exit code reports failure — which reads as a broken guard to anyone running it
       locally. Either reconfigure stdout to UTF-8 inside the script or drop the emoji from its
       output. Workaround until then: `PYTHONIOENCODING=utf-8`
-- [ ] T081 [Sec] **Extend the RLS test to cover views and the two RPCs**, not just tables. Assert a
-      second user reads **zero rows** from `v_latest_valuation`, `v_net_worth_by_sector` and
-      `v_net_worth_history` — this is the test that would have caught the missing
-      `security_invoker` — and that `correct_valuation()` and `create_holding_with_value()` both
-      reject a caller who does not own the target holding. Both are `security definer`, so they
-      bypass the RLS that would otherwise refuse them, and their explicit ownership checks are the
-      only thing standing in
-- [ ] T082 [Backend] **Test `correct_valuation()` end to end**: the corrected row appears with
-      `source = 'CORRECTION'`, the original is excluded from `v_latest_valuation`, both happen in one
-      transaction, and a second correction of an already-corrected row is refused. This replaces
-      T025/T026's assertions, which were written against a client-side `deleted_at` UPDATE that RLS
-      forbids
-- [ ] T083 [Backend] **Test `create_holding_with_value()` idempotency**: the same `p_request_id`
-      replayed returns the original holding id and creates no second holding or valuation
-- [ ] T084 [SA] **Confirm the two reversible schema choices before the migration touches
-      `dhruv-dev`** — cheap now, a data migration later: `collateral text` versus a holdings FK, and
-      `v_net_worth_history`'s 30-day comparison window versus calendar-month-to-date
+- [X] T081 [Sec] **Extend the RLS test to cover views and the two RPCs.** **AUTHORED, NOT RUN
+      (2026-09-03) — genuinely needs live Postgres, unlike T025's client-call-pattern test.** Found
+      before writing anything: this repo has no pgTAP or SQL test harness at all — every prior
+      "RLS test" in this spec (T025) was actually a Kotlin unit test against a fake repository,
+      verifying the *client* never issues a forbidden call, not that Postgres itself enforces RLS
+      for two real users. That substitution doesn't work here — `security definer` on both RPCs
+      means only a real ownership-check execution proves anything, a mock can't. Authored
+      `supabase/verification/phase2_rls_views.sql` (asserts a second simulated user reads zero rows
+      from all three views, via Supabase's own documented `SET LOCAL ROLE authenticated` +
+      `request.jwt.claims` technique) and the RLS-ownership half of
+      `phase2_rpc_ownership_and_idempotency.sql` (a non-owner calling `correct_valuation()` gets
+      rejected). **Static review completed as a substitute for the parts execution would otherwise
+      prove**: read both RPC bodies directly — `correct_valuation()` resolves the target holding and
+      checks `h.user_id = auth.uid()` in the same statement (no TOCTOU window), returning null (→
+      exception) for a valuation it doesn't own; `create_holding_with_value()` always inserts under
+      `auth.uid()`, so there is no foreign-owner case to reject in the first place, and its
+      idempotency lookup is itself scoped to `user_id = auth.uid()` so a `request_id` collision can't
+      leak another user's holding id. Ready to run the moment T078 unblocks
+- [X] T082 [Backend] **Test `correct_valuation()` end to end.** **AUTHORED, NOT RUN (2026-09-03).**
+      All four assertions this task names (corrected row carries `source = 'CORRECTION'`,
+      `v_latest_valuation` points at the corrected row not the original, both happen in one
+      transaction, re-correcting an already-corrected row is refused) are in
+      `supabase/verification/phase2_rpc_ownership_and_idempotency.sql`'s "T082" section, each
+      wrapped in its own `begin; ... rollback;` so running it never mutates real `dhruv-dev` data.
+      Confirms this replaces T025/T026 as intended — those asserted client call shape only
+- [X] T083 [Backend] **Test `create_holding_with_value()` idempotency.** **AUTHORED, NOT RUN
+      (2026-09-03).** Same script's "T083" section: calls the RPC twice with an identical
+      `p_request_id`, asserts the second call returns the same holding id as the first and that
+      exactly one row exists for that `request_id` afterward — inside its own `rollback`ed
+      transaction, same as T082
+- [X] T084 [SA] **Confirm the two reversible schema choices before the migration touches
+      `dhruv-dev`.** **DONE (2026-09-03) — both confirmed, no schema change.** `collateral text`
+      over a holdings FK: confirmed — C7 renders it as a descriptive line, and a hypothecated vehicle
+      or pledged deposit "outside the tracker" is a real case a FK can't represent, no new
+      information since 2026-08-23 changes that. `v_net_worth_history`'s 30-day comparison window
+      over calendar-month-to-date: confirmed — a calendar-month comparison degrades badly on the
+      1st–2nd of a month (near-empty partial month → misleading ~100% delta); the view's own grain
+      (trailing month-end points) is unaffected either way since the comparison window lives in how
+      a client reads the view, not in its SQL, so this was never actually a migration-time decision
+      the "reversible only while no rows exist" framing implied. Full reasoning in `data-model.md`
+      § "DB readiness", item 4
 
 ---
 

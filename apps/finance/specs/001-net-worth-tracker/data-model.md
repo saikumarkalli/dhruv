@@ -269,6 +269,25 @@ path to try first — confirm it works before relying on it. ADR-0032 decision 4
 requires hand-authorship for several statements here regardless (security-invoker views, grants,
 `create or replace function` bodies), so a generated diff would still need hand-editing.
 
+**Re-verified 2026-09-03 (Phase 11, T078) — still blocked, same shape of blocker as ADR-0033 named
+for a different tool.** The CLI is present and the project is linked
+(`supabase/.temp/linked-project.json` → `dsfnrtckgpnvyvscevxn`, name `dhruv`), confirmed by reading
+that file directly. What's missing is an **authenticated session**: no `SUPABASE_ACCESS_TOKEN` in
+the environment and no `supabase login` session on disk (`supabase projects list` fails with
+`LegacyPlatformAuthRequiredError`) — `supabase db diff --linked`/`db push` both need one, and Docker
+is still absent, so the local `db reset` path is equally closed. Both routes named above remain the
+correct unblock; neither is executable from this session. **What *was* completed without execution**
+— a static text review of the migration file against T078's own three named watch-items, all
+confirmed present by direct inspection of `supabase/migrations/20260823094500_networth_phase2.sql`:
+`security_invoker = on` on all three views (lines 173, 191, 209), the `as_of <= current_date` guard
+as `add constraint valuations_as_of_check` (line 95), and both RPC functions
+(`correct_valuation`/`create_holding_with_value`) present with bodies matching their declarative
+source files verbatim. This is not a substitute for running it — a text match proves the SQL says
+what it should, not that Postgres accepts it against `dhruv-dev`'s actual state — but it is real,
+completable verification that needed no live access. Ready-to-run verification scripts for what
+*does* need a live database (T081–T083) are authored at `supabase/verification/` — see that
+directory's `README.md`.
+
 **2. The ADR-0032 equivalence guard — RESOLVED 2026-08-23.** It reported
 `finance.holdings` and `finance.valuations` as drifted when the schema was in fact
 consistent, because `gen_schema_docs.py` had no rule for `ALTER TABLE … ADD COLUMN`, so a
@@ -290,9 +309,19 @@ successfully and then died printing `✅` under cp1252, reporting failure for a 
 succeeded. It now reconfigures stdout/stderr to UTF-8 itself; no `PYTHONIOENCODING` needed.
 → T080.
 
-**4. Two schema choices are reversible only while no rows exist** and should be confirmed before the
-migration runs against `dhruv-dev`: `collateral text` versus a holdings FK (above), and the 30-day
-comparison window in `v_net_worth_history`.
+**4. Two reversible schema choices — CONFIRMED 2026-09-03 (Phase 11, T084), no change.**
+`collateral text` (not a `collateral_holding_id uuid` FK): confirmed — the design's own C7 renders
+collateral as a descriptive line, not a link to another tracked holding, and a hypothecated vehicle
+or a pledged deposit "outside the tracker" (this file's original reasoning, § New entities above) is
+a real and common case a FK cannot represent. No new information since 2026-08-23 argues otherwise.
+`v_net_worth_history`'s 30-day comparison window (not calendar-month-to-date): confirmed — a
+calendar-month comparison degrades badly on the 1st–2nd of a new month (comparing against an
+almost-empty partial month produces a misleading, near-100% delta), which a rolling 30-day window
+never does. The view's own grain is trailing month-end points regardless of which comparison a
+client picks, so this choice lives entirely in how a client reads the view, not in the view's SQL —
+changing it later, if ever needed, touches no schema and is not the migration-time decision the
+"reversible only while no rows exist" framing implied. Both choices ship as originally authored;
+this entry exists so a later phase does not re-open either without a genuinely new reason.
 
 ### Maintenance conventions for every later phase
 

@@ -58,6 +58,17 @@ See [`platform/VERSIONING.md`](platform/VERSIONING.md).
   4/5-tab shell — zero consumers remained anywhere in the app). The merged JVM test-coverage floor
   was raised from 9% to 14% to match measured coverage (`:libs:settings` 38%, `:libs:core` 15%).
 
+- Net-worth tracker (`apps/finance/specs/001-net-worth-tracker/`), Phase 11 (DB readiness): a new
+  `checkDesignTokenUsage` Gradle gate (Phase 10) catching raw `MaterialTheme.colorScheme`/`.typography`/
+  hex-color bypasses under `apps/finance/feature/**`, wired into `regressionCheck`. Manual SQL
+  verification scripts for RLS-on-views and both tracker RPCs (`supabase/verification/`), authored
+  but not yet run — no live Supabase credentials in the authoring session; see that directory's
+  `README.md` and the spec's `data-model.md` § "DB readiness" for the exact unblock steps.
+  **Known gap noted while adding this**: Phases 3–10 of this feature shipped substantial real work
+  (the C1–C7 screens, soft-delete/undo, settings contribution, accessibility, strings.xml
+  extraction) with no CHANGELOG entry at all — tracked in the spec's own Implementation record as a
+  named gap (Phase 10, T076), not backfilled here to keep this entry to what Phase 11 actually did.
+
 ### Fixed
 - The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no
   app behaviour at all. It is now a real, enforcing gate (see Added, sub-phase 0b.3).
