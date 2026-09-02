@@ -283,26 +283,86 @@ payoff progress, and a prepay projection all render.
 
 ### Tests for User Story 4
 
-- [ ] T028 [P] [US4] `LiabilityRepositoryTest` — CRUD on `liabilities_meta`, `liability_type` enum
+- [X] T028 [P] [US4] `LiabilityRepositoryTest` — CRUD on `liabilities_meta`, `liability_type` enum
       rejected if not in the fixed list (mirrors NW-BR-004 for liability types), amortisation split
       sums to total obligation, in
       `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/LiabilityRepositoryTest.kt`
+      **DONE (2026-09-02).** Also added `AmortisationMathTest.kt` and per-ViewModel tests
+      (`LiabilitiesViewModelTest`, `LiabilityDetailViewModelTest`, and liability-path cases added to
+      the existing `AddEditHoldingViewModelTest`) — not separately task-listed, but this phase's
+      established practice (every prior phase) is a ViewModel test file per new ViewModel.
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Implement `LiabilityRepository` (depends on T028) in
+- [X] T029 [US4] Implement `LiabilityRepository` (depends on T028) in
       `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/LiabilityRepository.kt`
-- [ ] T030 [US4] Build `LiabilitiesScreen` (C6) — grouped by `liability_type`, TOTAL OUTSTANDING ·
+      **DONE (2026-09-02).** `LiabilityApi` (GET/POST/PATCH against `finance.liabilities_meta` — no
+      DELETE, the table has no client DELETE policy), `LiabilityMetaDto`/`CreateLiabilityMetaRequestDto`/
+      `UpdateLiabilityMetaRequestDto`, `LiabilityMapper.toDomain()`, and the `LiabilityMeta`/
+      `LiabilityType`/`AmortisationSplit`/`amortisationSplit()` domain model all added alongside it,
+      mirroring `HoldingRepository`/`ValuationRepository`'s exact structure. Registered in
+      `PlatformModule.kt` (`single<LiabilityRepository> { LiabilityRepositoryImpl(get()) }`).
+      **Scope addition (undocumented in the spec, resolved here):** neither this task nor T030/T031
+      says where a liability's `liabilities_meta` row is actually created — the Independent Test
+      above requires it to be creatable, but tasks.md is silent on the write path. Resolved by
+      extending `AddEditHoldingScreen`/`AddEditHoldingViewModel` (C4, built in Phase 3): selecting
+      "I owe this" now reveals liability-type/rate/EMI/tenure fields, and `save()` makes a **second**
+      call to `LiabilityRepository.createMeta()` after `HoldingRepository.createWithFirstValuation()`
+      succeeds — deliberately not folded into one atomic RPC (loan terms are optional metadata on
+      top of the holding+valuation pair BR-C2 already guarantees, not a third leg of that guarantee).
+      A `createMeta()` failure is surfaced via a new non-blocking `UiState.liabilityMetaError` field
+      rather than blocking navigation away, since the holding itself is already safely saved by that
+      point. The value entered as the holding's first valuation doubles as `original_principal_paise`
+      (documented in code as a known simplification: a loan added partway through its term shows a
+      slightly optimistic payoff projection until an edit-liability screen exists, which this phase
+      does not build).
+- [X] T030 [US4] Build `LiabilitiesScreen` (C6) — grouped by `liability_type`, TOTAL OUTSTANDING ·
       MONTHLY OUTGO · DEBT-FREE BY stats, payoff progress per row, in
       `apps/finance/feature/home/networth/LiabilitiesScreen.kt`
-- [ ] T031 [US4] Build `LiabilityDetailScreen` (C7) — amortisation donut (T006), rate/EMI/debit
+      **DONE (2026-09-02).** `LiabilitiesViewModel` merges `HoldingRepository.list(LIABILITY)` with
+      `LiabilityRepository.listAll()` client-side by `holdingId` (no `v_liabilities`-style join view
+      exists — noted as a gap in this phase's earlier context and left unbuilt, matching scope).
+      DEBT-FREE BY is the latest (furthest-out) projected payoff date across every liability with
+      computable terms (`AmortisationMath.projectedPayoffMonths`); per-row payoff progress is
+      `paidMonths / tenureMonths` via `ProgressRing`, null (no ring) when tenure isn't known (a
+      credit card/BNPL line). C1's "By sector" rows for LIABILITY-kind breakdowns now route to this
+      screen instead of the ASSET-only `AssetsScreen` (`NetWorthNavHost`'s `onOpenSector` branches on
+      `HoldingKind`) — this was a latent gap (liability sector rows previously opened an Assets
+      screen that would never show them, since `AssetsViewModel.load()` hardcodes `HoldingKind.ASSET`)
+      and is this phase's only entry point into C6, rather than inventing a new one.
+- [X] T031 [US4] Build `LiabilityDetailScreen` (C7) — amortisation donut (T006), rate/EMI/debit
       day/tenure/linked account/collateral, prepay-savings projection, citing NW-UI-004, in
       `apps/finance/feature/home/networth/LiabilityDetailScreen.kt`
-- [ ] T032 [US4] Wire C7's prepay hand-off to the existing loan/EMI calculator via `NavTarget`
+      **DONE (2026-09-02).** `LiabilityDetailViewModel` loads the holding, its `LiabilityMeta` (null
+      is a designed non-blocking state, not a load error — an older liability or a failed
+      `createMeta()` write just renders without the rate/EMI card), and outstanding balance (latest
+      valuation, via `ValuationRepository.listHistory`). Reuses the existing `AmortisationDonut`
+      component. The prepay projection (`AmortisationMath.computePrepayProjection`, standard
+      amortisation formula) is copy-labelled "Estimated — assumes your rate and payment stay the
+      same" per `platform/DESIGN-SYSTEM.md` §10's "derived output is labelled as derived" rule
+      (NW-UI-004). `linked_account_id` is loaded but has no display row yet — there is no
+      `finance.accounts` table until Phase 3 (`liabilities_meta.sql`'s own comment), so nothing to
+      resolve it against; this matches the schema file's documented scope, not a defect.
+- [X] T032 [US4] Wire C7's prepay hand-off to the existing loan/EMI calculator via `NavTarget`
       (`OpenPlanTool(PlanTool.LOAN)`) — cross-feature navigation by id, never a class reference
       (constitution Article III)
+      **DONE (2026-09-02).** **Architectural correction made in this phase:** `NavigationDispatcher`
+      previously lived in `:apps:finance:app`, which `:apps:finance:feature:networth` cannot depend
+      on without inverting the module graph (`:app` already depends on `:feature:networth`). Moved
+      `NavigationDispatcher` into `:libs:core` (same package as `NavTarget`, zero app-specific
+      dependencies) — this is its first real cross-module consumer. `LiabilityDetailScreen` itself
+      has no `NavigationDispatcher` dependency; `NetWorthNavHost` injects it and passes
+      `onOpenLoanCalculator = { navigationDispatcher.navigate(NavTarget.OpenPlanTool(PlanTool.LOAN)) }`
+      down as a plain callback, keeping the screen/ViewModel navigation-agnostic (same pattern as
+      every other screen in this NavHost).
 
-**Checkpoint**: Stories 1–4 independently functional.
+**Checkpoint**: Stories 1–4 independently functional. **Known gaps carried forward, same disclosure
+pattern as Phases 3–5:** nothing in this phase has made a real Supabase call (no live credentials in
+this session) — verified against fakes only. There is no edit-liability screen, so `paid_months`,
+rate changes, and tenure extensions cannot be updated after creation even though `LiabilityRepository
+.updateMeta()` exists and is tested; wiring a UI to it is deferred, not this phase's scope. No
+`v_liabilities` aggregation view exists server-side — C6's merge is client-side, an O(n) join over
+two already-small lists (a user's liability count), not a performance concern at this scale.
 
 ---
 

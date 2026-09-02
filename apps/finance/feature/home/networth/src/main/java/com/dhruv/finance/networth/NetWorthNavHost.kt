@@ -12,8 +12,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dhruv.core.flags.FeatureFlagResolver
+import com.dhruv.core.navigation.NavTarget
+import com.dhruv.core.navigation.NavigationDispatcher
+import com.dhruv.core.navigation.PlanTool
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
+import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.Sector
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -23,6 +27,8 @@ private const val ROUTE_ASSETS = "assets/{sector}"
 private const val ROUTE_ADD_HOLDING = "addHolding"
 private const val ROUTE_HOLDING_DETAIL = "holding/{holdingId}"
 private const val ROUTE_ADD_VALUATION = "addValuation/{holdingId}?correcting={correcting}&last={last}"
+private const val ROUTE_LIABILITIES = "liabilities"
+private const val ROUTE_LIABILITY_DETAIL = "liability/{holdingId}"
 private const val ARG_SECTOR = "sector"
 private const val ARG_HOLDING_ID = "holdingId"
 private const val ARG_CORRECTING = "correcting"
@@ -36,11 +42,16 @@ private const val ARG_LAST = "last"
  * module's equivalent, self-contained rather than living in the app module, since Home's own tab
  * composable doesn't own a NavHost yet (Phase 7 wires this in from Home with a single call once
  * the real Home screen replaces its current placeholder).
+ *
+ * T032's exception: C7's prepay hand-off to the Plan tab's loan calculator IS genuinely cross-tab
+ * (a different Gradle module), so it goes through the injected [NavigationDispatcher] +
+ * `NavTarget.OpenPlanTool`, not the local [rememberNavController] used everywhere else in this file.
  */
 @Composable
 fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
     val resolver: FeatureFlagResolver = koinInject()
     val crashReporter: CrashReporter = koinInject()
+    val navigationDispatcher: NavigationDispatcher = koinInject()
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = ROUTE_OVERVIEW, modifier = modifier.fillMaxSize()) {
@@ -50,8 +61,41 @@ fun NetWorthFeatureRoot(modifier: Modifier = Modifier) {
             FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
                 NetWorthOverviewScreen(
                     viewModel = vm,
-                    onOpenSector = { _, sector -> navController.navigate("assets/${sector.name}") },
+                    onOpenSector = { kind, sector ->
+                        if (kind == HoldingKind.LIABILITY) {
+                            navController.navigate(ROUTE_LIABILITIES)
+                        } else {
+                            navController.navigate("assets/${sector.name}")
+                        }
+                    },
                     onAddHolding = { navController.navigate(ROUTE_ADD_HOLDING) },
+                )
+            }
+        }
+        composable(ROUTE_LIABILITIES) {
+            val vm: LiabilitiesViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                LiabilitiesScreen(
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                    onOpenLiability = { holdingId -> navController.navigate("liability/$holdingId") },
+                )
+            }
+        }
+        composable(
+            route = ROUTE_LIABILITY_DETAIL,
+            arguments = listOf(navArgument(ARG_HOLDING_ID) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val vm: LiabilityDetailViewModel = koinViewModel()
+            val holdingId = backStackEntry.arguments?.getString(ARG_HOLDING_ID).orEmpty()
+            LaunchedEffect(holdingId) { vm.load(holdingId) }
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("networth", resolver.isEnabled("networth"), error, crashReporter) {
+                LiabilityDetailScreen(
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                    onOpenLoanCalculator = { navigationDispatcher.navigate(NavTarget.OpenPlanTool(PlanTool.LOAN)) },
                 )
             }
         }

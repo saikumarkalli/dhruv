@@ -1,7 +1,7 @@
 package com.dhruv.finance.app.di
 
 import android.os.Build
-import com.dhruv.finance.app.navigation.NavigationDispatcher
+import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.settings.AccountSettingsViewModel
 import com.dhruv.finance.app.ui.settings.AppDetailsViewModel
 import com.dhruv.finance.app.ui.settings.AppSettingsViewModel

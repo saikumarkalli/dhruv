@@ -154,7 +154,7 @@ class OnboardingViewModel(
      * [hasAccountOrHolding] is honestly stubbed `false` for all of Phase 1 (see above), so
      * [onConsentContinue] always lands every signed-in user on [OnboardingUiState.EmptyStart] —
      * without this, that screen had no way out at all (no [androidx.activity.OnBackPressedCallback]
-     * anywhere in the app, and its two task rows dispatch [com.dhruv.finance.app.navigation.NavigationDispatcher]
+     * anywhere in the app, and its two task rows dispatch [com.dhruv.core.navigation.NavigationDispatcher]
      * targets that are silently dropped while onboarding is showing, since `AppShell` — the only
      * collector — isn't composed yet). Same shape as [onUseOfflineSelected]: persist
      * [ConsentRepository.setHasCompletedOnboarding] first so a later cold launch never re-shows

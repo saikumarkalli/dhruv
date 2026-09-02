@@ -3,10 +3,14 @@ package com.dhruv.finance.networth
 import com.dhruv.core.observability.NoOpCrashReporter
 import com.dhruv.core.observability.NoOpPerformanceTracer
 import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
+import com.dhruv.finance.data.tracker.model.CreateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
 import com.dhruv.finance.data.tracker.model.HoldingWithValue
+import com.dhruv.finance.data.tracker.model.LiabilityMeta
+import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
+import com.dhruv.finance.data.tracker.repo.LiabilityRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -39,6 +43,30 @@ private class FakeAddEditHoldingRepository(
         throw UnsupportedOperationException("not exercised by this test")
 }
 
+private class FakeAddEditLiabilityRepository(
+    private val onCreateMeta: (CreateLiabilityMetaRequest) -> Result<Unit> = { Result.success(Unit) },
+) : LiabilityRepository {
+    var createMetaCallCount = 0
+        private set
+    var lastRequest: CreateLiabilityMetaRequest? = null
+        private set
+
+    override suspend fun createMeta(request: CreateLiabilityMetaRequest): Result<Unit> {
+        createMetaCallCount++
+        lastRequest = request
+        return onCreateMeta(request)
+    }
+
+    override suspend fun listAll(): Result<List<LiabilityMeta>> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun get(holdingId: String): Result<LiabilityMeta> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun updateMeta(
+        holdingId: String,
+        request: UpdateLiabilityMetaRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddEditHoldingViewModelTest {
     private val dispatcher = StandardTestDispatcher()
@@ -53,8 +81,10 @@ class AddEditHoldingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(repo: FakeAddEditHoldingRepository) =
-        AddEditHoldingViewModel(repo, NoOpCrashReporter, NoOpPerformanceTracer)
+    private fun viewModel(
+        repo: FakeAddEditHoldingRepository,
+        liabilityRepo: FakeAddEditLiabilityRepository = FakeAddEditLiabilityRepository(),
+    ) = AddEditHoldingViewModel(repo, liabilityRepo, NoOpCrashReporter, NoOpPerformanceTracer)
 
     @Test
     fun `save rejects an empty name without calling the repository`() =
@@ -123,4 +153,83 @@ class AddEditHoldingViewModelTest {
         assertNull(parseRupeesToPaise("not a number"))
         assertNull(parseRupeesToPaise("-5"))
     }
+
+    @Test
+    fun `parseRatePercentToBps converts a percent string to basis points`() {
+        assertEquals(850, parseRatePercentToBps("8.5"))
+        assertEquals(0, parseRatePercentToBps("0"))
+        assertNull(parseRatePercentToBps("101"))
+        assertNull(parseRatePercentToBps("not a number"))
+    }
+
+    // Phase 6 scope addition: a LIABILITY-kind save rejects a missing type/rate before calling
+    // either repository — mirrors the existing name/sector/amount validation gate above.
+    @Test
+    fun `save rejects a liability with no type or rate without calling either repository`() =
+        runTest {
+            val repo = FakeAddEditHoldingRepository()
+            val liabilityRepo = FakeAddEditLiabilityRepository()
+            val vm = viewModel(repo, liabilityRepo)
+            vm.onKindChange(HoldingKind.LIABILITY)
+            vm.onNameChange("HDFC Home Loan")
+            vm.onSectorChange("PROPERTY")
+            vm.onAmountChange("50,00,000")
+
+            vm.save()
+
+            assertEquals(0, repo.createCallCount)
+            assertEquals(0, liabilityRepo.createMetaCallCount)
+            assertNotNull(vm.uiState.value.liabilityTypeError)
+            assertNotNull(vm.uiState.value.rateError)
+        }
+
+    @Test
+    fun `save with a valid liability calls both repositories and records the new holding id`() =
+        runTest(dispatcher) {
+            val repo = FakeAddEditHoldingRepository(onCreate = { Result.success("loan-holding-id") })
+            val liabilityRepo = FakeAddEditLiabilityRepository()
+            val vm = viewModel(repo, liabilityRepo)
+            vm.onKindChange(HoldingKind.LIABILITY)
+            vm.onNameChange("HDFC Home Loan")
+            vm.onSectorChange("PROPERTY")
+            vm.onAmountChange("50,00,000")
+            vm.onLiabilityTypeChange("HOME_LOAN")
+            vm.onRateChange("8.5")
+            vm.onEmiChange("45,000")
+            vm.onTenureMonthsChange("240")
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(1, repo.createCallCount)
+            assertEquals(1, liabilityRepo.createMetaCallCount)
+            assertEquals("loan-holding-id", vm.uiState.value.savedHoldingId)
+            val sentRequest = liabilityRepo.lastRequest
+            assertEquals("HOME_LOAN", sentRequest?.liabilityTypeCode)
+            assertEquals(850, sentRequest?.rateBps)
+            assertEquals(45_000_00L, sentRequest?.emiPaise)
+            assertEquals(240, sentRequest?.tenureMonths)
+            assertEquals(500_000_000L, sentRequest?.originalPrincipalPaise)
+            assertNull(vm.uiState.value.liabilityMetaError)
+        }
+
+    @Test
+    fun `a liability-meta failure still records the saved holding id, surfaced separately`() =
+        runTest(dispatcher) {
+            val repo = FakeAddEditHoldingRepository(onCreate = { Result.success("loan-holding-id") })
+            val liabilityRepo = FakeAddEditLiabilityRepository(onCreateMeta = { Result.failure(java.io.IOException("down")) })
+            val vm = viewModel(repo, liabilityRepo)
+            vm.onKindChange(HoldingKind.LIABILITY)
+            vm.onNameChange("HDFC Home Loan")
+            vm.onSectorChange("PROPERTY")
+            vm.onAmountChange("50,00,000")
+            vm.onLiabilityTypeChange("HOME_LOAN")
+            vm.onRateChange("8.5")
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals("loan-holding-id", vm.uiState.value.savedHoldingId)
+            assertNotNull(vm.uiState.value.liabilityMetaError)
+        }
 }

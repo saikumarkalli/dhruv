@@ -69,7 +69,7 @@ import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.NotConfiguredCard
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
-import com.dhruv.finance.app.navigation.NavigationDispatcher
+import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.finance.app.ui.dashboard.DashboardScreen
 import com.dhruv.finance.app.ui.onboarding.OnboardingHost
 import com.dhruv.finance.app.ui.plan.PlanLauncher

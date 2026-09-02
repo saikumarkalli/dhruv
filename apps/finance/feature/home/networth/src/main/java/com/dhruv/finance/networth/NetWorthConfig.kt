@@ -37,6 +37,9 @@ const val NET_WORTH_HISTORY_MONTHS = 24
  * value). */
 fun sectorLabel(code: String): String = SectorLabels.firstOrNull { it.first == code }?.second ?: code
 
+/** Display label for a raw liability-type code, same forward-compatible fallback as [sectorLabel]. */
+fun liabilityTypeLabel(code: String): String = LiabilityTypeLabels.firstOrNull { it.first == code }?.second ?: code
+
 /** Cycles the shared chart1-6 palette for an arbitrary number of donut/legend segments — C1's
  * sector breakdown can exceed six sectors, so colors repeat rather than run out. */
 fun chartColorForIndex(

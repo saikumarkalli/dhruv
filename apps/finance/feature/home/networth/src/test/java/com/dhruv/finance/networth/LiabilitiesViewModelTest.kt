@@ -1,0 +1,214 @@
+package com.dhruv.finance.networth
+
+import com.dhruv.core.observability.NoOpCrashReporter
+import com.dhruv.core.observability.NoOpPerformanceTracer
+import com.dhruv.finance.data.tracker.model.CreateHoldingRequest
+import com.dhruv.finance.data.tracker.model.CreateLiabilityMetaRequest
+import com.dhruv.finance.data.tracker.model.Holding
+import com.dhruv.finance.data.tracker.model.HoldingKind
+import com.dhruv.finance.data.tracker.model.HoldingWithValue
+import com.dhruv.finance.data.tracker.model.LiabilityMeta
+import com.dhruv.finance.data.tracker.model.LiabilityType
+import com.dhruv.finance.data.tracker.model.Sector
+import com.dhruv.finance.data.tracker.model.UpdateLiabilityMetaRequest
+import com.dhruv.finance.data.tracker.repo.HoldingRepository
+import com.dhruv.finance.data.tracker.repo.LiabilityRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
+
+private class FakeLiabilitiesHoldingRepository(
+    private val listResult: Result<List<HoldingWithValue>> = Result.success(emptyList()),
+) : HoldingRepository {
+    override suspend fun createWithFirstValuation(request: CreateHoldingRequest): Result<String> =
+        throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> = listResult
+
+    override suspend fun get(holdingId: String): Result<Holding> = throw UnsupportedOperationException("not exercised by this test")
+}
+
+private class FakeLiabilitiesLiabilityRepository(
+    private val listAllResult: Result<List<LiabilityMeta>> = Result.success(emptyList()),
+) : LiabilityRepository {
+    override suspend fun createMeta(request: CreateLiabilityMetaRequest): Result<Unit> =
+        throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun listAll(): Result<List<LiabilityMeta>> = listAllResult
+
+    override suspend fun get(holdingId: String): Result<LiabilityMeta> = throw UnsupportedOperationException("not exercised by this test")
+
+    override suspend fun updateMeta(
+        holdingId: String,
+        request: UpdateLiabilityMetaRequest,
+    ): Result<Unit> = throw UnsupportedOperationException("not exercised by this test")
+}
+
+private fun liabilityHolding(
+    id: String,
+    name: String,
+    valuePaise: Long,
+) = HoldingWithValue(
+    holding = Holding(id, name, HoldingKind.LIABILITY, Sector.OTHER, null, null),
+    currentValuePaise = valuePaise,
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class LiabilitiesViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    // spec.md Story 4 Scenario 1: grouped by type, with outstanding/outgo totals and a projected
+    // debt-free date.
+    @Test
+    fun `load merges holdings with their liability terms and groups by type`() =
+        runTest(dispatcher) {
+            val holdings =
+                listOf(
+                    liabilityHolding("h1", "Home Loan", 47_50_000_00L),
+                    liabilityHolding("h2", "Credit Card", 25_000_00L),
+                )
+            val metas =
+                listOf(
+                    LiabilityMeta(
+                        holdingId = "h1",
+                        liabilityType = LiabilityType.HOME_LOAN,
+                        rateBps = 850,
+                        emiPaise = 45_000_00L,
+                        debitDay = 5,
+                        tenureMonths = 240,
+                        paidMonths = 24,
+                        originalPrincipalPaise = 50_00_000_00L,
+                        collateral = null,
+                        linkedAccountId = null,
+                    ),
+                    LiabilityMeta(
+                        holdingId = "h2",
+                        liabilityType = LiabilityType.CREDIT_CARD,
+                        rateBps = 3600,
+                        emiPaise = null,
+                        debitDay = 10,
+                        tenureMonths = null,
+                        paidMonths = 0,
+                        originalPrincipalPaise = null,
+                        collateral = null,
+                        linkedAccountId = null,
+                    ),
+                )
+            val vm =
+                LiabilitiesViewModel(
+                    holdingRepository = FakeLiabilitiesHoldingRepository(Result.success(holdings)),
+                    liabilityRepository = FakeLiabilitiesLiabilityRepository(Result.success(metas)),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(2, state.rows.size)
+            val grouped = vm.groupedByType(state)
+            assertEquals(1, grouped[LiabilityType.HOME_LOAN]?.size)
+            assertEquals(1, grouped[LiabilityType.CREDIT_CARD]?.size)
+            assertEquals(47_75_000_00L, vm.totalOutstandingPaise(state))
+            assertEquals(45_000_00L, vm.monthlyOutgoPaise(state))
+        }
+
+    @Test
+    fun `payoffProgress is the paid-months fraction of tenure, null without a known tenure`() =
+        runTest(dispatcher) {
+            val withTenure =
+                LiabilityRow(
+                    holdingWithValue = liabilityHolding("h1", "Home Loan", 47_50_000_00L),
+                    meta =
+                        LiabilityMeta(
+                            holdingId = "h1",
+                            liabilityType = LiabilityType.HOME_LOAN,
+                            rateBps = 850,
+                            emiPaise = 45_000_00L,
+                            debitDay = 5,
+                            tenureMonths = 240,
+                            paidMonths = 60,
+                            originalPrincipalPaise = 50_00_000_00L,
+                            collateral = null,
+                            linkedAccountId = null,
+                        ),
+                )
+            val withoutTenure =
+                LiabilityRow(
+                    holdingWithValue = liabilityHolding("h2", "Credit Card", 25_000_00L),
+                    meta =
+                        LiabilityMeta(
+                            holdingId = "h2",
+                            liabilityType = LiabilityType.CREDIT_CARD,
+                            rateBps = 3600,
+                            emiPaise = null,
+                            debitDay = 10,
+                            tenureMonths = null,
+                            paidMonths = 0,
+                            originalPrincipalPaise = null,
+                            collateral = null,
+                            linkedAccountId = null,
+                        ),
+                )
+            val vm =
+                LiabilitiesViewModel(
+                    holdingRepository = FakeLiabilitiesHoldingRepository(),
+                    liabilityRepository = FakeLiabilitiesLiabilityRepository(),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+            advanceUntilIdle()
+
+            assertEquals(0.25f, vm.payoffProgress(withTenure))
+            assertNull(vm.payoffProgress(withoutTenure))
+        }
+
+    @Test
+    fun `debtFreeBy is null when no row has enough terms to project`() =
+        runTest(dispatcher) {
+            val holdings = listOf(liabilityHolding("h1", "Credit Card", 25_000_00L))
+            val metas =
+                listOf(
+                    LiabilityMeta(
+                        holdingId = "h1",
+                        liabilityType = LiabilityType.CREDIT_CARD,
+                        rateBps = 3600,
+                        emiPaise = null,
+                        debitDay = 10,
+                        tenureMonths = null,
+                        paidMonths = 0,
+                        originalPrincipalPaise = null,
+                        collateral = null,
+                        linkedAccountId = null,
+                    ),
+                )
+            val vm =
+                LiabilitiesViewModel(
+                    holdingRepository = FakeLiabilitiesHoldingRepository(Result.success(holdings)),
+                    liabilityRepository = FakeLiabilitiesLiabilityRepository(Result.success(metas)),
+                    crashReporter = NoOpCrashReporter,
+                    performanceTracer = NoOpPerformanceTracer,
+                )
+            advanceUntilIdle()
+
+            assertNull(vm.debtFreeBy(vm.uiState.value))
+        }
+}

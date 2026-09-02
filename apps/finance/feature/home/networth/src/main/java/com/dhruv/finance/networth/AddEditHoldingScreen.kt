@@ -49,6 +49,7 @@ fun AddEditHoldingScreen(
     val colors = LocalDhruvNextColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var sheetOpen by remember { mutableStateOf(false) }
+    var liabilityTypeSheetOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.savedHoldingId) {
         uiState.savedHoldingId?.let(onSaved)
@@ -102,6 +103,45 @@ fun AddEditHoldingScreen(
                 color = colors.tx3,
                 fontSize = DhruvNextType.meta,
             )
+
+            if (uiState.kind == HoldingKind.LIABILITY) {
+                NxSelect(
+                    value = uiState.liabilityTypeCode?.let { liabilityTypeLabel(it) },
+                    onClick = { liabilityTypeSheetOpen = true },
+                    label = "Liability type",
+                    placeholder = "Choose a type",
+                    errorMessage = uiState.liabilityTypeError,
+                )
+                NxTextField(
+                    value = uiState.rateText,
+                    onValueChange = viewModel::onRateChange,
+                    label = "Interest rate",
+                    placeholder = "e.g. 8.5",
+                    suffix = "% p.a.",
+                    errorMessage = uiState.rateError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                NxTextField(
+                    value = uiState.emiText,
+                    onValueChange = viewModel::onEmiChange,
+                    label = "Monthly payment (optional)",
+                    prefix = "₹",
+                    placeholder = "0",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                NxTextField(
+                    value = uiState.tenureMonthsText,
+                    onValueChange = viewModel::onTenureMonthsChange,
+                    label = "Tenure in months (optional)",
+                    placeholder = "e.g. 240",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+
+            uiState.liabilityMetaError?.let { message ->
+                Text(text = message, color = colors.warn, fontSize = DhruvNextType.meta)
+            }
+
             NxButton(
                 text = "Save",
                 onClick = viewModel::save,
@@ -121,6 +161,19 @@ fun AddEditHoldingScreen(
                 sheetOpen = false
             },
             onDismissRequest = { sheetOpen = false },
+        )
+    }
+
+    if (liabilityTypeSheetOpen) {
+        SelectionSheet(
+            title = "Choose a liability type",
+            options = LiabilityTypeLabels.map { (code, label) -> SelectionOption(id = code, label = label) },
+            selectedId = uiState.liabilityTypeCode,
+            onSelect = { option ->
+                viewModel.onLiabilityTypeChange(option.id)
+                liabilityTypeSheetOpen = false
+            },
+            onDismissRequest = { liabilityTypeSheetOpen = false },
         )
     }
 }
