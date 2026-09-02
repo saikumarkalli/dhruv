@@ -68,10 +68,12 @@ Article II — SA schema + QA catalog rows, in that order, before Backend/Androi
       authenticated connection (`supabase login`/`SUPABASE_ACCESS_TOKEN`), unavailable in this
       unauthenticated session (same class of gap ADR-0032's runbook already names). Remains open;
       run `supabase gen types typescript --linked --schema public,finance` once credentialed
-- [ ] T005 [P] [Sec] RLS policy test for `liabilities_meta` and both new views against the dev
-      Supabase project — verifies no cross-user leakage, no client UPDATE/DELETE path exists where
-      the schema says there shouldn't be one. **Blocked**: needs a live, authenticated Supabase
-      connection, unavailable in this session (same gap as T004b)
+- [X] T005 [P] [Sec] **Superseded by Phase 11's T081 (2026-09-03), closing the loop rather than
+      leaving this checkbox stale.** Same ask (RLS on the new views, no client UPDATE/DELETE path)
+      and same blocker (no live authenticated Supabase connection) as originally written here — the
+      actual script satisfying it is `supabase/verification/phase2_rls_views.sql`, authored in
+      Phase 11 with a wider scope than this task named (all three tracker views, not just
+      `liabilities_meta`'s two). Not run, for the same credential reason T004b/T081 both cite
 - [X] T006 [P] **DONE (2026-09-01).** Build component batch B3 (charts) — `DonutChart` + `RankedLegend`
       (`DonutChart.kt`), `PieChart` (`PieChart.kt`), `AmortisationDonut` (`AmortisationDonut.kt`),
       `PaceRing` (`PaceRing.kt`), all in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/` —
