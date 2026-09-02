@@ -2,6 +2,7 @@ package com.dhruv.finance.data.tracker.repo
 
 import com.dhruv.finance.data.tracker.mapper.toDomain
 import com.dhruv.finance.data.tracker.model.HoldingKind
+import com.dhruv.finance.data.tracker.model.NetWorthHistoryPoint
 import com.dhruv.finance.data.tracker.model.NetWorthSummary
 import com.dhruv.finance.data.tracker.net.SupabaseClientFactory
 import kotlinx.coroutines.CancellationException
@@ -13,6 +14,11 @@ import kotlinx.coroutines.CancellationException
  */
 interface NetWorthRepository {
     suspend fun getSummary(): Result<NetWorthSummary>
+
+    /** Oldest-first, trailing 24 month-ends (`finance.v_net_worth_history`, FR-010) — Home's hero
+     * delta compares the newest point against the one ~30 days prior (data-model.md), which at this
+     * view's month-end granularity is simply the second-to-last point. */
+    suspend fun getHistory(): Result<List<NetWorthHistoryPoint>>
 }
 
 class NetWorthRepositoryImpl(
@@ -36,6 +42,16 @@ class NetWorthRepositoryImpl(
                     bySector = bySector,
                 ),
             )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun getHistory(): Result<List<NetWorthHistoryPoint>> =
+        try {
+            Result.success(netWorthApi.getNetWorthHistory().map { it.toDomain() })
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

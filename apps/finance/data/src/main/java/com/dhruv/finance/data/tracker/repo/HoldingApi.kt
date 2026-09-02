@@ -5,6 +5,7 @@ import com.dhruv.finance.data.tracker.dto.CreateHoldingWithValueRequestDto
 import com.dhruv.finance.data.tracker.dto.HoldingDto
 import com.dhruv.finance.data.tracker.dto.LatestValuationRowDto
 import com.dhruv.finance.data.tracker.dto.NetWorthBySectorRowDto
+import com.dhruv.finance.data.tracker.dto.NetWorthHistoryRowDto
 import com.dhruv.finance.data.tracker.dto.RecordValuationRequestDto
 import com.dhruv.finance.data.tracker.dto.ValuationDto
 import retrofit2.http.Body
@@ -75,8 +76,17 @@ interface ValuationApi {
     ): String
 }
 
-/** Read-only access to `finance.v_net_worth_by_sector` (BR-C4). */
+/** Read-only access to `finance.v_net_worth_by_sector` (BR-C4) and `finance.v_net_worth_history`
+ * (FR-010's Home hero delta/sparkline). */
 interface NetWorthApi {
     @GET("v_net_worth_by_sector")
     suspend fun getNetWorthBySector(): List<NetWorthBySectorRowDto>
+
+    /** The view has no guaranteed row order of its own; `as_of.asc` makes the trailing-24-month-end
+     * series oldest-first, matching [com.dhruv.finance.data.tracker.model.NetWorthHistoryPoint]'s
+     * own doc. */
+    @GET("v_net_worth_history")
+    suspend fun getNetWorthHistory(
+        @Query("order") order: String = "as_of.asc",
+    ): List<NetWorthHistoryRowDto>
 }

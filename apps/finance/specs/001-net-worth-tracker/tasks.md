@@ -376,23 +376,83 @@ confirm all three render without navigation.
 
 ### Tests for User Story 5
 
-- [ ] T033 [P] [US5] `HomeViewModel` test — hero figure matches C1's total, UPCOMING is EMI-only
+- [X] T033 [P] [US5] `HomeViewModel` test — hero figure matches C1's total, UPCOMING is EMI-only
       this phase (implementation plan's Phase 2 scoped-dependency note — card-bill rows wait for
       Phase 3's `accounts` table), citing HOM-UI-001/HOM-UI-003, in
       `apps/finance/app/src/test/java/com/dhruv/finance/app/ui/home/HomeViewModelTest.kt`
-- [ ] T034 [P] [US5] Ask-pill visibility test — renders on Home, not on Calc/Money, citing
+      **DONE (2026-09-02).** Also covers the pure helpers `deltaBps`, `nextDueDate`, and
+      `greetingForHour` directly (same "test the pure function, not just the ViewModel wrapper"
+      practice as Phase 6's `AmortisationMathTest.kt`).
+- [X] T034 [P] [US5] Ask-pill visibility test — renders on Home, not on Calc/Money, citing
       HOM-UI-004, same file as T033
+      **DONE (2026-09-02).** The rule itself (`tab == HOME || tab == PLAN || tab == INSIGHTS`) is a
+      new pure function, `shouldShowAskPill(tab: TabKey)`, extracted into `HomeViewModel.kt` — it
+      was previously an inline `tabs[pagerState.currentPage] != TabKey.CALC` condition in
+      `MainActivity.kt`, which is not independently testable and (per the QA catalog's fuller
+      wording, "Home/Plan/Insights… not on Calc/Money") was also **wrong**: it left the Ask pill
+      showing on the Money tab too. Fixed as part of extracting the testable function, not a
+      separate follow-up.
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Rewrite `HomeViewModel` (shell-owned, not `:feature:networth` — module-standard
+- [X] T035 [US5] Rewrite `HomeViewModel` (shell-owned, not `:feature:networth` — module-standard
       doc's HOM/PLN correction) in `apps/finance/app/src/main/java/com/dhruv/finance/app/ui/home/HomeViewModel.kt`
-- [ ] T036 [US5] Replace the placeholder `DashboardScreen` with the real Home (01) — greeting, date
+      **DONE (2026-09-02).** Extends plain `ViewModel()` + `crashReporter.setModule("home")`, matching
+      `SettingsViewModel`'s shell-owned convention — **not** `FeatureViewModel` (Home has no feature
+      flag to gate on, so `featureError`/`FeatureHost` don't apply here, same reasoning already
+      applied to Settings). Reads `NetWorthRepository.getHistory()` (new — see below) for the hero
+      figure/delta/sparkline, and merges `HoldingRepository.list(LIABILITY)` +
+      `LiabilityRepository.listAll()` for UPCOMING, same client-side merge shape
+      `LiabilitiesViewModel` already uses. `SessionState`/`ConsentState` gating mirrors
+      `NetWorthOverviewViewModel`'s existing pattern exactly.
+      **Scope addition:** `finance.v_net_worth_history` (added by the 2026-08-23 readiness
+      decisions, already living in the schema) had no Kotlin consumer anywhere in the repo — this
+      phase adds `NetWorthHistoryRowDto`, `NetWorthHistoryPoint`, `NetWorthApi.getNetWorthHistory()`,
+      and `NetWorthRepository.getHistory()`, mirroring the existing `HoldingApi`/`ValuationApi`
+      structure exactly. The hero delta compares the newest point against the second-to-last
+      (data-model.md's "~30 days prior", which at this view's month-end granularity is simply the
+      prior point) — see `NetWorthAggregationTest.kt`'s new cases and `deltaBps()`'s own doc.
+- [X] T036 [US5] Replace the placeholder `DashboardScreen` with the real Home (01) — greeting, date
       line, net-worth hero (value + ▲/▼% + sparkline), 4 quick actions (Loan EMI/SIP/Currency/GST)
       via `NavTarget`, UPCOMING (EMI-only, sourced from `liabilities_meta.debit_day`), Ask pill,
       citing HOM-UI-001/002/003/004, in `apps/finance/app/src/main/java/com/dhruv/finance/app/ui/home/HomeScreen.kt`
-- [ ] T037 [US5] Add `SignedOutCard`/`OfflineStateCard` to Home in place of the hero card, citing
+      **DONE (2026-09-02).** `DashboardScreen.kt` (and its now-empty `ui/dashboard/` package)
+      deleted; `MainActivity.kt`'s `TabKey.HOME` case now renders `HomeScreen`.
+      **Deviation, resolving a gap the 2026-08-22 spec-phase gap register already flagged
+      ("Home → Currency quick action"):** this task and QA row HOM-UI-002 both say all four quick
+      actions go "via `NavTarget`", but `NavTarget.kt`'s own doc comment deliberately excludes
+      Currency (a shell-level detail route, not tab-scoped) — no spec ever added a case or an
+      alternative. Resolved by routing Loan EMI/SIP/GST through `NavigationDispatcher` +
+      `NavTarget.OpenPlanTool` (genuinely cross-tab, into Plan), and Currency through the **existing**
+      `onOpenDetail(DetailRoute.Currency)` shell mechanism `CalcTab` already uses for the same
+      screen — not a new mechanism, just applying the one that already exists for exactly this class
+      of route.
+      **Deviation:** `NxHomeTopBar` (`:libs:core`, built but never consumed anywhere) was
+      deliberately NOT wired in as this tab's top bar. It has no app-switcher icon, and swapping it
+      in for `MainActivity`'s shared `TopAppBar` on the Home tab would silently drop N5's
+      "app-switcher reachable from every tab's top bar" guarantee. The greeting/date line render as
+      an in-content header inside `HomeScreen` instead, under the shared top bar every tab already
+      has. `NxHomeTopBar` remains unconsumed — tracked as a design-system follow-up (add an
+      app-switcher slot, or accept a per-tab override with N5 satisfied another way), not fixed here.
+      Sparkline reuses the existing `TrendSparkline` component (an existing, already-accepted gap:
+      §5.2's own audit notes the design wants **area** charts on 01/C2/C3 and the library has none —
+      same choice `HoldingDetailScreen` already made for C3).
+- [X] T037 [US5] Add `SignedOutCard`/`OfflineStateCard` to Home in place of the hero card, citing
       HOM-FLOW-001
+      **DONE (2026-09-02).** Signed-out and consent-off gating mirror `NetWorthOverviewScreen`
+      exactly, but wired for real here (`onAction = { onOpenDetail(DetailRoute.Settings) }`) rather
+      than that screen's `{}` stub — Home lives in `:apps:finance:app` and already has `onOpenDetail`
+      in scope, so there was no cross-module reason to leave it a no-op.
+      **Known gap, same limitation `NetWorthOverviewScreen` already has:** there is no real
+      connectivity monitor anywhere in this codebase. "Offline" is modelled as "the history load
+      failed and there's no cached net worth to show" (`OfflineStateCard` shown on that failure),
+      not a genuine network-state check — not fixed here, not this phase's scope.
+
+**Checkpoint**: All five stories independently functional — Phase 2 feature-complete. **Known gaps
+carried forward:** nothing in this phase has made a real Supabase call (no live credentials in this
+session) — verified against fakes only, same as every prior phase. `v_net_worth_history`'s 24-point
+window and the 30-day delta window are both server-side and untested against live data for the same
+reason.
 
 **Checkpoint**: All five stories independently functional — Phase 2 feature-complete.
 

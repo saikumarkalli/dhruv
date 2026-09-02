@@ -32,6 +32,9 @@ private class FakeNetWorthRepository(
     private val result: Result<NetWorthSummary>,
 ) : NetWorthRepository {
     override suspend fun getSummary(): Result<NetWorthSummary> = result
+
+    override suspend fun getHistory(): Result<List<com.dhruv.finance.data.tracker.model.NetWorthHistoryPoint>> =
+        throw UnsupportedOperationException("not exercised by this test")
 }
 
 private class FakeSessionStore : SessionStore {

@@ -46,6 +46,16 @@ data class NetWorthBySectorRowDto(
     @param:Json(name = "value_paise") val valuePaise: Long,
 )
 
+/** Wire shape of a `finance.v_net_worth_history` row (data-model.md) — one of the trailing 24
+ * month-end points behind Home's hero delta/sparkline (FR-010). */
+@JsonClass(generateAdapter = true)
+data class NetWorthHistoryRowDto(
+    @param:Json(name = "as_of") val asOf: String,
+    @param:Json(name = "assets_paise") val assetsPaise: Long,
+    @param:Json(name = "liabilities_paise") val liabilitiesPaise: Long,
+    @param:Json(name = "net_paise") val netPaise: Long,
+)
+
 /** Wire shape of a full `finance.valuations` row (C3's history list — every column, unlike
  * [LatestValuationRowDto]'s two-column projection off the latest-only view). */
 @JsonClass(generateAdapter = true)

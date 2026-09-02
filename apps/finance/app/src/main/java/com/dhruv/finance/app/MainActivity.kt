@@ -70,7 +70,8 @@ import com.dhruv.core.ui.components.NotConfiguredCard
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import com.dhruv.core.navigation.NavigationDispatcher
-import com.dhruv.finance.app.ui.dashboard.DashboardScreen
+import com.dhruv.finance.app.ui.home.HomeScreen
+import com.dhruv.finance.app.ui.home.shouldShowAskPill
 import com.dhruv.finance.app.ui.onboarding.OnboardingHost
 import com.dhruv.finance.app.ui.plan.PlanLauncher
 import com.dhruv.finance.app.ui.settings.AppLockGate
@@ -507,7 +508,7 @@ private fun TabsScaffold(
                     modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
                 ) { page ->
                     when (tabs[page]) {
-                        TabKey.HOME -> DashboardScreen()
+                        TabKey.HOME -> HomeScreen(viewModel = koinViewModel(), onOpenDetail = onOpenDetail)
                         TabKey.MONEY ->
                             NotConfiguredCard(
                                 message = "Money lands once the ledger ships",
@@ -536,7 +537,7 @@ private fun TabsScaffold(
                     }
                 }
 
-                if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
+                if (shouldShowAskPill(tabs[pagerState.currentPage]) && resolver.isEnabled("assistant")) {
                     AskPill(
                         onClick = { onOpenDetail(DetailRoute.Ask) },
                         modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),

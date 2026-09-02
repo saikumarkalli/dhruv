@@ -2,9 +2,11 @@ package com.dhruv.finance.data.tracker.mapper
 
 import com.dhruv.finance.data.tracker.dto.HoldingDto
 import com.dhruv.finance.data.tracker.dto.NetWorthBySectorRowDto
+import com.dhruv.finance.data.tracker.dto.NetWorthHistoryRowDto
 import com.dhruv.finance.data.tracker.dto.ValuationDto
 import com.dhruv.finance.data.tracker.model.Holding
 import com.dhruv.finance.data.tracker.model.HoldingKind
+import com.dhruv.finance.data.tracker.model.NetWorthHistoryPoint
 import com.dhruv.finance.data.tracker.model.Sector
 import com.dhruv.finance.data.tracker.model.SectorBreakdown
 import com.dhruv.finance.data.tracker.model.Valuation
@@ -27,6 +29,8 @@ fun NetWorthBySectorRowDto.toDomain(): SectorBreakdown =
         holdingCount = holdingCount,
         valuePaise = valuePaise,
     )
+
+fun NetWorthHistoryRowDto.toDomain(): NetWorthHistoryPoint = NetWorthHistoryPoint(asOf = asOf, netPaise = netPaise)
 
 fun ValuationDto.toDomain(): Valuation =
     Valuation(

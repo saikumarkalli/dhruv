@@ -19,3 +19,11 @@ data class NetWorthSummary(
     val liabilitiesPaise: Long,
     val bySector: List<SectorBreakdown>,
 )
+
+/** One month-end point from `finance.v_net_worth_history` (FR-010) — oldest-first is the caller's
+ * responsibility (the view itself has no guaranteed row order); see
+ * [com.dhruv.finance.data.tracker.repo.NetWorthRepository.getHistory]. */
+data class NetWorthHistoryPoint(
+    val asOf: String,
+    val netPaise: Long,
+)
