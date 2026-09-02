@@ -1085,20 +1085,27 @@ run, and one CI guard cannot currently pass for a structural reason. These tasks
 Per the tracking rule in `apps/finance/CLAUDE.md`. All three move together; a phase is not done
 until they do.
 
-- [ ] T085 [P] Move **`networth`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of
-      the "Planned" table into the shipped Modules table — `Status: enabled`, flag `networth`
-      (`requiresConsent: true`), owner tab Home
-- [ ] T086 [P] Rewrite **`apps/finance/feature/home/networth/README.md`** — drop the
-      "(not yet created)" heading and the "does not exist yet" preamble, and write the real screens
-      (C1–C7), ViewModels, repositories consumed, the two RPCs this phase introduced, and the flag
-      key. Detail belongs here and **not** back in FEATURES.md
-- [ ] T087 [P] Add the **root [`CHANGELOG.md`](../../../../CHANGELOG.md)** entry under the
-      `finance-*` heading CI injects. This phase's notable items: the net-worth tracker itself, the
-      `finance.correct_valuation()` and `finance.create_holding_with_value()` RPCs, the
-      `v_net_worth_history` view, `invested_paise`, the frozen `sector`/`source` enums, and —
-      because they are behaviour changes a reader would otherwise be surprised by —
-      `security_invoker` on every view and the new no-future-date constraint on `valuations.as_of`
-- [ ] T088 [P] Update the **spec-kit tracking table** in
-      `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §7:
-      Phase 2's status moves to *shipped*, and its "NOT ready for `/speckit-implement`" note is
-      removed once T045–T047 and T078–T084 are closed
+- [X] T085 [P] **DONE (2026-09-03).** Moved `networth`'s row from the "Planned" table into the
+      shipped Modules table in `apps/finance/FEATURES.md` — `enabled, requiresConsent: true`, owner
+      tab Home, linking C1–C7's spec
+- [X] T086 [P] **DONE (2026-09-03) — found already partly written, brought current.** The
+      "not yet created" preamble this task describes was already gone (written in an earlier phase,
+      undated in tasks.md) — the real gap was staleness, not absence: "Known gaps" still listed the
+      C2/C6 gating issue Phase 9 fixed, and said nothing about soft-delete/undo, the
+      `SettingsContribution`, or either RPC. Updated screens (C4's edit mode, C3's delete/undo),
+      added a Settings section, documented both RPCs under Data dependencies, and rewrote Known
+      gaps to the current state: no edit-liability screen, and the migration/verification scripts
+      still unexecuted (Phase 11)
+- [X] T087 [P] **DONE (2026-09-03).** Added the full `CHANGELOG.md` entry this task describes —
+      found while doing so that Phases 3–11 had shipped with **zero** prior entries (only Phase 1's
+      spec-kit-artifacts line existed), so this entry covers the whole feature's shipped scope, not
+      just one phase's delta: C1–C7 + Home, both RPCs (and why they're RPCs, not plain inserts),
+      `security_invoker` on every view, the `as_of` future-date CHECK, `invested_paise`, the frozen
+      enums, the new `checkDesignTokenUsage` gate, and the two known gaps (edit-liability, DB
+      execution)
+- [X] T088 [P] **DONE (2026-09-03).** Phase 2's row in the design-v1 implementation plan §7 already
+      said "shipped" (dated 2026-09-02, reflecting only the Phase 8 checkpoint) — rewritten to
+      account for Phases 9–12 rather than just updating a status word. Also resolved the two stale
+      "blocking" framings in that section's own lead-in: T045–T047 were described as still blocking
+      003/005 (closed in Phase 9) and the DB-readiness paragraph described only T078–T080 (T081–T084
+      now folded in, with the credential blocker re-confirmed rather than assumed carried-over)

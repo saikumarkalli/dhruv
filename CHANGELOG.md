@@ -58,16 +58,39 @@ See [`platform/VERSIONING.md`](platform/VERSIONING.md).
   4/5-tab shell — zero consumers remained anywhere in the app). The merged JVM test-coverage floor
   was raised from 9% to 14% to match measured coverage (`:libs:settings` 38%, `:libs:core` 15%).
 
-- Net-worth tracker (`apps/finance/specs/001-net-worth-tracker/`), Phase 11 (DB readiness): a new
-  `checkDesignTokenUsage` Gradle gate (Phase 10) catching raw `MaterialTheme.colorScheme`/`.typography`/
-  hex-color bypasses under `apps/finance/feature/**`, wired into `regressionCheck`. Manual SQL
-  verification scripts for RLS-on-views and both tracker RPCs (`supabase/verification/`), authored
-  but not yet run — no live Supabase credentials in the authoring session; see that directory's
-  `README.md` and the spec's `data-model.md` § "DB readiness" for the exact unblock steps.
-  **Known gap noted while adding this**: Phases 3–10 of this feature shipped substantial real work
-  (the C1–C7 screens, soft-delete/undo, settings contribution, accessibility, strings.xml
-  extraction) with no CHANGELOG entry at all — tracked in the spec's own Implementation record as a
-  named gap (Phase 10, T076), not backfilled here to keep this entry to what Phase 11 actually did.
+- **Net-worth tracker** (`:apps:finance:feature:networth`, design-v1 Phase 2 —
+  [001-net-worth-tracker](apps/finance/specs/001-net-worth-tracker/)): Home's net-worth overview
+  (C1, donut + ranked-by-sector legend), assets (C2) and liabilities (C6) lists, holding detail
+  (C3, value-history trend + simple return), add/edit holding (C4) and add/correct-value (C5)
+  forms, and liability detail (C7, amortisation split + prepay-savings projection). Soft-delete +
+  5-second undo for holdings; a Settings entry stating the frozen sector/liability-type counts.
+  Behind the `networth` flag (`requiresConsent: true`, already provisioned in Phase 1).
+  - **Two security-definer RPCs**, not plain PostgREST inserts, because the operations they replace
+    aren't safely expressible as one: `finance.create_holding_with_value()` writes a holding and
+    its first valuation in one transaction (no orphan holding on a failed second insert) and
+    replays idempotently on `request_id`; `finance.correct_valuation()` is the *only* way a
+    valuation is ever amended — it soft-deletes the wrong row and appends the corrected one
+    (`source = 'CORRECTION'`) in one transaction, because `finance.valuations` carries no UPDATE
+    policy or grant at all. This is a genuine behaviour surprise for anyone assuming client-side
+    UPDATEs work against this table: they don't, by design, and never will.
+  - `finance.valuations.as_of` gained a `CHECK (as_of <= current_date)` — a future-dated valuation
+    is rejected server-side, not just left unvalidated.
+  - Every view PostgREST exposes over this schema (`v_latest_valuation`, `v_net_worth_by_sector`,
+    and the new `v_net_worth_history` trend view) carries `security_invoker = on` — without it, a
+    Postgres 15+ view runs as its owner and bypasses RLS, silently returning every user's rows to
+    every signed-in caller. Also worth knowing: `holdings.invested_paise` (nullable cost basis,
+    funds C3's "Simple return", explicitly not XIRR) and the frozen `sector`/`liability_type`/
+    `source` enums are DB `CHECK` constraints, not client-side validation — adding a new value to
+    any of them is a migration, by design (BR-C3).
+  - New Gradle verification gate `checkDesignTokenUsage`: fails on raw
+    `MaterialTheme.colorScheme`/`.typography` or a hex `Color(0x...)` literal anywhere under
+    `apps/finance/feature/**`, wired into `regressionCheck`.
+  - **Known gaps, not fixed in this feature's own scope**: no edit-liability screen
+    (`LiabilityRepository.updateMeta()` exists and is tested, nothing in the UI calls it yet); the
+    schema migration and the RLS/RPC verification scripts authored for it
+    (`supabase/verification/`) have never run against a live Supabase project — no credentials in
+    any authoring session so far. See `apps/finance/specs/001-net-worth-tracker/data-model.md`
+    § "DB readiness" for the exact unblock steps.
 
 ### Fixed
 - The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no

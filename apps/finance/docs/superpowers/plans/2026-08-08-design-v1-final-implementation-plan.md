@@ -304,7 +304,9 @@ creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`
 >    fails), and the missing ADR-0033 grants. Fixed in 001 T001/T004/T004a/T004b.
 >
 > Three Phase 2 product decisions (001 T045–T047 — cost basis, net-worth history source,
-> `liabilities_meta`'s schema) block work in 001, 003 and 005 and are the correct next action.
+> `liabilities_meta`'s schema) blocked work in 001, 003 and 005. **Resolved (2026-09-01, 001
+> Phase 9)** — all three landed in `data-model.md`; 003/005 may read the final shapes rather than
+> treating them as pending.
 > Cross-cutting items with no owner anywhere — **undo** (binding in DESIGN-SYSTEM §8, specified in
 > zero phases), **Trash**, **Profile**, **Custom fields**, the **credit-card screens**, **`NxTabs`**,
 > the **Glance widget** and three registry intents — are enumerated in the register's §1 and §4f.
@@ -322,18 +324,26 @@ creating a new phase's spec-kit directory, not by scanning `apps/finance/specs/`
 > `correct_valuation()` and `create_holding_with_value()`, the first of which ADR-0029 decision 4
 > named and assigned to this phase two versions ago. Declarative files under
 > `supabase/schemas/finance/`, migration `20260823094500_networth_phase2.sql`.
-> **It has not been executed** — hand-authored because the Supabase CLI/Docker stack is not
-> installed (ADR-0033's own migration records the same), so its first run is its first verification
-> (001 T078). The CI equivalence guard was **structurally unable to pass** for any table extended in place;
-> `scripts/db/gen_schema_docs.py` now understands `ALTER TABLE … ADD COLUMN`/`ADD CONSTRAINT` and is
-> green (001 T079, done 2026-08-23), along with its Windows console crash (T080). Full state and the maintenance conventions
-> every later phase inherits: `../../../specs/001-net-worth-tracker/data-model.md` § "DB readiness".
+> **It has still not been executed** (re-confirmed 2026-09-03, 001 Phase 11, T078) — the CLI is now
+> installed and the project is linked, but there is no `SUPABASE_ACCESS_TOKEN`/`supabase login`
+> session and Docker is still absent, so neither `db push`/`diff --linked` nor a local `db reset`
+> can run from an authoring session; its first run remains its first live verification. What *was*
+> completed without execution: a line-by-line check of the migration against its own three named
+> risk items (`security_invoker` on all three views, the `as_of` future-date guard, both RPC
+> bodies) — all three confirmed correct by static review — and three ready-to-run manual SQL
+> verification scripts for RLS-on-views and both RPCs' ownership/idempotency behaviour
+> (`supabase/verification/`, 001 T081–T083), authored but equally blocked on the same missing
+> credentials. The CI equivalence guard was **structurally unable to pass** for any table extended
+> in place; `scripts/db/gen_schema_docs.py` now understands `ALTER TABLE … ADD COLUMN`/
+> `ADD CONSTRAINT` and is green (001 T079, done 2026-08-23), along with its Windows console crash
+> (T080). Full state and the maintenance conventions every later phase inherits:
+> `../../../specs/001-net-worth-tracker/data-model.md` § "DB readiness".
 
 | Phase | Spec-kit directory | Status |
 |---|---|---|
 | 0 — Shell foundation | — (shipped before spec-kit was installed; not retrofitted) | shipped |
 | 1 — Identity & consent | — (shipped before spec-kit was installed; not retrofitted) | shipped |
-| 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | **shipped (2026-09-02)** — all 8 phases (Setup, Foundational, US1–US5, Polish) implemented via `/speckit-implement`, `regressionCheck` green throughout. C1–C7 + Home (01) all built; `liabilities_meta` CRUD, `v_net_worth_history`-backed hero delta/sparkline, and the amortisation/prepay math all shipped with unit-test coverage. Phase 8's QA-closure pass found and fixed two real defects beyond the task list itself: `NetWorthFeatureRoot` (C1–C7) was never mounted anywhere reachable in the app until this pass (`DetailRoute.NetWorth` + a hoisted `netWorthNavController` fix it), and two screens' ViewModels never reloaded on returning to them (`NW-FLOW-001`/`NW-FLOW-002`, fixed via `LifecycleResumeEffect`). Catalog `NW-*`/`HOM-*` rows closed or explicitly deferred, §14 recounted. Known open items carried forward, not silently dropped: `NW-BR-007` (XIRR) stays blocked on its own ADR; C2/C6 don't gate on signed-out/offline state the way C1 does; no live Supabase verification this session (fakes only). Every other phase depends on this one |
+| 2 — Net worth + real Home | [`apps/finance/specs/001-net-worth-tracker/`](../../../specs/001-net-worth-tracker/) | **shipped, 12 phases closed (2026-09-03)** — the original 8 (Setup, Foundational, US1–US5, Polish) plus four gap-remediation rounds (9–12), `regressionCheck` green throughout. C1–C7 + Home (01) all built; `liabilities_meta` CRUD, `v_net_worth_history`-backed hero delta/sparkline, and the amortisation/prepay math all shipped with unit-test coverage. Phase 8's QA-closure pass fixed two real defects beyond the task list: `NetWorthFeatureRoot` (C1–C7) unreachable until `DetailRoute.NetWorth` + a hoisted `netWorthNavController`, and two ViewModels never reloading on return (`NW-FLOW-001`/`NW-FLOW-002`, fixed via `LifecycleResumeEffect`). Phase 9 closed a multi-agent spec audit: holding soft-delete + undo, C4 edit mode, cost-basis/notes capture, C2/C6 signed-out/consent gating (the gap this table previously carried as open), and this module's `SettingsContribution`. Phase 10 closed a UI/UX + requirements audit: full `strings.xml` extraction, chart `contentDescription`s, a new `checkDesignTokenUsage` Gradle gate, and several design-fidelity fixes (C3's header, C1's legend tag, Home's status line) — most of that audit's other findings (the two RPCs, field-rule CHECKs, post-write invalidation) turned out to already exist and only needed a citation, the same doc-drift pattern found repeatedly across this spec's history. Phase 11 closed DB readiness as far as it can go without live credentials: static confirmation the migration matches its own risk checklist, and three ready-to-run RLS/RPC verification scripts (`supabase/verification/`). Phase 12 (this row) closed FEATURES.md/README/CHANGELOG/this table. **Still open, not silently dropped**: `NW-BR-007` (XIRR) blocked on its own ADR; no edit-liability screen; the migration and the new verification scripts have never run against live `dhruv-dev` — no credentials in any authoring session yet, see `data-model.md` § "DB readiness". Every other phase depends on this one |
 | 3 — Money tab | [`apps/finance/specs/002-money-tab/`](../../../specs/002-money-tab/) | spec + plan + research + data-model + routes + quickstart + tasks (83, T001–T083) done, ready for `/speckit-implement` |
 | 4 — Plan live modules | [`apps/finance/specs/003-plan-live-modules/`](../../../specs/003-plan-live-modules/) | spec + plan + research + data-model + routes + quickstart + tasks (134, T001-T134) done (2026-08-19), ready for `/speckit-implement` |
 | 5 — Insights | [`apps/finance/specs/005-insights/`](../../../specs/005-insights/) | spec + requirements checklist done (2026-08-21); clarified 2026-08-22 (4 Q&A, checklist 24/24). Scope settled: one period model across the whole tab, balance sheet carries an overridable date, F5 ships the XIRR and tax-summary reports, monthly-summary alert stores its preference here and is **delivered** in Phase 6 (the 003 precedent). plan + research + data-model + 2 contracts + quickstart done 2026-08-22. **Split into 6 sub-phases 5a–5f** (foundation+F1 · cashflow · balance sheet · P&L · reports+export · gated "More" reports), each independently shippable and green on `regressionCheck`. tasks (175, T001–T175) done 2026-08-22. **Ready for `/speckit-implement` on 5a–5e (T001–T146); 5f (T147–T163) blocked** on an accepted decision record fixing the investment-returns calculation (functional spec open item §8.6) — research R8 lists what it must settle, and T147 is writing it. Also depends on Phases 2 and 3 shipping first. **Four corrections to this plan** to fold into §5.4/§6 on implementation: reporting is parameterised `finance` functions, not the `v_cashflow`/`v_pnl`/`v_balance_sheet` views §5.4 names (a view cannot take a period); as-at position derives from "latest valuation ≤ date"; net worth (holdings) and cashflow balances (accounts) are two different money universes and are not required to agree; tax relevance is a user-set `categories.tax_section` column |
