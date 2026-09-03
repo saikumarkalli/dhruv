@@ -170,6 +170,18 @@ already existing. The same push also tripped `branch-guard.yml` (see the note be
 cause, same commit. Re-run `apply-dev` after completing this step to confirm it's clean; it will
 keep failing on every `develop` push carrying a `supabase/**` change until then.
 
+**Re-confirmed 2026-09-03, still 0 secrets on both `dev` and `prod` Environments** — but
+`supabase migration list --linked` against `dhruv-dev` (run with a one-time personal access token,
+manually, outside CI) shows all three local migration files already applied remotely
+(`local == remote` for `0001`, `20260816211500`, `20260823094500`). **This means CI's `apply-dev`
+run history is not a reliable signal of actual DB state** — the migrations reached `dhruv-dev`
+through some out-of-band manual `db push` from an earlier session, not through this pipeline, and
+`apply-dev` has in fact never once succeeded end-to-end. Don't infer "not applied" from a red
+`apply-dev` run without independently checking `supabase migration list --linked` — and don't infer
+"this pipeline works" from the DB happening to be in the right state either. Completing this step
+(env secrets) is what makes future migrations reach `dhruv-dev`/`dhruv-prod` through the actual
+gated pipeline instead of by hand.
+
 Run **yourself**, in your own terminal (it prompts for real credentials — never paste secret
 values into a chat session, including this one):
 
@@ -208,14 +220,33 @@ every tracker request unconditionally (ADR-0033) — so until this step is done,
 fails with `406 Not Acceptable` ("The schema must be one of the following: public, graphql_public"),
 independent of whether the migration itself has been applied (step 1) or not.
 
-For **each** project (`dhruv-dev`, then `dhruv-prod` before it takes live traffic):
+**Status: `dhruv-dev` fixed 2026-09-03. `dhruv-prod` still pending** — do this before `dhruv-prod`
+takes any tracker traffic, i.e. before the first `develop → main` promotion that includes the
+tracker feature.
 
-1. Supabase Studio → the project → **Project Settings → Data API → Exposed schemas**.
-2. Add `finance` to the list, save.
+Two ways to do it, per project. Either the Studio dashboard (Project Settings → Data API → Exposed
+schemas → add `finance` → save), or the Management API directly — this is what was actually used
+to fix `dhruv-dev`, with a one-time personal access token (https://supabase.com/dashboard/account/tokens),
+revoked immediately after:
 
-No CLI equivalent exists for this today — it's a dashboard-only toggle. Do this *after* step 1's
-migration has actually applied (exposing an empty/nonexistent schema still leaves the underlying
-`relation does not exist` error on the actual query, just changes which error you see first).
+```powershell
+# read current value first — don't blind-overwrite, db_schema is a full replace not a merge
+curl -H "Authorization: Bearer $env:SUPABASE_ACCESS_TOKEN" `
+  "https://api.supabase.co/v1/projects/<project-ref>/postgrest"
+
+curl -X PATCH -H "Authorization: Bearer $env:SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" `
+  -d '{"db_schema":"public,graphql_public,finance"}' `
+  "https://api.supabase.co/v1/projects/<project-ref>/postgrest"
+```
+
+`<project-ref>` = `dsfnrtckgpnvyvscevxn` (dev, already done) / `ikyzgxnktlccjvjedgal` (prod,
+pending). `db_schema` is a full string replace, not additive — always read the current value first
+so an unrelated schema someone else added isn't dropped.
+
+Do this *after* the migration itself has actually applied (exposing a schema whose tables don't yet
+exist still leaves a `relation does not exist` error on the actual query — just a different error
+than 406). Verify with an unauthenticated probe: `406` means the schema still isn't exposed; `401`
+means the schema check passed and it's now failing at the (expected, unauthenticated) apikey check.
 
 ### 2. Supabase — baseline dhruv-prod
 
