@@ -38,7 +38,12 @@ class FinanceSchemaInterceptorTest {
     fun `a GET request carries Accept-Profile finance but not Content-Profile`() {
         server.enqueue(MockResponse().setResponseCode(200).setBody("[]"))
 
-        val request = Request.Builder().url(server.url("/v_net_worth_by_sector")).get().build()
+        val request =
+            Request
+                .Builder()
+                .url(server.url("/v_net_worth_by_sector"))
+                .get()
+                .build()
         client.newCall(request).execute().close()
 
         val recorded = server.takeRequest()
@@ -51,7 +56,12 @@ class FinanceSchemaInterceptorTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody("\"holding-id\""))
 
         val body = "{}".toRequestBody("application/json".toMediaType())
-        val request = Request.Builder().url(server.url("/rpc/create_holding_with_value")).post(body).build()
+        val request =
+            Request
+                .Builder()
+                .url(server.url("/rpc/create_holding_with_value"))
+                .post(body)
+                .build()
         client.newCall(request).execute().close()
 
         val recorded = server.takeRequest()

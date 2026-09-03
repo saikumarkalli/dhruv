@@ -151,7 +151,11 @@ private fun HoldingDetailContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
-    val currentValuePaise = uiState.history.firstOrNull()?.valuation?.valuePaise
+    val currentValuePaise =
+        uiState.history
+            .firstOrNull()
+            ?.valuation
+            ?.valuePaise
 
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(DhruvNextSpacing.screenGutter),
@@ -161,7 +165,11 @@ private fun HoldingDetailContent(
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 // Phase 10, T074: the design's C3 header names the sector and the last-valued date
                 // next to the hero figure — this card previously showed neither.
-                val lastValuedAsOf = uiState.history.firstOrNull()?.valuation?.asOf
+                val lastValuedAsOf =
+                    uiState.history
+                        .firstOrNull()
+                        ?.valuation
+                        ?.asOf
                 val lastValuedLabel = stringResource(R.string.c3_last_valued_format, lastValuedAsOf.orEmpty())
                 Text(
                     text =
@@ -212,11 +220,15 @@ private fun HoldingDetailContent(
                             listOf(
                                 StatItem(
                                     label = stringResource(R.string.c3_stat_invested),
-                                    value = com.dhruv.core.format.Paise.formatCompact(investedPaise),
+                                    value =
+                                        com.dhruv.core.format.Paise
+                                            .formatCompact(investedPaise),
                                 ),
                                 StatItem(
                                     label = stringResource(R.string.c3_stat_gain),
-                                    value = com.dhruv.core.format.Paise.formatCompact(gainPaise),
+                                    value =
+                                        com.dhruv.core.format.Paise
+                                            .formatCompact(gainPaise),
                                 ),
                                 StatItem(
                                     label = stringResource(R.string.c3_stat_return),
@@ -289,7 +301,10 @@ private fun HistoryRow(
                 fontSize = DhruvNextType.body,
             )
             Text(
-                text = entry.valuation.source.name.lowercase(Locale.US).replaceFirstChar { it.uppercase(Locale.US) },
+                text =
+                    entry.valuation.source.name
+                        .lowercase(Locale.US)
+                        .replaceFirstChar { it.uppercase(Locale.US) },
                 color = colors.tx3,
                 fontSize = DhruvNextType.meta,
             )

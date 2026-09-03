@@ -38,8 +38,7 @@ private class FakeAssetsHoldingRepository(
 
     override suspend fun list(kind: HoldingKind): Result<List<HoldingWithValue>> = listResult
 
-    override suspend fun get(holdingId: String): Result<Holding> =
-        throw UnsupportedOperationException("not exercised by this test")
+    override suspend fun get(holdingId: String): Result<Holding> = throw UnsupportedOperationException("not exercised by this test")
 
     override suspend fun update(
         holdingId: String,
@@ -108,7 +107,12 @@ class AssetsViewModelTest {
             val state = vm.uiState.value
             assertEquals(false, state.isLoading)
             assertEquals(1, state.holdings.size)
-            assertEquals("HDFC Savings", state.holdings.first().holding.name)
+            assertEquals(
+                "HDFC Savings",
+                state.holdings
+                    .first()
+                    .holding.name,
+            )
         }
 
     @Test

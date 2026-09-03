@@ -29,7 +29,6 @@ import com.dhruv.core.ui.components.MoneyTextVariant
 import com.dhruv.core.ui.components.NxCard
 import com.dhruv.core.ui.components.NxTopBar
 import com.dhruv.core.ui.components.OfflineStateCard
-import com.dhruv.core.ui.components.RetryErrorCard
 import com.dhruv.core.ui.components.SignedOutCard
 import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.theme.DhruvNextSpacing

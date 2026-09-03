@@ -30,7 +30,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.navigation.NavTarget
 import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.core.navigation.PlanTool
-import com.dhruv.finance.app.R
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
@@ -47,6 +46,7 @@ import com.dhruv.core.ui.components.TrendSparkline
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.app.R
 import com.dhruv.finance.app.ui.shell.DetailRoute
 import com.dhruv.finance.data.tracker.auth.SessionState
 import org.koin.compose.koinInject

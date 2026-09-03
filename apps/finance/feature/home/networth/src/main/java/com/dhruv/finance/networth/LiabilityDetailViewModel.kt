@@ -57,7 +57,13 @@ class LiabilityDetailViewModel(
             // A missing liabilities_meta row (metaResult failure) is not surfaced as
             // UiState.errorMessage — it is a designed non-blocking state, not a load failure.
             val meta = liabilityRepository.get(holdingId).getOrNull()
-            val outstanding = valuationRepository.listHistory(holdingId).getOrNull()?.firstOrNull()?.valuation?.valuePaise
+            val outstanding =
+                valuationRepository
+                    .listHistory(holdingId)
+                    .getOrNull()
+                    ?.firstOrNull()
+                    ?.valuation
+                    ?.valuePaise
             _uiState.update {
                 it.copy(isLoading = false, holding = holding, meta = meta, outstandingPaise = outstanding)
             }

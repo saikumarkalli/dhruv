@@ -2,8 +2,8 @@ package com.dhruv.finance.networth
 
 import com.dhruv.core.observability.NoOpCrashReporter
 import com.dhruv.core.observability.NoOpPerformanceTracer
-import com.dhruv.finance.data.tracker.repo.ValuationRepository
 import com.dhruv.finance.data.tracker.model.ValuationHistoryEntry
+import com.dhruv.finance.data.tracker.repo.ValuationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -67,8 +67,7 @@ class AddValuationViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(repo: ValuationRepository) =
-        AddValuationViewModel(repo, NoOpCrashReporter, NoOpPerformanceTracer)
+    private fun viewModel(repo: ValuationRepository) = AddValuationViewModel(repo, NoOpCrashReporter, NoOpPerformanceTracer)
 
     @Test
     fun `save with no correcting id calls recordValue, never correctValue`() =

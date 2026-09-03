@@ -98,8 +98,7 @@ class LiabilitiesViewModel(
                 val meta = row.meta ?: return@mapNotNull null
                 val outstanding = row.holdingWithValue.currentValuePaise ?: return@mapNotNull null
                 projectedPayoffMonths(meta, outstanding)
-            }
-            .maxOrNull()
+            }.maxOrNull()
             ?.let { months -> LocalDate.now().plusMonths(months.toLong()) }
 
     /** Payoff progress for one row, as a 0f..1f fraction of [LiabilityMeta.tenureMonths] paid —

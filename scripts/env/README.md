@@ -197,6 +197,26 @@ identity (ADR-0031), not a dev/prod pair, so the `release`/`prod-apply` jobs' `e
 correctly falls back to these repo-level values (GitHub resolves environment secrets first, then
 repo secrets — no environment-scoped copy needed for a secret that has only one value anyway).
 
+### 1a. Supabase — expose the `finance` schema on each project's Data API (manual dashboard step)
+
+**Found 2026-09-03**, debugging a live HTTP 406 on the net-worth screen. `supabase/config.toml`'s
+`[api] schemas = ["public", "graphql_public", "finance"]` (ADR-0033) is **local-CLI config only** —
+it does not sync to a hosted project's Data API settings, whether via `db push` or any other CLI
+command. A hosted project's exposed-schema list is a separate Studio setting, and `FinanceSchemaInterceptor`
+(`apps/finance/data/.../tracker/net/FinanceSchemaInterceptor.kt`) sends `Accept-Profile: finance` on
+every tracker request unconditionally (ADR-0033) — so until this step is done, every tracker call
+fails with `406 Not Acceptable` ("The schema must be one of the following: public, graphql_public"),
+independent of whether the migration itself has been applied (step 1) or not.
+
+For **each** project (`dhruv-dev`, then `dhruv-prod` before it takes live traffic):
+
+1. Supabase Studio → the project → **Project Settings → Data API → Exposed schemas**.
+2. Add `finance` to the list, save.
+
+No CLI equivalent exists for this today — it's a dashboard-only toggle. Do this *after* step 1's
+migration has actually applied (exposing an empty/nonexistent schema still leaves the underlying
+`relation does not exist` error on the actual query, just changes which error you see first).
+
 ### 2. Supabase — baseline dhruv-prod
 
 `dhruv-prod` currently has no applied-migration history. Before `supabase-migrate.yml`'s drift

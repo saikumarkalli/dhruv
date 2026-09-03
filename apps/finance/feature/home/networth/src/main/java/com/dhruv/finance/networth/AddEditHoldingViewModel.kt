@@ -87,8 +87,7 @@ class AddEditHoldingViewModel(
                             notesText = holding.notes ?: "",
                         )
                     }
-                }
-                .onFailure { e ->
+                }.onFailure { e ->
                     _uiState.update { it.copy(isLoadingForEdit = false, nameError = e.message ?: "Couldn't load this holding.") }
                 }
         }
@@ -168,8 +167,7 @@ class AddEditHoldingViewModel(
                             investedPaise = state.investedAmountText.takeIf { it.isNotBlank() }?.let(::parseRupeesToPaise),
                             notes = state.notesText.trim().ifBlank { null },
                         ),
-                )
-                .onSuccess { _uiState.update { it.copy(isSaving = false, savedHoldingId = state.editingHoldingId) } }
+                ).onSuccess { _uiState.update { it.copy(isSaving = false, savedHoldingId = state.editingHoldingId) } }
                 .onFailure { e ->
                     _uiState.update { it.copy(isSaving = false, nameError = e.message ?: "Couldn't save. Try again.") }
                 }
@@ -224,15 +222,13 @@ class AddEditHoldingViewModel(
                     notes = state.notesText.trim().ifBlank { null },
                     requestId = UUID.randomUUID().toString(),
                 ),
-            )
-            .onSuccess { id ->
+            ).onSuccess { id ->
                 if (isLiability) {
                     createLiabilityMeta(holdingId = id, state = state, rateBps = rateBps!!, valuePaise = paise)
                 } else {
                     _uiState.update { it.copy(isSaving = false, savedHoldingId = id) }
                 }
-            }
-            .onFailure { e ->
+            }.onFailure { e ->
                 _uiState.update { it.copy(isSaving = false, amountError = e.message ?: "Couldn't save. Try again.") }
             }
     }
@@ -262,8 +258,7 @@ class AddEditHoldingViewModel(
                     originalPrincipalPaise = valuePaise,
                     requestId = UUID.randomUUID().toString(),
                 ),
-            )
-            .onSuccess { _uiState.update { it.copy(isSaving = false, savedHoldingId = holdingId) } }
+            ).onSuccess { _uiState.update { it.copy(isSaving = false, savedHoldingId = holdingId) } }
             .onFailure { e ->
                 _uiState.update {
                     it.copy(

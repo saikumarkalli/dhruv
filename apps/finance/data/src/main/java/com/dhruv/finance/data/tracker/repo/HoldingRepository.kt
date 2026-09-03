@@ -16,7 +16,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.time.Instant
 
-
 /**
  * Holdings CRUD for the net worth tracker (Phase 2, C1-C7). [createWithFirstValuation] is the only
  * creation path — it delegates to the `finance.create_holding_with_value` RPC, which writes the

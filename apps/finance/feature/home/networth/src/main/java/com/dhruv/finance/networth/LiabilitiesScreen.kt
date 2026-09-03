@@ -135,8 +135,9 @@ private fun LiabilitiesContent(
                             ),
                             StatItem(
                                 label = stringResource(R.string.c6_stat_debt_free_by),
-                                value = debtFreeBy?.format(DEBT_FREE_DATE_FORMAT)
-                                    ?: stringResource(R.string.networth_value_placeholder_dash),
+                                value =
+                                    debtFreeBy?.format(DEBT_FREE_DATE_FORMAT)
+                                        ?: stringResource(R.string.networth_value_placeholder_dash),
                             ),
                         ),
                 )
@@ -192,9 +193,10 @@ private fun LiabilityRowCard(
                     if (meta != null) {
                         val rateLabel = stringResource(R.string.c6_rate_format, "%.2f".format(Locale.US, meta.rateBps / 100.0))
                         val emiLabel =
-                            meta.emiPaise?.let {
-                                stringResource(R.string.c6_emi_suffix_format, Paise.formatCompact(it))
-                            }.orEmpty()
+                            meta.emiPaise
+                                ?.let {
+                                    stringResource(R.string.c6_emi_suffix_format, Paise.formatCompact(it))
+                                }.orEmpty()
                         Text(
                             text = rateLabel + emiLabel,
                             color = colors.tx3,

@@ -22,10 +22,11 @@ data class PrepayProjection(
  * Null when the liability lacks EMI terms, or its EMI is at or below the interest-only payment (the
  * balance would never shrink). Double/`ln` math is fine in this file: it lives in the feature
  * module, not `:apps:finance:data`'s tracker path that `checkTrackerMoneyPrecision` scans
- * (Article VII / DAT-BR-008 only restricts that path). */
-// Deliberately multiple early returns: EMI presence, EMI positivity, outstanding positivity, and
-// the not-computable case are four genuinely distinct exits — same accepted pattern as
-// AuthInterceptor.intercept() and ValuationRepositoryImpl.recordValue().
+ * (Article VII / DAT-BR-008 only restricts that path).
+ *
+ * Deliberately multiple early returns: EMI presence, EMI positivity, outstanding positivity, and
+ * the not-computable case are four genuinely distinct exits — same accepted pattern as
+ * AuthInterceptor.intercept() and ValuationRepositoryImpl.recordValue(). */
 @Suppress("ReturnCount")
 fun projectedPayoffMonths(
     meta: LiabilityMeta,
@@ -42,10 +43,11 @@ fun projectedPayoffMonths(
 /** [extraPaymentPaise] is a one-time additional payment applied to the current outstanding balance
  * today (FR-009's "hypothetical extra payment"). Null when the projection isn't computable — no EMI
  * terms, the extra payment isn't smaller than what's owed, or the EMI can never amortise the
- * balance either before or after the extra payment. */
-// Deliberately multiple early returns, same accepted pattern as [projectedPayoffMonths] above —
-// each guard is its own genuinely distinct exit, kept as single-operator conditions rather than one
-// large boolean expression.
+ * balance either before or after the extra payment.
+ *
+ * Deliberately multiple early returns, same accepted pattern as [projectedPayoffMonths] above —
+ * each guard is its own genuinely distinct exit, kept as single-operator conditions rather than one
+ * large boolean expression. */
 @Suppress("ReturnCount")
 fun computePrepayProjection(
     meta: LiabilityMeta,

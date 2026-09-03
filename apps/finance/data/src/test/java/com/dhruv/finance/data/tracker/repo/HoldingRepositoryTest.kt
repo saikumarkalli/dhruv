@@ -100,9 +100,8 @@ private class FakeValuationApi : ValuationApi {
         body: com.dhruv.finance.data.tracker.dto.RecordValuationRequestDto,
     ): List<com.dhruv.finance.data.tracker.dto.ValuationDto> = throw UnsupportedOperationException("not exercised by this test")
 
-    override suspend fun correctValuation(
-        body: com.dhruv.finance.data.tracker.dto.CorrectValuationRequestDto,
-    ): String = throw UnsupportedOperationException("not exercised by this test")
+    override suspend fun correctValuation(body: com.dhruv.finance.data.tracker.dto.CorrectValuationRequestDto): String =
+        throw UnsupportedOperationException("not exercised by this test")
 }
 
 class HoldingRepositoryTest {

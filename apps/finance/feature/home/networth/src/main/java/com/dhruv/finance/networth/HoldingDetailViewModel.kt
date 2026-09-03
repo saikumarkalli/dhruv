@@ -23,7 +23,9 @@ class HoldingDetailViewModel(
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "networth") {
     /** Matches C3's design copy exactly (3M/6M/1Y/All) — [days] is the trend window; null = All. */
-    enum class TrendRange(val days: Long?) {
+    enum class TrendRange(
+        val days: Long?,
+    ) {
         THREE_MONTHS(90L),
         SIX_MONTHS(182L),
         ONE_YEAR(365L),
