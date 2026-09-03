@@ -150,11 +150,24 @@ internal fun nextDueDate(
  * dependency threaded through the ViewModel. */
 internal fun greetingForHour(hour: Int): String =
     when (hour) {
-        in 5..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        in 17..20 -> "Good evening"
-        else -> "Good night"
+        in 5..11 -> "Good Morning"
+        in 12..16 -> "Good Afternoon"
+        in 17..20 -> "Good Evening"
+        else -> "Good Night"
     }
+
+/** Appends the user's first name to [greeting] when [displayName] is available (Google profile
+ * claim, `SessionState.Active.displayName` — absent for signed-out state or an account with no
+ * public name). First token only: `displayName` may be a full "First Last" name and the header has
+ * no room for both. Blank/whitespace-only names are treated as absent, not rendered as a trailing
+ * comma. */
+internal fun greetingWithName(
+    greeting: String,
+    displayName: String?,
+): String {
+    val firstName = displayName?.trim()?.substringBefore(' ')?.takeIf { it.isNotBlank() }
+    return if (firstName != null) "$greeting, $firstName" else greeting
+}
 
 /** HOM-UI-004/ADR-0024 decision 4: the Ask pill renders on Home/Plan/Insights, never Calc/Money.
  * A pure function (used by `MainActivity.kt`'s pager) so this rule has one definition and one test,

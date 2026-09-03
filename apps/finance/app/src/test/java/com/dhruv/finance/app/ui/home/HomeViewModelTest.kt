@@ -267,10 +267,22 @@ class HomeViewModelTest {
 
     @Test
     fun `greetingForHour matches time of day`() {
-        assertEquals("Good morning", greetingForHour(8))
-        assertEquals("Good afternoon", greetingForHour(14))
-        assertEquals("Good evening", greetingForHour(19))
-        assertEquals("Good night", greetingForHour(2))
+        assertEquals("Good Morning", greetingForHour(8))
+        assertEquals("Good Afternoon", greetingForHour(14))
+        assertEquals("Good Evening", greetingForHour(19))
+        assertEquals("Good Night", greetingForHour(2))
+    }
+
+    @Test
+    fun `greetingWithName appends only the first token of a full display name`() {
+        assertEquals("Good Night, Sai", greetingWithName("Good Night", "Sai Kumar"))
+        assertEquals("Good Morning, Sai", greetingWithName("Good Morning", "Sai"))
+    }
+
+    @Test
+    fun `greetingWithName falls back to the bare greeting when no name is available`() {
+        assertEquals("Good night", greetingWithName("Good night", displayName = null))
+        assertEquals("Good night", greetingWithName("Good night", displayName = "   "))
     }
 
     // HOM-UI-004/ADR-0024 decision 4: the Ask pill renders on Home/Plan/Insights, not Calc/Money.

@@ -93,7 +93,7 @@ fun HomeScreen(
                 .padding(DhruvNextSpacing.screenGutter),
         verticalArrangement = Arrangement.spacedBy(DhruvNextSpacing.interCardGap),
     ) {
-        HomeHeader()
+        HomeHeader(displayName = (sessionState as? SessionState.Active)?.displayName)
 
         when {
             sessionState !is SessionState.Active ->
@@ -135,9 +135,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(modifier: Modifier = Modifier) {
+private fun HomeHeader(
+    displayName: String?,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalDhruvNextColors.current
-    val greeting = greetingForHour(LocalTime.now().hour)
+    val greeting = greetingWithName(greetingForHour(LocalTime.now().hour), displayName)
     val dateLine = LocalDate.now().format(DATE_LINE_FORMAT)
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = greeting, color = colors.tx, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
