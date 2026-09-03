@@ -405,4 +405,4 @@ spec was once wrong rather than assuming the code is.
 
 | Date | Change | Type | FR affected | PR |
 |---|---|---|---|---|
-| 2026-09-03 | Home greeting appends the signed-in user's first name when available (`Good Evening, Sai`), falling back to the bare greeting when signed out or the Google profile has no display name — `greetingWithName` (`HomeViewModel.kt`), wired in `HomeScreen.kt`'s `HomeHeader` from `SessionState.Active.displayName` | change | HOM-UI-001 | — |
+| 2026-09-03 | Home greeting appends the signed-in user's first name when available (`Good Evening, Sai`), name rendered in the user's own selected accent color (`colors.acc`, dynamic — never hardcoded), falling back to the bare greeting when signed out or the Google profile has no display name — `firstNameFrom` (`HomeViewModel.kt`), wired in `HomeScreen.kt`'s `HomeHeader` via a `buildAnnotatedString` | change | HOM-UI-001 | — |

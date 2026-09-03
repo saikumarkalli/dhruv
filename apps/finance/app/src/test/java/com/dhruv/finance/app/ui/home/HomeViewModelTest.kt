@@ -274,15 +274,15 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `greetingWithName appends only the first token of a full display name`() {
-        assertEquals("Good Night, Sai", greetingWithName("Good Night", "Sai Kumar"))
-        assertEquals("Good Morning, Sai", greetingWithName("Good Morning", "Sai"))
+    fun `firstNameFrom takes only the first token of a full display name`() {
+        assertEquals("Sai", firstNameFrom("Sai Kumar"))
+        assertEquals("Sai", firstNameFrom("Sai"))
     }
 
     @Test
-    fun `greetingWithName falls back to the bare greeting when no name is available`() {
-        assertEquals("Good night", greetingWithName("Good night", displayName = null))
-        assertEquals("Good night", greetingWithName("Good night", displayName = "   "))
+    fun `firstNameFrom is null when no name is available`() {
+        assertEquals(null, firstNameFrom(null))
+        assertEquals(null, firstNameFrom("   "))
     }
 
     // HOM-UI-004/ADR-0024 decision 4: the Ask pill renders on Home/Plan/Insights, not Calc/Money.

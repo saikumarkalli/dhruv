@@ -92,9 +92,10 @@ See [`platform/VERSIONING.md`](platform/VERSIONING.md).
     any authoring session so far. See `apps/finance/specs/001-net-worth-tracker/data-model.md`
     § "DB readiness" for the exact unblock steps.
   - Home's greeting (`HOM-UI-001`) now appends the signed-in user's first name when the Google
-    profile provides one (`Good Evening, Sai`), falling back to the bare greeting when signed out or
-    unavailable — `greetingWithName` (`HomeViewModel.kt`), first token of `SessionState.Active
-    .displayName` only.
+    profile provides one (`Good Evening, Sai`, name rendered in the user's own selected accent
+    color — `LocalDhruvNextColors.current.acc`, ADR-0024 §2 — never a hardcoded color), falling
+    back to the bare greeting when signed out or unavailable — `firstNameFrom` (`HomeViewModel.kt`),
+    first token of `SessionState.Active.displayName` only.
 
 ### Fixed
 - The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no

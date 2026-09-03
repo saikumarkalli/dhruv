@@ -24,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.navigation.NavTarget
@@ -140,10 +143,26 @@ private fun HomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
-    val greeting = greetingWithName(greetingForHour(LocalTime.now().hour), displayName)
+    val greeting = greetingForHour(LocalTime.now().hour)
+    val firstName = firstNameFrom(displayName)
     val dateLine = LocalDate.now().format(DATE_LINE_FORMAT)
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = greeting, color = colors.tx, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
+        Text(
+            text =
+                buildAnnotatedString {
+                    append(greeting)
+                    if (firstName != null) {
+                        append(", ")
+                        // Name renders in the user's own selected accent (colors.acc resolves from
+                        // the Settings 4-swatch picker, ADR-0024 §2) — never a literal color, so it
+                        // stays in sync if the user changes their accent.
+                        withStyle(SpanStyle(color = colors.acc)) { append(firstName) }
+                    }
+                },
+            color = colors.tx,
+            fontSize = DhruvNextType.title,
+            fontWeight = FontWeight.Bold,
+        )
         Text(text = dateLine, color = colors.tx3, fontSize = DhruvNextType.meta)
     }
 }
