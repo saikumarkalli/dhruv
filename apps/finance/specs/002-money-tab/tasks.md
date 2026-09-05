@@ -326,17 +326,56 @@ and ratchets what it actually landed.
 views (T007), corrected in place because the original would have returned every user's rows to every
 signed-in caller through PostgREST.
 
-- [ ] T084 [SA] **Specify category create and delete.** FR-022 lists, FR-023 renames, FR-024 merges,
+- [X] T084 [SA] **Specify category create and delete.** FR-022 lists, FR-023 renames, FR-024 merges,
       FR-025 excludes — but nothing creates a category and nothing deletes one. Reserved rows are
-      called out as non-deletable, implying ordinary ones are, with no requirement saying so
-- [ ] T085 [SA] **Specify recurring-template edit and delete.** The Key Entities row states a
+      called out as non-deletable, implying ordinary ones are, with no requirement saying so —
+      added FR-026a/FR-026b. **Built, not just specified**: `CategoryRepository.createCategory`/
+      `softDeleteCategory` already existed (unused); `CategoriesViewModel` gained `createCategory`/
+      `requestDelete`/`confirmDelete`/`dismissDeletePrompt` (delete resolves the exact transaction
+      count first via `countTransactionsForCategory`, blocking with that count — naming merge as
+      the way to empty it first — rather than refusing silently), `CategoriesScreen` gained an "Add
+      category" icon button + dialog and a per-row Delete action (hidden for the two reserved
+      categories via the new `CategoryRow.isReserved`). Tests: `createCategory adds the new
+      category and reloads`, `createCategory with a blank name is a no-op`, `requestDelete confirms
+      directly when the category has no transactions`, `requestDelete blocks with the exact count
+      when the category has transactions`, `confirmDelete calls the repository and reloads`, `the
+      two reserved categories are never marked deletable`
+- [X] T085 [SA] **Specify recurring-template edit and delete.** The Key Entities row states a
       template "can be paused, resumed and **deleted**"; FR-027 creates one and no FR edits or
-      deletes it
-- [ ] T086 [SA] **Give account deletion an FR.** It exists only as an Edge Case today
-- [ ] T087 [SA] **Give "saved view" a `data-model.md` row.** It is a Key Entity in this spec with no
+      deletes it — added FR-031a/FR-031b. **Built**: `MoneyApi.editRecurringTemplate`/
+      `softDeleteRecurringTemplate`/`dismissPendingForRecurring` (deleting a template withdraws
+      every still-pending suggestion it produced, satisfying the Edge Cases clause "a pending entry
+      belonging to a paused or deleted definition must stop being actionable"),
+      `RecurringRepository.edit`/`delete`, `RecurringViewModel.edit`/`delete`. `RecurringScreen`
+      gained a per-row menu (Pause for active rows — this closes a **pre-existing** FR-031 gap too,
+      the screen previously only exposed Resume — and Delete, both rows) with a
+      `ConfirmDangerDialog`. **Edit has no screen affordance yet** — the repository/mapper/VM
+      method are built and unit-tested, but the account/category pickers a real edit form would
+      need are not loaded by `RecurringViewModel` today; recorded here rather than silently
+      claimed done, same "repo/VM done, screen not" pattern as the saved-view gap below. Tests:
+      `edit sends the new amount, category, account and schedule`, `delete soft-deletes the
+      template and dismisses its pending suggestions` (data module); `delete removes the template
+      and reloads`, `edit updates the template's amount and schedule` (feature module)
+- [X] T086 [SA] **Give account deletion an FR.** It exists only as an Edge Case today — added
+      FR-021a, worded to match what soft-delete actually does (the account row is never hard-
+      deleted, so no transaction's `account_id` is ever left dangling — deleted transactions are
+      not reassigned). **Built**: `MoneyApi.countTransactionsForAccount` (same `Prefer: count=exact`
+      pattern as the category one), `AccountRepository.countTransactionsForAccount`,
+      `AccountDetailViewModel.requestDelete`/`confirmDelete`/`dismissDeletePrompt` +
+      `AccountDeletePrompt`/`deleted` state, `AccountDetailScreen` gained a "Delete account" button
+      + `ConfirmDangerDialog` naming the exact count, `MainActivity`'s `onDeleted` pops the back
+      stack. Tests: `countTransactionsForAccount reads the exact total from the Content-Range
+      header` (data module); `requestDelete resolves the exact transaction count before
+      confirming`, `confirmDelete soft-deletes the account and signals deleted` (feature module)
+- [X] T087 [SA] **Give "saved view" a `data-model.md` row.** It is a Key Entity in this spec with no
       data-model entry; its storage (encrypted DataStore, not a table) is decided only inside a task
       line, so a data-model reader concludes the entity is unowned. Add rename and delete while
-      there — neither is specified
+      there — neither is specified — added the row; rename/delete were **already built and tested**
+      on `SavedViewRepository` (`saveView` with an existing id overwrites — same identity-survives-
+      rename rule as FR-023 — `deleteSavedView` removes), just never documented. **Not built**: D5's
+      `FilterSheet` has no "save this filter" / "apply a saved view" UI at all — `SavedView` has no
+      consumer anywhere in the money feature module. Recorded as an explicit gap in `data-model.md`
+      rather than left to be rediscovered
 - [ ] T088 [Android] Wire **`UndoSnackbarHost`** to the transaction soft-delete (FR-006).
       DESIGN-SYSTEM §8 makes soft-delete + 5s undo + a recoverable location binding, and
       `transactions.deleted_at` already exists — the mechanism is present and the UX obligation is
@@ -372,13 +411,19 @@ signed-in caller through PostgREST.
 
 ## Phase 11: Gap remediation, round 2 (UI/UX + requirements audit, 2026-08-22)
 
-- [ ] T096 [SA] **Resolve the split-transaction entity model — it is one entity in the spec and N
+- [X] T096 [SA] **Resolve the split-transaction entity model — it is one entity in the spec and N
       rows in the data model.** Key Entities and Assumptions describe "one transaction allocated
       across two or more categories"; `data-model.md:98-102` makes them sibling rows with "no parent
       row holding a total". The consequences are decided only inside T025, with no FR, no test and no
       presentation rule: does a 3-way split render as three ledger rows under FR-012? Does an edit or
       delete (FR-006) act on one part or all of them? Does a split count once or three times in a
-      category share?
+      category share? — resolved: spec.md's Transaction Key Entity now states the N-sibling-rows
+      shape explicitly and answers all three questions from the code's actual (if currently unused)
+      behaviour — renders as N independent ledger rows, edit/delete acts on one row at a time, and
+      each row counts once in its own category's share, exactly like a non-split transaction. No
+      screen creates a split yet (`QuickAddViewModel`/`TransactionFormViewModel` always write
+      `splitGroupId = null`) — the column ships now, per the same "schema now, UI later" pattern
+      FR-004 already uses for the goal link, and this is now stated rather than left implicit
 - [ ] T097 [SA] **Specify write-retry semantics.** A mutation that times out mid-write has no stated
       outcome anywhere in this feature. The only idempotency key in the repo is
       `(recurring_id, due_on)` for materialisation — manual transaction creates have none, and no

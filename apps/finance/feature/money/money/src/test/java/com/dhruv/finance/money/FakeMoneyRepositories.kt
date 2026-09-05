@@ -24,10 +24,14 @@ import java.util.UUID
  * directly). */
 class FakeAccountRepository(
     private var accounts: List<Account> = emptyList(),
+    /** Per-account transaction count, keyed by id — backs [countTransactionsForAccount], the D7
+     * delete confirmation's "what happens to those transactions" check (FR-021a). */
+    private val transactionCounts: Map<String, Int> = emptyMap(),
 ) : AccountRepository {
     /** (accountId, statedBalancePaise) for every [reconcileAccount] call — lets a ViewModel test
      * assert reconciliation was actually invoked, not just that the UI stopped showing stale. */
     val reconcileCalls = mutableListOf<Pair<String, Long>>()
+    val deletedIds = mutableListOf<String>()
 
     override suspend fun listAccounts(): Result<List<Account>> = Result.success(accounts)
 
@@ -43,9 +47,13 @@ class FakeAccountRepository(
     }
 
     override suspend fun softDeleteAccount(accountId: String): Result<Unit> {
+        deletedIds += accountId
         accounts = accounts.filterNot { it.id == accountId }
         return Result.success(Unit)
     }
+
+    override suspend fun countTransactionsForAccount(accountId: String): Result<Int> =
+        Result.success(transactionCounts[accountId] ?: 0)
 
     /** Mirrors [com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl.reconcileAccount]'s
      * observable effect — sets `reconciledAt` to now and adopts the stated balance — without
@@ -114,7 +122,13 @@ class FakeCategoryRepository(
         return Result.success(mergeResult)
     }
 
-    override suspend fun softDeleteCategory(categoryId: String): Result<Unit> = Result.success(Unit)
+    val deletedIds = mutableListOf<String>()
+
+    override suspend fun softDeleteCategory(categoryId: String): Result<Unit> {
+        deletedIds += categoryId
+        categories = categories.filterNot { it.id == categoryId }
+        return Result.success(Unit)
+    }
 
     override suspend fun ensureReservedCategories(): Result<Unit> {
         ensureReservedCalls += Unit
@@ -199,9 +213,49 @@ class FakeRecurringRepository(
         return Result.success(created)
     }
 
+    val deleted = mutableListOf<String>()
+
     override suspend fun pause(templateId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun resume(templateId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun edit(
+        templateId: String,
+        type: com.dhruv.finance.data.tracker.model.TransactionType,
+        amountPaise: Long,
+        accountId: String,
+        categoryId: String?,
+        payee: String?,
+        note: String?,
+        rrule: String,
+        nextRun: LocalDate,
+        amountIsVariable: Boolean,
+    ): Result<RecurringTemplate> {
+        val existing = templates.firstOrNull { it.id == templateId } ?: return Result.failure(IllegalStateException("not found"))
+        val edited =
+            existing.copy(
+                template =
+                    mapOf(
+                        "type" to type.name,
+                        "amountPaise" to amountPaise,
+                        "accountId" to accountId,
+                        "categoryId" to categoryId,
+                        "payee" to payee,
+                        "note" to note,
+                    ),
+                rrule = rrule,
+                nextRun = nextRun,
+                amountIsVariable = amountIsVariable,
+            )
+        templates = templates.map { if (it.id == templateId) edited else it }
+        return Result.success(edited)
+    }
+
+    override suspend fun delete(templateId: String): Result<Unit> {
+        deleted += templateId
+        templates = templates.filterNot { it.id == templateId }
+        return Result.success(Unit)
+    }
 
     override suspend fun materialiseDue(
         suggestionRepository: SuggestionRepository,

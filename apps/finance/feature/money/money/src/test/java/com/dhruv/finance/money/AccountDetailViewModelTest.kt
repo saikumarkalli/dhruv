@@ -109,4 +109,33 @@ class AccountDetailViewModelTest {
             assertEquals(1, accountRepository.reconcileCalls.size)
             assertEquals("acc-1" to 10_000_00L, accountRepository.reconcileCalls.single())
         }
+
+    // FR-021a: the confirmation names the exact transaction count, resolved before it's shown.
+    @Test
+    fun `requestDelete resolves the exact transaction count before confirming`() =
+        runTest {
+            val accountRepository = FakeAccountRepository(listOf(staleAccount), transactionCounts = mapOf("acc-1" to 5))
+            val vm = viewModel(accountRepository)
+            advanceUntilIdle()
+
+            vm.requestDelete()
+            advanceUntilIdle()
+
+            assertEquals(AccountDeletePrompt.Confirm(5), vm.deletePrompt.value)
+        }
+
+    @Test
+    fun `confirmDelete soft-deletes the account and signals deleted`() =
+        runTest {
+            val accountRepository = FakeAccountRepository(listOf(staleAccount))
+            val vm = viewModel(accountRepository)
+            advanceUntilIdle()
+
+            vm.confirmDelete()
+            advanceUntilIdle()
+
+            assertEquals(listOf("acc-1"), accountRepository.deletedIds)
+            assertTrue(vm.deleted.value)
+            assertEquals(AccountDeletePrompt.None, vm.deletePrompt.value)
+        }
 }

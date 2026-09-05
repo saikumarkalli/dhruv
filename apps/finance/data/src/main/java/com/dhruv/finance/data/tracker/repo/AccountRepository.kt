@@ -27,6 +27,11 @@ interface AccountRepository {
 
     suspend fun softDeleteAccount(accountId: String): Result<Unit>
 
+    /** FR-021a, Edge Cases — the exact count of non-deleted transactions naming this account as
+     * their primary `account_id`, resolved before the delete confirmation is shown so the user is
+     * told what happens to them, not guessed at. */
+    suspend fun countTransactionsForAccount(accountId: String): Result<Int>
+
     /**
      * FR-021/research R8: records the user-stated real balance, sets `reconciled_at` (clearing
      * the staleness flag, FR-020), and — when [statedBalancePaise] differs from the account's
@@ -97,6 +102,23 @@ class AccountRepositoryImpl(
         try {
             api.patchAccount("eq.$accountId", mapOf("deleted_at" to Instant.now().toString()))
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun countTransactionsForAccount(accountId: String): Result<Int> =
+        try {
+            val response = api.countTransactionsForAccount("eq.$accountId")
+            val contentRange = response.headers()["Content-Range"]
+            val total = contentRange?.substringAfterLast('/')?.toIntOrNull()
+            if (total != null) {
+                Result.success(total)
+            } else {
+                Result.failure(IllegalStateException("PostgREST returned no exact count (Content-Range: $contentRange)"))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

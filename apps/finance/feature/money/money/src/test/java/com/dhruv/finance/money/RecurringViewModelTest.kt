@@ -132,4 +132,48 @@ class RecurringViewModelTest {
 
             assertTrue(materialised)
         }
+
+    // FR-031b: deleting removes the template from state (via the repository's delete + reload).
+    @Test
+    fun `delete removes the template and reloads`() =
+        runTest {
+            val active = template("t1", "EXPENSE", 1_00, LocalDate.now().plusDays(5))
+            val recurringRepository = FakeRecurringRepository(listOf(active))
+            val vm = RecurringViewModel(recurringRepository, FakeSuggestionRepository(), NoOpCrashReporter, NoOpPerformanceTracer)
+            advanceUntilIdle()
+
+            vm.delete("t1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("t1"), recurringRepository.deleted)
+            val loaded = vm.uiState.value as RecurringUiState.Loaded
+            assertTrue(loaded.next30Days.isEmpty())
+        }
+
+    // FR-031a: edit reaches the repository with the new fields and reloads.
+    @Test
+    fun `edit updates the template's amount and schedule`() =
+        runTest {
+            val active = template("t1", "EXPENSE", 1_00, LocalDate.now().plusDays(5))
+            val recurringRepository = FakeRecurringRepository(listOf(active))
+            val vm = RecurringViewModel(recurringRepository, FakeSuggestionRepository(), NoOpCrashReporter, NoOpPerformanceTracer)
+            advanceUntilIdle()
+
+            vm.edit(
+                templateId = "t1",
+                type = com.dhruv.finance.data.tracker.model.TransactionType.EXPENSE,
+                amountPaise = 9_00,
+                accountId = "acc-1",
+                categoryId = "cat-1",
+                payee = "t1",
+                note = null,
+                rrule = "FREQ=WEEKLY",
+                nextRun = LocalDate.now().plusDays(7),
+                amountIsVariable = false,
+            )
+            advanceUntilIdle()
+
+            val loaded = vm.uiState.value as RecurringUiState.Loaded
+            assertEquals(9_00L, loaded.monthlyOutPaise)
+        }
 }

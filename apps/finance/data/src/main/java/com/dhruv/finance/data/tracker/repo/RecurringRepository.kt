@@ -1,10 +1,13 @@
 package com.dhruv.finance.data.tracker.repo
 
 import com.dhruv.finance.data.tracker.dto.RecurringPauseDto
+import com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto
+import com.dhruv.finance.data.tracker.dto.SuggestionStatusDto
 import com.dhruv.finance.data.tracker.mapper.toDomain
 import com.dhruv.finance.data.tracker.model.RecurringTemplate
 import com.dhruv.finance.data.tracker.model.Transaction
+import com.dhruv.finance.data.tracker.model.TransactionType
 import com.dhruv.finance.data.tracker.net.MoneyApi
 import com.dhruv.finance.data.tracker.net.SupabaseClientFactory
 import kotlinx.coroutines.CancellationException
@@ -61,6 +64,26 @@ interface RecurringRepository {
     suspend fun pause(templateId: String): Result<Unit>
 
     suspend fun resume(templateId: String): Result<Unit>
+
+    /** FR-031a — edits amount, category, account and schedule. Never retroactively changes any
+     * transaction this template has already produced (Edge Cases) — only the template row itself
+     * is written. */
+    suspend fun edit(
+        templateId: String,
+        type: TransactionType,
+        amountPaise: Long,
+        accountId: String,
+        categoryId: String?,
+        payee: String?,
+        note: String?,
+        rrule: String,
+        nextRun: LocalDate,
+        amountIsVariable: Boolean,
+    ): Result<RecurringTemplate>
+
+    /** FR-031b — soft-deletes the template and withdraws every still-pending suggestion it
+     * produced, so none is left actionable in the review queue. */
+    suspend fun delete(templateId: String): Result<Unit>
 
     /** For every active, non-paused template whose `nextRun` has arrived, writes one pending
      * [com.dhruv.finance.data.tracker.model.PendingEntry] (never a ledger transaction, FR-028) and
@@ -138,6 +161,59 @@ class RecurringRepositoryImpl(
     override suspend fun resume(templateId: String): Result<Unit> =
         try {
             api.setRecurringPaused("eq.$templateId", RecurringPauseDto(paused = false, pausedAt = null))
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun edit(
+        templateId: String,
+        type: TransactionType,
+        amountPaise: Long,
+        accountId: String,
+        categoryId: String?,
+        payee: String?,
+        note: String?,
+        rrule: String,
+        nextRun: LocalDate,
+        amountIsVariable: Boolean,
+    ): Result<RecurringTemplate> =
+        try {
+            val template =
+                mapOf(
+                    RecurringTemplateKeys.TYPE to type.name,
+                    RecurringTemplateKeys.AMOUNT_PAISE to amountPaise,
+                    RecurringTemplateKeys.ACCOUNT_ID to accountId,
+                    RecurringTemplateKeys.CATEGORY_ID to categoryId,
+                    RecurringTemplateKeys.PAYEE to payee,
+                    RecurringTemplateKeys.NOTE to note,
+                )
+            val edited =
+                api
+                    .editRecurringTemplate(
+                        "eq.$templateId",
+                        RecurringTemplateEditDto(
+                            template = template,
+                            rrule = rrule,
+                            nextRun = nextRun.toString(),
+                            amountIsVariable = amountIsVariable,
+                        ),
+                    ).first()
+            Result.success(edited.toDomain())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun delete(templateId: String): Result<Unit> =
+        try {
+            api.softDeleteRecurringTemplate("eq.$templateId", mapOf("deleted_at" to Instant.now().toString()))
+            api.dismissPendingForRecurring("eq.$templateId", SuggestionStatusDto(status = "IGNORED"))
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e

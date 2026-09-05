@@ -10,6 +10,7 @@ import com.dhruv.finance.data.tracker.dto.RecurringPauseDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto
 import com.dhruv.finance.data.tracker.dto.SuggestionStatusDto
 import com.dhruv.finance.data.tracker.dto.SuggestionUpsertDto
+import com.dhruv.finance.data.tracker.dto.TransactionCountRowDto
 import com.dhruv.finance.data.tracker.dto.TransactionUpsertDto
 import com.dhruv.finance.data.tracker.model.Category
 import com.dhruv.finance.data.tracker.model.MonthSummary
@@ -19,6 +20,8 @@ import com.dhruv.finance.data.tracker.model.TransactionSource
 import com.dhruv.finance.data.tracker.model.TransactionType
 import com.dhruv.finance.data.tracker.net.MoneyApi
 import kotlinx.coroutines.test.runTest
+import okhttp3.Headers
+import retrofit2.Response
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -78,6 +81,8 @@ private object AccountUnimplementedMoneyApi : MoneyApi {
 
     override suspend fun countTransactionsForCategory(categoryId: String) = unimplemented()
 
+    override suspend fun countTransactionsForAccount(accountId: String) = unimplemented()
+
     override suspend fun listTransactions(
         occurredAtGte: String,
         occurredAtLt: String,
@@ -116,6 +121,22 @@ private object AccountUnimplementedMoneyApi : MoneyApi {
     override suspend fun advanceRecurringNextRun(
         id: String,
         body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun editRecurringTemplate(
+        id: String,
+        body: com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto,
+    ) = unimplemented()
+
+    override suspend fun softDeleteRecurringTemplate(
+        id: String,
+        body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun dismissPendingForRecurring(
+        recurringIdFilter: String,
+        body: com.dhruv.finance.data.tracker.dto.SuggestionStatusDto,
+        statusFilter: String,
     ) = unimplemented()
 
     override suspend fun listPendingSuggestions() = unimplemented()
@@ -358,5 +379,27 @@ class AccountRepositoryTest {
             repo.reconcileAccount("acc-1", statedBalancePaise = 6_000_00)
 
             assertNull(patchedFields?.get("opening_balance_paise"))
+        }
+
+    // FR-021a / Edge Cases: the delete confirmation needs the exact, all-time count of
+    // transactions naming this account — same Content-Range pattern as
+    // CategoryRepository.countTransactionsForCategory (FR-024/FR-026).
+    @Test
+    fun `countTransactionsForAccount reads the exact total from the Content-Range header`() =
+        runTest {
+            val api =
+                object : AccountFakeMoneyApi() {
+                    override suspend fun countTransactionsForAccount(accountId: String) =
+                        Response.success(
+                            listOf(TransactionCountRowDto(id = "txn-1")),
+                            Headers.headersOf("Content-Range", "0-0/7"),
+                        )
+                }
+            val repo: AccountRepository = AccountRepositoryImpl(api, RecordingTransactionRepository(), ReservedCategoryRepository())
+
+            val result = repo.countTransactionsForAccount("acc-1")
+
+            assertTrue(result.isSuccess)
+            assertEquals(7, result.getOrThrow())
         }
 }

@@ -6,21 +6,31 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.format.Paise
+import com.dhruv.core.ui.components.ConfirmDangerDialog
 import com.dhruv.core.ui.components.EmptyStateCard
 import com.dhruv.core.ui.components.InfoBanner
 import com.dhruv.core.ui.components.NxButton
 import com.dhruv.core.ui.components.NxButtonVariant
+import com.dhruv.core.ui.components.NxIconButton
 import com.dhruv.core.ui.components.RetryErrorCard
 import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.components.StatItem
@@ -41,6 +51,7 @@ fun RecurringScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val colors = LocalDhruvNextColors.current
+    var deleteTarget by remember { mutableStateOf<RecurringTemplate?>(null) }
 
     when (val current = state) {
         is RecurringUiState.Loading -> SkeletonBlock(modifier = modifier.fillMaxSize())
@@ -81,7 +92,11 @@ fun RecurringScreen(
                         SectionLabel("NEXT 30 DAYS", colors, Modifier.padding(bottom = 8.dp))
                     }
                     items(current.next30Days, key = { it.id }) { template ->
-                        RecurringRow(template)
+                        RecurringRow(
+                            template,
+                            onPause = { viewModel.pause(template.id) },
+                            onDelete = { deleteTarget = template },
+                        )
                     }
                     if (current.paused.isNotEmpty()) {
                         item {
@@ -92,11 +107,30 @@ fun RecurringScreen(
                             )
                         }
                         items(current.paused, key = { it.id }) { template ->
-                            RecurringRow(template, isPaused = true, onResume = { viewModel.resume(template.id) })
+                            RecurringRow(
+                                template,
+                                isPaused = true,
+                                onResume = { viewModel.resume(template.id) },
+                                onDelete = { deleteTarget = template },
+                            )
                         }
                     }
                 }
             }
+    }
+
+    deleteTarget?.let { template ->
+        val payee = template.template[RecurringTemplateKeys.PAYEE] as? String ?: "this recurring entry"
+        ConfirmDangerDialog(
+            title = "Delete \"$payee\"?",
+            body = "This stops future occurrences and withdraws any of its entries still waiting for review. This cannot be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                viewModel.delete(template.id)
+                deleteTarget = null
+            },
+            onDismiss = { deleteTarget = null },
+        )
     }
 }
 
@@ -120,8 +154,11 @@ private fun RecurringRow(
     template: RecurringTemplate,
     isPaused: Boolean = false,
     onResume: (() -> Unit)? = null,
+    onPause: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     val colors = LocalDhruvNextColors.current
+    var menuExpanded by remember { mutableStateOf(false) }
     val amountPaise = (template.template[RecurringTemplateKeys.AMOUNT_PAISE] as? Number)?.toLong() ?: 0L
     val payee = template.template[RecurringTemplateKeys.PAYEE] as? String ?: "Recurring"
     Row(
@@ -147,6 +184,21 @@ private fun RecurringRow(
         )
         if (isPaused && onResume != null) {
             NxButton(text = "Resume", onClick = onResume, variant = NxButtonVariant.Soft)
+        }
+        Box {
+            NxIconButton(
+                icon = Icons.Default.MoreVert,
+                onClick = { menuExpanded = true },
+                contentDescription = "More actions for $payee",
+            )
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                if (!isPaused && onPause != null) {
+                    DropdownMenuItem(text = { Text("Pause") }, onClick = { menuExpanded = false; onPause() })
+                }
+                if (onDelete != null) {
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = { menuExpanded = false; onDelete() })
+                }
+            }
         }
     }
 }

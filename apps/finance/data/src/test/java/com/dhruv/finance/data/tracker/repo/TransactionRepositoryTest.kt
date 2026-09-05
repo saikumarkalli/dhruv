@@ -67,6 +67,8 @@ private object UnimplementedMoneyApi : MoneyApi {
 
     override suspend fun countTransactionsForCategory(categoryId: String) = unimplemented()
 
+    override suspend fun countTransactionsForAccount(accountId: String) = unimplemented()
+
     override suspend fun listTransactions(
         occurredAtGte: String,
         occurredAtLt: String,
@@ -106,6 +108,22 @@ private object UnimplementedMoneyApi : MoneyApi {
     override suspend fun advanceRecurringNextRun(
         id: String,
         body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun editRecurringTemplate(
+        id: String,
+        body: com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto,
+    ) = unimplemented()
+
+    override suspend fun softDeleteRecurringTemplate(
+        id: String,
+        body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun dismissPendingForRecurring(
+        recurringIdFilter: String,
+        body: com.dhruv.finance.data.tracker.dto.SuggestionStatusDto,
+        statusFilter: String,
     ) = unimplemented()
 
     override suspend fun listPendingSuggestions() = unimplemented()

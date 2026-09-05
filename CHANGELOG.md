@@ -57,6 +57,18 @@ See [`platform/VERSIONING.md`](platform/VERSIONING.md).
   per-tab enable flags, both retired when the design system moved to a single global accent and a
   4/5-tab shell — zero consumers remained anywhere in the app). The merged JVM test-coverage floor
   was raised from 9% to 14% to match measured coverage (`:libs:settings` 38%, `:libs:core` 15%).
+- The **Money tab** (`apps/finance/specs/002-money-tab/`, design-v1 Phase 3, new
+  `:apps:finance:feature:money` module): a day-grouped ledger with quick add, a full transaction
+  form (transfers, "make it recurring"), transaction detail with an audit trail and
+  duplicate/make-recurring actions, accounts with "spendable now" and staleness-gated
+  reconciliation, categories with rename and an **irreversible** merge (the confirmation states the
+  exact transaction count that will move), and recurring templates with a review queue that
+  materialises due occurrences as suggestions — never straight to the ledger. Transfers are
+  excluded from expense totals; credit-card balances are excluded from "spendable now"; every
+  transaction mutation appends a `transaction_events` audit row. Money-bearing fields are `Long`
+  paise end-to-end, enforced by a new `checkTrackerMoneyPrecision` Gradle task; the one non-money
+  percentage (category spend share) is an integer tenths-of-a-percent, the same convention as the
+  existing `rate_bps` fields. Merged JVM coverage floor raised 14% → 17%.
 
 ### Fixed
 - The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no

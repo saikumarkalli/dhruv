@@ -86,6 +86,37 @@ class RecurringViewModel(
             recurringRepository.resume(templateId).onSuccess { load() }
         }
     }
+
+    /** FR-031a. No screen currently offers an edit form (account/category pickers this would need
+     * are not loaded by this ViewModel today) — exposed here, tested, and ready for whichever
+     * polish pass builds the sheet, the same "repository/VM done, screen not" pattern already
+     * recorded for the saved-view feature (data-model.md). */
+    fun edit(
+        templateId: String,
+        type: com.dhruv.finance.data.tracker.model.TransactionType,
+        amountPaise: Long,
+        accountId: String,
+        categoryId: String?,
+        payee: String?,
+        note: String?,
+        rrule: String,
+        nextRun: LocalDate,
+        amountIsVariable: Boolean,
+    ) {
+        viewModelScope.launch(exceptionHandler) {
+            recurringRepository
+                .edit(templateId, type, amountPaise, accountId, categoryId, payee, note, rrule, nextRun, amountIsVariable)
+                .onSuccess { load() }
+        }
+    }
+
+    /** FR-031b — deleting withdraws every pending entry this template produced too
+     * (`RecurringRepository.delete`), so [load] never shows a stale actionable row for it. */
+    fun delete(templateId: String) {
+        viewModelScope.launch(exceptionHandler) {
+            recurringRepository.delete(templateId).onSuccess { load() }
+        }
+    }
 }
 
 private fun RecurringTemplate.isIncome(): Boolean = template[RecurringTemplateKeys.TYPE] == "INCOME"

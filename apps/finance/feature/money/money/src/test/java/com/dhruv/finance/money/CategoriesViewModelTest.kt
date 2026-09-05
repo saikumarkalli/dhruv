@@ -212,4 +212,91 @@ class CategoriesViewModelTest {
             val state = vm.uiState.value as CategoriesUiState.Loaded
             assertEquals("Groceries & Household", state.expenseRows.single().name)
         }
+
+    // FR-026a
+    @Test
+    fun `createCategory adds the new category and reloads`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            vm.createCategory("Subscriptions", CategoryKind.EXPENSE)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CategoriesUiState.Loaded
+            assertTrue(state.expenseRows.any { it.name == "Subscriptions" })
+        }
+
+    @Test
+    fun `createCategory with a blank name is a no-op`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            vm.createCategory("   ", CategoryKind.EXPENSE)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CategoriesUiState.Loaded
+            assertEquals(1, state.expenseRows.size)
+        }
+
+    // FR-026b: zero linked transactions confirms straight away.
+    @Test
+    fun `requestDelete confirms directly when the category has no transactions`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries), transactionCounts = mapOf("cat-groceries" to 0))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            vm.requestDelete("cat-groceries", "Groceries")
+            advanceUntilIdle()
+
+            assertEquals(DeletePrompt.Confirm("cat-groceries", "Groceries"), vm.deletePrompt.value)
+        }
+
+    // FR-026b: a category with linked transactions blocks with the exact count, naming merge.
+    @Test
+    fun `requestDelete blocks with the exact count when the category has transactions`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries), transactionCounts = mapOf("cat-groceries" to 3))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            vm.requestDelete("cat-groceries", "Groceries")
+            advanceUntilIdle()
+
+            assertEquals(DeletePrompt.Blocked("Groceries", 3), vm.deletePrompt.value)
+        }
+
+    @Test
+    fun `confirmDelete calls the repository and reloads`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries), transactionCounts = mapOf("cat-groceries" to 0))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            vm.requestDelete("cat-groceries", "Groceries")
+            advanceUntilIdle()
+            vm.confirmDelete()
+            advanceUntilIdle()
+
+            assertEquals(listOf("cat-groceries"), repo.deletedIds)
+            assertEquals(DeletePrompt.None, vm.deletePrompt.value)
+            val state = vm.uiState.value as CategoriesUiState.Loaded
+            assertTrue(state.expenseRows.none { it.id == "cat-groceries" })
+        }
+
+    @Test
+    fun `the two reserved categories are never marked deletable`() =
+        runTest {
+            val repo = FakeCategoryRepository(listOf(groceries, uncategorised))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CategoriesUiState.Loaded
+            assertTrue(state.expenseRows.first { it.name == Category.RESERVED_UNCATEGORISED }.isReserved)
+            assertTrue(state.expenseRows.first { it.name == "Groceries" }.isReserved.not())
+        }
 }

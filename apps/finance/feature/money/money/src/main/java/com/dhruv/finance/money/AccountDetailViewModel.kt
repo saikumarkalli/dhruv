@@ -46,6 +46,16 @@ sealed interface AccountDetailUiState {
     data object SignedOut : AccountDetailUiState
 }
 
+/** D7's delete confirmation (FR-021a, Edge Cases). A zero-transaction account confirms directly;
+ * one with transactions still confirms — its transactions are unaffected by a soft-delete, they
+ * simply no longer belong to a visible account — but names the exact count first so nothing is a
+ * surprise. */
+sealed interface AccountDeletePrompt {
+    data object None : AccountDeletePrompt
+
+    data class Confirm(val transactionCount: Int) : AccountDeletePrompt
+}
+
 /**
  * D7 (account detail, US3) — balance, trend, month in/out and a running-balance activity feed, all
  * derived from [TransactionRepository.listForMonth] (the current month only, mirroring D1/US1's
@@ -62,6 +72,12 @@ class AccountDetailViewModel(
 ) : FeatureViewModel(crashReporter, "money") {
     private val _uiState = MutableStateFlow<AccountDetailUiState>(AccountDetailUiState.Loading)
     val uiState: StateFlow<AccountDetailUiState> = _uiState.asStateFlow()
+
+    private val _deletePrompt = MutableStateFlow<AccountDeletePrompt>(AccountDeletePrompt.None)
+    val deletePrompt: StateFlow<AccountDeletePrompt> = _deletePrompt.asStateFlow()
+
+    private val _deleted = MutableStateFlow(false)
+    val deleted: StateFlow<Boolean> = _deleted.asStateFlow()
 
     private var isReconciling = false
 
@@ -103,6 +119,28 @@ class AccountDetailViewModel(
                 .onFailure { error -> _uiState.value = error.toUiState() }
             isReconciling = false
         }
+    }
+
+    /** FR-021a — resolves the exact transaction count before showing the confirmation. */
+    fun requestDelete() {
+        viewModelScope.launch(exceptionHandler) {
+            accountRepository.countTransactionsForAccount(accountId).onSuccess { count ->
+                _deletePrompt.value = AccountDeletePrompt.Confirm(count)
+            }
+        }
+    }
+
+    fun confirmDelete() {
+        viewModelScope.launch(exceptionHandler) {
+            accountRepository.softDeleteAccount(accountId).onSuccess {
+                _deletePrompt.value = AccountDeletePrompt.None
+                _deleted.value = true
+            }
+        }
+    }
+
+    fun dismissDeletePrompt() {
+        _deletePrompt.value = AccountDeletePrompt.None
     }
 
     private fun buildLoadedState(

@@ -66,6 +66,8 @@ internal object RecurringUnimplementedMoneyApi : MoneyApi {
 
     override suspend fun countTransactionsForCategory(categoryId: String) = unimplemented()
 
+    override suspend fun countTransactionsForAccount(accountId: String) = unimplemented()
+
     override suspend fun listTransactions(
         occurredAtGte: String,
         occurredAtLt: String,
@@ -104,6 +106,22 @@ internal object RecurringUnimplementedMoneyApi : MoneyApi {
     override suspend fun advanceRecurringNextRun(
         id: String,
         body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun editRecurringTemplate(
+        id: String,
+        body: com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto,
+    ) = unimplemented()
+
+    override suspend fun softDeleteRecurringTemplate(
+        id: String,
+        body: Map<String, String>,
+    ) = unimplemented()
+
+    override suspend fun dismissPendingForRecurring(
+        recurringIdFilter: String,
+        body: SuggestionStatusDto,
+        statusFilter: String,
     ) = unimplemented()
 
     override suspend fun listPendingSuggestions() = unimplemented()
@@ -268,5 +286,82 @@ class RecurringRepositoryTest {
 
             assertTrue(result.isSuccess)
             assertTrue(createCalled)
+        }
+
+    // FR-031a: edit writes only the recurring_templates row, never a transaction or suggestion.
+    @Test
+    fun `edit sends the new amount, category, account and schedule`() =
+        runTest {
+            var sentId: String? = null
+            var sentBody: com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto? = null
+            val api =
+                object : RecurringFakeMoneyApi() {
+                    override suspend fun editRecurringTemplate(
+                        id: String,
+                        body: com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto,
+                    ): List<RecurringTemplateDto> {
+                        sentId = id
+                        sentBody = body
+                        return listOf(templateDto(id = "rec-1", nextRun = body.nextRun))
+                    }
+                }
+            val repo: RecurringRepository = RecurringRepositoryImpl(api)
+
+            val result =
+                repo.edit(
+                    templateId = "rec-1",
+                    type = com.dhruv.finance.data.tracker.model.TransactionType.EXPENSE,
+                    amountPaise = 7_50,
+                    accountId = "acc-2",
+                    categoryId = "cat-2",
+                    payee = "Landlord",
+                    note = "rent",
+                    rrule = "FREQ=WEEKLY",
+                    nextRun = LocalDate.of(2026, 10, 1),
+                    amountIsVariable = true,
+                )
+
+            assertTrue(result.isSuccess)
+            assertEquals("eq.rec-1", sentId)
+            assertEquals("FREQ=WEEKLY", sentBody?.rrule)
+            assertEquals("2026-10-01", sentBody?.nextRun)
+            assertEquals(7_50L, sentBody?.template?.get("amountPaise"))
+            assertEquals("acc-2", sentBody?.template?.get("accountId"))
+        }
+
+    // FR-031b: delete soft-deletes the template AND withdraws every still-pending suggestion it
+    // produced — the two calls a real deletion must make, neither of which is a hard DELETE.
+    @Test
+    fun `delete soft-deletes the template and dismisses its pending suggestions`() =
+        runTest {
+            var deletedId: String? = null
+            var dismissedFilter: String? = null
+            var dismissedStatus: String? = null
+            val api =
+                object : RecurringFakeMoneyApi() {
+                    override suspend fun softDeleteRecurringTemplate(
+                        id: String,
+                        body: Map<String, String>,
+                    ) {
+                        deletedId = id
+                    }
+
+                    override suspend fun dismissPendingForRecurring(
+                        recurringIdFilter: String,
+                        body: SuggestionStatusDto,
+                        statusFilter: String,
+                    ) {
+                        dismissedFilter = recurringIdFilter
+                        dismissedStatus = body.status
+                    }
+                }
+            val repo: RecurringRepository = RecurringRepositoryImpl(api)
+
+            val result = repo.delete("rec-1")
+
+            assertTrue(result.isSuccess)
+            assertEquals("eq.rec-1", deletedId)
+            assertEquals("eq.rec-1", dismissedFilter)
+            assertEquals("IGNORED", dismissedStatus)
         }
 }

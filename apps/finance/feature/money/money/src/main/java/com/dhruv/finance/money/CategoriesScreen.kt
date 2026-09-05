@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -44,6 +45,7 @@ import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
+import com.dhruv.finance.data.tracker.model.CategoryKind
 
 private const val TAB_EXPENSE = 0
 
@@ -58,9 +60,11 @@ fun CategoriesScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val mergePrompt by viewModel.mergePrompt.collectAsStateWithLifecycle()
     val mergeError by viewModel.mergeError.collectAsStateWithLifecycle()
+    val deletePrompt by viewModel.deletePrompt.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(TAB_EXPENSE) }
     var renameTarget by remember { mutableStateOf<CategoryRow?>(null) }
     var mergeSource by remember { mutableStateOf<CategoryRow?>(null) }
+    var showCreate by remember { mutableStateOf(false) }
 
     val colors = LocalDhruvNextColors.current
 
@@ -80,12 +84,22 @@ fun CategoriesScreen(
                 )
             is CategoriesUiState.Loaded -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    SegmentedRow(
-                        options = listOf("Expense (${current.expenseCount})", "Income (${current.incomeCount})"),
-                        selectedIndex = selectedTab,
-                        onSelected = { selectedTab = it },
+                    Row(
                         modifier = Modifier.fillMaxWidth().padding(DhruvNextSpacing.screenGutter),
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SegmentedRow(
+                            options = listOf("Expense (${current.expenseCount})", "Income (${current.incomeCount})"),
+                            selectedIndex = selectedTab,
+                            onSelected = { selectedTab = it },
+                            modifier = Modifier.weight(1f),
+                        )
+                        NxIconButton(
+                            icon = Icons.Default.Add,
+                            onClick = { showCreate = true },
+                            contentDescription = "Add category",
+                        )
+                    }
                     val rows = if (selectedTab == TAB_EXPENSE) current.expenseRows else current.incomeRows
 
                     if (rows.isEmpty()) {
@@ -105,6 +119,7 @@ fun CategoriesScreen(
                                     onRename = { renameTarget = row },
                                     onToggleExcluded = { viewModel.setExcludedFromSpend(row.id, !row.excludedFromSpend) },
                                     onMergeInto = { mergeSource = row },
+                                    onDelete = { viewModel.requestDelete(row.id, row.name) },
                                 )
                             }
                         }
@@ -171,6 +186,79 @@ fun CategoriesScreen(
             )
         MergePrompt.None -> Unit
     }
+
+    when (val prompt = deletePrompt) {
+        is DeletePrompt.Confirm ->
+            ConfirmDangerDialog(
+                title = "Delete \"${prompt.categoryName}\"?",
+                body = "This category has no transactions. This cannot be undone.",
+                confirmLabel = "Delete",
+                onConfirm = { viewModel.confirmDelete() },
+                onDismiss = { viewModel.dismissDeletePrompt() },
+            )
+        is DeletePrompt.Blocked ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDeletePrompt() },
+                title = { Text("Can't delete \"${prompt.categoryName}\"") },
+                text = {
+                    Text(
+                        "It has ${prompt.transactionCount} transaction" +
+                            (if (prompt.transactionCount == 1) "" else "s") +
+                            ". Merge it into another category first, then it can be deleted.",
+                    )
+                },
+                confirmButton = {
+                    NxButton(text = "Got it", onClick = { viewModel.dismissDeletePrompt() }, size = NxButtonSize.Small)
+                },
+            )
+        DeletePrompt.None -> Unit
+    }
+
+    if (showCreate) {
+        CreateCategoryDialog(
+            defaultKind = if (selectedTab == TAB_EXPENSE) CategoryKind.EXPENSE else CategoryKind.INCOME,
+            onConfirm = { name, kind ->
+                viewModel.createCategory(name, kind)
+                showCreate = false
+            },
+            onDismiss = { showCreate = false },
+        )
+    }
+}
+
+@Composable
+private fun CreateCategoryDialog(
+    defaultKind: CategoryKind,
+    onConfirm: (String, CategoryKind) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var kind by remember { mutableStateOf(defaultKind) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New category") },
+        text = {
+            Column {
+                NxTextField(value = name, onValueChange = { name = it }, placeholder = "Category name")
+                SegmentedRow(
+                    options = listOf("Expense", "Income"),
+                    selectedIndex = if (kind == CategoryKind.EXPENSE) 0 else 1,
+                    onSelected = { kind = if (it == 0) CategoryKind.EXPENSE else CategoryKind.INCOME },
+                    modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),
+                )
+            }
+        },
+        confirmButton = {
+            NxButton(
+                text = "Create",
+                onClick = { if (name.isNotBlank()) onConfirm(name, kind) },
+                size = NxButtonSize.Small,
+            )
+        },
+        dismissButton = {
+            NxButton(text = "Cancel", onClick = onDismiss, variant = NxButtonVariant.Ghost, size = NxButtonSize.Small)
+        },
+    )
 }
 
 @Composable
@@ -179,6 +267,7 @@ private fun CategoryListRow(
     onRename: () -> Unit,
     onToggleExcluded: () -> Unit,
     onMergeInto: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDhruvNextColors.current
@@ -210,6 +299,9 @@ private fun CategoryListRow(
                             onClick = { menuExpanded = false; onToggleExcluded() },
                         )
                         DropdownMenuItem(text = { Text("Merge into…") }, onClick = { menuExpanded = false; onMergeInto() })
+                        if (!row.isReserved) {
+                            DropdownMenuItem(text = { Text("Delete") }, onClick = { menuExpanded = false; onDelete() })
+                        }
                     }
                 }
             }

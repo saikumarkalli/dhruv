@@ -763,6 +763,7 @@ private fun MoneyTab(
                     viewModel = vm,
                     onAddTransaction = { navController.navigate(TRANSACTION_FORM_ROUTE) },
                     onSignIn = {},
+                    onDeleted = { navController.popBackStack() },
                 )
             }
         }

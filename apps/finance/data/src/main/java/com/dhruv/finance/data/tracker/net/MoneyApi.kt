@@ -11,6 +11,7 @@ import com.dhruv.finance.data.tracker.dto.MergeCategoriesRequestDto
 import com.dhruv.finance.data.tracker.dto.MonthSummaryDto
 import com.dhruv.finance.data.tracker.dto.RecurringPauseDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateDto
+import com.dhruv.finance.data.tracker.dto.RecurringTemplateEditDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto
 import com.dhruv.finance.data.tracker.dto.SuggestionDto
 import com.dhruv.finance.data.tracker.dto.SuggestionStatusDto
@@ -66,6 +67,16 @@ interface MoneyApi {
         @Query("id") id: String,
         @Body body: Map<String, @JvmSuppressWildcards Any?>,
     ): List<AccountDto>
+
+    /** Exact, all-time transaction count for one account (FR-021a, Edge Cases — "the user must be
+     * told what happens to those transactions before the deletion is confirmed"). Same
+     * `Prefer: count=exact` pattern as [countTransactionsForCategory]; counts the account as the
+     * primary `account_id` only, not a transfer's `to_account_id` side. */
+    @Headers("Prefer: count=exact")
+    @GET("transactions?deleted_at=is.null&limit=1&select=id")
+    suspend fun countTransactionsForAccount(
+        @Query("account_id") accountId: String,
+    ): Response<List<TransactionCountRowDto>>
 
     // ── Categories ──────────────────────────────────────────────────────────────────────────
     @GET("categories?deleted_at=is.null&order=name.asc")
@@ -185,6 +196,28 @@ interface MoneyApi {
         @Query("id") id: String,
         @Body body: Map<String, String>,
     ): List<RecurringTemplateDto>
+
+    @Headers("Prefer: return=representation")
+    @PATCH("recurring_templates")
+    suspend fun editRecurringTemplate(
+        @Query("id") id: String,
+        @Body body: RecurringTemplateEditDto,
+    ): List<RecurringTemplateDto>
+
+    @PATCH("recurring_templates")
+    suspend fun softDeleteRecurringTemplate(
+        @Query("id") id: String,
+        @Body body: Map<String, String>,
+    )
+
+    /** FR-031b — withdraws every still-pending suggestion a deleted recurring definition produced,
+     * so none is left actionable in the review queue. */
+    @PATCH("suggestions")
+    suspend fun dismissPendingForRecurring(
+        @Query("recurring_id") recurringIdFilter: String,
+        @Body body: SuggestionStatusDto,
+        @Query("status") statusFilter: String = "eq.PENDING",
+    )
 
     @GET("suggestions?status=eq.PENDING&order=due_on.asc")
     suspend fun listPendingSuggestions(): List<SuggestionDto>

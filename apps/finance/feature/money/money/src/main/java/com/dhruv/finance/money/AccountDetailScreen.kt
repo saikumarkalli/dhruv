@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,12 +25,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.format.Paise
+import com.dhruv.core.ui.components.ConfirmDangerDialog
 import com.dhruv.core.ui.components.DhruvModalSheet
 import com.dhruv.core.ui.components.ListGroup
 import com.dhruv.core.ui.components.ListGroupRow
 import com.dhruv.core.ui.components.MoneyText
 import com.dhruv.core.ui.components.MoneyTextVariant
 import com.dhruv.core.ui.components.NxButton
+import com.dhruv.core.ui.components.NxButtonVariant
 import com.dhruv.core.ui.components.NxTextField
 import com.dhruv.core.ui.components.OfflineStateCard
 import com.dhruv.core.ui.components.ReconcileBanner
@@ -59,10 +62,15 @@ fun AccountDetailScreen(
     viewModel: AccountDetailViewModel,
     onAddTransaction: () -> Unit,
     onSignIn: () -> Unit,
+    onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val deletePrompt by viewModel.deletePrompt.collectAsStateWithLifecycle()
+    val deleted by viewModel.deleted.collectAsStateWithLifecycle()
     var showReconcileSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(deleted) { if (deleted) onDeleted() }
 
     Box(modifier = modifier.fillMaxSize()) {
         when (val current = state) {
@@ -160,6 +168,14 @@ fun AccountDetailScreen(
                         block = true,
                         modifier = Modifier.padding(top = DhruvNextSpacing.sectionGap),
                     )
+
+                    NxButton(
+                        text = "Delete account",
+                        onClick = { viewModel.requestDelete() },
+                        variant = NxButtonVariant.Destructive,
+                        block = true,
+                        modifier = Modifier.padding(top = DhruvNextSpacing.interCardGap),
+                    )
                 }
         }
     }
@@ -173,6 +189,24 @@ fun AccountDetailScreen(
                 viewModel.reconcile(statedBalancePaise)
                 showReconcileSheet = false
             },
+        )
+    }
+
+    val prompt = deletePrompt
+    if (prompt is AccountDeletePrompt.Confirm) {
+        ConfirmDangerDialog(
+            title = "Delete this account?",
+            body =
+                if (prompt.transactionCount == 0) {
+                    "This account has no transactions. This cannot be undone."
+                } else {
+                    "It has ${prompt.transactionCount} transaction" +
+                        (if (prompt.transactionCount == 1) "" else "s") +
+                        ". They are not deleted — they stay recorded, this account just no longer appears in your accounts list. This cannot be undone."
+                },
+            confirmLabel = "Delete",
+            onConfirm = { viewModel.confirmDelete() },
+            onDismiss = { viewModel.dismissDeletePrompt() },
         )
     }
 }

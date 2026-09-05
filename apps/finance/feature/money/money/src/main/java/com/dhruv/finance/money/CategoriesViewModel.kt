@@ -28,6 +28,8 @@ data class CategoryRow(
     val sharePercentTenths: Int?,
     val subtitle: String?,
     val isReservedUncategorised: Boolean,
+    /** FR-026b — the two reserved categories (Uncategorised, Adjustment) are never deletable. */
+    val isReserved: Boolean,
 )
 
 sealed interface CategoriesUiState {
@@ -61,6 +63,16 @@ sealed interface MergePrompt {
     ) : MergePrompt
 }
 
+/** D8's delete confirmation (FR-026b). A category with linked transactions is not directly
+ * deletable — [Blocked] tells the user to merge it first (FR-024) rather than silently refusing. */
+sealed interface DeletePrompt {
+    data object None : DeletePrompt
+
+    data class Confirm(val categoryId: String, val categoryName: String) : DeletePrompt
+
+    data class Blocked(val categoryName: String, val transactionCount: Int) : DeletePrompt
+}
+
 /**
  * D8 (categories, US5) — Expense/Income separation with counts, per-row spend/share, safe
  * rename, excluded-from-spend toggling, and the irreversible merge flow (spec.md Story 5,
@@ -80,6 +92,9 @@ class CategoriesViewModel(
 
     private val _mergeError = MutableStateFlow<String?>(null)
     val mergeError: StateFlow<String?> = _mergeError.asStateFlow()
+
+    private val _deletePrompt = MutableStateFlow<DeletePrompt>(DeletePrompt.None)
+    val deletePrompt: StateFlow<DeletePrompt> = _deletePrompt.asStateFlow()
 
     init {
         load()
@@ -117,6 +132,9 @@ class CategoriesViewModel(
                     sharePercentTenths = category.sharePercentTenths,
                     subtitle = subtitleFor(category, isUncategorised, uncategorisedCount),
                     isReservedUncategorised = isUncategorised,
+                    isReserved =
+                        category.name == Category.RESERVED_UNCATEGORISED ||
+                            category.name == Category.RESERVED_ADJUSTMENT,
                 )
             }
         return CategoriesUiState.Loaded(
@@ -200,5 +218,59 @@ class CategoriesViewModel(
 
     fun dismissMergePrompt() {
         _mergePrompt.value = MergePrompt.None
+    }
+
+    /** FR-026a. */
+    fun createCategory(
+        name: String,
+        kind: CategoryKind,
+    ) {
+        if (name.isBlank()) return
+        viewModelScope.launch(exceptionHandler) {
+            categoryRepository
+                .createCategory(
+                    Category(id = "", name = name, kind = kind, parentId = null, icon = null, excludedFromSpend = false),
+                ).onSuccess { load() }
+        }
+    }
+
+    /** FR-026b — resolves the exact transaction count first, same pattern [requestMerge] already
+     * uses: a category with zero linked transactions confirms the delete; one or more routes to
+     * [DeletePrompt.Blocked] naming merge (FR-024) as the way to empty it first. */
+    fun requestDelete(
+        categoryId: String,
+        categoryName: String,
+    ) {
+        _mergeError.value = null
+        viewModelScope.launch(exceptionHandler) {
+            categoryRepository.countTransactionsForCategory(categoryId).onSuccess { count ->
+                _deletePrompt.value =
+                    if (count == 0) {
+                        DeletePrompt.Confirm(categoryId, categoryName)
+                    } else {
+                        DeletePrompt.Blocked(categoryName, count)
+                    }
+            }.onFailure {
+                _mergeError.value = "Couldn't check whether this category can be deleted. Try again."
+            }
+        }
+    }
+
+    fun confirmDelete() {
+        val prompt = _deletePrompt.value as? DeletePrompt.Confirm ?: return
+        viewModelScope.launch(exceptionHandler) {
+            categoryRepository
+                .softDeleteCategory(prompt.categoryId)
+                .onSuccess {
+                    _deletePrompt.value = DeletePrompt.None
+                    load()
+                }.onFailure { error ->
+                    _mergeError.value = error.message ?: "Couldn't delete this category. Try again."
+                }
+        }
+    }
+
+    fun dismissDeletePrompt() {
+        _deletePrompt.value = DeletePrompt.None
     }
 }

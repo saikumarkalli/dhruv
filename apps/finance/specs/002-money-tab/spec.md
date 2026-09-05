@@ -270,6 +270,12 @@ it came from a recurring entry.
 - **FR-021**: Reconciling an account MUST record the user-stated real balance, clear the staleness
   flag, and record any difference as an explainable adjustment with its own history entry — never as
   a silent overwrite.
+- **FR-021a**: Users MUST be able to delete an account. If it has transactions, the user MUST be
+  told the exact number before the deletion is confirmed. Deletion is soft (`deleted_at`), which is
+  what satisfies "no transaction may end up pointing at nothing" (Edge Cases) — the account row
+  still exists, so every transaction's `account_id` still resolves; the account simply no longer
+  appears in the accounts list or "spendable now". Deleted transactions are not reassigned or
+  deleted alongside it.
 
 **Categories**
 
@@ -284,6 +290,11 @@ it came from a recurring entry.
   contribute nothing to any spend total, category share, or budget.
 - **FR-026**: The system MUST surface how many transactions have no category, with a path to
   categorise them.
+- **FR-026a**: Users MUST be able to create a new category, naming its income/expense set.
+- **FR-026b**: Users MUST be able to delete a category that has no linked transactions. The two
+  reserved categories (Uncategorised, Adjustment) are never deletable. A category with linked
+  transactions is not deletable directly — merge it into another category first (FR-024), which
+  empties it before a delete would apply.
 
 **Recurring**
 
@@ -298,6 +309,13 @@ it came from a recurring entry.
   entries, and list paused entries separately.
 - **FR-031**: Users MUST be able to pause and resume a recurring entry; a paused entry produces no
   pending entries.
+- **FR-031a**: Users MUST be able to edit a recurring definition's amount, category, account and
+  schedule; editing MUST NOT retroactively change any transaction it has already produced (Edge
+  Cases), and MUST NOT alter its `next_run` in a way that skips or repeats an occurrence already
+  due.
+- **FR-031b**: Users MUST be able to delete a recurring definition. Any pending entry it produced
+  MUST stop being actionable (Edge Cases) — it is withdrawn from the review queue, not silently left
+  behind.
 
 **Cross-cutting**
 
@@ -317,8 +335,17 @@ it came from a recurring entry.
   optional masked identifier, current balance, a primary flag, and (for credit) a limit and a due
   day. Carries the date its balance was last confirmed.
 - **Transaction**: A single dated money movement of one type (expense, income, transfer) with an
-  amount, a category, one account (two for a transfer), and optional payee, note, receipt, split
-  allocation, goal link and cleared state.
+  amount, a category, one account (two for a transfer), and optional payee, note, receipt, goal
+  link and cleared state. **A split is N sibling transaction rows sharing a `split_group_id`, not
+  one entity with parts** (data-model.md; there is no parent row holding a total) — each row is
+  independently a full `Transaction`: it renders as its own ledger row (FR-012), is edited and
+  deleted on its own (FR-006, one row at a time, not the group), and is counted once in its own
+  category's share, exactly like any other transaction. `split_group_id` exists purely so a detail
+  screen can offer "show the other parts of this split"; nothing about totals, editing or deletion
+  treats a split differently from an ordinary transaction. No screen in this phase creates a split
+  (`QuickAddViewModel`/`TransactionFormViewModel` always write `splitGroupId = null`) — the column
+  ships now so a later phase's split-entry UI has somewhere to write, per the same
+  "schema now, UI later" pattern FR-004 already uses for the goal link.
 - **Category**: A user-facing grouping for transactions, belonging to either the income or expense
   set, optionally excluded from spend, optionally holding sub-categories. Identity survives renaming.
 - **Transaction history entry**: An append-only, human-readable record of one change to one
@@ -329,7 +356,10 @@ it came from a recurring entry.
   fixed (auto-debit) or variable.
 - **Pending entry**: A proposed transaction awaiting the user's accept or dismiss. Not part of any
   total until accepted.
-- **Saved view**: A named filter combination a user can re-apply to the ledger.
+- **Saved view**: A named filter combination a user can re-apply to the ledger. Stored on-device in
+  encrypted DataStore, not Supabase — a saved view is a personal shortcut, not tracker data, so it
+  carries no `user_id`/RLS/sync obligation (data-model.md). Users can rename and delete a saved
+  view; identity survives a rename the same way a category's does (FR-023).
 - **Reconciliation**: A user-stated real balance for an account at a point in time, plus any
   adjustment it produced.
 
