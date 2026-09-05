@@ -9,6 +9,7 @@ import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
 import com.dhruv.finance.data.tracker.repo.TransactionGuess
 import com.dhruv.finance.data.tracker.repo.TransactionRepository
+import java.time.Instant
 import java.time.YearMonth
 import java.util.UUID
 
@@ -19,6 +20,10 @@ import java.util.UUID
 class FakeAccountRepository(
     private var accounts: List<Account> = emptyList(),
 ) : AccountRepository {
+    /** (accountId, statedBalancePaise) for every [reconcileAccount] call — lets a ViewModel test
+     * assert reconciliation was actually invoked, not just that the UI stopped showing stale. */
+    val reconcileCalls = mutableListOf<Pair<String, Long>>()
+
     override suspend fun listAccounts(): Result<List<Account>> = Result.success(accounts)
 
     override suspend fun createAccount(account: Account): Result<Account> {
@@ -27,11 +32,35 @@ class FakeAccountRepository(
         return Result.success(created)
     }
 
-    override suspend fun updateAccount(account: Account): Result<Account> = Result.success(account)
+    override suspend fun updateAccount(account: Account): Result<Account> {
+        accounts = accounts.map { if (it.id == account.id) account else it }
+        return Result.success(account)
+    }
 
-    override suspend fun softDeleteAccount(accountId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun softDeleteAccount(accountId: String): Result<Unit> {
+        accounts = accounts.filterNot { it.id == accountId }
+        return Result.success(Unit)
+    }
 
-    override suspend fun markReconciled(accountId: String): Result<Unit> = Result.success(Unit)
+    /** Mirrors [com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl.reconcileAccount]'s
+     * observable effect — sets `reconciledAt` to now and adopts the stated balance — without
+     * writing a real adjustment transaction (that write is the data-layer's own concern, verified
+     * separately in `AccountRepositoryTest`). */
+    override suspend fun reconcileAccount(
+        accountId: String,
+        statedBalancePaise: Long,
+    ): Result<Unit> {
+        reconcileCalls += accountId to statedBalancePaise
+        accounts =
+            accounts.map {
+                if (it.id == accountId) {
+                    it.copy(reconciledAt = Instant.now(), balancePaise = statedBalancePaise)
+                } else {
+                    it
+                }
+            }
+        return Result.success(Unit)
+    }
 }
 
 class FakeCategoryRepository(
