@@ -191,7 +191,7 @@ class TransactionRepositoryTest {
                                 categoryKind = "EXPENSE",
                                 excludedFromSpend = false,
                                 spendPaise = 340_00,
-                                sharePercent = 42.5,
+                                sharePercentTenths = 425,
                             ),
                         )
                     override suspend fun listCategories() =
@@ -208,7 +208,7 @@ class TransactionRepositoryTest {
             val category = categoryDto.toDomain(spend[categoryDto.id])
 
             assertEquals(340_00L, category.spendPaise)
-            assertEquals(42.5, category.sharePercent)
+            assertEquals(425, category.sharePercentTenths)
         }
 
     // MNY-BR-006 companion (T022): the repository boundary rejects a shape the DB CHECK

@@ -15,7 +15,7 @@ fun CategoryDto.toDomain(spend: CategorySpendDto? = null): Category =
         icon = icon,
         excludedFromSpend = excludedFromSpend,
         spendPaise = spend?.spendPaise,
-        sharePercent = spend?.sharePercent,
+        sharePercentTenths = spend?.sharePercentTenths,
     )
 
 fun Category.toUpsertDto(requestId: String? = null): CategoryUpsertDto =

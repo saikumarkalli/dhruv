@@ -17,7 +17,7 @@ interface CategoryRepository {
     suspend fun listCategories(): Result<List<Category>>
 
     /** Same rows as [listCategories], joined against `finance.v_category_spend` for [month] —
-     * each [Category.spendPaise]/[Category.sharePercent] is server-computed (NFR-8), never
+     * each [Category.spendPaise]/[Category.sharePercentTenths] is server-computed (NFR-8), never
      * re-derived client-side. A category with no spend this month (or genuinely excluded from
      * the view) comes back with both fields `null`, not zero. */
     suspend fun listCategoriesWithSpend(month: YearMonth): Result<List<Category>>

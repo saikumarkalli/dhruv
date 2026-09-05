@@ -13,7 +13,9 @@ data class Category(
     val icon: String?,
     val excludedFromSpend: Boolean,
     val spendPaise: Long? = null,
-    val sharePercent: Double? = null,
+    /** Tenths-of-a-percent (425 = 42.5%) — Article VII/DAT-BR-008 forbids floating-point numeric
+     * types anywhere under the tracker package, even for a non-money percentage. */
+    val sharePercentTenths: Int? = null,
 ) {
     companion object {
         const val RESERVED_UNCATEGORISED = "Uncategorised"

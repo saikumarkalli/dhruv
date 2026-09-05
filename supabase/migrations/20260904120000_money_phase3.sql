@@ -368,11 +368,11 @@ select
     sum(t.amount_paise) as spend_paise,
     case
         when c.kind = 'EXPENSE' and ms.expense_paise > 0
-            then round((sum(t.amount_paise)::numeric / ms.expense_paise) * 100, 1)
+            then round((sum(t.amount_paise)::numeric / ms.expense_paise) * 1000)::integer
         when c.kind = 'INCOME' and ms.income_paise > 0
-            then round((sum(t.amount_paise)::numeric / ms.income_paise) * 100, 1)
+            then round((sum(t.amount_paise)::numeric / ms.income_paise) * 1000)::integer
         else 0
-    end as share_percent
+    end as share_percent_tenths
 from finance.transactions t
 join finance.categories c on c.id = t.category_id
 join finance.v_month_summary ms

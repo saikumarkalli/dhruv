@@ -26,7 +26,7 @@ hit. Read it before a first change to an unfamiliar module.
 ## Modules
 - `:apps:finance:app` — shell: `MainActivity` (pager + bottom nav), Settings UI, `platformModule`/`appModule` Koin wiring, Converter/Finance hubs.
 - `:apps:finance:data` — shared Room DB + entities + DAOs + repositories + `CurrencyApi` + `GeminiRepository` + `CurrencyFormatter`. Feature modules depend on this (Repository-only access).
-- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`. `networth` and the other design-v1 tracker modules (`money`, `planning`, `insurance`, `retirement`, `insights`, `automation`, `onboarding`) are **not yet created** — none is in `settings.gradle.kts`. Planned module topology + build order: `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §6–§7.
+- `:apps:finance:feature:*` — `calculator`, `loans`, `investments`, `tax`, `everyday`, `currency`, `unit`, `date`, `time`, `assistant`, `onboarding`, `money`. `networth` and the other design-v1 tracker modules (`planning`, `insurance`, `retirement`, `insights`, `automation`) are **not yet created** — none is in `settings.gradle.kts`. Planned module topology + build order: `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §6–§7.
 
 **Folder layout (2026-08-09):** feature modules are grouped by owning tab under
 `apps/finance/feature/<home|money|calc|plan|insights|onboarding|shell>/<name>/` — e.g. `loans` now

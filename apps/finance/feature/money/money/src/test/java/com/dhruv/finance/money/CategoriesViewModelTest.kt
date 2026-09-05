@@ -39,7 +39,7 @@ class CategoriesViewModelTest {
             icon = null,
             excludedFromSpend = false,
             spendPaise = 340_00,
-            sharePercent = 42.5,
+            sharePercentTenths = 425,
         )
     private val investment =
         Category(
@@ -50,7 +50,7 @@ class CategoriesViewModelTest {
             icon = null,
             excludedFromSpend = true,
             spendPaise = 500_00,
-            sharePercent = 0.0,
+            sharePercentTenths = 0,
         )
     private val uncategorised =
         Category(
@@ -70,7 +70,7 @@ class CategoriesViewModelTest {
             icon = null,
             excludedFromSpend = false,
             spendPaise = 1_000_00,
-            sharePercent = 100.0,
+            sharePercentTenths = 1000,
         )
 
     private fun viewModel(
@@ -101,7 +101,7 @@ class CategoriesViewModelTest {
             val state = vm.uiState.value as CategoriesUiState.Loaded
             val row = state.expenseRows.single { it.id == "cat-groceries" }
             assertEquals(340_00L, row.spendPaise)
-            assertEquals(42.5, row.sharePercent)
+            assertEquals(425, row.sharePercentTenths)
             assertNull(row.subtitle)
         }
 

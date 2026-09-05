@@ -42,10 +42,14 @@ val coveredModules =
 // Global LINE-coverage floor for the merged report. A non-regression ratchet: it sits just under the
 // current measured coverage and is bumped as tests land. Baseline was ~6.7%; 0.09 held through the
 // data/core/assistant/date tests. Raised to 0.14 at the 004-settings 0b.5 checkpoint (T117) — merged
-// coverage measured at 14.91% (:libs:settings 38.38%, :libs:core 15.02%) after 0b.1-0b.5. Most of the
-// remaining uncovered code is Compose UI, which the JVM gate does not exercise. (Per-module floors
-// are a later-phase refinement.)
-val globalLineFloor = "0.14".toBigDecimal()
+// coverage measured at 14.91% (:libs:settings 38.38%, :libs:core 15.02%) after 0b.1-0b.5. Raised to
+// 0.17 at the 002-money-tab Phase 9 checkpoint (T078) — merged coverage measured at 17.40%
+// (3144/18070 lines) after all six Money user stories: :apps:finance:feature:money's own package at
+// 27.4% (567/2069 — most of the module is Compose screen code the JVM gate does not exercise),
+// :apps:finance:data overall at 29.9% (987/3303), the tracker/repo package specifically at 52.1%.
+// Most of the remaining uncovered code across the tree is Compose UI. (Per-module floors are a
+// later-phase refinement.)
+val globalLineFloor = "0.17".toBigDecimal()
 
 // Generated / non-logic classes excluded from the coverage denominator.
 val coverageExcludes =

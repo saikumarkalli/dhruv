@@ -193,8 +193,8 @@ private fun CategoryListRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(horizontalAlignment = Alignment.End) {
                     row.spendPaise?.let { MoneyText(paise = it, variant = MoneyTextVariant.Row) }
-                    row.sharePercent?.let {
-                        Text(text = "$it%", color = colors.tx3, fontSize = DhruvNextType.meta)
+                    row.sharePercentTenths?.let {
+                        Text(text = "${it / 10}.${it % 10}%", color = colors.tx3, fontSize = DhruvNextType.meta)
                     }
                 }
                 Box {

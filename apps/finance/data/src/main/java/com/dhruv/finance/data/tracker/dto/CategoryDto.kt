@@ -17,7 +17,10 @@ data class CategoryDto(
     @param:Json(name = "deleted_at") val deletedAt: String? = null,
 )
 
-/** Wire shape of `finance.v_category_spend` — server-computed month spend + share (NFR-8). */
+/** Wire shape of `finance.v_category_spend` — server-computed month spend + share (NFR-8).
+ * [sharePercentTenths] is an integer count of tenths-of-a-percent (425 = 42.5%) — constitution
+ * Article VII / DAT-BR-008 forbids floating-point numeric types anywhere under the tracker package,
+ * even for a non-money percentage, enforced by `checkTrackerMoneyPrecision`. */
 @JsonClass(generateAdapter = true)
 data class CategorySpendDto(
     @param:Json(name = "month") val month: String,
@@ -26,7 +29,7 @@ data class CategorySpendDto(
     @param:Json(name = "category_kind") val categoryKind: String,
     @param:Json(name = "excluded_from_spend") val excludedFromSpend: Boolean,
     @param:Json(name = "spend_paise") val spendPaise: Long,
-    @param:Json(name = "share_percent") val sharePercent: Double,
+    @param:Json(name = "share_percent_tenths") val sharePercentTenths: Int,
 )
 
 @JsonClass(generateAdapter = true)

@@ -204,7 +204,7 @@ class CategoryRepositoryTest {
                                 categoryKind = "EXPENSE",
                                 excludedFromSpend = true,
                                 spendPaise = 500_00,
-                                sharePercent = 0.0,
+                                sharePercentTenths = 0,
                             ),
                         )
                 }
@@ -215,7 +215,7 @@ class CategoryRepositoryTest {
             val row = result.single()
             assertTrue(row.excludedFromSpend)
             assertEquals(500_00L, row.spendPaise)
-            assertEquals(0.0, row.sharePercent)
+            assertEquals(0, row.sharePercentTenths)
         }
 
     // Companion case: a category absent from this month's v_category_spend rows (no spend at
@@ -235,7 +235,7 @@ class CategoryRepositoryTest {
             val row = repo.listCategoriesWithSpend(YearMonth.of(2026, 9)).getOrThrow().single()
 
             assertNull(row.spendPaise)
-            assertNull(row.sharePercent)
+            assertNull(row.sharePercentTenths)
         }
 
     // countTransactionsForCategory: reads the exact total from PostgREST's `Content-Range`

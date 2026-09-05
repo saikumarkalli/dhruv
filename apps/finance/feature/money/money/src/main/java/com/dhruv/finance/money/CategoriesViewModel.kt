@@ -23,7 +23,9 @@ data class CategoryRow(
     val kind: CategoryKind,
     val excludedFromSpend: Boolean,
     val spendPaise: Long?,
-    val sharePercent: Double?,
+    /** Tenths-of-a-percent (425 = 42.5%) — Article VII/DAT-BR-008 forbids floating-point numeric
+     * types anywhere under the tracker package. */
+    val sharePercentTenths: Int?,
     val subtitle: String?,
     val isReservedUncategorised: Boolean,
 )
@@ -112,7 +114,7 @@ class CategoriesViewModel(
                     kind = category.kind,
                     excludedFromSpend = category.excludedFromSpend,
                     spendPaise = category.spendPaise,
-                    sharePercent = category.sharePercent,
+                    sharePercentTenths = category.sharePercentTenths,
                     subtitle = subtitleFor(category, isUncategorised, uncategorisedCount),
                     isReservedUncategorised = isUncategorised,
                 )

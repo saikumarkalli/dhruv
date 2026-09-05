@@ -9,6 +9,12 @@
 -- category's share of expense_paise; an income category's share of income_paise) — sharing one
 -- denominator across both kinds would make an income category's "share" a fraction of spend, which
 -- is not a meaningful number.
+--
+-- `share_percent_tenths` is an integer count of tenths-of-a-percent (425 = 42.5%), not a
+-- fractional percent — constitution Article VII / DAT-BR-008 forbids Double/Float anywhere under
+-- `tracker/**` on the Kotlin side, including non-money percentages like this one, enforced by the
+-- `checkTrackerMoneyPrecision` Gradle task. Same integer-fixed-point convention `rate_bps` already
+-- uses for loan rates (readiness decisions §2.1), one decimal of precision instead of two.
 create or replace view finance.v_category_spend
 with (security_invoker = on) as
 select
@@ -21,11 +27,11 @@ select
     sum(t.amount_paise) as spend_paise,
     case
         when c.kind = 'EXPENSE' and ms.expense_paise > 0
-            then round((sum(t.amount_paise)::numeric / ms.expense_paise) * 100, 1)
+            then round((sum(t.amount_paise)::numeric / ms.expense_paise) * 1000)::integer
         when c.kind = 'INCOME' and ms.income_paise > 0
-            then round((sum(t.amount_paise)::numeric / ms.income_paise) * 100, 1)
+            then round((sum(t.amount_paise)::numeric / ms.income_paise) * 1000)::integer
         else 0
-    end as share_percent
+    end as share_percent_tenths
 from finance.transactions t
 join finance.categories c on c.id = t.category_id
 join finance.v_month_summary ms
