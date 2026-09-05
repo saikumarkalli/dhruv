@@ -95,6 +95,13 @@ fun LedgerScreen(
         onUndoConsumed()
     }
 
+    // Found 2026-09-05, live-device audit: D1 only ever loaded via `LedgerViewModel.init` plus
+    // QuickAddSheet's explicit `onSaved { refresh() }` (an in-place sheet, not a route). D3 (full
+    // form, "more options") is a separate pushed route whose `onClose` never refreshed D1 either —
+    // same reload-on-return fix as AccountsScreen/RecurringScreen, since D1 leaves and re-enters
+    // composition exactly the same way D6/D9 do when a sibling route is pushed and popped.
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
     val accountRepository: AccountRepository = koinInject()
     val categoryRepository: CategoryRepository = koinInject()
     var accountOptions by remember { mutableStateOf<List<SelectionOption>>(emptyList()) }

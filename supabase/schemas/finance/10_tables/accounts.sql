@@ -10,7 +10,14 @@
 -- FR-016).
 create table if not exists finance.accounts (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users (id) on delete cascade,
+    -- `default auth.uid()` (found 2026-09-05, live-device verification): no client DTO on any of
+    -- this table's six siblings ever sent `user_id` in its create payload, so every real INSERT
+    -- was rejected by this table's own `accounts_insert_own` RLS policy with a 403 -- invisible
+    -- until this migration was actually applied to a live project, since no real device write had
+    -- ever reached it before. The default makes `auth.uid()` self-populate the column instead of
+    -- relying on a client to echo back an id it has no reason to know; RLS's own WITH CHECK still
+    -- rejects a client that tries to override it with someone else's id.
+    user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
     name text not null check (length(btrim(name)) between 1 and 60),
     type text not null check (type in ('BANK', 'CASH', 'WALLET', 'CREDIT_CARD')),
     mask text check (mask is null or length(mask) <= 4),

@@ -15,7 +15,11 @@
 -- dated cashflow series that no phase models yet (readiness decisions §2.3, 005 research R8).
 create table if not exists finance.holdings (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users (id) on delete cascade,
+    -- default auth.uid() -- see finance/10_tables/accounts.sql's identical column for why (found
+    -- 2026-09-05 auditing 002-money-tab's client). No Android client consumes this table yet, but
+    -- every sibling tracker table had the identical missing-default bug, so this is fixed now
+    -- rather than left as the same landmine for whichever phase builds the holdings client.
+    user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
     name text not null check (length(btrim(name)) between 1 and 120),
     kind text not null check (kind in ('ASSET', 'LIABILITY')),
     sector text not null check (sector in (

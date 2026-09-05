@@ -65,6 +65,9 @@ class TransactionFormViewModel(
     fun open(prefill: TransactionFormUiState? = null) {
         if (prefill != null) _uiState.value = prefill.copy(isDirty = false)
         viewModelScope.launch(exceptionHandler) {
+            // Same fix as QuickAddViewModel.open() -- see its doc comment (found 2026-09-05,
+            // live-device audit). D3 is also reachable before a user has ever visited D8.
+            categoryRepository.ensureReservedCategories()
             accountRepository.listAccounts().onSuccess { accounts ->
                 _uiState.value = _uiState.value.copy(accountOptions = accounts.map { SelectionOption(it.id, it.name) })
             }

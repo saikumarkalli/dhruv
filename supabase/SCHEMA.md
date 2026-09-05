@@ -21,7 +21,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `name` | `text` | not null check (length(btrim(name)) between 1 and 60) |
 | `type` | `text` | not null check (type in ('BANK', 'CASH', 'WALLET', 'CREDIT_CARD')) |
 | `mask` | `text` | check (mask is null or length(mask) <= 4) |
@@ -49,7 +49,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `name` | `text` | not null check (length(btrim(name)) between 1 and 60) |
 | `kind` | `text` | not null check (kind in ('EXPENSE', 'INCOME')) |
 | `parent_id` | `uuid` | references finance.categories (id) on delete set null |
@@ -74,7 +74,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `name` | `text` | not null check (length(btrim(name)) between 1 and 120) |
 | `kind` | `text` | not null check (kind in ('ASSET', 'LIABILITY')) |
 | `sector` | `text` | not null check (sector in (
@@ -132,7 +132,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `template` | `jsonb` | not null |
 | `rrule` | `text` | not null |
 | `next_run` | `date` | not null |
@@ -158,7 +158,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `recurring_id` | `uuid` | references finance.recurring_templates (id) |
 | `due_on` | `date` | — |
 | `raw_text` | `text` | — |
@@ -202,7 +202,7 @@ RLS: **enabled**
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | `uuid` | primary key default gen_random_uuid() |
-| `user_id` | `uuid` | not null references auth.users (id) on delete cascade |
+| `user_id` | `uuid` | not null default auth.uid() references auth.users (id) on delete cascade |
 | `type` | `text` | not null check (type in ('EXPENSE', 'INCOME', 'TRANSFER')) |
 | `amount_paise` | `bigint` | not null check (amount_paise > 0) |
 | `account_id` | `uuid` | not null references finance.accounts (id) |

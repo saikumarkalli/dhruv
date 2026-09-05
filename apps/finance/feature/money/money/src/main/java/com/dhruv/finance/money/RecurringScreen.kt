@@ -15,6 +15,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,12 @@ fun RecurringScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val colors = LocalDhruvNextColors.current
     var deleteTarget by remember { mutableStateOf<RecurringTemplate?>(null) }
+
+    // Same reload-on-return fix as AccountsScreen (found 2026-09-05, live-device audit): D9-review
+    // is a separate pushed route, so accepting/dismissing a pending entry there never reached D9
+    // without this — D9's pendingCount and NEXT 30 DAYS list stayed stale until the tab's own
+    // ViewModel was torn down and recreated.
+    LaunchedEffect(Unit) { viewModel.load() }
 
     when (val current = state) {
         is RecurringUiState.Loading -> SkeletonBlock(modifier = modifier.fillMaxSize())

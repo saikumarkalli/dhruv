@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,14 @@ fun AccountsScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Found 2026-09-05, live-device audit: D6 only ever loaded once (`AccountsViewModel.init`),
+    // so a freshly created account (D6a "Add account" pushes a separate route and pops back) was
+    // invisible until the whole tab's ViewModel was torn down and recreated. This screen
+    // recomposes fresh every time D6 is navigated back to (NavHost only composes the current
+    // back-stack entry), so re-running `load()` here is the same "reload on return" fix
+    // TransactionDetailScreen already uses for its own `LaunchedEffect(transactionId)`.
+    LaunchedEffect(Unit) { viewModel.load() }
 
     Box(modifier = modifier.fillMaxSize()) {
         when (val current = state) {

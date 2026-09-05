@@ -182,4 +182,19 @@ class QuickAddViewModelTest {
             assertEquals(transactionRepository.createRequestIds[0], transactionRepository.createRequestIds[1])
             assertEquals("txn-1", vm.uiState.value.savedTransactionId)
         }
+
+    // Found 2026-09-05, live-device audit: this was the only Money entry point that never seeded
+    // the reserved categories -- a brand-new user's actual first action is this FAB, so every real
+    // account hit an empty category picker with no way to proceed until this was fixed.
+    @Test
+    fun `open ensures the reserved categories exist`() =
+        runTest {
+            val categoryRepository = FakeCategoryRepository(listOf(groceries))
+            val vm = viewModel(categoryRepository = categoryRepository)
+
+            vm.open()
+            advanceUntilIdle()
+
+            assertEquals(1, categoryRepository.ensureReservedCalls.size)
+        }
 }

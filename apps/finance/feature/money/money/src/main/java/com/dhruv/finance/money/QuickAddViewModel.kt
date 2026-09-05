@@ -55,6 +55,12 @@ class QuickAddViewModel(
 
     fun open(payee: String? = null) {
         viewModelScope.launch(exceptionHandler) {
+            // Found 2026-09-05, live-device audit: this was the only Money entry point that never
+            // called ensureReservedCategories() -- only CategoriesViewModel did, on D8's own open.
+            // A brand-new user's actual first action is this FAB, not a detour through D8 first,
+            // so every real account hit an empty category picker with no way to proceed (FR-001
+            // requires a category for a non-transfer type) until they happened to visit D8 first.
+            categoryRepository.ensureReservedCategories()
             transactionRepository.guessFor(payee).onSuccess { guess ->
                 _uiState.value = _uiState.value.copy(accountId = guess.accountId, categoryId = guess.categoryId)
             }

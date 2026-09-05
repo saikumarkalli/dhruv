@@ -6,7 +6,8 @@
 -- (research R7) safe to run repeatedly and from two devices without duplicating a pending entry.
 create table if not exists finance.suggestions (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users (id) on delete cascade,
+    -- default auth.uid() -- see accounts.sql's identical column for why (found 2026-09-05).
+    user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
     recurring_id uuid references finance.recurring_templates (id),
     due_on date,
     raw_text text,

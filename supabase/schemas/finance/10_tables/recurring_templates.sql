@@ -4,7 +4,8 @@
 -- (research R7); the client materialises due occurrences on open, idempotently.
 create table if not exists finance.recurring_templates (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users (id) on delete cascade,
+    -- default auth.uid() -- see accounts.sql's identical column for why (found 2026-09-05).
+    user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
     -- The transaction shape to produce: type, amount, category, account, payee.
     template jsonb not null,
     rrule text not null,

@@ -11,7 +11,8 @@
 -- public.delete_my_data()/public.delete_my_account().
 create table if not exists finance.transactions (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users (id) on delete cascade,
+    -- default auth.uid() -- see accounts.sql's identical column for why (found 2026-09-05).
+    user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
     type text not null check (type in ('EXPENSE', 'INCOME', 'TRANSFER')),
     amount_paise bigint not null check (amount_paise > 0),
     account_id uuid not null references finance.accounts (id),

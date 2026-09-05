@@ -251,4 +251,18 @@ class TransactionFormViewModelTest {
             assertEquals(transactionRepository.createRequestIds[0], transactionRepository.createRequestIds[1])
             assertEquals("txn-1", vm.uiState.value.savedTransactionId)
         }
+
+    // Same fix as QuickAddViewModelTest's -- see its doc comment (found 2026-09-05, live-device
+    // audit). D3 is also reachable before a user has ever visited D8.
+    @Test
+    fun `open ensures the reserved categories exist`() =
+        runTest {
+            val categoryRepository = FakeCategoryRepository(listOf(groceries))
+            val vm = viewModel(categoryRepository = categoryRepository)
+
+            vm.open()
+            advanceUntilIdle()
+
+            assertEquals(1, categoryRepository.ensureReservedCalls.size)
+        }
 }
