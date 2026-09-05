@@ -8,7 +8,7 @@ import org.koin.dsl.module
 
 val moneyModule =
     module {
-        viewModel { LedgerViewModel(get(), get(), get()) }
+        viewModel { LedgerViewModel(get(), get(), get(), get()) }
         viewModel { QuickAddViewModel(get(), get(), get(), get(), get()) }
         viewModel { TransactionFormViewModel(get(), get(), get(), get(), get()) }
     }

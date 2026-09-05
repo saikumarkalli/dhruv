@@ -118,16 +118,16 @@ day grouping and month totals, then apply a filter and confirm the count and lis
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] `LedgerViewModelTest` — rows day-grouped with per-day net; pinned header shows correct INCOME/EXPENSE/SAVED %, citing `MNY-UI-002`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerViewModelTest.kt`
-- [ ] T032 [P] [US2] `LedgerFilterViewModelTest` — the live result count updates on every filter change and equals the row count after applying, citing `MNY-UI-003`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerFilterViewModelTest.kt`
+- [X] T031 [P] [US2] `LedgerViewModelTest` — rows day-grouped with per-day net; pinned header shows correct INCOME/EXPENSE/SAVED %, citing `MNY-UI-002`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerViewModelTest.kt`
+- [X] T032 [P] [US2] `LedgerFilterViewModelTest` — the live result count updates on every filter change and equals the row count after applying, citing `MNY-UI-003`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerFilterViewModelTest.kt`
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add the month selector and month-scoped paging — list and summary both follow the selector (FR-011), in `apps/finance/feature/money/money/LedgerViewModel.kt` and `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T034 [US2] Add ledger search over payee, description and note using `SearchField` (FR-013), in `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T035 [US2] Build `LedgerFilterSheet` (D5) — type, multi-category via `SelectionSheet` with a "+N more" summary, amount range, account; live "Show N results"; Reset (depends on T032), in `apps/finance/feature/money/money/LedgerFilterSheet.kt`
-- [ ] T036 [US2] Implement saved views — name a filter combination and re-apply it later (FR-015); persisted in the existing encrypted settings DataStore, not a new table, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/SavedViewRepository.kt`
-- [ ] T037 [US2] Add the full state set to D1 — `EmptyStateCard` with a verb CTA, `SkeletonBlock`, `RetryErrorCard`, `OfflineStateCard`, `SignedOutCard` per the screen-state matrix (FR-032), in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T033 [US2] Add the month selector and month-scoped paging — list and summary both follow the selector (FR-011), in `apps/finance/feature/money/money/LedgerViewModel.kt` and `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T034 [US2] Add ledger search over payee, description and note using `SearchField` (FR-013), in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T035 [US2] Build `LedgerFilterSheet` (D5) — type, multi-category via `SelectionSheet` with a "+N more" summary, amount range, account; live "Show N results"; Reset (depends on T032), in `apps/finance/feature/money/money/LedgerFilterSheet.kt`
+- [X] T036 [US2] Implement saved views — name a filter combination and re-apply it later (FR-015); persisted in the existing encrypted settings DataStore, not a new table, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/SavedViewRepository.kt`
+- [X] T037 [US2] Add the full state set to D1 — `EmptyStateCard` with a verb CTA, `SkeletonBlock`, `RetryErrorCard`, `OfflineStateCard`, `SignedOutCard` per the screen-state matrix (FR-032), in `apps/finance/feature/money/money/LedgerScreen.kt`
 - [ ] T038 [US2] Verify D1's list is virtualised and month-paged so a 5,000-transaction month scrolls without stutter (SC-009, NFR-8) — measure on a device, do not assume, in `apps/finance/feature/money/money/LedgerScreen.kt`
 
 **Checkpoint**: Stories 1–2 independently functional.
