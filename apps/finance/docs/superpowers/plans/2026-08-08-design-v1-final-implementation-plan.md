@@ -535,6 +535,25 @@ engineer when that phase's web track starts.
 
 ---
 
+## 7a. Deferred cross-cutting work (unscheduled — not yet a numbered phase)
+
+Work that is real, decided, and intentionally *not* owned by any phase above — recorded here so it
+is findable rather than buried in a single phase's task list, and so a future phase doesn't
+re-litigate the "should this be measured per-phase or once, app-wide" question. No phase number is
+reserved for these (per the numbering-hygiene notes in `DECISIONS.md` — a number is claimed only
+when the work is actually scheduled, never speculatively).
+
+- **App-wide scroll/render performance benchmarking.** Maintainer decision, 2026-09-06: this
+  belongs in a dedicated future performance spec covering the app's lists/screens as a whole, not
+  decided ad hoc inside each phase's own device pass. First concrete instance: 002-money-tab's
+  `MNY-*` SC-009 / T038 ("a 5,000-transaction month scrolls without stutter") — `LedgerScreen`
+  already builds on `LazyColumn` (structural virtualisation is in place), but the actual on-device
+  stutter measurement stays unverified until this spec exists and runs it. Any future phase that
+  finds itself needing a device-measured performance number should land it here too, not invent a
+  one-off per-phase check.
+
+---
+
 ## 8. Cross-cutting engineering rules for this build
 
 | Rule | Enforcement |
