@@ -166,7 +166,22 @@ class FakeTransactionRepository(
 
     override suspend fun updateTransaction(transaction: Transaction): Result<Transaction> = Result.success(transaction)
 
-    override suspend fun softDeleteTransaction(transactionId: String): Result<Unit> = Result.success(Unit)
+    val deletedIds = mutableListOf<String>()
+    val restoredIds = mutableListOf<String>()
+    private val softDeleted = mutableMapOf<String, Transaction>()
+
+    override suspend fun softDeleteTransaction(transactionId: String): Result<Unit> {
+        deletedIds += transactionId
+        transactions.firstOrNull { it.id == transactionId }?.let { softDeleted[transactionId] = it }
+        transactions = transactions.filterNot { it.id == transactionId }
+        return Result.success(Unit)
+    }
+
+    override suspend fun restoreTransaction(transactionId: String): Result<Unit> {
+        restoredIds += transactionId
+        softDeleted.remove(transactionId)?.let { transactions = transactions + it }
+        return Result.success(Unit)
+    }
 
     override suspend fun getTransaction(transactionId: String): Result<Transaction?> =
         Result.success(transactions.firstOrNull { it.id == transactionId })

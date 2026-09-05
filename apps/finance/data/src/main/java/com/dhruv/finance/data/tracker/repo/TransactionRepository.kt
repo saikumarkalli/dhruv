@@ -40,6 +40,11 @@ interface TransactionRepository {
 
     suspend fun softDeleteTransaction(transactionId: String): Result<Unit>
 
+    /** FR-006's undo (DESIGN-SYSTEM §8 — soft-delete + `UndoSnackbarHost` + a recoverable
+     * location). Clears `deleted_at` on the same row rather than recreating it, so the
+     * transaction's id, `transaction_events` history and any `split_group_id` all survive. */
+    suspend fun restoreTransaction(transactionId: String): Result<Unit>
+
     suspend fun getTransaction(transactionId: String): Result<Transaction?>
 
     suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>>
@@ -115,6 +120,17 @@ class TransactionRepositoryImpl(
     override suspend fun softDeleteTransaction(transactionId: String): Result<Unit> =
         try {
             api.patchTransaction("eq.$transactionId", mapOf("deleted_at" to Instant.now().toString()))
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun restoreTransaction(transactionId: String): Result<Unit> =
+        try {
+            api.patchTransaction("eq.$transactionId", mapOf("deleted_at" to null))
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e

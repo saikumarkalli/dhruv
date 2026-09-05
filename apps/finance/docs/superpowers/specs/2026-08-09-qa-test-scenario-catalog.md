@@ -137,6 +137,7 @@ screens instead of every module carrying its own copy.
 | PLN-FLOW-002 | E4 open | "Link another holding" → pick → confirm | E5 progress recomputes; assert no call to any transaction-write endpoint occurred | F-5, BR-E1 | M | Y | Backend | ☐ |
 | PLN-FLOW-003 | a budget over 100% | B2 shows the overrun notification | tapping it opens E3; E3's recovery insight and "Raise budget"/"Alert me at 80%" actions work; the chained B2→E3 sequence is exercised end-to-end, not just E3 in isolation | F-4 | M | Y | Android | ☐ (added 2026-08-09 — F-4 had no chained-flow row, only its pieces) |
 | PLN-BR-005 | E3's recovery insight, E6's avalanche/snowball trade-off statement, and any other derived/AI insight text | rendered | each is visually labelled as a derived/AI insight, not presented as a plain fact | BR-E4 (2nd clause) | S | Y | Android | ☐ (added 2026-08-09 — BR-E4's insight-labelling clause had zero coverage; only its 1st clause, assumptions-visible, was tested via RET-UI-002) |
+| PLN-BR-006 | a TRANSFER transaction between two of the user's accounts, and an active budget on the source account's category | budget consumption (E2) is computed | the transfer is excluded — same BR-D1 exclusion 002-money-tab's `MNY-BR-001` already tests for expense totals, restated here against `FR-010`'s budget consumption once `budgets` exists | BR-D1, FR-010 | M | Y | Backend | ☐ (added 2026-09-05 — 002-money-tab T094: `MNY-BR-001`'s budget clause was untestable in that phase since `budgets` doesn't exist there; this row is its Phase 4 receiving row) |
 
 ---
 
@@ -413,7 +414,7 @@ deferred-with-reason.
 | ONB | 14 | 3 | 0 | 10 | 1 |
 | NW | 14 | 14 | 0 | 0 | 0 |
 | MNY | 20 | 0 | 2 | 0 | 18 |
-| PLN | 14 | 14 | 0 | 0 | 0 |
+| PLN | 15 | 15 | 0 | 0 | 0 |
 | INS | 4 | 4 | 0 | 0 | 0 |
 | RET | 4 | 4 | 0 | 0 | 0 |
 | SIG | 8 | 8 | 0 | 0 | 0 |
@@ -422,7 +423,7 @@ deferred-with-reason.
 | DAT | 9 | 0 | 0 | 5 | 4 |
 | HOM | 5 | 5 | 0 | 0 | 0 |
 | SET | 50 | 0 | 5 | 0 | 45 |
-| **Total** | **167** | **73** | **7** | **19** | **68** |
+| **Total** | **168** | **74** | **7** | **19** | **68** |
 
 Phase 1's own module (`ONB`, `DAT`) has zero rows blocked on infrastructure now — every remaining
 `ONB` ☐ row is deliberately deferred with a stated reason, not silently missing: `ONB-BR-006`/

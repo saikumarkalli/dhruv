@@ -199,4 +199,18 @@ class TransactionDetailViewModelTest {
 
             assertTrue(vm.uiState.value is TransactionDetailUiState.Error)
         }
+
+    // FR-006/DESIGN-SYSTEM §8: delete soft-deletes and signals the id for D1's Undo hand-off —
+    // no confirm dialog, the Undo snackbar is the safety net.
+    @Test
+    fun `delete soft-deletes and exposes the deleted id`() =
+        runTest {
+            val (vm, transactionRepository) = viewModel()
+
+            vm.delete("txn-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("txn-1"), transactionRepository.deletedIds)
+            assertEquals("txn-1", vm.deletedTransactionId.value)
+        }
 }

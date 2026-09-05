@@ -156,6 +156,21 @@ class LedgerViewModel(
      * committing it (FR-014). */
     fun previewCount(candidate: LedgerFilter): Int = allTransactions.value.count { candidate.matches(it) }
 
+    /** FR-006/DESIGN-SYSTEM §8 — soft-delete + a recoverable location. The ledger itself is that
+     * location: [UndoSnackbarHost] the screen shows on success calls [undoDelete] if the user
+     * taps Undo, restoring the same row rather than recreating it. */
+    fun delete(transactionId: String) {
+        viewModelScope.launch(exceptionHandler) {
+            transactionRepository.softDeleteTransaction(transactionId).onSuccess { refresh() }
+        }
+    }
+
+    fun undoDelete(transactionId: String) {
+        viewModelScope.launch(exceptionHandler) {
+            transactionRepository.restoreTransaction(transactionId).onSuccess { refresh() }
+        }
+    }
+
     private fun applyView(
         transactions: List<Transaction>,
         query: String,

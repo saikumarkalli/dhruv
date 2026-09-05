@@ -342,6 +342,9 @@ private fun AppShell(
                 if (target is NavTarget.OpenAccount) {
                     moneyNavController.navigate(accountDetailRoute(target.accountId))
                 }
+                if (target is NavTarget.OpenTransaction) {
+                    moneyNavController.navigate(transactionDetailRoute(target.transactionId))
+                }
             }
         }
     }
@@ -401,6 +404,9 @@ private fun AppShell(
                 }
                 if (target is NavTarget.OpenAccount) {
                     moneyNavController.navigate(accountDetailRoute(target.accountId))
+                }
+                if (target is NavTarget.OpenTransaction) {
+                    moneyNavController.navigate(transactionDetailRoute(target.transactionId))
                 }
             }
         },
@@ -669,6 +675,10 @@ private fun transactionDetailRoute(transactionId: String) = "transactionDetail/$
  * [pendingDuplicatePrefill] hands a D4 "Duplicate" prefill across to D3's `TransactionFormViewModel`
  * without a shared nav-graph ViewModel scope (this codebase has no existing pattern for one) —
  * hoisted here, consumed once by the D3 route's `LaunchedEffect`, then cleared.
+ *
+ * [pendingUndoTransactionId] is the same hand-off pattern for FR-006's delete: D4 soft-deletes and
+ * pops back to D1, D1 is the "recoverable location" `UndoSnackbarHost` needs (DESIGN-SYSTEM §8) —
+ * hoisted here so D1's `LaunchedEffect` can show the snackbar once, then clear it.
  */
 @Composable
 private fun MoneyTab(
@@ -678,6 +688,7 @@ private fun MoneyTab(
     modifier: Modifier = Modifier,
 ) {
     var pendingDuplicatePrefill by remember { mutableStateOf<com.dhruv.finance.money.TransactionFormUiState?>(null) }
+    var pendingUndoTransactionId by remember { mutableStateOf<String?>(null) }
 
     NavHost(navController = navController, startDestination = MONEY_HOME_ROUTE, modifier = modifier.fillMaxSize()) {
         composable(MONEY_HOME_ROUTE) {
@@ -691,6 +702,8 @@ private fun MoneyTab(
                     onOpenAccounts = { navController.navigate(ACCOUNTS_ROUTE) },
                     onOpenCategories = { navController.navigate(CATEGORIES_ROUTE) },
                     onOpenRecurring = { navController.navigate(RECURRING_ROUTE) },
+                    pendingUndoTransactionId = pendingUndoTransactionId,
+                    onUndoConsumed = { pendingUndoTransactionId = null },
                 )
             }
         }
@@ -737,6 +750,10 @@ private fun MoneyTab(
                                 makeRecurring = true,
                             )
                         navController.navigate(TRANSACTION_FORM_ROUTE)
+                    },
+                    onDeleted = { deletedId ->
+                        pendingUndoTransactionId = deletedId
+                        navController.popBackStack()
                     },
                 )
             }

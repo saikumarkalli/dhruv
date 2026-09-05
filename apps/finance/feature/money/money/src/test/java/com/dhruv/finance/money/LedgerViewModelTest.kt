@@ -144,4 +144,24 @@ class LedgerViewModelTest {
             val loaded = vm.uiState.value as LedgerUiState.Loaded
             assertEquals(2, loaded.totalCount)
         }
+
+    // FR-006/DESIGN-SYSTEM §8: delete removes the row; undoDelete restores the same row.
+    @Test
+    fun `delete removes the transaction and undoDelete restores it`() =
+        runTest {
+            val a = txn("t1", Instant.parse("2026-09-01T09:00:00Z"), 1_00)
+            val repository = FakeTransactionRepository(transactions = listOf(a))
+            val vm = viewModel(repository)
+            advanceUntilIdle()
+
+            vm.delete("t1")
+            advanceUntilIdle()
+            assertEquals(0, (vm.uiState.value as LedgerUiState.Loaded).totalCount)
+            assertEquals(listOf("t1"), repository.deletedIds)
+
+            vm.undoDelete("t1")
+            advanceUntilIdle()
+            assertEquals(1, (vm.uiState.value as LedgerUiState.Loaded).totalCount)
+            assertEquals(listOf("t1"), repository.restoredIds)
+        }
 }

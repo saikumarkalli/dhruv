@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +44,8 @@ import com.dhruv.core.ui.components.SignedOutCard
 import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.components.StatItem
 import com.dhruv.core.ui.components.ThreeUpStatRow
+import com.dhruv.core.ui.components.UndoSnackbarHost
+import com.dhruv.core.ui.components.showUndoSnackbar
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
@@ -70,6 +73,10 @@ fun LedgerScreen(
     onOpenAccounts: () -> Unit = {},
     onOpenCategories: () -> Unit = {},
     onOpenRecurring: () -> Unit = {},
+    /** FR-006/DESIGN-SYSTEM §8 — set once by D4 after a delete, D1's own back-navigation hand-off
+     * (see `MainActivity`'s `MoneyTab` doc comment). Shown as an Undo snackbar, then consumed. */
+    pendingUndoTransactionId: String? = null,
+    onUndoConsumed: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -77,6 +84,16 @@ fun LedgerScreen(
     var showQuickAdd by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     val colors = LocalDhruvNextColors.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(pendingUndoTransactionId) {
+        val deletedId = pendingUndoTransactionId ?: return@LaunchedEffect
+        snackbarHostState.showUndoSnackbar(
+            message = "Transaction deleted",
+            onUndo = { viewModel.undoDelete(deletedId) },
+        )
+        onUndoConsumed()
+    }
 
     val accountRepository: AccountRepository = koinInject()
     val categoryRepository: CategoryRepository = koinInject()
@@ -207,6 +224,8 @@ fun LedgerScreen(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
             )
         }
+
+        UndoSnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
 
     if (showQuickAdd) {

@@ -70,6 +70,20 @@ class TransactionDetailViewModel(
     private val _uiState = MutableStateFlow<TransactionDetailUiState>(TransactionDetailUiState.Loading)
     val uiState: StateFlow<TransactionDetailUiState> = _uiState.asStateFlow()
 
+    /** FR-006/DESIGN-SYSTEM §8 — soft-delete, no confirm dialog: the recoverable Undo snackbar
+     * D1 shows after navigating back *is* the safety net, not a second blocking confirm. Carries
+     * the deleted id so the caller can hand it back to D1 for [LedgerViewModel.undoDelete]. */
+    private val _deletedTransactionId = MutableStateFlow<String?>(null)
+    val deletedTransactionId: StateFlow<String?> = _deletedTransactionId.asStateFlow()
+
+    fun delete(transactionId: String) {
+        viewModelScope.launch(exceptionHandler) {
+            transactionRepository.softDeleteTransaction(transactionId).onSuccess {
+                _deletedTransactionId.value = transactionId
+            }
+        }
+    }
+
     fun load(transactionId: String) {
         performanceTracer.trace("money_transaction_detail_load") {
             _uiState.value = TransactionDetailUiState.Loading

@@ -171,6 +171,8 @@ private class RecordingTransactionRepository : TransactionRepository {
 
     override suspend fun softDeleteTransaction(transactionId: String): Result<Unit> = Result.success(Unit)
 
+    override suspend fun restoreTransaction(transactionId: String): Result<Unit> = Result.success(Unit)
+
     override suspend fun getTransaction(transactionId: String): Result<Transaction?> = Result.success(null)
 
     override suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>> = Result.success(emptyList())

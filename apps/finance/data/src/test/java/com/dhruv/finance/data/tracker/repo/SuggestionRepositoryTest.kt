@@ -33,6 +33,8 @@ private class SuggestionRecordingTransactionRepository : TransactionRepository {
 
     override suspend fun softDeleteTransaction(transactionId: String) = error("not stubbed for this test")
 
+    override suspend fun restoreTransaction(transactionId: String) = error("not stubbed for this test")
+
     override suspend fun getTransaction(transactionId: String) = error("not stubbed for this test")
 
     override suspend fun listEvents(transactionId: String) = error("not stubbed for this test")

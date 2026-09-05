@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,14 +63,23 @@ fun TransactionDetailScreen(
     onBack: () -> Unit,
     onDuplicate: (TransactionFormUiState) -> Unit,
     onMakeRecurring: (Transaction) -> Unit,
+    onDeleted: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val deletedId by viewModel.deletedTransactionId.collectAsStateWithLifecycle()
 
     LaunchedEffect(transactionId) { viewModel.load(transactionId) }
+    LaunchedEffect(deletedId) { deletedId?.let(onDeleted) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        NxTopBar(title = "Transaction", onBack = onBack)
+        NxTopBar(
+            title = "Transaction",
+            onBack = onBack,
+            trailingIcon = Icons.Default.Delete,
+            trailingIconContentDescription = "Delete transaction",
+            onTrailingClick = { viewModel.delete(transactionId) },
+        )
 
         when (val current = state) {
             is TransactionDetailUiState.Loading ->

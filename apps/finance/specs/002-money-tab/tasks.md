@@ -376,36 +376,78 @@ signed-in caller through PostgREST.
       `FilterSheet` has no "save this filter" / "apply a saved view" UI at all — `SavedView` has no
       consumer anywhere in the money feature module. Recorded as an explicit gap in `data-model.md`
       rather than left to be rediscovered
-- [ ] T088 [Android] Wire **`UndoSnackbarHost`** to the transaction soft-delete (FR-006).
+- [X] T088 [Android] Wire **`UndoSnackbarHost`** to the transaction soft-delete (FR-006).
       DESIGN-SYSTEM §8 makes soft-delete + 5s undo + a recoverable location binding, and
       `transactions.deleted_at` already exists — the mechanism is present and the UX obligation is
-      unwritten across all six phases. Coordinate the shared pattern with 001 T053
-- [ ] T089 [SA] Declare **D2 (quick add) and D7 (account detail) as dark-hero surfaces** in
+      unwritten across all six phases. Coordinate the shared pattern with 001 T053 — **built**:
+      `TransactionRepository.restoreTransaction` (clears `deleted_at` in place, so id/history/
+      `split_group_id` all survive undo — a true undo, not a recreate); D4 gained a top-bar delete
+      icon with **no confirm dialog** (soft-delete + the Undo snackbar itself is DESIGN-SYSTEM §8's
+      stated safety net, not a second blocking confirm) via `TransactionDetailViewModel.delete`;
+      `LedgerViewModel.delete`/`undoDelete`; D1 (the ledger) is the recoverable location —
+      `LedgerScreen` renders `UndoSnackbarHost` and shows it once D4 hands the deleted id back
+      through `MainActivity`'s existing `pendingDuplicatePrefill`-style hoisted-state pattern
+      (`pendingUndoTransactionId`). Tests: `delete removes the transaction and undoDelete restores
+      it` (LedgerViewModelTest), `delete soft-deletes and exposes the deleted id`
+      (TransactionDetailViewModelTest)
+- [X] T089 [SA] Declare **D2 (quick add) and D7 (account detail) as dark-hero surfaces** in
       `contracts/routes.md` and have their tasks read `DhruvBrand.*`. Functional spec D-2 and
       implementation plan §3.1 name both theme-invariant; this spec never mentions dark hero or
-      `DhruvBrand`, so both would ship on the flipping palette
-- [ ] T090 [SA] **Reconcile the transaction column names with 006's search contract.**
+      `DhruvBrand`, so both would ship on the flipping palette — declared in `contracts/routes.md`,
+      **built**: `AccountDetailScreen.BalanceHeader` and `QuickAddSheet`'s amount band both read
+      `DhruvBrand.navy`/`navyElevated`/`silverLight`/`steel`/`accentBlue`, never
+      `LocalDhruvNextColors`, so both render identically in light and dark mode
+- [X] T090 [SA] **Reconcile the transaction column names with 006's search contract.**
       `../006-search-notifications/contracts/search-rpc.md:42` returns "description / counterparty"
       for a `TRANSACTION` row; this phase's table has `payee` and `note` and no `description`. Fix
-      whichever is wrong before 006 codes against it
-- [ ] T091 [SA] **Extend `NavTarget` with `OpenTransaction`.** Implementation plan §4.1 lists it as
+      whichever is wrong before 006 codes against it — 002's schema shipped first and is the source
+      of truth; fixed the two 006 doc references (`search-rpc.md`'s projection table,
+      `data-model.md` §5's read list) to `payee`/`note` instead of the invented `description`/
+      `counterparty` names
+- [X] T091 [SA] **Extend `NavTarget` with `OpenTransaction`.** Implementation plan §4.1 lists it as
       required; this phase deliberately declines it and 006 adds it only conditionally ("if Phase 3
       has not added it"), so no phase owns it unconditionally. D4 is reachable from B2's deep links
-      and from search results
-- [ ] T092 [Android] Ship this module's **`SettingsContribution`** per
+      and from search results — **built**: `NavTarget.OpenTransaction(transactionId)` added to
+      `:libs:core`, resolves to `TabKey.MONEY`, wired at both `MainActivity` dispatch sites
+      (immediate + post-unlock held-target replay) to `moneyNavController.navigate(transactionDetailRoute(...))`,
+      registry row added to `contracts/routes.md`. An unknown/foreign id resolves to D4's existing
+      "couldn't be found" error state, matching the untrusted-intent-extras rule
+- [X] T092 [Android] Ship this module's **`SettingsContribution`** per
       `../004-settings/contracts/settings-contribution.md` — 004 declares every later phase ships its
-      own entry with the module, and this phase plans none
-- [ ] T093 [SA] Replace the parallel **`InputChip`** with an extension of the existing `Chip`'s
+      own entry with the module, and this phase plans none — **built**: `moneySettingsContribution`
+      (title/summary + a real category-count Info row), registered
+      `single(qualifier = named("money"))` in `MoneyModule.kt`. `consentGranted` is **deliberately
+      left at its default** (always granted) rather than wired to the tracker's real "Sync my
+      financial records" state — `DependencyRulesTest`'s `a SettingsContribution package must not
+      reach shell-owned security surfaces directly` forbids any `*.settings` package from importing
+      `ConsentRepository`'s package directly, and `SettingsRepository` (the rule's own stated
+      sanctioned path) has no tracker-consent field to read without duplicating ADR-0014 §7's single
+      source of truth. Recorded as a real, tracked gap in the code (not silently faked) — the actual
+      data-access boundary is unaffected, `ConsentInterceptor` still gates every PostgREST call
+      regardless of what this Settings row shows
+- [X] T093 [SA] Replace the parallel **`InputChip`** with an extension of the existing `Chip`'s
       removable variant (DESIGN-SYSTEM §5.3). Its own closing rule is explicit: "extending the
       existing component, never adding a parallel one" — two chip components is the fragmentation
-      the library exists to prevent
-- [ ] T094 [QA] **Move `MNY-BR-001`'s budget clause to a Phase 4 QA row.** The row asserts transfers
+      the library exists to prevent — **already resolved**: `Chip`'s own doc comment in
+      `libs/core/.../ui/components/Chips.kt` already states "a parallel `InputChip` was rejected in
+      favor of extending this one" and `onRemove` is that removable variant; no parallel `InputChip`
+      exists in `:libs:core`. DESIGN-SYSTEM §5.3's own table (marking Chip/Pill's removable variant
+      as still-missing) is now stale against the code — worth a future doc-sync pass, out of this
+      task's scope
+- [X] T094 [QA] **Move `MNY-BR-001`'s budget clause to a Phase 4 QA row.** The row asserts transfers
       are excluded from budgets, but budgets do not exist in this phase — the assertion is untestable
       where it lives. Phase 4 restates BR-D1 in FR-010 but has no `PLN-*` row covering the transfer
-      clause
-- [ ] T095 [SA] Record the receiving task for **D4's deferred budget-impact line**. This spec defers
+      clause — added `PLN-BR-006` to the shared QA catalog
+      (`apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §5, the PLN
+      module 003-plan-live-modules owns), restating BR-D1's transfer-exclusion clause against
+      `FR-010`'s budget consumption once `budgets` exists; `MNY-BR-001` here keeps its own
+      already-tested expense-total half unchanged
+- [X] T095 [SA] Record the receiving task for **D4's deferred budget-impact line**. This spec defers
       it to Phase 4 with a stated reason, but 003 carries no task to add it back — a deferral with no
-      receiving task is a silent drop
+      receiving task is a silent drop — 003 already had a meta-task for this gap (`003 T148`, "add
+      the receiving task"), rewritten here into the actual concrete work item: add
+      `budgetImpact: BudgetImpactSummary?` to `TransactionDetailUiState.Loaded`, populated once
+      budgets exist, rendered as one line in `TransactionDetailScreen.kt`
 
 ---
 

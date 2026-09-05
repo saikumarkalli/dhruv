@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +44,7 @@ import com.dhruv.core.ui.components.SkeletonBlock
 import com.dhruv.core.ui.components.StatItem
 import com.dhruv.core.ui.components.ThreeUpStatRow
 import com.dhruv.core.ui.components.TrendSparkline
+import com.dhruv.core.ui.theme.DhruvBrand
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
@@ -211,32 +213,35 @@ fun AccountDetailScreen(
     }
 }
 
+/** D7's own dark-hero surface (DESIGN-SYSTEM §1: brand chrome is theme-invariant) — the functional
+ * spec names D7 a dark-hero screen; this reads [DhruvBrand] rather than [LocalDhruvNextColors] so
+ * it does not flip with the system theme, same as the design's own hero gradient cards. */
 @Composable
 private fun BalanceHeader(current: AccountDetailUiState.Loaded) {
-    val colors = LocalDhruvNextColors.current
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(DhruvNextRadii.card))
-                .background(colors.surf2)
-                .padding(DhruvNextSpacing.cardPadding),
+                .background(
+                    Brush.verticalGradient(listOf(DhruvBrand.navyElevated, DhruvBrand.navy)),
+                ).padding(DhruvNextSpacing.cardPadding),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text(text = current.account.name, color = colors.tx, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
+                Text(text = current.account.name, color = DhruvBrand.silverLight, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
                 val typeLabel = accountTypeLabels[current.account.type.name].orEmpty()
                 val maskLabel = current.account.mask?.let { "•••• $it" }
                 Text(
                     text = listOfNotNull(typeLabel, maskLabel).joinToString(" · "),
-                    color = colors.tx2,
+                    color = DhruvBrand.steel,
                     fontSize = DhruvNextType.meta,
                 )
             }
             if (current.account.isPrimary) {
                 Text(
                     text = "PRIMARY",
-                    color = colors.acc,
+                    color = DhruvBrand.accentBlue,
                     fontSize = DhruvNextType.sectionLabel,
                     fontWeight = FontWeight.Bold,
                 )
@@ -245,7 +250,7 @@ private fun BalanceHeader(current: AccountDetailUiState.Loaded) {
         MoneyText(
             paise = current.account.balancePaise ?: current.account.openingBalancePaise,
             variant = MoneyTextVariant.Hero,
-            color = colors.tx,
+            color = DhruvBrand.silverLight,
             modifier = Modifier.padding(top = 8.dp),
         )
     }

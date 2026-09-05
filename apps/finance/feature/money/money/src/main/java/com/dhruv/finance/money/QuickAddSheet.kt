@@ -1,9 +1,11 @@
 package com.dhruv.finance.money
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -14,6 +16,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,6 +29,8 @@ import com.dhruv.core.ui.components.NxSelect
 import com.dhruv.core.ui.components.NxTextField
 import com.dhruv.core.ui.components.SegmentedRow
 import com.dhruv.core.ui.components.SelectionSheet
+import com.dhruv.core.ui.theme.DhruvBrand
+import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
@@ -60,12 +66,23 @@ fun QuickAddSheet(
 
     DhruvModalSheet(onDismissRequest = onDismissRequest, modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth().padding(DhruvNextSpacing.screenGutter)) {
-            Text(
-                text = Paise.format(state.amountPaise),
-                color = colors.tx,
-                fontSize = DhruvNextType.hero,
-                fontWeight = FontWeight.Bold,
-            )
+            // D2's own dark-hero band (DESIGN-SYSTEM §1) — theme-invariant DhruvBrand, not
+            // LocalDhruvNextColors, matching D7's BalanceHeader treatment.
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(DhruvNextRadii.card))
+                        .background(Brush.verticalGradient(listOf(DhruvBrand.navyElevated, DhruvBrand.navy)))
+                        .padding(DhruvNextSpacing.cardPadding),
+            ) {
+                Text(
+                    text = Paise.format(state.amountPaise),
+                    color = DhruvBrand.silverLight,
+                    fontSize = DhruvNextType.hero,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
 
             SegmentedRow(
                 options = TransactionType.entries.map { transactionTypeLabels.getValue(it.name) },

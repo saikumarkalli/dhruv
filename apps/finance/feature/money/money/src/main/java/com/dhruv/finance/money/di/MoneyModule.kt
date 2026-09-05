@@ -11,8 +11,10 @@ import com.dhruv.finance.money.RecurringReviewViewModel
 import com.dhruv.finance.money.RecurringViewModel
 import com.dhruv.finance.money.TransactionDetailViewModel
 import com.dhruv.finance.money.TransactionFormViewModel
+import com.dhruv.finance.money.settings.moneySettingsContribution
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val moneyModule =
@@ -28,4 +30,5 @@ val moneyModule =
         viewModel { RecurringViewModel(get(), get(), get(), get()) }
         viewModel { RecurringReviewViewModel(get(), get(), get()) }
         single { ReceiptStore(androidContext()) }
+        single(qualifier = named("money")) { moneySettingsContribution(categoryRepository = get()) }
     }

@@ -38,6 +38,15 @@ sealed interface NavTarget {
     data class OpenAccount(
         val accountId: String,
     ) : NavTarget
+
+    /** Money tab -> D4 (transaction detail). Implementation plan §4.1 names this as required, but
+     * no phase owned it unconditionally (002-money-tab's own gap register, T091) — B2's deep
+     * links and search results are its future callers, whichever phase builds them first. An
+     * unknown or foreign id resolves to D4's own "couldn't be found" error state, never a crash
+     * (`platform/DESIGN-SYSTEM.md` §1 route registry note — untrusted intent extras). */
+    data class OpenTransaction(
+        val transactionId: String,
+    ) : NavTarget
 }
 
 /** Which tab a [NavTarget] belongs to — every case names exactly one. */
@@ -47,6 +56,7 @@ val NavTarget.tab: TabKey
             is NavTarget.SelectTab -> tab
             is NavTarget.OpenPlanTool -> TabKey.PLAN
             is NavTarget.OpenAccount -> TabKey.MONEY
+            is NavTarget.OpenTransaction -> TabKey.MONEY
         }
 
 /**

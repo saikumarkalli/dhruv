@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_money_title">Money</string>
+    <string name="settings_money_summary">Ledger, accounts, categories and recurring entries</string>
+    <string name="settings_money_categories_label">Categories</string>
+    <string name="settings_money_categories_description">Manage the categories your transactions are grouped under</string>
+</resources>
