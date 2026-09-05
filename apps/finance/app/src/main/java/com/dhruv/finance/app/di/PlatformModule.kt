@@ -105,7 +105,9 @@ val platformModule =
         // Money tab repositories (002-money-tab) — same SupabaseClientFactory-taking convenience
         // constructor shape as TrackerAccountRepositoryImpl above, built on dataRetrofit (consent-
         // gated, unlike TrackerAccountRepository's erasure-only erasureRetrofit).
-        single<AccountRepository> { AccountRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<AccountRepository> {
+            AccountRepositoryImpl(get<SupabaseClientFactory>(), get<TransactionRepository>(), get<CategoryRepository>())
+        }
         single<CategoryRepository> { CategoryRepositoryImpl(get<SupabaseClientFactory>()) }
         single<TransactionRepository> { TransactionRepositoryImpl(get<SupabaseClientFactory>()) }
 

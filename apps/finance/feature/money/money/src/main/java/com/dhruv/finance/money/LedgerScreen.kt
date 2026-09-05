@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +65,9 @@ fun LedgerScreen(
     onOpenFullForm: () -> Unit,
     modifier: Modifier = Modifier,
     onSignInRequested: () -> Unit = {},
+    onOpenTransaction: (String) -> Unit = {},
+    onOpenAccounts: () -> Unit = {},
+    onOpenCategories: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -118,6 +123,16 @@ fun LedgerScreen(
                             contentDescription = "Filter",
                             tint = if (filter.isEmpty) colors.tx2 else colors.acc,
                         )
+                        NxIconButton(
+                            icon = Icons.Default.Wallet,
+                            onClick = onOpenAccounts,
+                            contentDescription = "Accounts",
+                        )
+                        NxIconButton(
+                            icon = Icons.Default.Sell,
+                            onClick = onOpenCategories,
+                            contentDescription = "Categories",
+                        )
                     }
                     current.summary?.let { summary ->
                         ThreeUpStatRow(
@@ -167,6 +182,7 @@ fun LedgerScreen(
                                         subtitle = txn.note.orEmpty(),
                                         amountPaise = txn.amountPaise,
                                         isPositive = txn.type == TransactionType.INCOME,
+                                        onClick = { onOpenTransaction(txn.id) },
                                     )
                                 }
                             }

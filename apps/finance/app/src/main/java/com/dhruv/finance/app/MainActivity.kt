@@ -106,6 +106,7 @@ import com.dhruv.settings.SettingsRepository
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import org.koin.core.parameter.parametersOf
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -647,15 +648,25 @@ private fun PlanTab(
 private const val MONEY_HOME_ROUTE = "moneyHome"
 private const val TRANSACTION_FORM_ROUTE = "transactionForm"
 private const val ACCOUNT_DETAIL_ROUTE = "accountDetail/{accountId}"
+private const val TRANSACTION_DETAIL_ROUTE = "transactionDetail/{transactionId}"
+private const val ACCOUNTS_ROUTE = "accounts"
+private const val ACCOUNT_FORM_ROUTE = "accountForm"
+private const val CATEGORIES_ROUTE = "categories"
 
 private fun accountDetailRoute(accountId: String) = "accountDetail/$accountId"
+
+private fun transactionDetailRoute(transactionId: String) = "transactionDetail/$transactionId"
 
 /**
  * Money tab's own nested NavHost (002-money-tab) — the second tab-owned nested controller
  * (Phase 0 explicitly descoped this generalisation until a second tab needed sub-routes; Money is
  * that tab). D1 (ledger) is the root; D2 (quick add) is a sheet over D1, not a pushed route
  * (contracts/routes.md); D3 (full form) pushes as a route so "more options" and back both behave
- * like an ordinary drill-in. D4/D6/D7/D8/D9 land in later stories.
+ * like an ordinary drill-in.
+ *
+ * [pendingDuplicatePrefill] hands a D4 "Duplicate" prefill across to D3's `TransactionFormViewModel`
+ * without a shared nav-graph ViewModel scope (this codebase has no existing pattern for one) —
+ * hoisted here, consumed once by the D3 route's `LaunchedEffect`, then cleared.
  */
 @Composable
 private fun MoneyTab(
@@ -664,6 +675,8 @@ private fun MoneyTab(
     crashReporter: CrashReporter,
     modifier: Modifier = Modifier,
 ) {
+    var pendingDuplicatePrefill by remember { mutableStateOf<com.dhruv.finance.money.TransactionFormUiState?>(null) }
+
     NavHost(navController = navController, startDestination = MONEY_HOME_ROUTE, modifier = modifier.fillMaxSize()) {
         composable(MONEY_HOME_ROUTE) {
             val vm: com.dhruv.finance.money.LedgerViewModel = koinViewModel()
@@ -672,12 +685,21 @@ private fun MoneyTab(
                 com.dhruv.finance.money.LedgerScreen(
                     viewModel = vm,
                     onOpenFullForm = { navController.navigate(TRANSACTION_FORM_ROUTE) },
+                    onOpenTransaction = { id -> navController.navigate(transactionDetailRoute(id)) },
+                    onOpenAccounts = { navController.navigate(ACCOUNTS_ROUTE) },
+                    onOpenCategories = { navController.navigate(CATEGORIES_ROUTE) },
                 )
             }
         }
         composable(TRANSACTION_FORM_ROUTE) {
             val vm: com.dhruv.finance.money.TransactionFormViewModel = koinViewModel()
             val error by vm.featureError.collectAsStateWithLifecycle()
+            LaunchedEffect(Unit) {
+                pendingDuplicatePrefill?.let {
+                    vm.open(it)
+                    pendingDuplicatePrefill = null
+                }
+            }
             FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
                 com.dhruv.finance.money.TransactionFormScreen(
                     viewModel = vm,
@@ -685,14 +707,67 @@ private fun MoneyTab(
                 )
             }
         }
-        composable(ACCOUNT_DETAIL_ROUTE) {
-            // D7 lands in US3 (T043) — placeholder route so NavTarget.OpenAccount has somewhere
-            // real to point at from the moment the target exists, per the design system's "add a
-            // route = sealed case + registry row" rule (not an unused speculative case).
-            NotConfiguredCard(
-                message = "Account detail lands with US3",
-                modifier = Modifier.padding(24.dp),
-            )
+        composable(TRANSACTION_DETAIL_ROUTE) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getString("transactionId").orEmpty()
+            val vm: com.dhruv.finance.money.TransactionDetailViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.TransactionDetailScreen(
+                    viewModel = vm,
+                    transactionId = transactionId,
+                    onBack = { navController.popBackStack() },
+                    onDuplicate = { prefill ->
+                        pendingDuplicatePrefill = prefill
+                        navController.navigate(TRANSACTION_FORM_ROUTE)
+                    },
+                    onMakeRecurring = {
+                        // US6 (recurring) not yet built — no destination to hand this off to.
+                    },
+                )
+            }
+        }
+        composable(ACCOUNTS_ROUTE) {
+            val vm: com.dhruv.finance.money.AccountsViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.AccountsScreen(
+                    viewModel = vm,
+                    onOpenAccount = { id -> navController.navigate(accountDetailRoute(id)) },
+                    onAddAccount = { navController.navigate(ACCOUNT_FORM_ROUTE) },
+                    onSignIn = {},
+                )
+            }
+        }
+        composable(ACCOUNT_DETAIL_ROUTE) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getString("accountId").orEmpty()
+            val vm: com.dhruv.finance.money.AccountDetailViewModel =
+                koinViewModel(parameters = { parametersOf(accountId) })
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.AccountDetailScreen(
+                    viewModel = vm,
+                    onAddTransaction = { navController.navigate(TRANSACTION_FORM_ROUTE) },
+                    onSignIn = {},
+                )
+            }
+        }
+        composable(ACCOUNT_FORM_ROUTE) {
+            val vm: com.dhruv.finance.money.AccountFormViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.AccountFormScreen(
+                    viewModel = vm,
+                    existing = null,
+                    onClose = { navController.popBackStack() },
+                )
+            }
+        }
+        composable(CATEGORIES_ROUTE) {
+            val vm: com.dhruv.finance.money.CategoriesViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.CategoriesScreen(viewModel = vm)
+            }
         }
     }
 }

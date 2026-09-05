@@ -144,18 +144,18 @@ now" equals bank + cash only and the card sits in a separate owed grouping.
 
 ### Tests for User Story 3
 
-- [ ] T039 [P] [US3] `AccountRepositoryTest` — "spendable now" sums BANK/CASH/WALLET only and excludes a credit card's negative balance, citing `MNY-BR-002`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/AccountRepositoryTest.kt`
-- [ ] T040 [P] [US3] `AccountDetailViewModelTest` — an account past the 30-day staleness threshold raises the reconcile banner, and reconciling clears it, citing `MNY-UI-005`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/AccountDetailViewModelTest.kt`
+- [X] T039 [P] [US3] `AccountRepositoryTest` — "spendable now" sums BANK/CASH/WALLET only and excludes a credit card's negative balance, citing `MNY-BR-002`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/AccountRepositoryTest.kt`
+- [X] T040 [P] [US3] `AccountDetailViewModelTest` — an account past the 30-day staleness threshold raises the reconcile banner, and reconciling clears it, citing `MNY-UI-005`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/AccountDetailViewModelTest.kt`
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Implement `AccountRepository` — CRUD plus balances read from `v_account_balances` (depends on T039), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt`
-- [ ] T042 [US3] Build `AccountsScreen` (D6) — `SPENDABLE NOW` total, `BANK` / `CASH·WALLET` / `CREDIT — OWED, NOT HELD` groups with limit, utilisation % and due date, staleness note per account, and the footnote that automatic balance refresh arrives with account linking, citing `MNY-UI-004`, in `apps/finance/feature/money/money/AccountsScreen.kt`
-- [ ] T043 [US3] Build `AccountDetailScreen` (D7) — balance, masked number, primary badge, balance-trend chart, month IN/OUT, recent activity with a running balance, T012's `ReconcileBanner`, in `apps/finance/feature/money/money/AccountDetailScreen.kt`
-- [ ] T044 [US3] Implement the reconcile flow — sets `reconciled_at` and writes an adjustment transaction (`source = 'RECONCILE'`, reserved `Adjustment` category, `excluded_from_spend`) for any difference; never edits `opening_balance_paise` (FR-021, research R8), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
-- [ ] T045 [US3] Build the add/edit account form — name, type, mask (last 4 only, never a full number), primary flag, opening balance, and credit-only limit/due-day fields, in `apps/finance/feature/money/money/AccountFormScreen.kt`
+- [X] T041 [US3] Implement `AccountRepository` — CRUD plus balances read from `v_account_balances` (depends on T039), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt`
+- [X] T042 [US3] Build `AccountsScreen` (D6) — `SPENDABLE NOW` total, `BANK` / `CASH·WALLET` / `CREDIT — OWED, NOT HELD` groups with limit, utilisation % and due date, staleness note per account, and the footnote that automatic balance refresh arrives with account linking, citing `MNY-UI-004`, in `apps/finance/feature/money/money/AccountsScreen.kt`
+- [X] T043 [US3] Build `AccountDetailScreen` (D7) — balance, masked number, primary badge, balance-trend chart, month IN/OUT, recent activity with a running balance, T012's `ReconcileBanner`, in `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T044 [US3] Implement the reconcile flow — sets `reconciled_at` and writes an adjustment transaction (`source = 'RECONCILE'`, reserved `Adjustment` category, `excluded_from_spend`) for any difference; never edits `opening_balance_paise` (FR-021, research R8), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T045 [US3] Build the add/edit account form — name, type, mask (last 4 only, never a full number), primary flag, opening balance, and credit-only limit/due-day fields, in `apps/finance/feature/money/money/AccountFormScreen.kt`
 - [ ] T046 [US3] Add the credit-card-bill row to Home's UPCOMING list alongside the existing loan/EMI rows, tapping through via `NavTarget.OpenAccount` (FR-034 — the item Phase 2 deferred until `accounts` existed), in `apps/finance/app/src/main/java/com/dhruv/finance/app/ui/home/HomeScreen.kt`
-- [ ] T047 [US3] Add the full state set to D6 and D7 (FR-032), in `apps/finance/feature/money/money/AccountsScreen.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T047 [US3] Add the full state set to D6 and D7 (FR-032), in `apps/finance/feature/money/money/AccountsScreen.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
 
 **Checkpoint**: Stories 1–3 independently functional.
 
@@ -171,16 +171,16 @@ appear in an ordered history with old and new values.
 
 ### Tests for User Story 4
 
-- [ ] T048 [P] [US4] `TransactionAuditTest` — every mutation path (create, edit, category change, soft-delete, accept-from-recurring) leaves exactly one matching `transaction_events` row, citing `MNY-BR-006`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionAuditTest.kt`
-- [ ] T049 [P] [US4] `TransactionDetailViewModelTest` — amount/payee/datetime/cleared state render and HISTORY lists every event in order, citing `MNY-UI-006`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionDetailViewModelTest.kt`
-- [ ] T050 [P] [US4] `TransactionDetailViewModelTest` — Duplicate opens an unsaved pre-filled draft (nothing written) and Make-recurring opens the form's recurring toggle pre-filled, citing `MNY-FLOW-004` and `MNY-FLOW-005`, same file as T049
+- [X] T048 [P] [US4] `TransactionAuditTest` — every mutation path (create, edit, category change, soft-delete, accept-from-recurring) leaves exactly one matching `transaction_events` row, citing `MNY-BR-006`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionAuditTest.kt`
+- [X] T049 [P] [US4] `TransactionDetailViewModelTest` — amount/payee/datetime/cleared state render and HISTORY lists every event in order, citing `MNY-UI-006`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionDetailViewModelTest.kt`
+- [X] T050 [P] [US4] `TransactionDetailViewModelTest` — Duplicate opens an unsaved pre-filled draft (nothing written) and Make-recurring opens the form's recurring toggle pre-filled, citing `MNY-FLOW-004` and `MNY-FLOW-005`, same file as T049
 
 ### Implementation for User Story 4
 
-- [ ] T051 [US4] Implement `TransactionDetailViewModel` — transaction + its events, rendering each event's `kind`/`detail` as plain language (depends on T048), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
-- [ ] T052 [US4] Build `TransactionDetailScreen` (D4) — read-first layout, cleared state, category, account, note, receipt, HISTORY section. **No budget-impact line this phase** — it needs `budgets` (Phase 4); leave the row out and keep `MNY-UI-006`'s budget clause deferred, not faked, in `apps/finance/feature/money/money/TransactionDetailScreen.kt`
-- [ ] T053 [US4] Implement the Duplicate action — opens D3 pre-filled, writes nothing until saved, and the copy's history starts at `CREATED` (spec Edge Cases), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
-- [ ] T054 [US4] Implement receipt attach + view against a **device-local** URI in app-private storage, with the UI stating receipts stay on this device (research R6), in `apps/finance/feature/money/money/ReceiptStore.kt` (consumed by `TransactionFormScreen.kt` and `TransactionDetailScreen.kt`)
+- [X] T051 [US4] Implement `TransactionDetailViewModel` — transaction + its events, rendering each event's `kind`/`detail` as plain language (depends on T048), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
+- [X] T052 [US4] Build `TransactionDetailScreen` (D4) — read-first layout, cleared state, category, account, note, receipt, HISTORY section. **No budget-impact line this phase** — it needs `budgets` (Phase 4); leave the row out and keep `MNY-UI-006`'s budget clause deferred, not faked, in `apps/finance/feature/money/money/TransactionDetailScreen.kt`
+- [X] T053 [US4] Implement the Duplicate action — opens D3 pre-filled, writes nothing until saved, and the copy's history starts at `CREATED` (spec Edge Cases), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
+- [X] T054 [US4] Implement receipt attach + view against a **device-local** URI in app-private storage, with the UI stating receipts stay on this device (research R6), in `apps/finance/feature/money/money/ReceiptStore.kt` (consumed by `TransactionFormScreen.kt` and `TransactionDetailScreen.kt`)
 
 **Checkpoint**: Stories 1–4 independently functional.
 
@@ -196,17 +196,17 @@ confirm the dialog names the exact count and nothing is lost.
 
 ### Tests for User Story 5
 
-- [ ] T055 [P] [US5] `CategoryRepositoryTest` — rename changes only the label; id and every linked transaction are unchanged, citing `MNY-BR-003`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/CategoryRepositoryTest.kt`
-- [ ] T056 [P] [US5] `CategoryRepositoryTest` — merge moves N+M transactions atomically and returns the count the dialog must state; the source category ends soft-deleted, citing `MNY-BR-004`, same file as T055
-- [ ] T057 [P] [US5] `CategoriesViewModelTest` — Expense/Income tab counts, per-row spend and share, `Investment · Excluded from spend`, and `Uncategorised · N need a category`, citing `MNY-UI-007`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/CategoriesViewModelTest.kt`
-- [ ] T058 [P] [US5] `CategoryRepositoryTest` — an `excluded_from_spend` category contributes nothing to month expense or category share (FR-025), same file as T055
+- [X] T055 [P] [US5] `CategoryRepositoryTest` — rename changes only the label; id and every linked transaction are unchanged, citing `MNY-BR-003`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/CategoryRepositoryTest.kt`
+- [X] T056 [P] [US5] `CategoryRepositoryTest` — merge moves N+M transactions atomically and returns the count the dialog must state; the source category ends soft-deleted, citing `MNY-BR-004`, same file as T055
+- [X] T057 [P] [US5] `CategoriesViewModelTest` — Expense/Income tab counts, per-row spend and share, `Investment · Excluded from spend`, and `Uncategorised · N need a category`, citing `MNY-UI-007`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/CategoriesViewModelTest.kt`
+- [X] T058 [P] [US5] `CategoryRepositoryTest` — an `excluded_from_spend` category contributes nothing to month expense or category share (FR-025), same file as T055
 
 ### Implementation for User Story 5
 
-- [ ] T059 [US5] Implement `CategoryRepository` — CRUD, rename, `excluded_from_spend` toggle, and merge via the `merge_categories` RPC (never a client-side loop, research R9) (depends on T055, T056), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
-- [ ] T060 [US5] Build `CategoriesScreen` (D8) — Expense/Income tabs with counts, per-row icon/name/sub-count-or-budget/spend/share, the two special rows, and the footnote stating the rule verbatim ("Renaming keeps history. Merging moves every transaction and cannot be undone."), in `apps/finance/feature/money/money/CategoriesScreen.kt`
-- [ ] T061 [US5] Wire the merge confirmation through `ConfirmDangerDialog` stating the exact transaction count that will move and that it cannot be undone (FR-024), in `apps/finance/feature/money/money/CategoriesScreen.kt`
-- [ ] T062 [US5] Seed the two reserved categories per user on first use — `Uncategorised` (FR-026's target) and `Adjustment` (`excluded_from_spend = true`, T044's reconciliation target); both renameable, neither deletable, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
+- [X] T059 [US5] Implement `CategoryRepository` — CRUD, rename, `excluded_from_spend` toggle, and merge via the `merge_categories` RPC (never a client-side loop, research R9) (depends on T055, T056), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
+- [X] T060 [US5] Build `CategoriesScreen` (D8) — Expense/Income tabs with counts, per-row icon/name/sub-count-or-budget/spend/share, the two special rows, and the footnote stating the rule verbatim ("Renaming keeps history. Merging moves every transaction and cannot be undone."), in `apps/finance/feature/money/money/CategoriesScreen.kt`
+- [X] T061 [US5] Wire the merge confirmation through `ConfirmDangerDialog` stating the exact transaction count that will move and that it cannot be undone (FR-024), in `apps/finance/feature/money/money/CategoriesScreen.kt`
+- [X] T062 [US5] Seed the two reserved categories per user on first use — `Uncategorised` (FR-026's target) and `Adjustment` (`excluded_from_spend = true`, T044's reconciliation target); both renameable, neither deletable, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
 
 **Checkpoint**: Stories 1–5 independently functional.
 
