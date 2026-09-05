@@ -24,6 +24,10 @@ import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.RecurringRepository
+import com.dhruv.finance.data.tracker.repo.RecurringRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.SuggestionRepository
+import com.dhruv.finance.data.tracker.repo.SuggestionRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.TransactionRepository
 import com.dhruv.finance.data.tracker.repo.TransactionRepositoryImpl
 import com.dhruv.finance.onboarding.GoogleSignInConfig
@@ -110,6 +114,8 @@ val platformModule =
         }
         single<CategoryRepository> { CategoryRepositoryImpl(get<SupabaseClientFactory>()) }
         single<TransactionRepository> { TransactionRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<RecurringRepository> { RecurringRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<SuggestionRepository> { SuggestionRepositoryImpl(get<SupabaseClientFactory>(), get<TransactionRepository>()) }
 
         // A2 sign-in's Credential Manager call needs the Web client id; sourced from app
         // BuildConfig here (secrets plugin) for the same reason as GeminiRepository/SupabaseClientFactory

@@ -60,8 +60,13 @@ fun TransactionFormScreen(
 
     val (guard, discardDialog) = rememberDiscardGuard(isDirty = { currentIsDirty }, onDiscardConfirmed = onClose)
 
-    LaunchedEffect(Unit) { viewModel.open() }
-    LaunchedEffect(state.savedTransactionId) { if (state.savedTransactionId != null) onClose() }
+    // NOTE: `open()` is called by the caller (MainActivity's route composable), not here — a
+    // second `LaunchedEffect(Unit) { viewModel.open() }` in this screen would race the caller's
+    // own open(prefill) call and could silently wipe a Duplicate/Make-recurring prefill depending
+    // on Compose's effect ordering. Single call site only.
+    LaunchedEffect(state.savedTransactionId, state.savedRecurringTemplateId) {
+        if (state.savedTransactionId != null || state.savedRecurringTemplateId != null) onClose()
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -142,6 +147,30 @@ fun TransactionFormScreen(
                 helperText = "Optional",
                 modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),
             )
+
+            if (state.type != TransactionType.TRANSFER) {
+                com.dhruv.core.ui.components.SwitchRow(
+                    label = "Make it recurring",
+                    checked = state.makeRecurring,
+                    onCheckedChange = { viewModel.setMakeRecurring(it) },
+                    modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),
+                )
+                if (state.makeRecurring) {
+                    SegmentedRow(
+                        options = listOf("Weekly", "Monthly", "Yearly"),
+                        selectedIndex =
+                            when {
+                                state.rrule.contains("WEEKLY") -> 0
+                                state.rrule.contains("YEARLY") -> 2
+                                else -> 1
+                            },
+                        onSelected = { index ->
+                            viewModel.setRrule(listOf("FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY")[index])
+                        },
+                        modifier = Modifier.padding(top = DhruvNextSpacing.interCardGap),
+                    )
+                }
+            }
 
             if (state.validationError != null) {
                 Text(

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.runtime.Composable
@@ -68,6 +69,7 @@ fun LedgerScreen(
     onOpenTransaction: (String) -> Unit = {},
     onOpenAccounts: () -> Unit = {},
     onOpenCategories: () -> Unit = {},
+    onOpenRecurring: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -132,6 +134,11 @@ fun LedgerScreen(
                             icon = Icons.Default.Sell,
                             onClick = onOpenCategories,
                             contentDescription = "Categories",
+                        )
+                        NxIconButton(
+                            icon = Icons.Default.Repeat,
+                            onClick = onOpenRecurring,
+                            contentDescription = "Recurring",
                         )
                     }
                     current.summary?.let { summary ->

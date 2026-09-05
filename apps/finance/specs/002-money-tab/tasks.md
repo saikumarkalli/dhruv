@@ -222,18 +222,18 @@ the pending entry, and confirm the resulting transaction's history names the rec
 
 ### Tests for User Story 6
 
-- [ ] T063 [P] [US6] `RecurringRepositoryTest` — a due template's occurrence creates a `suggestions` row, never a `transactions` row, citing `MNY-BR-005`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/RecurringRepositoryTest.kt`
-- [ ] T064 [P] [US6] `RecurringRepositoryTest` — materialising twice (two app opens, or two devices) produces exactly one pending entry, proving the `(recurring_id, due_on)` idempotency key (research R7), same file as T063
-- [ ] T065 [P] [US6] `TransactionFormViewModelTest` — saving with "make it recurring" writes a `recurring_templates` row and **no** duplicate immediate transaction, citing `MNY-FLOW-002`, in the T024 file
-- [ ] T066 [P] [US6] `RecurringViewModelTest` — MONTHLY IN/OUT totals, NEXT 30 DAYS ordered by date with correct auto-debit vs variable tags, and the PAUSED section showing its pause date, citing `MNY-UI-008`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/RecurringViewModelTest.kt`
+- [X] T063 [P] [US6] `RecurringRepositoryTest` — a due template's occurrence creates a `suggestions` row, never a `transactions` row, citing `MNY-BR-005`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/RecurringRepositoryTest.kt`
+- [X] T064 [P] [US6] `RecurringRepositoryTest` — materialising twice (two app opens, or two devices) produces exactly one pending entry, proving the `(recurring_id, due_on)` idempotency key (research R7), same file as T063
+- [X] T065 [P] [US6] `TransactionFormViewModelTest` — saving with "make it recurring" writes a `recurring_templates` row and **no** duplicate immediate transaction, citing `MNY-FLOW-002`, in the T024 file
+- [X] T066 [P] [US6] `RecurringViewModelTest` — MONTHLY IN/OUT totals, NEXT 30 DAYS ordered by date with correct auto-debit vs variable tags, and the PAUSED section showing its pause date, citing `MNY-UI-008`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/RecurringViewModelTest.kt`
 
 ### Implementation for User Story 6
 
-- [ ] T067 [US6] Implement `RecurringRepository` and `SuggestionRepository` — schedule evaluation, materialise-on-open for `next_run <= today` and not paused, `next_run` advance, pause/resume (depends on T063, T064), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/`
-- [ ] T068 [US6] Add the "make it recurring" toggle + schedule editor to D3, and the Make-recurring entry point from D4 (T050's second case) (depends on T065), in `apps/finance/feature/money/money/TransactionFormScreen.kt` and `apps/finance/feature/money/money/TransactionDetailScreen.kt`
-- [ ] T069 [US6] Build `RecurringScreen` (D9) — review banner with the pending count, MONTHLY IN/OUT, NEXT 30 DAYS dated list, PAUSED section, pause/resume actions, in `apps/finance/feature/money/money/RecurringScreen.kt`
-- [ ] T070 [US6] Build the recurring review list — T012's `SuggestedRow` (dashed until accepted); Accept writes the transaction with `source = 'RECURRING'` and an `ACCEPTED_FROM_RECURRING` event, Dismiss writes nothing (FR-029). Scoped to recurring suggestions only — the shared queue that also handles SMS/AA sources is Phase 7 (spec.md Assumptions), in `apps/finance/feature/money/money/RecurringReviewScreen.kt`
-- [ ] T071 [US6] Add the full state set to D9 and the review list (FR-032), in `apps/finance/feature/money/money/RecurringScreen.kt` and `apps/finance/feature/money/money/RecurringReviewScreen.kt`
+- [X] T067 [US6] Implement `RecurringRepository` and `SuggestionRepository` — schedule evaluation, materialise-on-open for `next_run <= today` and not paused, `next_run` advance, pause/resume (depends on T063, T064), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/`
+- [X] T068 [US6] Add the "make it recurring" toggle + schedule editor to D3, and the Make-recurring entry point from D4 (T050's second case) (depends on T065), in `apps/finance/feature/money/money/TransactionFormScreen.kt` and `apps/finance/feature/money/money/TransactionDetailScreen.kt`
+- [X] T069 [US6] Build `RecurringScreen` (D9) — review banner with the pending count, MONTHLY IN/OUT, NEXT 30 DAYS dated list, PAUSED section, pause/resume actions, in `apps/finance/feature/money/money/RecurringScreen.kt`
+- [X] T070 [US6] Build the recurring review list — T012's `SuggestedRow` (dashed until accepted); Accept writes the transaction with `source = 'RECURRING'` and an `ACCEPTED_FROM_RECURRING` event, Dismiss writes nothing (FR-029). Scoped to recurring suggestions only — the shared queue that also handles SMS/AA sources is Phase 7 (spec.md Assumptions), in `apps/finance/feature/money/money/RecurringReviewScreen.kt`
+- [X] T071 [US6] Add the full state set to D9 and the review list (FR-032), in `apps/finance/feature/money/money/RecurringScreen.kt` and `apps/finance/feature/money/money/RecurringReviewScreen.kt`
 
 **Checkpoint**: all six stories independently functional — Phase 3 feature-complete.
 

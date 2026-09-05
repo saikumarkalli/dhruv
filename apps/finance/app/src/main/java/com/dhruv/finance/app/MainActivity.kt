@@ -652,6 +652,8 @@ private const val TRANSACTION_DETAIL_ROUTE = "transactionDetail/{transactionId}"
 private const val ACCOUNTS_ROUTE = "accounts"
 private const val ACCOUNT_FORM_ROUTE = "accountForm"
 private const val CATEGORIES_ROUTE = "categories"
+private const val RECURRING_ROUTE = "recurring"
+private const val RECURRING_REVIEW_ROUTE = "recurringReview"
 
 private fun accountDetailRoute(accountId: String) = "accountDetail/$accountId"
 
@@ -688,6 +690,7 @@ private fun MoneyTab(
                     onOpenTransaction = { id -> navController.navigate(transactionDetailRoute(id)) },
                     onOpenAccounts = { navController.navigate(ACCOUNTS_ROUTE) },
                     onOpenCategories = { navController.navigate(CATEGORIES_ROUTE) },
+                    onOpenRecurring = { navController.navigate(RECURRING_ROUTE) },
                 )
             }
         }
@@ -695,10 +698,8 @@ private fun MoneyTab(
             val vm: com.dhruv.finance.money.TransactionFormViewModel = koinViewModel()
             val error by vm.featureError.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) {
-                pendingDuplicatePrefill?.let {
-                    vm.open(it)
-                    pendingDuplicatePrefill = null
-                }
+                vm.open(pendingDuplicatePrefill)
+                pendingDuplicatePrefill = null
             }
             FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
                 com.dhruv.finance.money.TransactionFormScreen(
@@ -720,8 +721,22 @@ private fun MoneyTab(
                         pendingDuplicatePrefill = prefill
                         navController.navigate(TRANSACTION_FORM_ROUTE)
                     },
-                    onMakeRecurring = {
-                        // US6 (recurring) not yet built — no destination to hand this off to.
+                    onMakeRecurring = { transaction ->
+                        // "The recurring setup opens pre-filled from that transaction" (spec.md
+                        // Story 4 Acceptance Scenario 4) — reuses D3's own toggle (T068) as that
+                        // setup surface, rather than a second recurring-specific form.
+                        pendingDuplicatePrefill =
+                            com.dhruv.finance.money.TransactionFormUiState(
+                                type = transaction.type,
+                                amountPaise = transaction.amountPaise,
+                                accountId = transaction.accountId,
+                                toAccountId = transaction.toAccountId,
+                                categoryId = transaction.categoryId,
+                                payee = transaction.payee.orEmpty(),
+                                note = transaction.note.orEmpty(),
+                                makeRecurring = true,
+                            )
+                        navController.navigate(TRANSACTION_FORM_ROUTE)
                     },
                 )
             }
@@ -767,6 +782,23 @@ private fun MoneyTab(
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
                 com.dhruv.finance.money.CategoriesScreen(viewModel = vm)
+            }
+        }
+        composable(RECURRING_ROUTE) {
+            val vm: com.dhruv.finance.money.RecurringViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.RecurringScreen(
+                    viewModel = vm,
+                    onOpenReview = { navController.navigate(RECURRING_REVIEW_ROUTE) },
+                )
+            }
+        }
+        composable(RECURRING_REVIEW_ROUTE) {
+            val vm: com.dhruv.finance.money.RecurringReviewViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.RecurringReviewScreen(viewModel = vm)
             }
         }
     }

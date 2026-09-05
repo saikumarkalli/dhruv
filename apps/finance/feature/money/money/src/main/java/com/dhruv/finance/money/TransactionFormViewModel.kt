@@ -10,18 +10,22 @@ import com.dhruv.finance.data.tracker.model.TransactionSource
 import com.dhruv.finance.data.tracker.model.TransactionType
 import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
+import com.dhruv.finance.data.tracker.repo.RecurringRepository
 import com.dhruv.finance.data.tracker.repo.TransactionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 
 /** D3's full-form state (FR-004). [isDirty] backs `rememberDiscardGuard`'s confirm-on-discard
  * (FR-005, N4) — every field setter marks it true; only a successful save resets it.
  *
  * The goal-link field is deliberately absent — `goals` does not exist until Phase 4
- * (spec.md Assumptions, T029). The recurring toggle lands in US6 (T068), not this phase. */
+ * (spec.md Assumptions, T029). [makeRecurring]/[rrule] are US6/T068: when on, [save] writes ONLY
+ * a `recurring_templates` row (FR-027 — "no duplicate immediate transaction"), never a
+ * transaction. */
 data class TransactionFormUiState(
     val type: TransactionType = TransactionType.EXPENSE,
     val amountPaise: Long = 0,
@@ -37,6 +41,9 @@ data class TransactionFormUiState(
     val accountOptions: List<SelectionOption> = emptyList(),
     val categoryOptions: List<SelectionOption> = emptyList(),
     val validationError: String? = null,
+    val makeRecurring: Boolean = false,
+    val rrule: String = "FREQ=MONTHLY",
+    val savedRecurringTemplateId: String? = null,
 )
 
 /** D3 (full transaction form) — every field FR-004 promises beyond D2's quick-add surface. */
@@ -44,6 +51,7 @@ class TransactionFormViewModel(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
+    private val recurringRepository: RecurringRepository,
     crashReporter: CrashReporter,
     private val performanceTracer: PerformanceTracer,
 ) : FeatureViewModel(crashReporter, "money") {
@@ -77,6 +85,10 @@ class TransactionFormViewModel(
     fun setNote(note: String) = update { it.copy(note = note, isDirty = true) }
 
     fun setCleared(cleared: Boolean) = update { it.copy(cleared = cleared, isDirty = true) }
+
+    fun setMakeRecurring(makeRecurring: Boolean) = update { it.copy(makeRecurring = makeRecurring, isDirty = true) }
+
+    fun setRrule(rrule: String) = update { it.copy(rrule = rrule, isDirty = true) }
 
     private inline fun update(block: (TransactionFormUiState) -> TransactionFormUiState) {
         _uiState.value = block(_uiState.value)
@@ -112,6 +124,19 @@ class TransactionFormViewModel(
                     splitGroupId = null,
                     source = TransactionSource.MANUAL,
                 )
+
+            if (state.makeRecurring) {
+                // FR-027: only the recurring_templates row is written — no immediate duplicate.
+                recurringRepository
+                    .createFromTransaction(transaction, state.rrule, nextRun = LocalDate.now().plusMonths(1))
+                    .onSuccess { template ->
+                        _uiState.value = state.copy(isSaving = false, isDirty = false, savedRecurringTemplateId = template.id)
+                    }.onFailure { thr ->
+                        _uiState.value = state.copy(isSaving = false, validationError = thr.message)
+                    }
+                return@launch
+            }
+
             transactionRepository
                 .createTransaction(transaction)
                 .onSuccess { created ->

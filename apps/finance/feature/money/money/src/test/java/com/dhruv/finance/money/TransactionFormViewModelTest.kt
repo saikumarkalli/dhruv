@@ -43,7 +43,15 @@ class TransactionFormViewModelTest {
         transactionRepository: FakeTransactionRepository = FakeTransactionRepository(),
         accountRepository: FakeAccountRepository = FakeAccountRepository(listOf(bankAccount, walletAccount)),
         categoryRepository: FakeCategoryRepository = FakeCategoryRepository(listOf(groceries)),
-    ) = TransactionFormViewModel(transactionRepository, accountRepository, categoryRepository, NoOpCrashReporter, NoOpPerformanceTracer)
+        recurringRepository: FakeRecurringRepository = FakeRecurringRepository(),
+    ) = TransactionFormViewModel(
+        transactionRepository,
+        accountRepository,
+        categoryRepository,
+        recurringRepository,
+        NoOpCrashReporter,
+        NoOpPerformanceTracer,
+    )
 
     // D2 "more options" hands off everything already entered (spec.md Story 1, Acceptance
     // Scenario 4) — carried-over values arrive already-filled and NOT dirty (nothing new typed yet).
@@ -171,5 +179,45 @@ class TransactionFormViewModelTest {
 
             assertEquals(listOf("acc-1", "acc-2"), vm.uiState.value.accountOptions.map { it.id })
             assertEquals(listOf("cat-1"), vm.uiState.value.categoryOptions.map { it.id })
+        }
+
+    // MNY-FLOW-002 (T065/T068): saving with "make it recurring" writes a recurring_templates row
+    // and no duplicate immediate transaction (FR-027).
+    @Test
+    fun `saving with make-it-recurring on writes only a recurring template, never a transaction`() =
+        runTest {
+            val transactionRepository = FakeTransactionRepository()
+            val recurringRepository = FakeRecurringRepository()
+            val vm = viewModel(transactionRepository = transactionRepository, recurringRepository = recurringRepository)
+            vm.setAmount(1_500_00)
+            vm.setAccount("acc-1")
+            vm.setCategory("cat-1")
+            vm.setMakeRecurring(true)
+            vm.setRrule("FREQ=MONTHLY")
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(0, transactionRepository.created.size)
+            assertEquals(1, recurringRepository.createdFromTransaction.size)
+            assertEquals(1_500_00L, recurringRepository.createdFromTransaction.single().amountPaise)
+            assertTrue(vm.uiState.value.savedRecurringTemplateId != null)
+        }
+
+    @Test
+    fun `saving with make-it-recurring off writes only a transaction, no recurring template`() =
+        runTest {
+            val transactionRepository = FakeTransactionRepository()
+            val recurringRepository = FakeRecurringRepository()
+            val vm = viewModel(transactionRepository = transactionRepository, recurringRepository = recurringRepository)
+            vm.setAmount(200_00)
+            vm.setAccount("acc-1")
+            vm.setCategory("cat-1")
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(1, transactionRepository.created.size)
+            assertEquals(0, recurringRepository.createdFromTransaction.size)
         }
 }

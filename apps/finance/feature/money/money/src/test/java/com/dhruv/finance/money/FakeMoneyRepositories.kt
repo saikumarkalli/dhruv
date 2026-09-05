@@ -5,11 +5,16 @@ import com.dhruv.finance.data.tracker.model.Category
 import com.dhruv.finance.data.tracker.model.MonthSummary
 import com.dhruv.finance.data.tracker.model.Transaction
 import com.dhruv.finance.data.tracker.model.TransactionEvent
+import com.dhruv.finance.data.tracker.model.PendingEntry
+import com.dhruv.finance.data.tracker.model.RecurringTemplate
 import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
+import com.dhruv.finance.data.tracker.repo.RecurringRepository
+import com.dhruv.finance.data.tracker.repo.SuggestionRepository
 import com.dhruv.finance.data.tracker.repo.TransactionGuess
 import com.dhruv.finance.data.tracker.repo.TransactionRepository
 import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 
@@ -156,4 +161,91 @@ class FakeTransactionRepository(
         Result.success(events[transactionId].orEmpty())
 
     override suspend fun guessFor(payee: String?): Result<TransactionGuess> = Result.success(guess)
+}
+
+class FakeRecurringRepository(
+    private var templates: List<RecurringTemplate> = emptyList(),
+) : RecurringRepository {
+    val createdFromTransaction = mutableListOf<Transaction>()
+
+    override suspend fun listActive(): Result<List<RecurringTemplate>> = Result.success(templates)
+
+    override suspend fun createFromTransaction(
+        transaction: Transaction,
+        rrule: String,
+        nextRun: LocalDate,
+        amountIsVariable: Boolean,
+    ): Result<RecurringTemplate> {
+        createdFromTransaction += transaction
+        val created =
+            RecurringTemplate(
+                id = UUID.randomUUID().toString(),
+                template =
+                    mapOf(
+                        "type" to transaction.type.name,
+                        "amountPaise" to transaction.amountPaise,
+                        "accountId" to transaction.accountId,
+                        "categoryId" to transaction.categoryId,
+                        "payee" to transaction.payee,
+                        "note" to transaction.note,
+                    ),
+                rrule = rrule,
+                nextRun = nextRun,
+                amountIsVariable = amountIsVariable,
+                paused = false,
+                pausedAt = null,
+            )
+        templates = templates + created
+        return Result.success(created)
+    }
+
+    override suspend fun pause(templateId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun resume(templateId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun materialiseDue(
+        suggestionRepository: SuggestionRepository,
+        today: LocalDate,
+    ): Result<Unit> = Result.success(Unit)
+}
+
+class FakeSuggestionRepository(
+    private var pending: List<PendingEntry> = emptyList(),
+) : SuggestionRepository {
+    val accepted = mutableListOf<PendingEntry>()
+    val dismissed = mutableListOf<String>()
+
+    override suspend fun listPending(): Result<List<PendingEntry>> = Result.success(pending)
+
+    override suspend fun createFromRecurring(template: RecurringTemplate): Result<Unit> = Result.success(Unit)
+
+    override suspend fun accept(entry: PendingEntry): Result<Transaction> {
+        accepted += entry
+        pending = pending.filterNot { it.id == entry.id }
+        return Result.success(
+            Transaction(
+                id = "txn-from-${entry.id}",
+                type = com.dhruv.finance.data.tracker.model.TransactionType.EXPENSE,
+                amountPaise = 0,
+                accountId = "acc-1",
+                toAccountId = null,
+                categoryId = null,
+                payee = null,
+                note = null,
+                occurredAt = Instant.now(),
+                cleared = true,
+                receiptPath = null,
+                goalId = null,
+                recurringId = entry.recurringId,
+                splitGroupId = null,
+                source = com.dhruv.finance.data.tracker.model.TransactionSource.RECURRING,
+            ),
+        )
+    }
+
+    override suspend fun dismiss(entryId: String): Result<Unit> {
+        dismissed += entryId
+        pending = pending.filterNot { it.id == entryId }
+        return Result.success(Unit)
+    }
 }
