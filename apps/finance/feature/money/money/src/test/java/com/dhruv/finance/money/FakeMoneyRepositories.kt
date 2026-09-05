@@ -68,6 +68,9 @@ class FakeCategoryRepository(
 class FakeTransactionRepository(
     private var transactions: List<Transaction> = emptyList(),
     private val guess: TransactionGuess = TransactionGuess(accountId = null, categoryId = null),
+    // US4/T049: per-transaction seeded audit trail — defaults to empty so every existing US1-3
+    // caller of this fake (QuickAddViewModelTest, TransactionFormViewModelTest) is unaffected.
+    private val events: Map<String, List<TransactionEvent>> = emptyMap(),
     private val createResult: (Transaction) -> Result<Transaction> = { txn ->
         Result.success(txn.copy(id = UUID.randomUUID().toString()))
     },
@@ -94,7 +97,8 @@ class FakeTransactionRepository(
     override suspend fun getTransaction(transactionId: String): Result<Transaction?> =
         Result.success(transactions.firstOrNull { it.id == transactionId })
 
-    override suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>> = Result.success(emptyList())
+    override suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>> =
+        Result.success(events[transactionId].orEmpty())
 
     override suspend fun guessFor(payee: String?): Result<TransactionGuess> = Result.success(guess)
 }
