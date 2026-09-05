@@ -76,6 +76,8 @@ private object AccountUnimplementedMoneyApi : MoneyApi {
 
     override suspend fun mergeCategories(body: MergeCategoriesRequestDto) = unimplemented()
 
+    override suspend fun countTransactionsForCategory(categoryId: String) = unimplemented()
+
     override suspend fun listTransactions(
         occurredAtGte: String,
         occurredAtLt: String,
@@ -195,6 +197,11 @@ private class ReservedCategoryRepository(
     override suspend fun softDeleteCategory(categoryId: String): Result<Unit> = error("not stubbed for this test")
 
     override suspend fun ensureReservedCategories(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun listCategoriesWithSpend(month: java.time.YearMonth): Result<List<Category>> =
+        error("not stubbed for this test")
+
+    override suspend fun countTransactionsForCategory(categoryId: String): Result<Int> = error("not stubbed for this test")
 }
 
 private fun accountDto(
