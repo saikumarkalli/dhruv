@@ -1,5 +1,7 @@
 package com.dhruv.finance.money
 
+import com.dhruv.finance.data.tracker.model.Category
+
 /**
  * Screen-level constants for the Money tab (D1-D9) — no-hardcoding rule
  * (constitution Article V / DESIGN-SYSTEM.md). Never inline these in a screen file.
@@ -32,7 +34,8 @@ object MoneyConfig {
             "TRANSFER" to "Transfer",
         )
 
-    /** Reserved category names seeded per user (data-model.md "Reserved rows"). */
-    const val RESERVED_CATEGORY_UNCATEGORISED = "Uncategorised"
-    const val RESERVED_CATEGORY_ADJUSTMENT = "Adjustment"
+    /** Reserved category names seeded per user (data-model.md "Reserved rows") — canonical values
+     * live on [Category] itself so the data layer and this config never drift. */
+    val RESERVED_CATEGORY_UNCATEGORISED = Category.RESERVED_UNCATEGORISED
+    val RESERVED_CATEGORY_ADJUSTMENT = Category.RESERVED_ADJUSTMENT
 }

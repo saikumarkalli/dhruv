@@ -32,6 +32,12 @@ sealed interface NavTarget {
     data class OpenPlanTool(
         val tool: PlanTool,
     ) : NavTarget
+
+    /** Money tab -> D7 (account detail). Home's UPCOMING credit-card-bill row hand-off (FR-034,
+     * 002-money-tab contracts/routes.md). */
+    data class OpenAccount(
+        val accountId: String,
+    ) : NavTarget
 }
 
 /** Which tab a [NavTarget] belongs to — every case names exactly one. */
@@ -40,6 +46,7 @@ val NavTarget.tab: TabKey
         when (this) {
             is NavTarget.SelectTab -> tab
             is NavTarget.OpenPlanTool -> TabKey.PLAN
+            is NavTarget.OpenAccount -> TabKey.MONEY
         }
 
 /**

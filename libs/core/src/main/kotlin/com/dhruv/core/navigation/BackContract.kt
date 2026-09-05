@@ -16,7 +16,8 @@ enum class BackAction {
     /** A shell-level detail route (Settings/Ask/Currency/…) is showing — close it first. */
     CLOSE_DETAIL,
 
-    /** The active tab has its own nested back stack (only Plan today) — pop one level of it. */
+    /** The active tab has its own nested back stack (Plan, and since 002-money-tab, Money) — pop
+     * one level of it. */
     POP_NESTED,
 
     /** Not on the first tab and nothing else to unwind — return to tab 0. */

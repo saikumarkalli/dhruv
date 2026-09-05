@@ -6,8 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,13 +23,19 @@ import androidx.compose.ui.unit.dp
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
-/** A small rounded-rectangle chip — filter/tag rows, category chips. */
+/**
+ * A small rounded-rectangle chip — filter/tag rows, category chips. [onRemove] renders a trailing
+ * `×` and turns this into the "input chip" shape (design batch B6) — a removable filter/tag pill,
+ * e.g. a picked category in D5's filter sheet. This is the one chip component (design system §5.3,
+ * T093): a parallel `InputChip` was rejected in favor of extending this one.
+ */
 @Composable
 fun Chip(
     label: String,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onRemove: (() -> Unit)? = null,
 ) {
     val colors = LocalDhruvNextColors.current
     val background = if (selected) colors.accSoft else colors.surf2
@@ -41,6 +50,18 @@ fun Chip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = label, color = textColor, fontSize = DhruvNextType.body, fontWeight = FontWeight.Medium)
+        if (onRemove != null) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Remove $label",
+                tint = textColor,
+                modifier =
+                    Modifier
+                        .size(16.dp)
+                        .padding(start = 6.dp)
+                        .clickable(onClick = onRemove),
+            )
+        }
     }
 }
 

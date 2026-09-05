@@ -116,17 +116,12 @@ class SupabaseClientFactory(
         baseClientBuilder()
             .addInterceptor(ConsentInterceptor(hasSyncConsent))
             .addInterceptor(authInterceptor)
+            .addInterceptor(FinanceSchemaInterceptor())
             .build()
 
-    /** PostgREST Retrofit instance, consent- and auth-gated. No concrete endpoint interface yet
-     * (Phase 2 adds holdings/valuations) — this phase only needs the gated client to exist.
-     *
-     * ADR-0033: `holdings`/`valuations` live in the `finance` Postgres schema, not `public`.
-     * Every Phase 2 endpoint built on this Retrofit instance MUST send PostgREST's schema-select
-     * headers — `Accept-Profile: finance` on GET/HEAD, `Content-Profile: finance` on
-     * POST/PATCH/PUT/DELETE (supabase-js's `.schema('finance')` does this automatically; Retrofit
-     * needs an explicit header, e.g. an interceptor added to [dataClient] when those endpoints are
-     * built) — omitting it silently 404s against the (empty) `public` schema instead. */
+    /** PostgREST Retrofit instance, consent- and auth-gated, `finance`-schema-profiled
+     * ([FinanceSchemaInterceptor], wired 002-money-tab T020 — every `finance.*` endpoint,
+     * `holdings`/`valuations` included, is built on this instance and inherits the header). */
     val dataRetrofit: Retrofit = moshiRetrofit("$baseUrl/rest/v1/", dataClient)
 
     /** PostgREST Retrofit instance for calls that must succeed regardless of consent state — today
