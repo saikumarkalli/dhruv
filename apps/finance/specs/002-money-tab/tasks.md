@@ -593,25 +593,46 @@ Phase 2 authored its schema against a fixed set of conventions
 [readiness architecture decisions](../../docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md)).
 They are binding here, and three of them are things this phase's tasks do not currently do.
 
-- [ ] T109 [SA] **`security_invoker = on` on all three views** (T007 now says so). Verify by hand in
+- [X] T109 [SA] **`security_invoker = on` on all three views** (T007 now says so). Verify by hand in
       the generated migration — `db diff` cannot express it — and extend this phase's RLS test to
       assert a **second user reads zero rows from each view**, not only from each table. That
-      assertion is what would have caught the original omission
-- [ ] T110 [SA] **Add `request_id uuid unique` to `transactions`** (and to `accounts`, `categories`,
+      assertion is what would have caught the original omission — schema-side verified by reading
+      the generated migration/declarative files: `v_account_balances`, `v_category_spend` and
+      `v_month_summary` all carry `with (security_invoker = on)`. The RLS-test extension is
+      **not performed**: a real second-user-reads-zero-rows assertion needs a live Postgres/RLS
+      context (`SET ROLE authenticated` + a real second `auth.users` row), which no JVM/Robolectric
+      test can provide and which needs the live Supabase credentials unavailable in this session —
+      same blocker as T073/T074/T080's remainder, recorded honestly rather than faked with a mock
+- [X] T110 [SA] **Add `request_id uuid unique` to `transactions`** (and to `accounts`, `categories`,
       `recurring_templates` if they accept client-initiated creates). Phase 2 established retry
       idempotency as the standard: a client generates the id when the user commits, so a retry after
       a timeout collides instead of writing a second money row. This phase is where duplicate
-      transactions actually hurt
-- [ ] T111 [SA] **Add the `finance.accounts` FK for `liabilities_meta.linked_account_id`.** Phase 2
+      transactions actually hurt — **already done**: all four tables' schema files already carry
+      `request_id uuid unique` (verified by reading each), and T097 (this phase's Phase 11 work)
+      is what finally makes the client actually reuse it across a retry instead of minting a fresh
+      one every call
+- [X] T111 [SA] **Add the `finance.accounts` FK for `liabilities_meta.linked_account_id`.** Phase 2
       ships the column with no constraint because `accounts` does not exist yet; **this phase owns
-      adding the FK** in its own migration, and nothing else will do it
-- [ ] T112 [SA] **Confirm every new table's `DELETE` lands in `public.delete_my_data()`** in the same
+      adding the FK** in its own migration, and nothing else will do it — **already done**:
+      `liabilities_meta.linked_account_id references finance.accounts (id)` in the declarative
+      schema file, and the money-phase migration carries the matching
+      `alter table ... add constraint liabilities_meta_linked_account_id_fkey ... foreign key
+      (linked_account_id) references finance.accounts (id)`
+- [X] T112 [SA] **Confirm every new table's `DELETE` lands in `public.delete_my_data()`** in the same
       migration that creates it. T009 does this today — the task is to keep it true for every table
-      the phase ends up adding, since a miss is silent and no test fails
-- [ ] T113 [SA] **Depends on 001 T079.** The ADR-0032 equivalence guard cannot currently pass for any
+      the phase ends up adding, since a miss is silent and no test fails — confirmed by reading
+      `public.delete_my_data()`: all six of this phase's tables are present (`transaction_events`,
+      `suggestions` before their parents; `transactions`, `recurring_templates`, `categories`,
+      `accounts` after), children-before-parents as the function's own comment requires
+- [X] T113 [SA] **Depends on 001 T079.** The ADR-0032 equivalence guard cannot currently pass for any
       table extended by `ALTER TABLE … ADD COLUMN` — the parser has no rule for it. If this phase
       extends an existing table (it extends `holdings` via nothing today, but `categories` and
-      `accounts` may grow), the guard stays red until 001 T079 lands
+      `accounts` may grow), the guard stays red until 001 T079 lands — **001 T079 landed 2026-08-23**
+      (confirmed: `apps/finance/specs/001-net-worth-tracker/tasks.md` T079 marked done, "taught
+      `gen_schema_docs.py` about `ALTER TABLE … ADD COLUMN`"). This phase's own migration doesn't
+      use `ADD COLUMN` at all (only `CREATE TABLE` and one `ADD CONSTRAINT`, T111), so the
+      limitation this task named never actually applied here — confirmed green either way:
+      `python scripts/db/gen_schema_docs.py equiv` reports no drift
 
 ---
 
@@ -619,16 +640,25 @@ They are binding here, and three of them are things this phase's tasks do not cu
 
 Per the tracking rule in `apps/finance/CLAUDE.md`.
 
-- [ ] T114 [P] Move **`money`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of the
-      "Planned" table into the shipped Modules table — owner tab Money, flag `money`
-- [ ] T115 [P] Rewrite **`apps/finance/feature/money/money/README.md`** with the real D1–D9 screens,
-      ViewModels, repositories, and the flag key; drop the "not yet created" preamble
-- [ ] T116 [P] Add the **root `CHANGELOG.md`** entry: the Money tab and ledger, accounts and
+- [X] T114 [P] Move **`money`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of the
+      "Planned" table into the shipped Modules table — owner tab Money, flag `money` — done in
+      Phase 9 (T082)
+- [X] T115 [P] Rewrite **`apps/finance/feature/money/money/README.md`** with the real D1–D9 screens,
+      ViewModels, repositories, and the flag key; drop the "not yet created" preamble — done in
+      Phase 9 (T082)
+- [X] T116 [P] Add the **root `CHANGELOG.md`** entry: the Money tab and ledger, accounts and
       reconciliation, categories with rename/merge, recurring templates, and the transaction audit
       trail. Call out **merge being irreversible** — it is the one user-facing action in this phase
-      that cannot be undone
-- [ ] T117 [P] Update the **spec-kit tracking table** (implementation plan §7) — Phase 3 to *shipped*
-- [ ] T118 [P] If this phase adds any `NavTarget` case or route, add its row to
+      that cannot be undone — done in Phase 9 (T072-T083 commit)
+- [X] T117 [P] Update the **spec-kit tracking table** (implementation plan §7) — Phase 3 to *shipped*
+      — done in Phase 9 (T083)
+- [X] T118 [P] If this phase adds any `NavTarget` case or route, add its row to
       `apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md` §1 **in the same
       change** — the registry is five routes behind its own phase contracts today precisely because
-      each spec deferred the row to implementation time and nothing collected them
+      each spec deferred the row to implementation time and nothing collected them — the registry's
+      single combined D1-D9 row is now expanded into the 9 individual rows `contracts/routes.md`
+      already had (its own header calls that file "shown expanded once here for task-planning
+      granularity, not maintained as a second source" — the registry was always meant to carry the
+      real rows once shipped, which is now). `OpenAccount`/`OpenTransaction` need no separate
+      listing — this registry states it "maps 1:1 onto the sealed `NavTarget` type," so the same 9
+      route rows are that mapping, not a second list to keep in sync
