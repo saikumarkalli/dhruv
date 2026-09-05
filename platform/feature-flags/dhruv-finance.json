@@ -12,6 +12,7 @@
     "date":        { "enabled": false, "minVersion": "1.0.0" },
     "time":        { "enabled": false, "minVersion": "1.0.0" },
     "assistant":   { "enabled": true,  "minVersion": "1.2.0", "requiresConsent": true },
-    "networth":    { "enabled": true,  "minVersion": "1.0.0", "requiresConsent": true }
+    "networth":    { "enabled": true,  "minVersion": "1.0.0", "requiresConsent": true },
+    "money":       { "enabled": true,  "minVersion": "1.0.0", "requiresConsent": true }
   }
 }

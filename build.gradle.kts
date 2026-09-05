@@ -34,6 +34,7 @@ val coveredModules =
     ":apps:finance:feature:time",
     ":apps:finance:feature:assistant",
     ":apps:finance:feature:onboarding",
+    ":apps:finance:feature:money",
     ":libs:core",
     ":libs:settings",
   )
