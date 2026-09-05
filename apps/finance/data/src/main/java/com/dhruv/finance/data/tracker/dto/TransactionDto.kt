@@ -46,6 +46,17 @@ data class TransactionUpsertDto(
     @param:Json(name = "request_id") val requestId: String? = null,
 )
 
+/** Minimal projection of `finance.transactions` (`select=id`) for a count-only request — see
+ * [com.dhruv.finance.data.tracker.net.MoneyApi.countTransactionsForCategory]. A body this narrow
+ * would fail Moshi parsing against the full [TransactionDto] (several of its fields are non-null
+ * with no default), so this exists purely to let the (otherwise-ignored) response body parse
+ * cleanly while [retrofit2.Response.headers]' `Content-Range` carries the actual exact count
+ * (FR-024 — the merge confirmation states the exact number of transactions that will move). */
+@JsonClass(generateAdapter = true)
+data class TransactionCountRowDto(
+    @param:Json(name = "id") val id: String,
+)
+
 /** Wire shape of `finance.transaction_events` — append-only audit trail (FR-007/FR-008). */
 @JsonClass(generateAdapter = true)
 data class TransactionEventDto(

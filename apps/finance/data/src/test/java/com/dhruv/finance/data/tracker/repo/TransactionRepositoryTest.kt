@@ -65,6 +65,8 @@ private object UnimplementedMoneyApi : MoneyApi {
 
     override suspend fun mergeCategories(body: com.dhruv.finance.data.tracker.dto.MergeCategoriesRequestDto) = unimplemented()
 
+    override suspend fun countTransactionsForCategory(categoryId: String) = unimplemented()
+
     override suspend fun listTransactions(
         occurredAtGte: String,
         occurredAtLt: String,

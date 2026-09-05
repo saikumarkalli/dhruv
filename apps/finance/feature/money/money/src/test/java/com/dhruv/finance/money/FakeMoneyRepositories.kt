@@ -65,8 +65,17 @@ class FakeAccountRepository(
 
 class FakeCategoryRepository(
     private var categories: List<Category> = emptyList(),
+    /** Per-category exact transaction count, keyed by id — backs [countTransactionsForCategory],
+     * the same call the D8 merge confirmation and the Uncategorised row use. */
+    private val transactionCounts: Map<String, Int> = emptyMap(),
+    private val mergeResult: Int = 0,
 ) : CategoryRepository {
+    val ensureReservedCalls = mutableListOf<Unit>()
+    val mergeCalls = mutableListOf<Pair<String, String>>()
+
     override suspend fun listCategories(): Result<List<Category>> = Result.success(categories)
+
+    override suspend fun listCategoriesWithSpend(month: YearMonth): Result<List<Category>> = Result.success(categories)
 
     override suspend fun createCategory(category: Category): Result<Category> {
         val created = category.copy(id = UUID.randomUUID().toString())
@@ -77,21 +86,38 @@ class FakeCategoryRepository(
     override suspend fun renameCategory(
         categoryId: String,
         newName: String,
-    ): Result<Category> = Result.success(categories.first { it.id == categoryId }.copy(name = newName))
+    ): Result<Category> {
+        val renamed = categories.first { it.id == categoryId }.copy(name = newName)
+        categories = categories.map { if (it.id == categoryId) renamed else it }
+        return Result.success(renamed)
+    }
 
     override suspend fun setExcludedFromSpend(
         categoryId: String,
         excluded: Boolean,
-    ): Result<Category> = Result.success(categories.first { it.id == categoryId }.copy(excludedFromSpend = excluded))
+    ): Result<Category> {
+        val updated = categories.first { it.id == categoryId }.copy(excludedFromSpend = excluded)
+        categories = categories.map { if (it.id == categoryId) updated else it }
+        return Result.success(updated)
+    }
 
     override suspend fun mergeCategories(
         sourceId: String,
         targetId: String,
-    ): Result<Int> = Result.success(0)
+    ): Result<Int> {
+        mergeCalls += sourceId to targetId
+        return Result.success(mergeResult)
+    }
 
     override suspend fun softDeleteCategory(categoryId: String): Result<Unit> = Result.success(Unit)
 
-    override suspend fun ensureReservedCategories(): Result<Unit> = Result.success(Unit)
+    override suspend fun ensureReservedCategories(): Result<Unit> {
+        ensureReservedCalls += Unit
+        return Result.success(Unit)
+    }
+
+    override suspend fun countTransactionsForCategory(categoryId: String): Result<Int> =
+        Result.success(transactionCounts[categoryId] ?: 0)
 }
 
 class FakeTransactionRepository(
