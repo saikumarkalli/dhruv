@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -190,7 +191,7 @@ private fun CreditAccountGroup(
 ) {
     if (accounts.isEmpty()) return
     Column(modifier = modifier.padding(top = DhruvNextSpacing.sectionGap)) {
-        SectionLabel(text = "Credit — owed, not held", modifier = Modifier.padding(bottom = 8.dp))
+        SectionLabel(text = stringResource(R.string.money_accounts_credit_group_label), modifier = Modifier.padding(bottom = 8.dp))
         ListGroup(
             rows = accounts.map { account -> { CreditAccountRow(account = account, onOpenAccount = onOpenAccount) } },
         )

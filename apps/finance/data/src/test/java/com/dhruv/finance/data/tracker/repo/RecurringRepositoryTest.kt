@@ -364,4 +364,38 @@ class RecurringRepositoryTest {
             assertEquals("eq.rec-1", dismissedFilter)
             assertEquals("IGNORED", dismissedStatus)
         }
+
+    // Edge Cases: "a pending recurring entry for a paused ... recurring definition must not remain
+    // actionable" — pause withdraws the same way delete does.
+    @Test
+    fun `pause dismisses the template's pending suggestions too`() =
+        runTest {
+            var pausedId: String? = null
+            var dismissedFilter: String? = null
+            val api =
+                object : RecurringFakeMoneyApi() {
+                    override suspend fun setRecurringPaused(
+                        id: String,
+                        body: RecurringPauseDto,
+                    ): List<RecurringTemplateDto> {
+                        pausedId = id
+                        return listOf(templateDto(id = "rec-1", paused = true))
+                    }
+
+                    override suspend fun dismissPendingForRecurring(
+                        recurringIdFilter: String,
+                        body: SuggestionStatusDto,
+                        statusFilter: String,
+                    ) {
+                        dismissedFilter = recurringIdFilter
+                    }
+                }
+            val repo: RecurringRepository = RecurringRepositoryImpl(api)
+
+            val result = repo.pause("rec-1")
+
+            assertTrue(result.isSuccess)
+            assertEquals("eq.rec-1", pausedId)
+            assertEquals("eq.rec-1", dismissedFilter)
+        }
 }

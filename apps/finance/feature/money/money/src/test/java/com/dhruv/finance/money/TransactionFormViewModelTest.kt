@@ -220,4 +220,35 @@ class TransactionFormViewModelTest {
             assertEquals(1, transactionRepository.created.size)
             assertEquals(0, recurringRepository.createdFromTransaction.size)
         }
+
+    // T097: a retry after a failed save reuses the same request_id.
+    @Test
+    fun `retrying a failed save reuses the same request id`() =
+        runTest {
+            var shouldFail = true
+            val transactionRepository =
+                FakeTransactionRepository(
+                    createResult = { txn ->
+                        if (shouldFail) {
+                            Result.failure(java.io.IOException("timeout"))
+                        } else {
+                            Result.success(txn.copy(id = "txn-1"))
+                        }
+                    },
+                )
+            val vm = viewModel(transactionRepository = transactionRepository)
+            vm.setAmount(200_00)
+            vm.setAccount("acc-1")
+            vm.setCategory("cat-1")
+
+            vm.save()
+            advanceUntilIdle()
+            shouldFail = false
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(2, transactionRepository.createRequestIds.size)
+            assertEquals(transactionRepository.createRequestIds[0], transactionRepository.createRequestIds[1])
+            assertEquals("txn-1", vm.uiState.value.savedTransactionId)
+        }
 }

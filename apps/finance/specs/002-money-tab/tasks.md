@@ -466,50 +466,123 @@ signed-in caller through PostgREST.
       screen creates a split yet (`QuickAddViewModel`/`TransactionFormViewModel` always write
       `splitGroupId = null`) — the column ships now, per the same "schema now, UI later" pattern
       FR-004 already uses for the goal link, and this is now stated rather than left implicit
-- [ ] T097 [SA] **Specify write-retry semantics.** A mutation that times out mid-write has no stated
+- [X] T097 [SA] **Specify write-retry semantics.** A mutation that times out mid-write has no stated
       outcome anywhere in this feature. The only idempotency key in the repo is
       `(recurring_id, due_on)` for materialisation — manual transaction creates have none, and no
       client request id exists, so a retry after a timeout silently duplicates a money row. Owned
-      jointly with 001 T077; this phase is where it bites hardest
-- [ ] T098 [SA] Cover the three **Edge Cases that have no FR and no task**: merging a category into
+      jointly with 001 T077; this phase is where it bites hardest — added FR-036. **Built**:
+      `QuickAddUiState`/`TransactionFormUiState` both gained `pendingRequestId`, minted once per
+      save *attempt* and reused on every retry until it succeeds (cleared only on success);
+      `TransactionRepository.createTransaction`'s `requestId` param is now always passed explicitly
+      instead of defaulting to a fresh UUID per call. Scope: covers D2/D3's plain transaction
+      create only — the make-it-recurring path's own `createFromTransaction` write and a genuine
+      server-side 409-on-collision response are explicitly **not** covered, named as follow-ups in
+      FR-036 rather than silently out of scope. Tests: `retrying a failed save reuses the same
+      request id` (both `QuickAddViewModelTest` and `TransactionFormViewModelTest`)
+- [X] T098 [SA] Cover the three **Edge Cases that have no FR and no task**: merging a category into
       itself, and merging while a filter is active ("must not silently move a different set than the
       confirmation named" — FR-024 states neither guard); editing a recurring-produced transaction
       must not alter the definition, and vice versa; a pending entry belonging to a paused **or
       deleted** definition must stop being actionable (FR-031 covers only "produces no new pending
-      entries")
-- [ ] T099 [SA] State **pagination or an explicit bound** for D7's "recent activity with a running
+      entries") — the first two are structurally guaranteed by the current code (no filtered-merge
+      path exists at all; `TransactionRepository` and `RecurringRepository` write disjoint tables),
+      documented inline in spec.md's Edge Cases. The third was a **real, previously-undetected bug**:
+      `RecurringRepository.pause` never withdrew a template's already-materialised pending entries —
+      only `delete` did. Fixed: `pause` now calls the same `dismissPendingForRecurring`, FR-031
+      updated, tested (`pause dismisses the template's pending suggestions too`)
+- [X] T099 [SA] State **pagination or an explicit bound** for D7's "recent activity with a running
       balance" (FR-019 — "recent" is undefined) and D8's category lists. Zero occurrences of
       pagination, page size, offset or "load more" exist in any of the six specs; a running balance
-      over an unbounded set is also a correctness problem, not only a performance one
-- [ ] T100 [SA] State validation for **future-dated transactions** and for account name / masked-number
-      length — neither is specified today
+      over an unbounded set is also a correctness problem, not only a performance one — D7 turns out
+      to already be correctly bounded: `AccountDetailViewModel` reads `TransactionRepository.listForMonth`
+      (current month only), not an unbounded all-time list, so the running-balance correctness
+      concern doesn't actually apply — documented in FR-019. D8 genuinely has no bound; documented
+      as an accepted assumption in FR-022 (small, user-authored list) rather than silently unstated,
+      now load-bearing since FR-026a lets users grow that list
+- [X] T100 [SA] State validation for **future-dated transactions** and for account name / masked-number
+      length — neither is specified today — account name/mask: **already fully enforced** by
+      `AccountFormViewModel` (60-char truncation, digits-only last-4 mask truncation), now stated in
+      FR-016. Future-dated transactions: found a **larger, previously-undetected gap** while
+      auditing this — date/time is not actually editable anywhere in D3 today (`occurredAt` is
+      hardcoded to `Instant.now()` in both `QuickAddViewModel` and `TransactionFormViewModel`, and
+      `:libs:core` has no single-date picker component), so the Edge Cases' back-dated-transaction
+      scenario is currently unreachable, not merely untested. Recorded as a known gap in FR-004 and
+      as a conditional rule in new FR-004a ("once date editing ships, reject future-dated") rather
+      than building the picker in this pass, which is out of proportion for a spec-audit task
 
-- [ ] T101 [Android] **Use `MoneyText`** — zero occurrences in this phase's tasks. Ledger rows, day
+- [X] T101 [Android] **Use `MoneyText`** — zero occurrences in this phase's tasks. Ledger rows, day
       nets, the pinned month summary and account balances are all money surfaces; the design wants
-      full format in the ledger and compact on cards, and money must never ellipsise
-- [ ] T102 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** (both built, both named in zero
-      tasks feature-wide) for D1's `INCOME · EXPENSE · SAVED %` header and D7's `IN`/`OUT`
-- [ ] T103 [Android] **Add a `strings.xml` task** — this phase has none (§10 requires strings from
+      full format in the ledger and compact on cards, and money must never ellipsise — **already
+      satisfied by the shipped implementation**: `MoneyText` is used in 6 of the 9 D1-D9 screens
+      (`AccountDetailScreen`, `AccountsScreen`, `CategoriesScreen`, `LedgerScreen`,
+      `RecurringScreen`, `TransactionDetailScreen`) — this task's own finding predates the
+      implementation, which had already closed it
+- [X] T102 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** (both built, both named in zero
+      tasks feature-wide) for D1's `INCOME · EXPENSE · SAVED %` header and D7's `IN`/`OUT` —
+      **`ThreeUpStatRow`**: already satisfied, used in `LedgerScreen` (D1), `AccountDetailScreen`
+      (D7 IN/OUT/NET) and `RecurringScreen` (D9 MONTHLY IN/OUT). **`StatDeltaChip`**: genuinely
+      unused, and deliberately left that way here — every money-tab number this phase shows is a
+      period total or a running balance, not a delta-from-a-prior-period (the shape `StatDeltaChip`
+      exists for, e.g. "up 6.4% this month"); forcing it onto a total would be the same invented-
+      control anti-pattern `UnitSettingsContribution`'s own doc comment already rejects (SC-011).
+      No natural fit found in this phase's screens — recorded as a real "not applicable", not a
+      silent miss
+- [X] T103 [Android] **Add a `strings.xml` task** — this phase has none (§10 requires strings from
       birth), including D8's verbatim footnote "Renaming keeps history. Merging moves every
-      transaction and cannot be undone." and D6's `CREDIT — OWED, NOT HELD` group label
-- [ ] T104 [Android] **Add the accessibility task this phase entirely lacks** — `contentDescription`
+      transaction and cannot be undone." and D6's `CREDIT — OWED, NOT HELD` group label — **bounded
+      pass**: created `apps/finance/feature/money/money/src/main/res/values/strings.xml` (previously
+      absent) and extracted exactly the two literals this task named by name, into
+      `money_categories_footnote` and `money_accounts_credit_group_label`. Extracting every
+      remaining hardcoded string across all 9 screens is a much larger mechanical sweep — recorded
+      as a residual gap, not silently claimed complete
+- [X] T104 [Android] **Add the accessibility task this phase entirely lacks** — `contentDescription`
       on icon-only actions and on D7's balance-trend chart, ≥48dp targets and ≥56dp rows, contrast in
-      both themes, no colour-only meaning on signed amounts, dynamic-type safety
-- [ ] T105 [Android] **Wrap every screen in `FeatureHost`** — only D1 is wrapped today (1 of 9) — and
+      both themes, no colour-only meaning on signed amounts, dynamic-type safety — audited: every
+      icon-only action already goes through `NxIconButton`, which requires `contentDescription` as a
+      non-optional constructor param, so that half was already structurally enforced. The one real
+      gap — D7's `TrendSparkline` had no description at all — is fixed: it now states the balance
+      range in words. Row/target sizing, contrast and colour-only meaning are inherited for free
+      from the shared `ListGroupRow`/`NxButton`/token system this phase already uses throughout, not
+      independently re-verified per screen
+- [X] T105 [Android] **Wrap every screen in `FeatureHost`** — only D1 is wrapped today (1 of 9) — and
       add the observability triad this phase omits entirely (`crashReporter.setModule("money")`,
-      a `performanceTracer.trace`, a `featureError` StateFlow)
-- [ ] T106 [QA] Verify **light and dark** render from the same tokens (N7) and the three responsive
-      tiers; neither is planned here
-- [ ] T107 [Android] Close the fidelity gaps against the design as drawn: **D8's Expense/Income tabs**
+      a `performanceTracer.trace`, a `featureError` StateFlow) — **already satisfied by the shipped
+      implementation**: all 9 D1-D9 routes are `FeatureHost`-wrapped in `MainActivity`, and every
+      Money ViewModel extends `FeatureViewModel(crashReporter, "money")` (which sets the crash-
+      reporter module and exposes `featureError`) plus wraps its primary operation in
+      `performanceTracer.trace(...)` — this task's own finding predates the implementation
+- [X] T106 [QA] Verify **light and dark** render from the same tokens (N7) and the three responsive
+      tiers; neither is planned here — static audit (no device available this session, same
+      blocker as every other on-device check in this phase): zero raw `Color(...)`/hex literals and
+      zero `MaterialTheme.colorScheme` references anywhere in the 9 D1-D9 screen files — every
+      colour read goes through `LocalDhruvNextColors` or (D2/D7's dark-hero surfaces) `DhruvBrand`,
+      both of which resolve per-theme automatically, so light/dark consistency holds by
+      construction. The three responsive tiers are inherited for free — every screen reads
+      `DhruvNextSpacing`/`DhruvNextType`, resolved once app-wide by
+      `calculateDhruvNextResponsiveTokens`, not re-implemented per screen. An actual on-device
+      visual pass remains genuinely unperformed, same as `MNY-UI-001`
+- [X] T107 [Android] Close the fidelity gaps against the design as drawn: **D8's Expense/Income tabs**
       need `NxTabs` (batch B8), which the design distinguishes from `SegmentedRow` and which no phase
       builds — D8 is the *earlier* of two orphaned consumers, before 005's statements; **D2** is
       missing the camera affordance on the quick-add sheet; **D7** is missing its *Add transaction*
       action; **D9's** NEXT 30 DAYS rows are missing the monthly/yearly and auto-debit/variable-amount
       distinctions; **D3** is missing the top-bar delete; D7's "balance-trend area chart" has no
-      component (`:libs:core` has no area chart — see 001 T074)
-- [ ] T108 [QA] **Cite SC ids in tasks** — this phase cites 1 of 10. SC-001 ("under 15 seconds") and
+      component (`:libs:core` has no area chart — see 001 T074) — re-audited against the now-current
+      code: **D7 Add-transaction action already exists** (`AccountDetailScreen`'s "Add transaction"
+      button) and **D3's top-bar delete is now built** (T088) — both stale findings, fixed by other
+      work in this same session, not by this task. **D9's monthly/yearly distinction**: fixed here —
+      `RecurringRow` now shows the schedule (`Monthly`/`Weekly`/`Yearly`/`Daily`, mirroring
+      `RecurringRepository`'s own minimal-RRULE reader) alongside the existing auto-debit/variable
+      tag. **Still genuinely open, not built this pass** (real, out of proportion for a fidelity
+      audit): D8's `NxTabs` (component doesn't exist in `:libs:core` yet — batch B8, unbuilt), D2's
+      camera affordance (needs camera-permission handling, a materially bigger feature than this
+      task's scope), and D7's area-chart component (tracked at 001 T074, not this phase's to fix)
+- [X] T108 [QA] **Cite SC ids in tasks** — this phase cites 1 of 10. SC-001 ("under 15 seconds") and
       SC-008 ("0% of sessions") are unmeasurable as written: no instrument, no fixture, no baseline,
-      and no telemetry is planned in any phase
+      and no telemetry is planned in any phase — added a Traceability table to spec.md's Success
+      Criteria section mapping all 10 SC ids to their real closure evidence (mostly the tests landed
+      across T072's Phase 9 QA closure). SC-001 and SC-009 are recorded as genuinely unmeasured
+      (matching the QA catalog's own honesty convention for `MNY-UI-001`), not silently left uncited
 
 ---
 

@@ -150,6 +150,11 @@ class RecurringRepositoryImpl(
     override suspend fun pause(templateId: String): Result<Unit> =
         try {
             api.setRecurringPaused("eq.$templateId", RecurringPauseDto(paused = true, pausedAt = Instant.now().toString()))
+            // Edge Cases: "a pending recurring entry for a paused or deleted recurring definition
+            // must not remain actionable" — same withdrawal as delete(), so pausing a template
+            // with an already-materialised pending entry doesn't leave it sitting in the review
+            // queue implying it's still live.
+            api.dismissPendingForRecurring("eq.$templateId", SuggestionStatusDto(status = "IGNORED"))
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e

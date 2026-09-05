@@ -150,6 +150,7 @@ class FakeTransactionRepository(
     },
 ) : TransactionRepository {
     val created = mutableListOf<Transaction>()
+    val createRequestIds = mutableListOf<String>()
 
     override suspend fun listForMonth(month: YearMonth): Result<List<Transaction>> = Result.success(transactions)
 
@@ -158,11 +159,13 @@ class FakeTransactionRepository(
     override suspend fun createTransaction(
         transaction: Transaction,
         requestId: String,
-    ): Result<Transaction> =
-        createResult(transaction).onSuccess {
+    ): Result<Transaction> {
+        createRequestIds += requestId
+        return createResult(transaction).onSuccess {
             created += it
             transactions = transactions + it
         }
+    }
 
     override suspend fun updateTransaction(transaction: Transaction): Result<Transaction> = Result.success(transaction)
 

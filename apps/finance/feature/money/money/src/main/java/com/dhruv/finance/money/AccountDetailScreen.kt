@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -112,7 +114,17 @@ fun AccountDetailScreen(
 
                     if (current.trend.size >= 2) {
                         SectionLabel(text = "Balance trend", modifier = Modifier.padding(top = DhruvNextSpacing.sectionGap, bottom = 8.dp))
-                        TrendSparkline(values = current.trend, modifier = Modifier.fillMaxWidth())
+                        TrendSparkline(
+                            values = current.trend,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .semantics {
+                                        contentDescription =
+                                            "Balance trend, from ${Paise.format(current.trend.first().toLong())} " +
+                                                "to ${Paise.format(current.trend.last().toLong())}"
+                                    },
+                        )
                     }
 
                     SectionLabel(text = "This month", modifier = Modifier.padding(top = DhruvNextSpacing.sectionGap, bottom = 8.dp))

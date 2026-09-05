@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.ui.components.ConfirmDangerDialog
@@ -125,7 +126,7 @@ fun CategoriesScreen(
                         }
                     }
                     DisclaimerFooter(
-                        text = "Renaming keeps history. Merging moves every transaction and cannot be undone.",
+                        text = stringResource(R.string.money_categories_footnote),
                         modifier = Modifier.fillMaxWidth().padding(DhruvNextSpacing.screenGutter),
                     )
                     if (mergeError != null) {

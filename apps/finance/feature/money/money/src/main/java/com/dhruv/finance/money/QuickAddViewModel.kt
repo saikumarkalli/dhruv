@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.UUID
 
 /** D2's editable state — pre-guessed on open (FR-002/T030), both guesses stay editable before
  * save, and everything here carries over verbatim into D3 via "more options" (Acceptance
@@ -29,6 +30,12 @@ data class QuickAddUiState(
     val savedTransactionId: String? = null,
     val accountOptions: List<com.dhruv.core.ui.components.SelectionOption> = emptyList(),
     val categoryOptions: List<com.dhruv.core.ui.components.SelectionOption> = emptyList(),
+    /** Write-retry semantics (002-money-tab gap register T097): minted once on the first save
+     * attempt and reused on every retry of the *same* entry, so a timeout-and-retry reaches the
+     * server with the same idempotency key instead of a fresh one — the whole point of
+     * `transactions.request_id unique` is defeated if a retry mints a new id. Cleared only once
+     * the save actually succeeds. */
+    val pendingRequestId: String? = null,
 )
 
 /**
@@ -91,7 +98,10 @@ class QuickAddViewModel(
         if (state.amountPaise <= 0 || state.accountId == null) return
         if (state.type != TransactionType.TRANSFER && state.categoryId == null) return
 
-        performanceTracer.trace("money_quick_add_save") { _uiState.value = state.copy(isSaving = true) }
+        val requestId = state.pendingRequestId ?: UUID.randomUUID().toString()
+        performanceTracer.trace("money_quick_add_save") {
+            _uiState.value = state.copy(isSaving = true, pendingRequestId = requestId)
+        }
         viewModelScope.launch(exceptionHandler) {
             val transaction =
                 Transaction(
@@ -112,11 +122,13 @@ class QuickAddViewModel(
                     source = TransactionSource.MANUAL,
                 )
             transactionRepository
-                .createTransaction(transaction)
+                .createTransaction(transaction, requestId)
                 .onSuccess { created ->
-                    _uiState.value = state.copy(isSaving = false, savedTransactionId = created.id)
+                    _uiState.value = state.copy(isSaving = false, savedTransactionId = created.id, pendingRequestId = null)
                 }.onFailure { error ->
-                    _uiState.value = state.copy(isSaving = false)
+                    // pendingRequestId is deliberately kept — a retry reuses it (see the field's
+                    // own doc comment).
+                    _uiState.value = state.copy(isSaving = false, pendingRequestId = requestId)
                     reportFeatureError(error)
                 }
         }

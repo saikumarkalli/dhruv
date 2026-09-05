@@ -172,7 +172,7 @@ private fun RecurringRow(
                     "Paused"
                 } else {
                     val label = if (template.amountIsVariable) "Variable" else "Auto-debit"
-                    "$label · ${template.nextRun.format(DateTimeFormatter.ofPattern("d MMM"))}"
+                    "${template.frequencyLabel()} · $label · ${template.nextRun.format(DateTimeFormatter.ofPattern("d MMM"))}"
                 }
             Text(subtitle, color = colors.tx2, fontSize = DhruvNextType.meta)
         }
@@ -202,3 +202,14 @@ private fun RecurringRow(
         }
     }
 }
+
+/** T107 fidelity gap: NEXT 30 DAYS rows named auto-debit/variable but not the schedule itself.
+ * Mirrors `RecurringRepository`'s own minimal-RRULE reader (`FREQ=` only, research R7) — no
+ * INTERVAL/BYDAY/COUNT/UNTIL support, same scope as the rest of this phase's recurring engine. */
+private fun RecurringTemplate.frequencyLabel(): String =
+    when {
+        rrule.contains("FREQ=DAILY") -> "Daily"
+        rrule.contains("FREQ=WEEKLY") -> "Weekly"
+        rrule.contains("FREQ=YEARLY") -> "Yearly"
+        else -> "Monthly"
+    }

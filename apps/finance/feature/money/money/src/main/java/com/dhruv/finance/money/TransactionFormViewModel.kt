@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 /** D3's full-form state (FR-004). [isDirty] backs `rememberDiscardGuard`'s confirm-on-discard
  * (FR-005, N4) — every field setter marks it true; only a successful save resets it.
@@ -44,6 +45,9 @@ data class TransactionFormUiState(
     val makeRecurring: Boolean = false,
     val rrule: String = "FREQ=MONTHLY",
     val savedRecurringTemplateId: String? = null,
+    /** Write-retry semantics (002-money-tab gap register T097) — same stable-across-retries
+     * idempotency key as [QuickAddUiState.pendingRequestId]; see that field's doc comment. */
+    val pendingRequestId: String? = null,
 )
 
 /** D3 (full transaction form) — every field FR-004 promises beyond D2's quick-add surface. */
@@ -102,8 +106,9 @@ class TransactionFormViewModel(
             return
         }
 
+        val requestId = state.pendingRequestId ?: UUID.randomUUID().toString()
         performanceTracer.trace("money_transaction_form_save") {
-            _uiState.value = state.copy(isSaving = true, validationError = null)
+            _uiState.value = state.copy(isSaving = true, validationError = null, pendingRequestId = requestId)
         }
         viewModelScope.launch(exceptionHandler) {
             val transaction =
@@ -138,11 +143,13 @@ class TransactionFormViewModel(
             }
 
             transactionRepository
-                .createTransaction(transaction)
+                .createTransaction(transaction, requestId)
                 .onSuccess { created ->
-                    _uiState.value = state.copy(isSaving = false, isDirty = false, savedTransactionId = created.id)
+                    _uiState.value =
+                        state.copy(isSaving = false, isDirty = false, savedTransactionId = created.id, pendingRequestId = null)
                 }.onFailure { thr ->
-                    _uiState.value = state.copy(isSaving = false, validationError = thr.message)
+                    // pendingRequestId kept — a retry reuses it, see the field's own doc comment.
+                    _uiState.value = state.copy(isSaving = false, validationError = thr.message, pendingRequestId = requestId)
                 }
         }
     }
