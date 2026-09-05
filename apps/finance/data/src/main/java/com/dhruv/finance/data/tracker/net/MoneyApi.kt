@@ -15,9 +15,11 @@ import com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto
 import com.dhruv.finance.data.tracker.dto.SuggestionDto
 import com.dhruv.finance.data.tracker.dto.SuggestionStatusDto
 import com.dhruv.finance.data.tracker.dto.SuggestionUpsertDto
+import com.dhruv.finance.data.tracker.dto.TransactionCountRowDto
 import com.dhruv.finance.data.tracker.dto.TransactionDto
 import com.dhruv.finance.data.tracker.dto.TransactionEventDto
 import com.dhruv.finance.data.tracker.dto.TransactionUpsertDto
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Headers
@@ -105,6 +107,17 @@ interface MoneyApi {
     suspend fun mergeCategories(
         @Body body: MergeCategoriesRequestDto,
     ): Int
+
+    /** Exact, all-time transaction count for one category, via PostgREST's `Prefer: count=exact`
+     * — the merge confirmation (FR-024) needs the true count of everything `merge_categories`
+     * will move, not a client-side re-derivation from a month-scoped listing. `limit=1&select=id`
+     * keeps the body itself minimal; the count lives in the response's `Content-Range` header
+     * (`0-0/<total>`), read by [com.dhruv.finance.data.tracker.repo.CategoryRepositoryImpl]. */
+    @Headers("Prefer: count=exact")
+    @GET("transactions?deleted_at=is.null&limit=1&select=id")
+    suspend fun countTransactionsForCategory(
+        @Query("category_id") categoryId: String,
+    ): Response<List<TransactionCountRowDto>>
 
     // ── Transactions ────────────────────────────────────────────────────────────────────────
     @GET("transactions?deleted_at=is.null&order=occurred_at.desc")
