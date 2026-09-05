@@ -245,6 +245,7 @@ private fun AppShell(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val planNavController = rememberNavController()
+    val moneyNavController = rememberNavController()
 
     var detailRoute by remember { mutableStateOf<DetailRoute?>(null) }
     // Settings' own sub-route (SettingsAccount/SettingsApp/SettingsModule, 004-settings T012/T013):
@@ -337,21 +338,31 @@ private fun AppShell(
                 if (target is NavTarget.OpenPlanTool) {
                     planNavController.navigate(target.tool.route())
                 }
+                if (target is NavTarget.OpenAccount) {
+                    moneyNavController.navigate(accountDetailRoute(target.accountId))
+                }
             }
         }
     }
 
-    // Back contract (NAV3): a shown detail route pops first, then Plan's own nested back stack
-    // (only Plan has real sub-routes today), then the pager returns to page 0, then the app exits.
+    // Back contract (NAV3): a shown detail route pops first, then the ACTIVE tab's own nested back
+    // stack (Plan and, since 002-money-tab, Money — resolveBackAction was already written
+    // tab-agnostic, per-tab controller is the only thing generalised here), then the pager returns
+    // to page 0, then the app exits.
     DisposableEffect(activity) {
         val callback =
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    val onPlanTab = tabs[pagerState.currentPage] == TabKey.PLAN
+                    val activeTabHasNestedBackStack =
+                        when (tabs[pagerState.currentPage]) {
+                            TabKey.PLAN -> planNavController.previousBackStackEntry != null
+                            TabKey.MONEY -> moneyNavController.previousBackStackEntry != null
+                            else -> false
+                        }
                     when (
                         resolveBackAction(
                             hasDetailRoute = detailRoute != null,
-                            activeTabHasNestedBackStack = onPlanTab && planNavController.previousBackStackEntry != null,
+                            activeTabHasNestedBackStack = activeTabHasNestedBackStack,
                             currentTabIndex = pagerState.currentPage,
                         )
                     ) {
@@ -361,7 +372,11 @@ private fun AppShell(
                             } else {
                                 detailRoute = null
                             }
-                        BackAction.POP_NESTED -> planNavController.popBackStack()
+                        BackAction.POP_NESTED ->
+                            when (tabs[pagerState.currentPage]) {
+                                TabKey.MONEY -> moneyNavController.popBackStack()
+                                else -> planNavController.popBackStack()
+                            }
                         BackAction.RETURN_TO_FIRST_TAB -> coroutineScope.launch { pagerState.scrollToPage(0) }
                         BackAction.EXIT_APP -> activity.finish()
                     }
@@ -383,6 +398,9 @@ private fun AppShell(
                 if (target is NavTarget.OpenPlanTool) {
                     planNavController.navigate(target.tool.route())
                 }
+                if (target is NavTarget.OpenAccount) {
+                    moneyNavController.navigate(accountDetailRoute(target.accountId))
+                }
             }
         },
     ) {
@@ -392,6 +410,7 @@ private fun AppShell(
             crashReporter = crashReporter,
             calculatorViewModel = calculatorViewModel,
             planNavController = planNavController,
+            moneyNavController = moneyNavController,
             detailRoute = detailRoute,
             settingsSubRoute = settingsSubRoute,
             settingsRepository = settingsRepository,
@@ -419,6 +438,7 @@ private fun TabsScaffold(
     crashReporter: CrashReporter,
     calculatorViewModel: CalculatorViewModel,
     planNavController: NavHostController,
+    moneyNavController: NavHostController,
     detailRoute: DetailRoute?,
     settingsSubRoute: DetailRoute?,
     settingsRepository: SettingsRepository,
@@ -509,9 +529,10 @@ private fun TabsScaffold(
                     when (tabs[page]) {
                         TabKey.HOME -> DashboardScreen()
                         TabKey.MONEY ->
-                            NotConfiguredCard(
-                                message = "Money lands once the ledger ships",
-                                modifier = Modifier.padding(24.dp),
+                            MoneyTab(
+                                navController = moneyNavController,
+                                resolver = resolver,
+                                crashReporter = crashReporter,
                             )
                         TabKey.CALC ->
                             CalcTab(
@@ -619,6 +640,59 @@ private fun PlanTab(
             FeatureHost("everyday", resolver.isEnabled("everyday"), error, crashReporter) {
                 EverydayScreen(viewModel = vm)
             }
+        }
+    }
+}
+
+private const val MONEY_HOME_ROUTE = "moneyHome"
+private const val TRANSACTION_FORM_ROUTE = "transactionForm"
+private const val ACCOUNT_DETAIL_ROUTE = "accountDetail/{accountId}"
+
+private fun accountDetailRoute(accountId: String) = "accountDetail/$accountId"
+
+/**
+ * Money tab's own nested NavHost (002-money-tab) — the second tab-owned nested controller
+ * (Phase 0 explicitly descoped this generalisation until a second tab needed sub-routes; Money is
+ * that tab). D1 (ledger) is the root; D2 (quick add) is a sheet over D1, not a pushed route
+ * (contracts/routes.md); D3 (full form) pushes as a route so "more options" and back both behave
+ * like an ordinary drill-in. D4/D6/D7/D8/D9 land in later stories.
+ */
+@Composable
+private fun MoneyTab(
+    navController: NavHostController,
+    resolver: FeatureFlagResolver,
+    crashReporter: CrashReporter,
+    modifier: Modifier = Modifier,
+) {
+    NavHost(navController = navController, startDestination = MONEY_HOME_ROUTE, modifier = modifier.fillMaxSize()) {
+        composable(MONEY_HOME_ROUTE) {
+            val vm: com.dhruv.finance.money.LedgerViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.LedgerScreen(
+                    viewModel = vm,
+                    onOpenFullForm = { navController.navigate(TRANSACTION_FORM_ROUTE) },
+                )
+            }
+        }
+        composable(TRANSACTION_FORM_ROUTE) {
+            val vm: com.dhruv.finance.money.TransactionFormViewModel = koinViewModel()
+            val error by vm.featureError.collectAsStateWithLifecycle()
+            FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
+                com.dhruv.finance.money.TransactionFormScreen(
+                    viewModel = vm,
+                    onClose = { navController.popBackStack() },
+                )
+            }
+        }
+        composable(ACCOUNT_DETAIL_ROUTE) {
+            // D7 lands in US3 (T043) — placeholder route so NavTarget.OpenAccount has somewhere
+            // real to point at from the moment the target exists, per the design system's "add a
+            // route = sealed case + registry row" rule (not an unused speculative case).
+            NotConfiguredCard(
+                message = "Account detail lands with US3",
+                modifier = Modifier.padding(24.dp),
+            )
         }
     }
 }
