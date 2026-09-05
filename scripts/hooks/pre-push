@@ -122,9 +122,15 @@ for MODULE in $CHANGED; do
     ISSUES="$ISSUES\n  ❌ Missing feature flag entry for '$MOD_NAME' in $FLAG_FILE"
   fi
 
-  # Check 3: Koin module declaration
+  # Check 3: Koin module declaration.
+  # Was a single grep requiring val/Module/=/module all on one line — this repo's ktlint config
+  # forces `val fooModule =` and `module {` onto separate lines
+  # (standard:multiline-expression-wrapping), which a single-line grep can never match. Every
+  # existing module (calculator, onboarding, loans, ...) already uses this exact wrapped style, so
+  # the old check was silently vacuous for all of them; split into two independent single-line
+  # checks that together tolerate either layout.
   if ! grep -rq "fun.*[Mm]odule\(\)" "$MODULE/" 2>/dev/null && \
-     ! grep -rq "val.*[Mm]odule.*=.*module" "$MODULE/" 2>/dev/null; then
+     ! { grep -rq "val.*[Mm]odule" "$MODULE/" 2>/dev/null && grep -rq "module {" "$MODULE/" 2>/dev/null; }; then
     ISSUES="$ISSUES\n  ❌ No Koin module declared in $MODULE"
   fi
 

@@ -30,7 +30,7 @@ JACOCO_XML = "build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport
 # full module paths so they merge 1:1 with the labels derived from test-results file paths.
 _FEATURES = (
     "calculator", "loans", "investments", "tax", "everyday",
-    "currency", "unit", "date", "time", "assistant",
+    "currency", "unit", "date", "time", "assistant", "networth",
 )
 PACKAGE_TO_MODULE = {
     "com/dhruv/core": ":libs:core",

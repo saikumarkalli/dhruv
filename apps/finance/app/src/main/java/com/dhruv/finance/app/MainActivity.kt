@@ -53,6 +53,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dhruv.core.flags.FeatureFlagResolver
 import com.dhruv.core.navigation.BackAction
 import com.dhruv.core.navigation.NavTarget
+import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.core.navigation.PlanTool
 import com.dhruv.core.navigation.TabKey
 import com.dhruv.core.navigation.pageIndexFor
@@ -69,8 +70,8 @@ import com.dhruv.core.ui.components.DhruvWordmarkImage
 import com.dhruv.core.ui.components.NotConfiguredCard
 import com.dhruv.core.ui.theme.DhruvTheme
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
-import com.dhruv.finance.app.navigation.NavigationDispatcher
-import com.dhruv.finance.app.ui.dashboard.DashboardScreen
+import com.dhruv.finance.app.ui.home.HomeScreen
+import com.dhruv.finance.app.ui.home.shouldShowAskPill
 import com.dhruv.finance.app.ui.onboarding.OnboardingHost
 import com.dhruv.finance.app.ui.plan.PlanLauncher
 import com.dhruv.finance.app.ui.settings.AppLockGate
@@ -82,6 +83,7 @@ import com.dhruv.finance.app.ui.shell.AskDetailContent
 import com.dhruv.finance.app.ui.shell.CurrencyDetailContent
 import com.dhruv.finance.app.ui.shell.DateDetailContent
 import com.dhruv.finance.app.ui.shell.DetailRoute
+import com.dhruv.finance.app.ui.shell.NetWorthDetailContent
 import com.dhruv.finance.app.ui.shell.NotifScreen
 import com.dhruv.finance.app.ui.shell.ProfileScreen
 import com.dhruv.finance.app.ui.shell.SettingsDetailContent
@@ -245,6 +247,9 @@ private fun AppShell(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val planNavController = rememberNavController()
+    // Hoisted the same way as planNavController (Phase 8) — DetailRoute.NetWorth needs it below to
+    // integrate C1-C7's own nested back stack into the hardware back button.
+    val netWorthNavController = rememberNavController()
 
     var detailRoute by remember { mutableStateOf<DetailRoute?>(null) }
     // Settings' own sub-route (SettingsAccount/SettingsApp/SettingsModule, 004-settings T012/T013):
@@ -358,6 +363,11 @@ private fun AppShell(
                         BackAction.CLOSE_DETAIL ->
                             if (settingsSubRoute != null) {
                                 settingsSubRoute = null
+                            } else if (detailRoute == DetailRoute.NetWorth && netWorthNavController.previousBackStackEntry != null) {
+                                // Same precedent as settingsSubRoute above: a shell detail route can
+                                // own its own nested back stack, popped here before the whole route
+                                // closes — C1-C7's NavHost is the first non-Settings case of this.
+                                netWorthNavController.popBackStack()
                             } else {
                                 detailRoute = null
                             }
@@ -392,6 +402,7 @@ private fun AppShell(
             crashReporter = crashReporter,
             calculatorViewModel = calculatorViewModel,
             planNavController = planNavController,
+            netWorthNavController = netWorthNavController,
             detailRoute = detailRoute,
             settingsSubRoute = settingsSubRoute,
             settingsRepository = settingsRepository,
@@ -419,6 +430,7 @@ private fun TabsScaffold(
     crashReporter: CrashReporter,
     calculatorViewModel: CalculatorViewModel,
     planNavController: NavHostController,
+    netWorthNavController: NavHostController,
     detailRoute: DetailRoute?,
     settingsSubRoute: DetailRoute?,
     settingsRepository: SettingsRepository,
@@ -496,6 +508,7 @@ private fun TabsScaffold(
                     resolver = resolver,
                     crashReporter = crashReporter,
                     settingsRepository = settingsRepository,
+                    netWorthNavController = netWorthNavController,
                     onBack = onDismissDetail,
                     onOpenSettingsSubRoute = onOpenSettingsSubRoute,
                     onDismissSettingsSubRoute = onDismissSettingsSubRoute,
@@ -507,7 +520,7 @@ private fun TabsScaffold(
                     modifier = Modifier.fillMaxSize().testTag("app_horizontal_pager"),
                 ) { page ->
                     when (tabs[page]) {
-                        TabKey.HOME -> DashboardScreen()
+                        TabKey.HOME -> HomeScreen(viewModel = koinViewModel(), onOpenDetail = onOpenDetail)
                         TabKey.MONEY ->
                             NotConfiguredCard(
                                 message = "Money lands once the ledger ships",
@@ -536,7 +549,7 @@ private fun TabsScaffold(
                     }
                 }
 
-                if (tabs[pagerState.currentPage] != TabKey.CALC && resolver.isEnabled("assistant")) {
+                if (shouldShowAskPill(tabs[pagerState.currentPage]) && resolver.isEnabled("assistant")) {
                     AskPill(
                         onClick = { onOpenDetail(DetailRoute.Ask) },
                         modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
@@ -630,6 +643,7 @@ private fun DetailRouteContent(
     resolver: FeatureFlagResolver,
     crashReporter: CrashReporter,
     settingsRepository: SettingsRepository,
+    netWorthNavController: NavHostController,
     onBack: () -> Unit,
     onOpenSettingsSubRoute: (DetailRoute) -> Unit,
     onDismissSettingsSubRoute: () -> Unit,
@@ -649,6 +663,7 @@ private fun DetailRouteContent(
                 onBackFromSubRoute = onDismissSettingsSubRoute,
             )
         DetailRoute.Ask -> AskDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
+        DetailRoute.NetWorth -> NetWorthDetailContent(navController = netWorthNavController, onBack = onBack)
         DetailRoute.Currency -> CurrencyDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
         DetailRoute.UnitConverter -> UnitDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)
         DetailRoute.DateTool -> DateDetailContent(resolver = resolver, crashReporter = crashReporter, onBack = onBack)

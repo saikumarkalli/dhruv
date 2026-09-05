@@ -49,6 +49,7 @@ is not a Finance module. Its changes go in the CHANGELOG entry only.
 | [time](feature/shell/time/README.md) | `:apps:finance:feature:time` | none — shell | `time` | **disabled** |
 | [assistant](feature/shell/assistant/README.md) | `:apps:finance:feature:assistant` | none — shell | `assistant` | enabled, gated `minVersion 1.2.0`, `requiresConsent` |
 | [onboarding](feature/onboarding/onboarding/README.md) | `:apps:finance:feature:onboarding` | none — pre-session | `onboarding` | enabled — A2 sign-in, A3 consent, A4 empty start (design-v1 Phase 1) |
+| [networth](feature/home/networth/README.md) | `:apps:finance:feature:networth` | Home | `networth` | enabled, `requiresConsent: true` — C1–C7 (design-v1 Phase 2, [001-net-worth-tracker](specs/001-net-worth-tracker/)) |
 
 ### Planned — flag and README exist, Gradle module does not
 
@@ -57,7 +58,6 @@ provisioned ahead of the code, the same way `date`/`time` were.
 
 | Module | Gradle coordinate | Owner tab | Flag | Builds in | Spec |
 |---|---|---|---|---|---|
-| [networth](feature/home/networth/README.md) | `:apps:finance:feature:networth` | Home | `networth` | Phase 2 | [001-net-worth-tracker](specs/001-net-worth-tracker/) |
 | [money](feature/money/money/README.md) | `:apps:finance:feature:money` | Money | `money` | Phase 3 | [002-money-tab](specs/002-money-tab/) |
 | [planning](feature/plan/planning/README.md) | `:apps:finance:feature:planning` | Plan | `budgets`, `goals`, `debtpayoff` | Phase 4 | [003-plan-live-modules](specs/003-plan-live-modules/) |
 | [insurance](feature/plan/insurance/README.md) | `:apps:finance:feature:insurance` | Plan | `insurance` | Phase 4 | [003-plan-live-modules](specs/003-plan-live-modules/) |

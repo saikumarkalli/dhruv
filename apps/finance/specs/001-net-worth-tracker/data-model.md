@@ -128,6 +128,14 @@ donut centre, while this phase previously defined only current-state views — t
 and "delta vs *when*" was undefined. Home's delta compares the latest point against the same holding
 set **30 days prior**; C2's per-holding sparkline reads that holding's own valuation rows directly.
 
+**T046 closure note (2026-09-02):** the source above (`v_net_worth_history`, feeding Home's delta
+and sparkline) shipped as designed. C2's own per-holding sparkline/last-updated-date/%-change,
+described in the line above, did **not** ship — `AssetsScreen`'s row only ever showed name/sector/
+current value. This is a deliberate scope deferral, not an oversight rediscovered here: building it
+means either an N+1 per-row valuation-history fetch or a new aggregation view, and no `NW-UI-*` row
+requires it (C2's own rows in the catalog only ever tested the sector filter/list, never a
+sparkline). Tracked as a follow-up for whichever phase next touches C2.
+
 Derivation is **"latest valuation ≤ date"** — deliberately the same rule Phase 5's
 `report_balance_sheet(p_as_of)` uses, so this is not a competing mechanism and 005 may read this view
 rather than re-derive. Cost is O(months × holdings) index lookups served by
@@ -151,6 +159,58 @@ window between the two.
 insert against the existing INSERT policy. Delivers FR-002's atomicity server-side. Replays
 idempotently: a retry carrying the same `p_request_id` returns the already-created holding instead of
 duplicating it.
+
+## Field validation rules (Phase 10, T064) and post-write invalidation (T075)
+
+**T064 — future-dated valuations and C4/C5 field rules.** Verified already fully guarded, both at
+the DB layer and the client, before this note was added:
+- `finance.valuations.as_of` carries `CHECK (as_of <= current_date)` (line above) — a future date is
+  rejected by Postgres regardless of what the client sends.
+- `AddValuationViewModel` never offers a date picker at all — every `save()` path uses
+  `LocalDate.now().toString()` for `asOf`, so a future date cannot be entered from C5 in the first
+  place. `finance.correct_valuation()` independently re-asserts `p_as_of > current_date` as a guard
+  for its own call site.
+- Every other field rule C4/C5 leave unstated in prose is enforced by a named `CHECK` above:
+  `holdings.name` 1–120 chars, `sector`/`kind` frozen enums, `invested_paise` nullable/`>= 0`,
+  `valuations.value_paise` `>= 0`, `source` frozen enum, `liabilities_meta.rate_bps` 0–10000,
+  `emi_paise` nullable/`>= 0`, `debit_day` 1–31, `tenure_months > 0`, `paid_months >= 0` and
+  `<= tenure_months`. There is no field in C4/C5 with a rule that exists only in prose and not as a
+  `CHECK` — the table above **is** the field-rule specification T064 asked this phase to write down.
+
+**T075 — post-write invalidation model.** SC-001 promises the net-worth total updates "without a
+manual refresh," and `platform/DESIGN-SYSTEM.md` §8 forbids per-feature pull-to-refresh. The model
+this phase actually ships (Phase 8) is **navigation-triggered reload, not polling or a server push**:
+every C1/C2/C3/C6/C7 route in `NetWorthNavHost.kt` wraps its content in
+`LifecycleResumeEffect(key) { viewModel.load(...); onPauseOrDispose { } }`, so returning to a screen
+(via `popBackStack()` from C4/C5's write, or backgrounding and resuming the app) re-fetches from the
+server-side views synchronously before render. Between write-ack and the caller screen resuming,
+C4/C5 themselves show their own submit-in-flight state (`NxButton`'s `loading` param disables the
+button and shows a spinner); there is no intermediate "stale total" frame because the previous
+screen simply hasn't re-rendered yet — it is still showing its last successfully loaded state,
+which was correct at the time it loaded. There is no cross-device realtime sync in this phase
+(ADR-0014: Supabase + RLS is the single source of truth, no client-side conflict resolution) — a
+second device only sees the update on its own next navigation-triggered reload.
+
+## Concurrency and write-retry semantics (Phase 10, T077)
+
+**Two-device conflict**: out of scope by ADR-0014 design, not an oversight of this phase — the
+tracker domain has no client-side conflict resolution at all; Supabase + RLS is the single source of
+truth and the last write physically committed wins. Two devices editing the same holding's mutable
+fields (name, sector, invested amount, or `liabilities_meta`'s EMI/tenure) is the same last-write-
+wins outcome any single-row UPDATE has; `valuations` cannot conflict this way since it is
+insert-only.
+
+**Write-retry / duplicate-submission**: **already solved**, not an open gap — `p_request_id` on both
+`finance.create_holding_with_value()` and (via the `holdings.request_id`/`valuations.request_id`
+UNIQUE columns) is generated client-side once, at the moment `AddEditHoldingViewModel.save()`
+commits (`UUID.randomUUID()`), and reused by the RPC's idempotent-replay check
+(`create_holding_with_value.sql`'s comment: "generated client-side at the moment the user commits
+… so an automatic retry after a timeout reuses it, collides on the UNIQUE column, and returns the
+already-created holding instead of duplicating it"). This covers the case that actually matters — an
+HTTP-level automatic retry of the *same* logical request. A user manually re-tapping "Save" after
+perceiving no response generates a **new** UUID and is treated as a new, independent save — which is
+correct: from the domain's perspective that is a second, deliberate user action, not a duplicate of
+the first.
 
 ## Simple return, not XIRR
 
@@ -209,6 +269,25 @@ path to try first — confirm it works before relying on it. ADR-0032 decision 4
 requires hand-authorship for several statements here regardless (security-invoker views, grants,
 `create or replace function` bodies), so a generated diff would still need hand-editing.
 
+**Re-verified 2026-09-03 (Phase 11, T078) — still blocked, same shape of blocker as ADR-0033 named
+for a different tool.** The CLI is present and the project is linked
+(`supabase/.temp/linked-project.json` → `dsfnrtckgpnvyvscevxn`, name `dhruv`), confirmed by reading
+that file directly. What's missing is an **authenticated session**: no `SUPABASE_ACCESS_TOKEN` in
+the environment and no `supabase login` session on disk (`supabase projects list` fails with
+`LegacyPlatformAuthRequiredError`) — `supabase db diff --linked`/`db push` both need one, and Docker
+is still absent, so the local `db reset` path is equally closed. Both routes named above remain the
+correct unblock; neither is executable from this session. **What *was* completed without execution**
+— a static text review of the migration file against T078's own three named watch-items, all
+confirmed present by direct inspection of `supabase/migrations/20260823094500_networth_phase2.sql`:
+`security_invoker = on` on all three views (lines 173, 191, 209), the `as_of <= current_date` guard
+as `add constraint valuations_as_of_check` (line 95), and both RPC functions
+(`correct_valuation`/`create_holding_with_value`) present with bodies matching their declarative
+source files verbatim. This is not a substitute for running it — a text match proves the SQL says
+what it should, not that Postgres accepts it against `dhruv-dev`'s actual state — but it is real,
+completable verification that needed no live access. Ready-to-run verification scripts for what
+*does* need a live database (T081–T083) are authored at `supabase/verification/` — see that
+directory's `README.md`.
+
 **2. The ADR-0032 equivalence guard — RESOLVED 2026-08-23.** It reported
 `finance.holdings` and `finance.valuations` as drifted when the schema was in fact
 consistent, because `gen_schema_docs.py` had no rule for `ALTER TABLE … ADD COLUMN`, so a
@@ -230,9 +309,19 @@ successfully and then died printing `✅` under cp1252, reporting failure for a 
 succeeded. It now reconfigures stdout/stderr to UTF-8 itself; no `PYTHONIOENCODING` needed.
 → T080.
 
-**4. Two schema choices are reversible only while no rows exist** and should be confirmed before the
-migration runs against `dhruv-dev`: `collateral text` versus a holdings FK (above), and the 30-day
-comparison window in `v_net_worth_history`.
+**4. Two reversible schema choices — CONFIRMED 2026-09-03 (Phase 11, T084), no change.**
+`collateral text` (not a `collateral_holding_id uuid` FK): confirmed — the design's own C7 renders
+collateral as a descriptive line, not a link to another tracked holding, and a hypothecated vehicle
+or a pledged deposit "outside the tracker" (this file's original reasoning, § New entities above) is
+a real and common case a FK cannot represent. No new information since 2026-08-23 argues otherwise.
+`v_net_worth_history`'s 30-day comparison window (not calendar-month-to-date): confirmed — a
+calendar-month comparison degrades badly on the 1st–2nd of a new month (comparing against an
+almost-empty partial month produces a misleading, near-100% delta), which a rolling 30-day window
+never does. The view's own grain is trailing month-end points regardless of which comparison a
+client picks, so this choice lives entirely in how a client reads the view, not in the view's SQL —
+changing it later, if ever needed, touches no schema and is not the migration-time decision the
+"reversible only while no rows exist" framing implied. Both choices ship as originally authored;
+this entry exists so a later phase does not re-open either without a genuinely new reason.
 
 ### Maintenance conventions for every later phase
 

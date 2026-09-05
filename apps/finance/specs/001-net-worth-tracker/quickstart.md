@@ -7,8 +7,11 @@ Validation guide only — implementation detail lives in `tasks.md` (generated s
 
 - Phase 1 already shipped and working: signed in via Google, consent granted for "Sync my financial
   records" (`networth`'s `requiresConsent` gate).
-- `supabase/migrations/0002_networth_phase2.sql` applied to the dev Supabase project (adds
-  `liabilities_meta`, `v_latest_valuation`, `v_net_worth_by_sector` — see `data-model.md`).
+- `supabase/migrations/20260823094500_networth_phase2.sql` applied to the dev Supabase project
+  (adds `finance.liabilities_meta`, `v_latest_valuation`, `v_net_worth_by_sector`,
+  `v_net_worth_history`, `correct_valuation()`, `create_holding_with_value()` — see
+  `data-model.md`). Phase 10, T065: this line previously named a placeholder
+  `0002_networth_phase2.sql` filename this feature never authored.
 - `:apps:finance:feature:networth` module registered in `settings.gradle.kts` and wired into
   `CalculatorApplication`'s Koin graph.
 

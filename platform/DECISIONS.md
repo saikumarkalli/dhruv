@@ -1040,6 +1040,38 @@ Decision 4 above makes grants explicit for every *new* custom schema going forwa
 retroactively audit or fix whatever implicit grant `public` was actually relying on — tracked as a
 follow-up, not resolved here, same pattern as ADR-0032's GitHub Pro correction.
 
+**Correction (2026-09-03).** This ADR's decision 5 — `config.toml`'s `[api] schemas` gaining
+`"finance"` — was written assuming that value is what governs a **hosted** project's Data API, the
+same assumption ADR-0032 made throughout for every other piece of `config.toml`. It does not: for a
+hosted (non-local) Supabase project, the exposed-schema list is a property of the project's
+PostgREST deployment (`db_schema` on the Management API's `/v1/projects/{ref}/postgrest` endpoint,
+surfaced in Studio as Project Settings → Data API → Exposed schemas) and is **never synced from
+`config.toml`** by any `supabase` CLI command, including `db push`. Found live debugging the net
+worth screen's first real request against `dhruv-dev`: `finance.holdings`/`finance.valuations` were
+correctly migrated (`supabase migration list --linked` showed local == remote for all three
+migration files), `FinanceSchemaInterceptor` correctly sent `Accept-Profile: finance` on every
+request (both exactly as this ADR and ADR-0033 specified) — and every tracker call still failed
+`406 Not Acceptable`, because `GET /v1/projects/dsfnrtckgpnvyvscevxn/postgrest` returned
+`"db_schema":"public,graphql_public"`. `finance` had never been added on the hosted side. Patched
+directly via `PATCH /v1/projects/{ref}/postgrest {"db_schema":"public,graphql_public,finance"}`
+(Management API, personal access token) — confirmed fixed (406 → 401 against an unauthenticated
+probe, i.e. past the schema check into the auth check). **`dhruv-prod` has the same default and has
+not been patched** — this must happen before `dhruv-prod` serves any tracker traffic, tracked in
+`scripts/env/README.md` step 1a. No CLI/declarative mechanism has been found for this setting; it is
+a manual (or Management-API-scripted) per-project step, same category as the Google OAuth redirect
+URIs in that runbook's step 4.
+**Why this wasn't caught earlier.** ADR-0032's own drift guard and equivalence guard both verify
+`schemas/` against `migrations/` against the *database* — none of them ever queried the Data API's
+own exposed-schema config, because nothing in this ADR or ADR-0032 named the Data API layer as a
+distinct thing to keep in sync. The gap was invisible to every automated check that exists.
+**Consequences.** Two things follow. First, `scripts/env/README.md`'s "Remaining steps" now carries
+a standing step for this (§1a) so the same gap doesn't reopen for `dhruv-prod` or for a future app
+schema (`tools`, …). Second, this is a genuine hole in the platform's own verification story:
+nothing currently asserts `db_schema` matches `config.toml`'s `[api] schemas` for either hosted
+project, so a manual dashboard revert (or a `prod` project that was simply never patched) would fail
+silently in production exactly as it did here in dev, with no CI signal — a scripted check against
+the Management API is a real follow-up, not yet built.
+
 ---
 
 ## Numbering-hygiene note — second ADR-0032 collision (found 2026-08-16)

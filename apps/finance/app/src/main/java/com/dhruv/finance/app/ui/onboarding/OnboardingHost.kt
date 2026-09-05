@@ -5,10 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dhruv.core.navigation.NavTarget
+import com.dhruv.core.navigation.NavigationDispatcher
 import com.dhruv.core.navigation.TabKey
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
-import com.dhruv.finance.app.navigation.NavigationDispatcher
 import com.dhruv.finance.onboarding.ConsentScreen
 import com.dhruv.finance.onboarding.EmptyStartScreen
 import com.dhruv.finance.onboarding.OnboardingUiState

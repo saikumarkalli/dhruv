@@ -58,6 +58,45 @@ See [`platform/VERSIONING.md`](platform/VERSIONING.md).
   4/5-tab shell — zero consumers remained anywhere in the app). The merged JVM test-coverage floor
   was raised from 9% to 14% to match measured coverage (`:libs:settings` 38%, `:libs:core` 15%).
 
+- **Net-worth tracker** (`:apps:finance:feature:networth`, design-v1 Phase 2 —
+  [001-net-worth-tracker](apps/finance/specs/001-net-worth-tracker/)): Home's net-worth overview
+  (C1, donut + ranked-by-sector legend), assets (C2) and liabilities (C6) lists, holding detail
+  (C3, value-history trend + simple return), add/edit holding (C4) and add/correct-value (C5)
+  forms, and liability detail (C7, amortisation split + prepay-savings projection). Soft-delete +
+  5-second undo for holdings; a Settings entry stating the frozen sector/liability-type counts.
+  Behind the `networth` flag (`requiresConsent: true`, already provisioned in Phase 1).
+  - **Two security-definer RPCs**, not plain PostgREST inserts, because the operations they replace
+    aren't safely expressible as one: `finance.create_holding_with_value()` writes a holding and
+    its first valuation in one transaction (no orphan holding on a failed second insert) and
+    replays idempotently on `request_id`; `finance.correct_valuation()` is the *only* way a
+    valuation is ever amended — it soft-deletes the wrong row and appends the corrected one
+    (`source = 'CORRECTION'`) in one transaction, because `finance.valuations` carries no UPDATE
+    policy or grant at all. This is a genuine behaviour surprise for anyone assuming client-side
+    UPDATEs work against this table: they don't, by design, and never will.
+  - `finance.valuations.as_of` gained a `CHECK (as_of <= current_date)` — a future-dated valuation
+    is rejected server-side, not just left unvalidated.
+  - Every view PostgREST exposes over this schema (`v_latest_valuation`, `v_net_worth_by_sector`,
+    and the new `v_net_worth_history` trend view) carries `security_invoker = on` — without it, a
+    Postgres 15+ view runs as its owner and bypasses RLS, silently returning every user's rows to
+    every signed-in caller. Also worth knowing: `holdings.invested_paise` (nullable cost basis,
+    funds C3's "Simple return", explicitly not XIRR) and the frozen `sector`/`liability_type`/
+    `source` enums are DB `CHECK` constraints, not client-side validation — adding a new value to
+    any of them is a migration, by design (BR-C3).
+  - New Gradle verification gate `checkDesignTokenUsage`: fails on raw
+    `MaterialTheme.colorScheme`/`.typography` or a hex `Color(0x...)` literal anywhere under
+    `apps/finance/feature/**`, wired into `regressionCheck`.
+  - **Known gaps, not fixed in this feature's own scope**: no edit-liability screen
+    (`LiabilityRepository.updateMeta()` exists and is tested, nothing in the UI calls it yet); the
+    schema migration and the RLS/RPC verification scripts authored for it
+    (`supabase/verification/`) have never run against a live Supabase project — no credentials in
+    any authoring session so far. See `apps/finance/specs/001-net-worth-tracker/data-model.md`
+    § "DB readiness" for the exact unblock steps.
+  - Home's greeting (`HOM-UI-001`) now appends the signed-in user's first name when the Google
+    profile provides one (`Good Evening, Sai`, name rendered in the user's own selected accent
+    color — `LocalDhruvNextColors.current.acc`, ADR-0024 §2 — never a hardcoded color), falling
+    back to the bare greeting when signed out or unavailable — `firstNameFrom` (`HomeViewModel.kt`),
+    first token of `SessionState.Active.displayName` only.
+
 ### Fixed
 - The app-lock preference toggle previously wrote a setting nothing read — enabling it changed no
   app behaviour at all. It is now a real, enforcing gate (see Added, sub-phase 0b.3).

@@ -4,6 +4,7 @@ import com.dhruv.finance.assistant.settings.assistantSettingsContribution
 import com.dhruv.finance.calculator.settings.calculatorSettingsContribution
 import com.dhruv.finance.currency.settings.currencySettingsContribution
 import com.dhruv.finance.data.HistoryRepository
+import com.dhruv.finance.networth.settings.netWorthSettingsContribution
 import com.dhruv.finance.unit.settings.unitSettingsContribution
 import com.dhruv.settings.contribution.SettingsContribution
 
@@ -33,4 +34,5 @@ fun realSettingsContributions(
         currencySettingsContribution(settingsRepository),
         unitSettingsContribution(),
         assistantSettingsContribution(settingsRepository),
+        netWorthSettingsContribution(),
     )
