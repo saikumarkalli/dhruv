@@ -3,10 +3,10 @@ package com.dhruv.finance.money
 import com.dhruv.finance.data.tracker.model.Account
 import com.dhruv.finance.data.tracker.model.Category
 import com.dhruv.finance.data.tracker.model.MonthSummary
-import com.dhruv.finance.data.tracker.model.Transaction
-import com.dhruv.finance.data.tracker.model.TransactionEvent
 import com.dhruv.finance.data.tracker.model.PendingEntry
 import com.dhruv.finance.data.tracker.model.RecurringTemplate
+import com.dhruv.finance.data.tracker.model.Transaction
+import com.dhruv.finance.data.tracker.model.TransactionEvent
 import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
 import com.dhruv.finance.data.tracker.repo.RecurringRepository
@@ -52,8 +52,7 @@ class FakeAccountRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun countTransactionsForAccount(accountId: String): Result<Int> =
-        Result.success(transactionCounts[accountId] ?: 0)
+    override suspend fun countTransactionsForAccount(accountId: String): Result<Int> = Result.success(transactionCounts[accountId] ?: 0)
 
     /** Mirrors [com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl.reconcileAccount]'s
      * observable effect — sets `reconciledAt` to now and adopts the stated balance — without
@@ -135,8 +134,7 @@ class FakeCategoryRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun countTransactionsForCategory(categoryId: String): Result<Int> =
-        Result.success(transactionCounts[categoryId] ?: 0)
+    override suspend fun countTransactionsForCategory(categoryId: String): Result<Int> = Result.success(transactionCounts[categoryId] ?: 0)
 }
 
 class FakeTransactionRepository(
@@ -189,8 +187,7 @@ class FakeTransactionRepository(
     override suspend fun getTransaction(transactionId: String): Result<Transaction?> =
         Result.success(transactions.firstOrNull { it.id == transactionId })
 
-    override suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>> =
-        Result.success(events[transactionId].orEmpty())
+    override suspend fun listEvents(transactionId: String): Result<List<TransactionEvent>> = Result.success(events[transactionId].orEmpty())
 
     override suspend fun guessFor(payee: String?): Result<TransactionGuess> = Result.success(guess)
 }

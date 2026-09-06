@@ -45,7 +45,9 @@ sealed interface TransactionDetailUiState {
         val history: List<TransactionHistoryItem>,
     ) : TransactionDetailUiState
 
-    data class Error(val message: String) : TransactionDetailUiState
+    data class Error(
+        val message: String,
+    ) : TransactionDetailUiState
 
     /** No connectivity and nothing cached for this transaction yet (FR-032's offline state). */
     data object Offline : TransactionDetailUiState

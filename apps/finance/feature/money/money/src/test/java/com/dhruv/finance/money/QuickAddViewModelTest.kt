@@ -84,8 +84,16 @@ class QuickAddViewModelTest {
             vm.open()
             advanceUntilIdle()
 
-            assertEquals(listOf("acc-1"), vm.uiState.value.accountOptions.map { it.id })
-            assertEquals(listOf("cat-1"), vm.uiState.value.categoryOptions.map { it.id })
+            assertEquals(
+                listOf("acc-1"),
+                vm.uiState.value.accountOptions
+                    .map { it.id },
+            )
+            assertEquals(
+                listOf("cat-1"),
+                vm.uiState.value.categoryOptions
+                    .map { it.id },
+            )
         }
 
     @Test

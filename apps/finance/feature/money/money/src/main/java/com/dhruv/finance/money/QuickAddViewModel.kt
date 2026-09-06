@@ -67,13 +67,21 @@ class QuickAddViewModel(
             accountRepository.listAccounts().onSuccess { accounts ->
                 _uiState.value =
                     _uiState.value.copy(
-                        accountOptions = accounts.map { com.dhruv.core.ui.components.SelectionOption(it.id, it.name) },
+                        accountOptions =
+                            accounts.map {
+                                com.dhruv.core.ui.components
+                                    .SelectionOption(it.id, it.name)
+                            },
                     )
             }
             categoryRepository.listCategories().onSuccess { categories ->
                 _uiState.value =
                     _uiState.value.copy(
-                        categoryOptions = categories.map { com.dhruv.core.ui.components.SelectionOption(it.id, it.name) },
+                        categoryOptions =
+                            categories.map {
+                                com.dhruv.core.ui.components
+                                    .SelectionOption(it.id, it.name)
+                            },
                     )
             }
         }

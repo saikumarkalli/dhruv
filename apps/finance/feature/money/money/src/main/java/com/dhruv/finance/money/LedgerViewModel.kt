@@ -34,7 +34,9 @@ sealed interface LedgerUiState {
         val totalCount: Int,
     ) : LedgerUiState
 
-    data class Error(val message: String) : LedgerUiState
+    data class Error(
+        val message: String,
+    ) : LedgerUiState
 
     /** FR-032: a network-backed surface with no session renders a designed state, never a
      * blank screen or an unresolving spinner. */
@@ -104,13 +106,15 @@ class LedgerViewModel(
             }
         }.launchIn(viewModelScope)
 
-        sessionStore?.state?.onEach { state ->
-            if (state is SessionState.SignedOut) {
-                _uiState.value = LedgerUiState.SignedOut
-            } else if (_uiState.value is LedgerUiState.SignedOut) {
-                load(month)
-            }
-        }?.launchIn(viewModelScope)
+        sessionStore
+            ?.state
+            ?.onEach { state ->
+                if (state is SessionState.SignedOut) {
+                    _uiState.value = LedgerUiState.SignedOut
+                } else if (_uiState.value is LedgerUiState.SignedOut) {
+                    load(month)
+                }
+            }?.launchIn(viewModelScope)
 
         if (sessionStore?.state?.value !is SessionState.SignedOut) {
             load(YearMonth.now())

@@ -38,7 +38,12 @@ data class Transaction(
 /** Append-only TEXT enum — every value [finance.fn_transaction_audit] can write (data-model.md
  * "Transaction history entry"). */
 enum class TransactionEventKind {
-    CREATED, EDITED, CATEGORY_CHANGED, DELETED, ACCEPTED_FROM_RECURRING, RECONCILED
+    CREATED,
+    EDITED,
+    CATEGORY_CHANGED,
+    DELETED,
+    ACCEPTED_FROM_RECURRING,
+    RECONCILED,
 }
 
 /** Domain model for `finance.transaction_events` — append-only, database-enforced (FR-008). */

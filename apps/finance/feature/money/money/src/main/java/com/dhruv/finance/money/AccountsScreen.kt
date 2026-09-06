@@ -183,7 +183,10 @@ private fun AccountGroup(
                             subtitle = accountSubtitle(account),
                             onClick = { onOpenAccount(account.id) },
                             trailing = {
-                                MoneyText(paise = account.balancePaise ?: account.openingBalancePaise, color = LocalDhruvNextColors.current.tx)
+                                MoneyText(
+                                    paise = account.balancePaise ?: account.openingBalancePaise,
+                                    color = LocalDhruvNextColors.current.tx,
+                                )
                             },
                         )
                     }

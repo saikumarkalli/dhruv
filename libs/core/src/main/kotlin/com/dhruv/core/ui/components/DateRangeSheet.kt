@@ -20,7 +20,11 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 import java.time.LocalDate
 
 /** A named quick-pick range plus its resolved [start]/[end] (inclusive) dates. */
-data class DateRangePreset(val label: String, val start: LocalDate, val end: LocalDate)
+data class DateRangePreset(
+    val label: String,
+    val start: LocalDate,
+    val end: LocalDate,
+)
 
 /**
  * A date-range picker sheet (design batch B2) — D5's amount/date filter. Offers named presets

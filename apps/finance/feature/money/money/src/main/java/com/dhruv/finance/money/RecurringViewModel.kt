@@ -9,10 +9,10 @@ import com.dhruv.finance.data.tracker.model.RecurringTemplate
 import com.dhruv.finance.data.tracker.repo.RecurringRepository
 import com.dhruv.finance.data.tracker.repo.RecurringTemplateKeys
 import com.dhruv.finance.data.tracker.repo.SuggestionRepository
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /** D9's screen state (spec.md Story 6; FR-030/FR-032). */
@@ -27,7 +27,9 @@ sealed interface RecurringUiState {
         val paused: List<RecurringTemplate>,
     ) : RecurringUiState
 
-    data class Error(val message: String) : RecurringUiState
+    data class Error(
+        val message: String,
+    ) : RecurringUiState
 }
 
 /**
@@ -127,9 +129,13 @@ private fun RecurringTemplate.amountPaise(): Long = (template[RecurringTemplateK
 sealed interface RecurringReviewUiState {
     data object Loading : RecurringReviewUiState
 
-    data class Loaded(val pending: List<PendingEntry>) : RecurringReviewUiState
+    data class Loaded(
+        val pending: List<PendingEntry>,
+    ) : RecurringReviewUiState
 
-    data class Error(val message: String) : RecurringReviewUiState
+    data class Error(
+        val message: String,
+    ) : RecurringReviewUiState
 }
 
 /** D9-review — accept writes the transaction (FR-029), dismiss writes nothing. */

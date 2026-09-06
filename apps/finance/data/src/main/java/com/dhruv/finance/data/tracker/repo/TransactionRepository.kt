@@ -66,7 +66,12 @@ class TransactionRepositoryImpl(
     override suspend fun listForMonth(month: YearMonth): Result<List<Transaction>> =
         try {
             val start = month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant()
-            val end = month.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant()
+            val end =
+                month
+                    .plusMonths(1)
+                    .atDay(1)
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toInstant()
             val rows = api.listTransactions("gte.$start", "lt.$end")
             Result.success(rows.map { it.toDomain() })
         } catch (e: CancellationException) {
@@ -174,7 +179,12 @@ class TransactionRepositoryImpl(
             val byPayee = if (payee.isNullOrBlank()) emptyList() else recent.filter { it.payee == payee }
             val source = byPayee.ifEmpty { recent }
 
-            val account = source.groupingBy { it.accountId }.eachCount().maxByOrNull { it.value }?.key
+            val account =
+                source
+                    .groupingBy { it.accountId }
+                    .eachCount()
+                    .maxByOrNull { it.value }
+                    ?.key
             val category =
                 source
                     .mapNotNull { it.categoryId }

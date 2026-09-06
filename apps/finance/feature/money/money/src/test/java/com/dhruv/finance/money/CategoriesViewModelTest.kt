@@ -73,9 +73,8 @@ class CategoriesViewModelTest {
             sharePercentTenths = 1000,
         )
 
-    private fun viewModel(
-        categoryRepository: FakeCategoryRepository,
-    ) = CategoriesViewModel(categoryRepository, NoOpCrashReporter, NoOpPerformanceTracer)
+    private fun viewModel(categoryRepository: FakeCategoryRepository) =
+        CategoriesViewModel(categoryRepository, NoOpCrashReporter, NoOpPerformanceTracer)
 
     @Test
     fun `load reports Expense and Income tab counts separately`() =
@@ -297,6 +296,11 @@ class CategoriesViewModelTest {
 
             val state = vm.uiState.value as CategoriesUiState.Loaded
             assertTrue(state.expenseRows.first { it.name == Category.RESERVED_UNCATEGORISED }.isReserved)
-            assertTrue(state.expenseRows.first { it.name == "Groceries" }.isReserved.not())
+            assertTrue(
+                state.expenseRows
+                    .first { it.name == "Groceries" }
+                    .isReserved
+                    .not(),
+            )
         }
 }

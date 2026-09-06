@@ -21,13 +21,13 @@ import com.dhruv.finance.data.tracker.model.TransactionType
 import com.dhruv.finance.data.tracker.net.MoneyApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.Headers
-import retrofit2.Response
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Response
 import java.time.YearMonth
 
 /**
@@ -221,8 +221,7 @@ private class ReservedCategoryRepository(
 
     override suspend fun ensureReservedCategories(): Result<Unit> = Result.success(Unit)
 
-    override suspend fun listCategoriesWithSpend(month: java.time.YearMonth): Result<List<Category>> =
-        error("not stubbed for this test")
+    override suspend fun listCategoriesWithSpend(month: java.time.YearMonth): Result<List<Category>> = error("not stubbed for this test")
 
     override suspend fun countTransactionsForCategory(categoryId: String): Result<Int> = error("not stubbed for this test")
 }

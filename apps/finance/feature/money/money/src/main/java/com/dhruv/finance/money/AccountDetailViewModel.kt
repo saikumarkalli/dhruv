@@ -39,7 +39,9 @@ sealed interface AccountDetailUiState {
         val staleMessage: String,
     ) : AccountDetailUiState
 
-    data class Error(val message: String) : AccountDetailUiState
+    data class Error(
+        val message: String,
+    ) : AccountDetailUiState
 
     data object Offline : AccountDetailUiState
 
@@ -53,7 +55,9 @@ sealed interface AccountDetailUiState {
 sealed interface AccountDeletePrompt {
     data object None : AccountDeletePrompt
 
-    data class Confirm(val transactionCount: Int) : AccountDeletePrompt
+    data class Confirm(
+        val transactionCount: Int,
+    ) : AccountDeletePrompt
 }
 
 /**

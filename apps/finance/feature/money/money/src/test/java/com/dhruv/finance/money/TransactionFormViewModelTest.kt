@@ -177,8 +177,16 @@ class TransactionFormViewModelTest {
             vm.open()
             advanceUntilIdle()
 
-            assertEquals(listOf("acc-1", "acc-2"), vm.uiState.value.accountOptions.map { it.id })
-            assertEquals(listOf("cat-1"), vm.uiState.value.categoryOptions.map { it.id })
+            assertEquals(
+                listOf("acc-1", "acc-2"),
+                vm.uiState.value.accountOptions
+                    .map { it.id },
+            )
+            assertEquals(
+                listOf("cat-1"),
+                vm.uiState.value.categoryOptions
+                    .map { it.id },
+            )
         }
 
     // MNY-FLOW-002 (T065/T068): saving with "make it recurring" writes a recurring_templates row

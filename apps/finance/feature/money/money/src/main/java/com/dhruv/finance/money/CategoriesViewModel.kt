@@ -43,7 +43,9 @@ sealed interface CategoriesUiState {
         val incomeCount: Int get() = incomeRows.size
     }
 
-    data class Error(val message: String) : CategoriesUiState
+    data class Error(
+        val message: String,
+    ) : CategoriesUiState
 }
 
 /** D8's merge confirmation (FR-024, MNY-BR-004). [Confirm] carries the exact, all-time counts
@@ -68,9 +70,15 @@ sealed interface MergePrompt {
 sealed interface DeletePrompt {
     data object None : DeletePrompt
 
-    data class Confirm(val categoryId: String, val categoryName: String) : DeletePrompt
+    data class Confirm(
+        val categoryId: String,
+        val categoryName: String,
+    ) : DeletePrompt
 
-    data class Blocked(val categoryName: String, val transactionCount: Int) : DeletePrompt
+    data class Blocked(
+        val categoryName: String,
+        val transactionCount: Int,
+    ) : DeletePrompt
 }
 
 /**
@@ -243,16 +251,18 @@ class CategoriesViewModel(
     ) {
         _mergeError.value = null
         viewModelScope.launch(exceptionHandler) {
-            categoryRepository.countTransactionsForCategory(categoryId).onSuccess { count ->
-                _deletePrompt.value =
-                    if (count == 0) {
-                        DeletePrompt.Confirm(categoryId, categoryName)
-                    } else {
-                        DeletePrompt.Blocked(categoryName, count)
-                    }
-            }.onFailure {
-                _mergeError.value = "Couldn't check whether this category can be deleted. Try again."
-            }
+            categoryRepository
+                .countTransactionsForCategory(categoryId)
+                .onSuccess { count ->
+                    _deletePrompt.value =
+                        if (count == 0) {
+                            DeletePrompt.Confirm(categoryId, categoryName)
+                        } else {
+                            DeletePrompt.Blocked(categoryName, count)
+                        }
+                }.onFailure {
+                    _mergeError.value = "Couldn't check whether this category can be deleted. Try again."
+                }
         }
     }
 

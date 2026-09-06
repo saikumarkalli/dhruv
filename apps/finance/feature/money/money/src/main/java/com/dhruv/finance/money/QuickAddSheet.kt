@@ -34,8 +34,8 @@ import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextSpacing
 import com.dhruv.core.ui.theme.DhruvNextType
 import com.dhruv.core.ui.theme.LocalDhruvNextColors
-import com.dhruv.finance.money.MoneyConfig.transactionTypeLabels
 import com.dhruv.finance.data.tracker.model.TransactionType
+import com.dhruv.finance.money.MoneyConfig.transactionTypeLabels
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -94,13 +94,21 @@ fun QuickAddSheet(
             Row(modifier = Modifier.padding(top = DhruvNextSpacing.interCardGap)) {
                 NxSelect(
                     label = "Category",
-                    value = state.categoryOptions.firstOrNull { it.id == state.categoryId }?.label.orEmpty(),
+                    value =
+                        state.categoryOptions
+                            .firstOrNull { it.id == state.categoryId }
+                            ?.label
+                            .orEmpty(),
                     onClick = { pickerTarget = "category" },
                     modifier = Modifier.weight(1f).padding(end = 8.dp),
                 )
                 NxSelect(
                     label = "Account",
-                    value = state.accountOptions.firstOrNull { it.id == state.accountId }?.label.orEmpty(),
+                    value =
+                        state.accountOptions
+                            .firstOrNull { it.id == state.accountId }
+                            ?.label
+                            .orEmpty(),
                     onClick = { pickerTarget = "account" },
                     modifier = Modifier.weight(1f),
                 )
@@ -121,10 +129,11 @@ fun QuickAddSheet(
                             digits = digits.dropLast(1)
                             viewModel.setAmount(digitsToPaise(digits))
                         }
-                        else -> if (digits.length < MAX_RUPEE_DIGITS) {
-                            digits += key
-                            viewModel.setAmount(digitsToPaise(digits))
-                        }
+                        else ->
+                            if (digits.length < MAX_RUPEE_DIGITS) {
+                                digits += key
+                                viewModel.setAmount(digitsToPaise(digits))
+                            }
                     }
                 },
                 modifier = Modifier.padding(top = DhruvNextSpacing.interCardGap),
@@ -175,23 +184,34 @@ private fun digitsToPaise(digits: String): Long {
 private fun quickAddKeypadRows(): List<List<com.dhruv.core.ui.components.KeypadKey>> =
     listOf(
         listOf(
-            com.dhruv.core.ui.components.KeypadKey("1"),
-            com.dhruv.core.ui.components.KeypadKey("2"),
-            com.dhruv.core.ui.components.KeypadKey("3"),
+            com.dhruv.core.ui.components
+                .KeypadKey("1"),
+            com.dhruv.core.ui.components
+                .KeypadKey("2"),
+            com.dhruv.core.ui.components
+                .KeypadKey("3"),
         ),
         listOf(
-            com.dhruv.core.ui.components.KeypadKey("4"),
-            com.dhruv.core.ui.components.KeypadKey("5"),
-            com.dhruv.core.ui.components.KeypadKey("6"),
+            com.dhruv.core.ui.components
+                .KeypadKey("4"),
+            com.dhruv.core.ui.components
+                .KeypadKey("5"),
+            com.dhruv.core.ui.components
+                .KeypadKey("6"),
         ),
         listOf(
-            com.dhruv.core.ui.components.KeypadKey("7"),
-            com.dhruv.core.ui.components.KeypadKey("8"),
-            com.dhruv.core.ui.components.KeypadKey("9"),
+            com.dhruv.core.ui.components
+                .KeypadKey("7"),
+            com.dhruv.core.ui.components
+                .KeypadKey("8"),
+            com.dhruv.core.ui.components
+                .KeypadKey("9"),
         ),
         listOf(
-            com.dhruv.core.ui.components.KeypadKey("0"),
-            com.dhruv.core.ui.components.KeypadKey("00"),
+            com.dhruv.core.ui.components
+                .KeypadKey("0"),
+            com.dhruv.core.ui.components
+                .KeypadKey("00"),
             com.dhruv.core.ui.components.KeypadKey(
                 label = "⌫",
                 icon = androidx.compose.material.icons.Icons.AutoMirrored.Filled.Backspace,

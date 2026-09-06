@@ -812,7 +812,8 @@ private fun MoneyTab(
             val vm: com.dhruv.finance.money.CategoriesViewModel = koinViewModel()
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
-                com.dhruv.finance.money.CategoriesScreen(viewModel = vm)
+                com.dhruv.finance.money
+                    .CategoriesScreen(viewModel = vm)
             }
         }
         composable(RECURRING_ROUTE) {
@@ -829,7 +830,8 @@ private fun MoneyTab(
             val vm: com.dhruv.finance.money.RecurringReviewViewModel = koinViewModel()
             val error by vm.featureError.collectAsStateWithLifecycle()
             FeatureHost("money", resolver.isEnabled("money"), error, crashReporter) {
-                com.dhruv.finance.money.RecurringReviewScreen(viewModel = vm)
+                com.dhruv.finance.money
+                    .RecurringReviewScreen(viewModel = vm)
             }
         }
     }

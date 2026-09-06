@@ -7,7 +7,6 @@ import com.dhruv.finance.data.tracker.dto.MergeCategoriesRequestDto
 import com.dhruv.finance.data.tracker.dto.RecurringPauseDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateDto
 import com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto
-import com.dhruv.finance.data.tracker.dto.SuggestionDto
 import com.dhruv.finance.data.tracker.dto.SuggestionStatusDto
 import com.dhruv.finance.data.tracker.dto.SuggestionUpsertDto
 import com.dhruv.finance.data.tracker.dto.TransactionUpsertDto
@@ -154,9 +153,7 @@ private class FakeSuggestionRepository : SuggestionRepository {
 
     override suspend fun listPending() = Result.success(emptyList<com.dhruv.finance.data.tracker.model.PendingEntry>())
 
-    override suspend fun createFromRecurring(
-        template: com.dhruv.finance.data.tracker.model.RecurringTemplate,
-    ): Result<Unit> {
+    override suspend fun createFromRecurring(template: com.dhruv.finance.data.tracker.model.RecurringTemplate): Result<Unit> {
         createdKeys += template.id to template.nextRun.toString()
         return Result.success(Unit)
     }

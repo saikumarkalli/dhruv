@@ -122,7 +122,7 @@ fun AccountDetailScreen(
                                     .semantics {
                                         contentDescription =
                                             "Balance trend, from ${Paise.format(current.trend.first().toLong())} " +
-                                                "to ${Paise.format(current.trend.last().toLong())}"
+                                            "to ${Paise.format(current.trend.last().toLong())}"
                                     },
                         )
                     }
@@ -239,9 +239,18 @@ private fun BalanceHeader(current: AccountDetailUiState.Loaded) {
                     Brush.verticalGradient(listOf(DhruvBrand.navyElevated, DhruvBrand.navy)),
                 ).padding(DhruvNextSpacing.cardPadding),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column {
-                Text(text = current.account.name, color = DhruvBrand.silverLight, fontSize = DhruvNextType.title, fontWeight = FontWeight.Bold)
+                Text(
+                    text = current.account.name,
+                    color = DhruvBrand.silverLight,
+                    fontSize = DhruvNextType.title,
+                    fontWeight = FontWeight.Bold,
+                )
                 val typeLabel = accountTypeLabels[current.account.type.name].orEmpty()
                 val maskLabel = current.account.mask?.let { "•••• $it" }
                 Text(

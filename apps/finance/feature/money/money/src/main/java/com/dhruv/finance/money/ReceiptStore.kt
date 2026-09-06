@@ -17,7 +17,9 @@ import java.util.UUID
  * Plain Kotlin, no Compose — `TransactionFormScreen.kt` (attach) and `TransactionDetailScreen.kt`
  * (view) both consume it the same way.
  */
-class ReceiptStore(private val context: Context) {
+class ReceiptStore(
+    private val context: Context,
+) {
     private val receiptsDir: File
         get() = File(context.filesDir, RECEIPTS_DIR_NAME).apply { mkdirs() }
 

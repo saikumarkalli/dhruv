@@ -294,14 +294,26 @@ private fun CategoryListRow(
                         contentDescription = "More actions for ${row.name}",
                     )
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        DropdownMenuItem(text = { Text("Rename") }, onClick = { menuExpanded = false; onRename() })
+                        DropdownMenuItem(text = { Text("Rename") }, onClick = {
+                            menuExpanded = false
+                            onRename()
+                        })
                         DropdownMenuItem(
                             text = { Text(if (row.excludedFromSpend) "Include in spend" else "Exclude from spend") },
-                            onClick = { menuExpanded = false; onToggleExcluded() },
+                            onClick = {
+                                menuExpanded = false
+                                onToggleExcluded()
+                            },
                         )
-                        DropdownMenuItem(text = { Text("Merge into…") }, onClick = { menuExpanded = false; onMergeInto() })
+                        DropdownMenuItem(text = { Text("Merge into…") }, onClick = {
+                            menuExpanded = false
+                            onMergeInto()
+                        })
                         if (!row.isReserved) {
-                            DropdownMenuItem(text = { Text("Delete") }, onClick = { menuExpanded = false; onDelete() })
+                            DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            })
                         }
                     }
                 }

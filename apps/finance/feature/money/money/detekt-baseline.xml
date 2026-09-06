@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>LongParameterList:RecurringViewModel.kt$RecurringViewModel$( templateId: String, type: com.dhruv.finance.data.tracker.model.TransactionType, amountPaise: Long, accountId: String, categoryId: String?, payee: String?, note: String?, rrule: String, nextRun: LocalDate, amountIsVariable: Boolean, )</ID>
+    <ID>MaxLineLength:AccountDetailScreen.kt$". They are not deleted — they stay recorded, this account just no longer appears in your accounts list. This cannot be undone."</ID>
+    <ID>SwallowedException:ReceiptStore.kt$ReceiptStore$e: IOException</ID>
+    <ID>UnusedPrivateProperty:QuickAddSheet.kt$val colors = LocalDhruvNextColors.current</ID>
+  </CurrentIssues>
+</SmellBaseline>

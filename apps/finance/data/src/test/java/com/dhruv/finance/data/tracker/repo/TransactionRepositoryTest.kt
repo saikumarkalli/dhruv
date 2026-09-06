@@ -2,7 +2,6 @@ package com.dhruv.finance.data.tracker.repo
 
 import com.dhruv.finance.data.tracker.dto.MonthSummaryDto
 import com.dhruv.finance.data.tracker.dto.TransactionDto
-import com.dhruv.finance.data.tracker.dto.TransactionEventDto
 import com.dhruv.finance.data.tracker.dto.TransactionUpsertDto
 import com.dhruv.finance.data.tracker.mapper.toDomain
 import com.dhruv.finance.data.tracker.model.Transaction
@@ -97,8 +96,7 @@ private object UnimplementedMoneyApi : MoneyApi {
 
     override suspend fun listRecurringTemplates() = unimplemented()
 
-    override suspend fun createRecurringTemplate(body: com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto) =
-        unimplemented()
+    override suspend fun createRecurringTemplate(body: com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto) = unimplemented()
 
     override suspend fun setRecurringPaused(
         id: String,
@@ -212,6 +210,7 @@ class TransactionRepositoryTest {
                                 sharePercentTenths = 425,
                             ),
                         )
+
                     override suspend fun listCategories() =
                         listOf(
                             com.dhruv.finance.data.tracker.dto.CategoryDto(

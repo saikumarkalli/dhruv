@@ -1,12 +1,12 @@
 package com.dhruv.finance.money
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -200,10 +200,16 @@ private fun RecurringRow(
             )
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 if (!isPaused && onPause != null) {
-                    DropdownMenuItem(text = { Text("Pause") }, onClick = { menuExpanded = false; onPause() })
+                    DropdownMenuItem(text = { Text("Pause") }, onClick = {
+                        menuExpanded = false
+                        onPause()
+                    })
                 }
                 if (onDelete != null) {
-                    DropdownMenuItem(text = { Text("Delete") }, onClick = { menuExpanded = false; onDelete() })
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    })
                 }
             }
         }

@@ -88,7 +88,13 @@ class LedgerViewModelTest {
 
             val loaded = vm.uiState.value as LedgerUiState.Loaded
             assertEquals(1, loaded.totalCount)
-            assertTrue(loaded.dayGroups.single().transactions.single().id == "t1")
+            assertTrue(
+                loaded.dayGroups
+                    .single()
+                    .transactions
+                    .single()
+                    .id == "t1",
+            )
         }
 
     @Test
@@ -104,7 +110,14 @@ class LedgerViewModelTest {
 
             val loaded = vm.uiState.value as LedgerUiState.Loaded
             assertEquals(1, loaded.totalCount)
-            assertEquals("t2", loaded.dayGroups.single().transactions.single().id)
+            assertEquals(
+                "t2",
+                loaded.dayGroups
+                    .single()
+                    .transactions
+                    .single()
+                    .id,
+            )
         }
 
     // MNY-UI-003: the count previewCount() returns for a candidate filter matches what applying

@@ -1,3 +1,7 @@
+// Named for the composable it hosts, not the small data class it also declares (NxButton.kt
+// precedent).
+@file:Suppress("MatchingDeclarationName")
+
 package com.dhruv.core.ui.components
 
 import androidx.compose.foundation.clickable
@@ -27,7 +31,11 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
  * account, a sector. [subtitle] is optional secondary text under the label (a currency's code, an
  * account's balance).
  */
-data class SelectionOption(val id: String, val label: String, val subtitle: String? = null)
+data class SelectionOption(
+    val id: String,
+    val label: String,
+    val subtitle: String? = null,
+)
 
 /**
  * A bottom-sheet picker (design batch B9) over [DhruvModalSheet] — single or multi-select list of
@@ -73,8 +81,7 @@ fun SelectionSheet(
                                     onSelectionChanged(setOf(option.id))
                                     onDismissRequest()
                                 }
-                            }
-                            .padding(horizontal = DhruvNextSpacing.screenGutter, vertical = 14.dp),
+                            }.padding(horizontal = DhruvNextSpacing.screenGutter, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -92,7 +99,11 @@ fun SelectionSheet(
         }
         if (multiSelect) {
             Row(modifier = Modifier.padding(DhruvNextSpacing.screenGutter)) {
-                NxButton(text = "Show ${selectedIds.size.let { if (it == 0) "all" else "$it selected" }}", onClick = onDismissRequest, block = true)
+                NxButton(
+                    text = "Show ${selectedIds.size.let { if (it == 0) "all" else "$it selected" }}",
+                    onClick = onDismissRequest,
+                    block = true,
+                )
             }
         }
     }

@@ -3,26 +3,29 @@ package com.dhruv.finance.data.tracker.net
 import okhttp3.Interceptor
 import okhttp3.Response
 
-private val WRITE_METHODS = setOf("POST", "PATCH", "PUT", "DELETE")
+private const val FINANCE_SCHEMA = "finance"
+private val MUTATION_METHODS = setOf("POST", "PATCH", "PUT", "DELETE")
 
 /**
- * Attaches PostgREST's schema-select header on every request to `SupabaseClientFactory.dataClient`
- * (ADR-0033): `Accept-Profile: finance` on reads, `Content-Profile: finance` on writes. Every
- * `finance.*` table/view/function lives outside the default `public` schema — omitting this header
- * does not error, it silently 404s against the (empty) `public` schema instead, which is exactly
- * the failure mode this interceptor exists to make structurally impossible rather than a thing
- * every new repository has to remember (same reasoning as [ConsentInterceptor]).
+ * Adds PostgREST's schema-select headers for the `finance` Postgres schema (ADR-0033) —
+ * `Accept-Profile` on every request, `Content-Profile` additionally on mutations. Without these, a
+ * `finance.*` table/view/RPC call silently 404s against the (empty) `public` schema instead of
+ * erroring loudly — [SupabaseClientFactory.dataRetrofit]'s own doc comment flagged this as the one
+ * thing every Phase 2+ endpoint on that client must not forget. An interceptor makes it structural
+ * instead of per-endpoint discipline, same reasoning as [ConsentInterceptor]/[AuthInterceptor].
  *
- * `rpc/merge_categories`, `rpc/delete_my_data` etc. also live under `finance`/`public` respectively
- * — `delete_my_data`/`delete_my_account` are called via [SupabaseClientFactory.erasureRetrofit],
- * which does NOT carry this interceptor (they are `public`-schema by design, ADR-0033), so this
- * interceptor is attached only to `dataClient`, never `authClient`.
+ * Attached only to [SupabaseClientFactory.dataClient] — [SupabaseClientFactory.erasureRetrofit]'s
+ * two RPCs deliberately stay in `public` (ADR-0033) and must never get this header.
  */
 class FinanceSchemaInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
-        val headerName = if (original.method in WRITE_METHODS) "Content-Profile" else "Accept-Profile"
-        val request = original.newBuilder().header(headerName, "finance").build()
+        val request =
+            original
+                .newBuilder()
+                .header("Accept-Profile", FINANCE_SCHEMA)
+                .apply { if (original.method in MUTATION_METHODS) header("Content-Profile", FINANCE_SCHEMA) }
+                .build()
         return chain.proceed(request)
     }
 }

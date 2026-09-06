@@ -107,7 +107,8 @@ class CategoryRepositoryImpl(
                 api
                     .renameCategory(
                         "eq.$categoryId",
-                        com.dhruv.finance.data.tracker.dto.CategoryRenameDto(newName),
+                        com.dhruv.finance.data.tracker.dto
+                            .CategoryRenameDto(newName),
                     ).first()
             Result.success(renamed.toDomain())
         } catch (e: CancellationException) {

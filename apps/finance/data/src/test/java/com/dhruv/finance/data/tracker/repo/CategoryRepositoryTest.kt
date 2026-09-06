@@ -98,8 +98,7 @@ private object CategoryUnimplementedMoneyApi : MoneyApi {
 
     override suspend fun listRecurringTemplates() = unimplemented()
 
-    override suspend fun createRecurringTemplate(body: com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto) =
-        unimplemented()
+    override suspend fun createRecurringTemplate(body: com.dhruv.finance.data.tracker.dto.RecurringTemplateUpsertDto) = unimplemented()
 
     override suspend fun setRecurringPaused(
         id: String,

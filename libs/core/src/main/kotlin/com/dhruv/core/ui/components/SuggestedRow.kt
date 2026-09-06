@@ -66,7 +66,10 @@ fun SuggestedRow(
 }
 
 /** A dashed rounded-rect outline — Compose's built-in `.border()` cannot express a dash pattern. */
-private fun Modifier.dashedOutline(color: Color, cornerRadius: androidx.compose.ui.unit.Dp): Modifier =
+private fun Modifier.dashedOutline(
+    color: Color,
+    cornerRadius: androidx.compose.ui.unit.Dp,
+): Modifier =
     drawBehind {
         val strokeWidthPx = 1.5.dp.toPx()
         drawRoundRect(

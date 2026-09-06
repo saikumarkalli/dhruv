@@ -35,7 +35,6 @@ enum class NxButtonVariant { Primary, Soft, Outline, Ghost, Destructive }
 /** Button height/type-scale preset — Small for inline/dialog actions, Medium (default) elsewhere. */
 enum class NxButtonSize { Small, Medium }
 
-
 @Composable
 fun NxButton(
     text: String,

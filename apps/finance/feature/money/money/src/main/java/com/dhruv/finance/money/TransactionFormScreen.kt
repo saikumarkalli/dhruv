@@ -109,7 +109,11 @@ fun TransactionFormScreen(
             if (state.type != TransactionType.TRANSFER) {
                 NxSelect(
                     label = "Category",
-                    value = state.categoryOptions.firstOrNull { it.id == state.categoryId }?.label.orEmpty(),
+                    value =
+                        state.categoryOptions
+                            .firstOrNull { it.id == state.categoryId }
+                            ?.label
+                            .orEmpty(),
                     onClick = { pickerTarget = "category" },
                     errorMessage = state.validationError?.takeIf { it.contains("category", ignoreCase = true) },
                     modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),
@@ -118,7 +122,11 @@ fun TransactionFormScreen(
 
             NxSelect(
                 label = if (state.type == TransactionType.TRANSFER) "From account" else "Account",
-                value = state.accountOptions.firstOrNull { it.id == state.accountId }?.label.orEmpty(),
+                value =
+                    state.accountOptions
+                        .firstOrNull { it.id == state.accountId }
+                        ?.label
+                        .orEmpty(),
                 onClick = { pickerTarget = "account" },
                 modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),
             )
@@ -126,7 +134,11 @@ fun TransactionFormScreen(
             if (state.type == TransactionType.TRANSFER) {
                 NxSelect(
                     label = "To account",
-                    value = state.accountOptions.firstOrNull { it.id == state.toAccountId }?.label.orEmpty(),
+                    value =
+                        state.accountOptions
+                            .firstOrNull { it.id == state.toAccountId }
+                            ?.label
+                            .orEmpty(),
                     onClick = { pickerTarget = "toAccount" },
                     errorMessage = state.validationError?.takeIf { it.contains("destination", ignoreCase = true) },
                     modifier = Modifier.fillMaxWidth().padding(top = DhruvNextSpacing.interCardGap),

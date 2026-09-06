@@ -29,7 +29,9 @@ sealed interface AccountsUiState {
             get() = bankAccounts.isEmpty() && cashAndWalletAccounts.isEmpty() && creditAccounts.isEmpty()
     }
 
-    data class Error(val message: String) : AccountsUiState
+    data class Error(
+        val message: String,
+    ) : AccountsUiState
 
     data object Offline : AccountsUiState
 

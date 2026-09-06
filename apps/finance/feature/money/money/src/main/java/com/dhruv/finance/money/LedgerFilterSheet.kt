@@ -116,7 +116,10 @@ fun LedgerFilterSheet(
                 )
                 NxButton(
                     text = "Apply",
-                    onClick = { onApply(candidate); onDismissRequest() },
+                    onClick = {
+                        onApply(candidate)
+                        onDismissRequest()
+                    },
                     block = true,
                     modifier = Modifier.weight(1f),
                 )
