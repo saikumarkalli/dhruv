@@ -1,7 +1,8 @@
 package com.dhruv.finance.app.di
 
 import android.os.Build
-import com.dhruv.finance.app.navigation.NavigationDispatcher
+import com.dhruv.core.navigation.NavigationDispatcher
+import com.dhruv.finance.app.ui.home.HomeViewModel
 import com.dhruv.finance.app.ui.settings.AccountSettingsViewModel
 import com.dhruv.finance.app.ui.settings.AppDetailsViewModel
 import com.dhruv.finance.app.ui.settings.AppSettingsViewModel
@@ -53,6 +54,7 @@ val appModule =
                 updateChecker = null,
             )
         }
+        viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
         single { NavigationDispatcher() }
         single { SettingsContributionSource(getKoin()) }
         single { SettingsRegistry() }

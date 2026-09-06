@@ -35,6 +35,7 @@ enum class NxButtonVariant { Primary, Soft, Outline, Ghost, Destructive }
 /** Button height/type-scale preset — Small for inline/dialog actions, Medium (default) elsewhere. */
 enum class NxButtonSize { Small, Medium }
 
+
 @Composable
 fun NxButton(
     text: String,
@@ -48,6 +49,7 @@ fun NxButton(
 ) {
     val colors = LocalDhruvNextColors.current
     val shape = RoundedCornerShape(DhruvNextRadii.innerTile)
+    val clickable = enabled && !loading
     val background =
         when (variant) {
             NxButtonVariant.Primary -> colors.acc

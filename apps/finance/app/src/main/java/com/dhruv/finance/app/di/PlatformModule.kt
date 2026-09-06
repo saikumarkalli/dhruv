@@ -24,12 +24,20 @@ import com.dhruv.finance.data.tracker.repo.AccountRepository
 import com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.CategoryRepository
 import com.dhruv.finance.data.tracker.repo.CategoryRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.HoldingRepository
+import com.dhruv.finance.data.tracker.repo.HoldingRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.LiabilityRepository
+import com.dhruv.finance.data.tracker.repo.LiabilityRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.NetWorthRepository
+import com.dhruv.finance.data.tracker.repo.NetWorthRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.RecurringRepository
 import com.dhruv.finance.data.tracker.repo.RecurringRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.SuggestionRepository
 import com.dhruv.finance.data.tracker.repo.SuggestionRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.TransactionRepository
 import com.dhruv.finance.data.tracker.repo.TransactionRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.ValuationRepository
+import com.dhruv.finance.data.tracker.repo.ValuationRepositoryImpl
 import com.dhruv.finance.onboarding.GoogleSignInConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -116,6 +124,14 @@ val platformModule =
         single<TransactionRepository> { TransactionRepositoryImpl(get<SupabaseClientFactory>()) }
         single<RecurringRepository> { RecurringRepositoryImpl(get<SupabaseClientFactory>()) }
         single<SuggestionRepository> { SuggestionRepositoryImpl(get<SupabaseClientFactory>(), get<TransactionRepository>()) }
+
+        // Net worth tracker (Phase 2, C1-C7). Both repositories build their Retrofit API
+        // interfaces off SupabaseClientFactory.dataRetrofit (consent-gated), same convenience-
+        // constructor pattern as TrackerAccountRepositoryImpl above.
+        single<HoldingRepository> { HoldingRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<NetWorthRepository> { NetWorthRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<ValuationRepository> { ValuationRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<LiabilityRepository> { LiabilityRepositoryImpl(get<SupabaseClientFactory>()) }
 
         // A2 sign-in's Credential Manager call needs the Web client id; sourced from app
         // BuildConfig here (secrets plugin) for the same reason as GeminiRepository/SupabaseClientFactory

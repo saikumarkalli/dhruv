@@ -12,6 +12,7 @@ import com.dhruv.finance.everyday.di.everydayModule
 import com.dhruv.finance.investments.di.investmentsModule
 import com.dhruv.finance.loans.di.loansModule
 import com.dhruv.finance.money.di.moneyModule
+import com.dhruv.finance.networth.di.netWorthModule
 import com.dhruv.finance.onboarding.di.onboardingModule
 import com.dhruv.finance.tax.di.taxModule
 import com.dhruv.finance.time.di.timeModule
@@ -47,6 +48,7 @@ class CalculatorApplication : Application() {
                 assistantModule,
                 onboardingModule,
                 moneyModule,
+                netWorthModule,
             )
         }
     }

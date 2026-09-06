@@ -59,7 +59,7 @@ F and G depends on that layer.
 
 | Screen | File | Design expects |
 |---|---|---|
-| Home tab | [DashboardScreen.kt](../../../app/src/main/java/com/dhruv/finance/app/ui/dashboard/DashboardScreen.kt) — 27 lines, logo + "coming soon" | **01 HOME**: greeting + date line, net-worth hero with area sparkline and ▲% delta, 4 quick-action tiles, "Upcoming" list (EMI auto-debit, card bill), Ask pill |
+| Home tab | [HomeScreen.kt](../../../app/src/main/java/com/dhruv/finance/app/ui/home/HomeScreen.kt) — built in 001-net-worth-tracker Phase 7, superseding the placeholder `DashboardScreen.kt` this row originally named | **01 HOME**: greeting + date line, net-worth hero with trend sparkline and ▲/▼% delta, 4 quick-action tiles, "Upcoming" list (EMI auto-debit, card bill), one-line status (Phase 10) |
 | Insights tab | `EmptyStateCard("Insights lands once expense tracking ships")` in `MainActivity` | **F1 Monthly summary** root + F2–F5 |
 | Plan tab | `PlanLauncher` — 4 calculator tiles only | **E1 PLAN ROOT (REVISED)**: *live modules on top* (Budgets, Goals, Debt payoff, Insurance, Retirement), calculators demoted to a strip **below** |
 | Notifications | `NotifScreen.kt` stub | **B2**: grouped Today/Earlier, budget overrun · EMI due · renewal · rate alert, "Mark all read" |

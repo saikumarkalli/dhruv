@@ -1,8 +1,5 @@
-package com.dhruv.finance.app.navigation
+package com.dhruv.core.navigation
 
-import com.dhruv.core.navigation.NavTarget
-import com.dhruv.core.navigation.PlanTool
-import com.dhruv.core.navigation.TabKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch

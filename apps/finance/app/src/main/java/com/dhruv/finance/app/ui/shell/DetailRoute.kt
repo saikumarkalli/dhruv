@@ -25,6 +25,14 @@ sealed interface DetailRoute {
 
     data object Ask : DetailRoute
 
+    /** Home's "View details" entry into C1-C7 (`:apps:finance:feature:networth`'s
+     * `NetWorthFeatureRoot`, added 001-net-worth-tracker Phase 8) — that module owns a real nested
+     * `NavHostController` of its own (assets/holding-detail/add-holding/add-valuation/liabilities),
+     * unlike every other route in this file, so `MainActivity` hoists and hardware-back-integrates
+     * it the same way it already does for [com.dhruv.finance.app.ui.plan.PlanLauncher]'s
+     * `planNavController` — see the `netWorthNavController` handling in `MainActivity.kt`. */
+    data object NetWorth : DetailRoute
+
     data object Currency : DetailRoute
 
     data object UnitConverter : DetailRoute

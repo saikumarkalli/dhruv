@@ -130,13 +130,18 @@ apps/finance/
 │                                    # owned per the module-standard doc's HOM/PLN correction, not
 │                                    # inside :feature:networth)
 libs/core/src/main/kotlin/com/dhruv/core/ui/components/
-├── charts/                          # + component batch B3 (DonutChart+RankedLegend, PieChart,
-│                                    #   AmortisationDonut, PaceRing)
-├── inputs/                          # + B6's NxSelect; NxTextField gets error/helper state
-├── overlays/                        # + B9's SelectionSheet
-└── actions/                         # NxButton gets sizes + loading + block treatment
+                                     # + component batch B3 (DonutChart+RankedLegend, PieChart,
+                                     #   AmortisationDonut, PaceRing), B6's NxSelect (error/helper
+                                     # state), B9's SelectionSheet, NxButton sizes+loading+block —
+                                     # all flat in this one directory, not a charts/inputs/overlays
+                                     # split (DESIGN-SYSTEM.md §5.2: that split was never adopted)
 supabase/migrations/
-└── 0002_networth_phase2.sql         # liabilities_meta, v_latest_valuation, v_net_worth_by_sector
+└── 20260823094500_networth_phase2.sql  # liabilities_meta, v_latest_valuation,
+                                         # v_net_worth_by_sector, v_net_worth_history,
+                                         # correct_valuation(), create_holding_with_value()
+                                         # (Phase 10, T065: corrected from this file's original
+                                         # `0002_networth_phase2.sql` placeholder name — see
+                                         # data-model.md's "Updated 2026-08-23" note)
 ```
 
 Tests mirror this tree under each module's `src/test/`, per existing project convention (no

@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.dhruv.core.flags.FeatureFlagResolver
 import com.dhruv.core.observability.CrashReporter
 import com.dhruv.core.ui.FeatureHost
@@ -28,6 +29,7 @@ import com.dhruv.finance.currency.CurrencyScreen
 import com.dhruv.finance.currency.CurrencyViewModel
 import com.dhruv.finance.date.DateScreen
 import com.dhruv.finance.date.DateViewModel
+import com.dhruv.finance.networth.NetWorthFeatureRoot
 import com.dhruv.finance.time.TimeScreen
 import com.dhruv.finance.time.TimeViewModel
 import com.dhruv.finance.unit.UnitScreen
@@ -218,6 +220,24 @@ fun DateDetailContent(
             DateScreen(viewModel = vm)
         }
     }
+}
+
+/**
+ * Home's "View details" entry into C1-C7 (001-net-worth-tracker Phase 8 — this module was built
+ * across Phases 3-6 but never mounted anywhere until now). [navController] is hoisted at
+ * `MainActivity`'s `AppShell` level (not created here) so the hardware back button can pop this
+ * module's own nested back stack before falling back to closing the whole detail route — same
+ * hoisting `planNavController` already uses for Plan's nested tool screens. Unlike the other
+ * `*DetailContent` functions in this file, [NetWorthFeatureRoot] owns its own per-route
+ * `FeatureHost` gating internally, so no second gating layer is added here.
+ */
+@Composable
+fun NetWorthDetailContent(
+    navController: NavHostController,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NetWorthFeatureRoot(modifier = modifier.fillMaxSize(), navController = navController, onExit = onBack)
 }
 
 @Composable

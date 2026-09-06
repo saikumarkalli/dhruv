@@ -169,12 +169,12 @@ no `.dp`/`.sp` literals in a screen file. `:libs:core` stays internally dependen
 |---|---|
 | **Brand** | `DhruvLogo` · `DhruvCrest` · `DhruvWordmark` · `DhruvWordmarkImage` · `DhruvWordmarkVertical` · `DhruvLogoWordmark` · `DhruvLogoWordmarkVertical` · `DhruvNotificationIcon` |
 | **Surfaces** | `NxCard` · `NxInsetSurface` · `DhruvGlassCard` · `ListGroup` · `ListGroupRow` · `SectionLabel` |
-| **Actions** | `NxButton` (Primary/Soft/Outline/Ghost/Destructive) · `NxIconButton` · `NxFab` · `NxExtendedFab` · `AskPill` · `QuickActionTile` · `KeypadButton` |
-| **Inputs** | `NxTextField` · `SearchField` · `SegmentedRow` · `SwitchRow` · `Stepper` · `SliderWithPresets` · `NumericKeypad` · `Chip` · `Pill` · `ModeChipRow` · `PeriodChipRow` |
+| **Actions** | `NxButton` (Primary/Soft/Outline/Ghost/Destructive; Small/Medium sizes; loading, block) · `NxIconButton` · `NxFab` · `NxExtendedFab` · `AskPill` · `QuickActionTile` · `KeypadButton` |
+| **Inputs** | `NxTextField` · `NxSelect` · `SearchField` · `SegmentedRow` · `SwitchRow` · `Stepper` · `SliderWithPresets` · `NumericKeypad` · `Chip` · `Pill` · `ModeChipRow` · `PeriodChipRow` |
 | **Data display** | `MoneyText` · `StatDeltaChip` · `ThreeUpStatRow` · `CountBadge` · `InitialsTile` · `SyncStatusChip` |
-| **Charts** | `BarChart` · `TrendSparkline` · `AllocationStackedBar` · `CategoryBarRow` · `ProgressRing` · `CountdownRing` · `FinancialHealthRing` |
+| **Charts** | `BarChart` · `TrendSparkline` · `AllocationStackedBar` · `CategoryBarRow` · `ProgressRing` · `CountdownRing` · `FinancialHealthRing` · `DonutChart` + `RankedLegend` · `PieChart` · `AmortisationDonut` · `PaceRing` |
 | **Navigation** | `BottomBar` · `NxTopBar` (back + title + actions) · `NxHomeTopBar` |
-| **Overlays** | `DhruvModalSheet` · `ConfirmDangerDialog` · `ConsentGateScaffold` |
+| **Overlays** | `DhruvModalSheet` · `SelectionSheet` · `ConfirmDangerDialog` · `ConsentGateScaffold` |
 | **States** | `EmptyStateCard` · `SignedOutCard` · `OfflineStateCard` · `NotConfiguredCard` · `OfflineBanner` · `RetryErrorCard` · `SkeletonBlock` · `UndoSnackbarHost` · `DisclaimerFooter` |
 | **AI** | `AiInsightStrip` · `SmartInsightCard` · `ChatBubble` |
 
@@ -204,12 +204,17 @@ below were incomplete). Everything the design draws and the code lacks is now li
 | Batch | Components | Design section |
 |---|---|---|
 | **B2 — input** | `NxCheckbox` · `NxRadio` · `PinEntry` (PIN/OTP) · `QwertyKeypad` · `DateRangeSheet` · `EnumPickerGrid` | Selection, Keypads |
-| **B3 — data viz** | `DonutChart` + ranked legend · `PieChart` · `AmortisationDonut` · `PaceRing` (ring + period marker) | Charts |
 | **B4 — list** | `DayGroupHeader` · `LedgerRow` · `SuggestedRow` (dashed until accepted) · `ReconcileBanner` | (Finance screens) |
-| **B6 — form** *(new)* | `NxSelect` (dropdown field, e.g. "Reducing balance ▾") · `NxTextArea` (multi-line + helper text) · `InputChip` (removable, `×`) | Inputs, Selection |
+| **B6 — form** *(new)* | `NxTextArea` (multi-line + helper text) · `InputChip` (removable, `×`) | Inputs, Selection |
 | **B7 — feedback** *(new)* | `StatusBadge` (success / warning / error / accent dot variants — `CountBadge` covers counts only) · `Spinner` (indeterminate; distinct from `ProgressRing`) · `InfoBanner` (the design draws SNACKBAR · INFO · OFFLINE as three; only offline + snackbar exist) | Status / Feedback |
 | **B8 — navigation** *(new)* | `NxTabs` with animated indicator (e.g. EMI / Schedule / Compare). **Not** the same control as `SegmentedRow` — the design draws segmented under Actions and tabs under Navigation, as two distinct components. | Navigation |
-| **B9 — overlays** *(new)* | `SelectionSheet` (picker rows with ✓ selected state, e.g. "Choose currency") | Overlays |
+
+B3 (`DonutChart`+`RankedLegend`/`PieChart`/`AmortisationDonut`/`PaceRing`), B6's `NxSelect` and B9's
+`SelectionSheet` shipped 2026-09-01 (001-net-worth-tracker Phase 2 Foundational, T006-T008) — moved
+to §5.1. All four charts and both `NxSelect`/`SelectionSheet` live flat in
+`libs/core/src/main/kotlin/com/dhruv/core/ui/components/`, same as every other built component —
+the `charts/`/`inputs/`/`overlays/` subdirectory split named in some phase plans was never actually
+adopted by any shipped file and should not be treated as the real layout.
 
 ### 5.3 Built, but narrower than the design draws
 
@@ -220,12 +225,13 @@ micro-frontend rule forbids).
 
 | Component | Has | Design also draws | Impact |
 |---|---|---|---|
-| `NxButton` | 5 variants (Primary/Soft/Outline/Ghost/Destructive), `enabled` | **Sizes** (Small / Medium), **Loading** state, **Block** (full-width) treatment | Sheets need the full-width primary (§8); forms need in-flight disable + spinner |
 | `CountBadge` | numeric count, "99+" cap | **Status dot** variants (success / warning / error / accent) | Status indicators fall back to ad-hoc dots |
 | `Chip` / `Pill` | selected, filled, strong, leading icon | **Removable** input chip (trailing `×`) | Filter/tag removal UI |
 
 Closed since the last pass: `NxTextField` gained an `errorMessage` param (red border + message text
 below the field) — 004-settings 0b.4 T097, first consumed by the assistant's personal-key row.
+`NxButton` gained `NxButtonSize` (Small/Medium), `loading` (spinner replaces the label, click
+suppressed) and `block` (fillMaxWidth) — 001-net-worth-tracker Phase 2 Foundational, T010.
 
 Closing a §5.3 row means **extending the existing component**, never adding a parallel one — two
 button components is precisely the fragmentation this library exists to prevent.

@@ -48,6 +48,7 @@ include(":apps:finance:feature:time")
 include(":apps:finance:feature:assistant")
 include(":apps:finance:feature:onboarding")
 include(":apps:finance:feature:money")
+include(":apps:finance:feature:networth")
 include(":libs:core")
 include(":libs:settings")
 
@@ -69,3 +70,4 @@ project(":apps:finance:feature:time").projectDir = file("apps/finance/feature/sh
 project(":apps:finance:feature:assistant").projectDir = file("apps/finance/feature/shell/assistant")
 project(":apps:finance:feature:onboarding").projectDir = file("apps/finance/feature/onboarding/onboarding")
 project(":apps:finance:feature:money").projectDir = file("apps/finance/feature/money/money")
+project(":apps:finance:feature:networth").projectDir = file("apps/finance/feature/home/networth")

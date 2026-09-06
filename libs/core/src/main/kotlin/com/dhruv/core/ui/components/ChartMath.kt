@@ -42,3 +42,15 @@ fun barHeights(
         values.map { (it / max * maxHeightPx).coerceAtLeast(0f) }
     }
 }
+
+/**
+ * Pure data-shaping backing [DonutChart]/[PieChart]/[AmortisationDonut] — each value's share of
+ * 360 degrees. Negative values are treated as zero (a share can't be negative); an all-zero/empty
+ * input returns an equal-zero sweep for every entry rather than dividing by zero.
+ */
+fun sweepAngles(values: List<Float>): List<Float> {
+    val clamped = values.map { it.coerceAtLeast(0f) }
+    val sum = clamped.sum()
+    if (sum <= 0f) return clamped.map { 0f }
+    return clamped.map { it / sum * 360f }
+}

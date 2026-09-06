@@ -113,4 +113,11 @@
     <string name="settings_app_details_privacy_policy">Privacy policy</string>
     <string name="settings_app_details_licences">Third-party licences</string>
     <string name="settings_app_details_source">Source</string>
+
+    <!-- 001-net-worth-tracker Phase 10, T068/T074: Home (01)'s one-line status line — the only
+         literal this phase introduced into shell code, so it follows the same
+         strings.xml-from-birth rule this phase's C1-C7 extraction applies to :feature:networth. -->
+    <string name="home_status_on_track">Everything on track</string>
+    <string name="home_status_upcoming_count">%1$d upcoming payment(s)</string>
+    <string name="home_trend_chart_description">Net worth trend</string>
 </resources>

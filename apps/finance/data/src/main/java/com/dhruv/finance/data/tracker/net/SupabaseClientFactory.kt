@@ -121,7 +121,9 @@ class SupabaseClientFactory(
 
     /** PostgREST Retrofit instance, consent- and auth-gated, `finance`-schema-profiled
      * ([FinanceSchemaInterceptor], wired 002-money-tab T020 — every `finance.*` endpoint,
-     * `holdings`/`valuations` included, is built on this instance and inherits the header). */
+     * `holdings`/`valuations`/their views included (Phase 2), is built on this instance and
+     * inherits the header, ADR-0033 — omitting it would silently 404 against the empty `public`
+     * schema instead of erroring loudly). */
     val dataRetrofit: Retrofit = moshiRetrofit("$baseUrl/rest/v1/", dataClient)
 
     /** PostgREST Retrofit instance for calls that must succeed regardless of consent state — today
