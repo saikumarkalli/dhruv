@@ -27,6 +27,7 @@
             <option value="$PROJECT_DIR$/apps/finance/data" />
             <option value="$PROJECT_DIR$/apps/finance/feature" />
             <option value="$PROJECT_DIR$/apps/finance/feature/calc/calculator" />
+            <option value="$PROJECT_DIR$/apps/finance/feature/home/networth" />
             <option value="$PROJECT_DIR$/apps/finance/feature/onboarding/onboarding" />
             <option value="$PROJECT_DIR$/apps/finance/feature/plan/everyday" />
             <option value="$PROJECT_DIR$/apps/finance/feature/plan/investments" />
