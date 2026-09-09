@@ -67,6 +67,7 @@ dependencies {
     implementation(project(":apps:finance:feature:time"))
     implementation(project(":apps:finance:feature:assistant"))
     implementation(project(":apps:finance:feature:onboarding"))
+    implementation(project(":apps:finance:feature:money"))
     implementation(project(":apps:finance:feature:networth"))
 
     // Firebase BOM (Compose BOM comes from dhruv.android.compose convention plugin)

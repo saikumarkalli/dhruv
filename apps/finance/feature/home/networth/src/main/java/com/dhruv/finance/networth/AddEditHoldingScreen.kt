@@ -186,11 +186,8 @@ fun AddEditHoldingScreen(
         SelectionSheet(
             title = stringResource(R.string.c4_choose_category_title),
             options = SectorLabels.map { (code, label) -> SelectionOption(id = code, label = label) },
-            selectedId = uiState.sectorCode,
-            onSelect = { option ->
-                viewModel.onSectorChange(option.id)
-                sheetOpen = false
-            },
+            selectedIds = setOfNotNull(uiState.sectorCode),
+            onSelectionChanged = { ids -> ids.firstOrNull()?.let(viewModel::onSectorChange) },
             onDismissRequest = { sheetOpen = false },
         )
     }
@@ -199,11 +196,8 @@ fun AddEditHoldingScreen(
         SelectionSheet(
             title = stringResource(R.string.c4_choose_liability_type_title),
             options = LiabilityTypeLabels.map { (code, label) -> SelectionOption(id = code, label = label) },
-            selectedId = uiState.liabilityTypeCode,
-            onSelect = { option ->
-                viewModel.onLiabilityTypeChange(option.id)
-                liabilityTypeSheetOpen = false
-            },
+            selectedIds = setOfNotNull(uiState.liabilityTypeCode),
+            onSelectionChanged = { ids -> ids.firstOrNull()?.let(viewModel::onLiabilityTypeChange) },
             onDismissRequest = { liabilityTypeSheetOpen = false },
         )
     }

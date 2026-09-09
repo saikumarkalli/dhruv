@@ -202,10 +202,17 @@ it came from a recurring entry.
 - A month with no transactions must show an empty state inviting the first entry, never a screen of
   zeros with no explanation.
 - Merging a category into itself, or merging while a filter is active, must not silently move a
-  different set than the confirmation named.
+  different set than the confirmation named (`CategoriesViewModel.requestMerge` rejects a
+  same-category merge outright; a Ledger filter is D1/D5 state the Categories screen never reads,
+  so `mergeCategories` always resolves the *unfiltered* category-wide count — there is no filtered
+  merge code path that could move a different set than the one the confirmation named).
 - Editing a transaction that a recurring entry produced must not retroactively change the recurring
-  definition, and vice versa.
-- A pending recurring entry for a paused or deleted recurring definition must not remain actionable.
+  definition, and vice versa (structurally true, not just behaviourally: `TransactionRepository`'s
+  writes touch only `transactions`, `RecurringRepository`'s writes touch only
+  `recurring_templates` — no code path writes both from one call).
+- A pending recurring entry for a paused or deleted recurring definition must not remain actionable
+  (FR-031, FR-031b — both `pause` and `delete` withdraw every still-pending suggestion the template
+  produced).
 - Signed-out, offline with nothing cached, or a failed load on any Money screen must render a
   designed state — never a blank screen or a spinner that never resolves.
 - A duplicate of an entry that has already been duplicated must not chain history from the original —
@@ -225,7 +232,19 @@ it came from a recurring entry.
   from every expense total, category share, and budget consumption figure in the app.
 - **FR-004**: Users MUST be able to record every remaining detail through a full form: date and
   time, payee, note, receipt attachment, split across categories, a repeating schedule, and a link
-  to a goal.
+  to a goal. **Known gap (found 2026-09-05, T100's own audit): date and time is not actually
+  editable anywhere in this phase's shipped D3** — `TransactionFormViewModel`/`QuickAddViewModel`
+  both hardcode `occurredAt = Instant.now()` at save time, with no field, setter or picker for it.
+  Every transaction this phase can produce is dated "now"; the Edge Cases clause about a
+  back-dated transaction landing in its own month's group is therefore currently unreachable, not
+  merely untested. `:libs:core` has no single-date picker component yet (only the planned, unbuilt
+  `DateRangeSheet` batch, DESIGN-SYSTEM §5.2) — building the picker is a real follow-up task, out
+  of proportion for a spec-audit pass; tracked here rather than silently assumed already covered
+  by FR-004's own wording.
+- **FR-004a**: Once date editing ships, a future-dated transaction (`occurred_at` after the current
+  moment) MUST be rejected with a validation error at save time — the same "no acceptance for data
+  that can't happen" posture FR-003's transfer-account guards already take. A same-day, past-time
+  entry is always valid.
 - **FR-005**: The full form MUST confirm before discarding unsaved changes.
 - **FR-006**: Users MUST be able to edit and delete a transaction they recorded.
 
@@ -257,6 +276,10 @@ it came from a recurring entry.
 
 - **FR-016**: Users MUST be able to create and edit accounts of type bank, cash, wallet, or credit
   card, each with a display name, an optional masked identifier, and one account marked primary.
+  A blank name is rejected; a name is truncated to 60 characters as it's typed, never rejected for
+  length. A masked identifier holds **only the last 4 digits** — non-digit characters are stripped
+  and anything beyond 4 digits is truncated as it's typed, so "the last 4 digits" is enforced by
+  construction rather than validated after the fact (`AccountFormViewModel`).
 - **FR-017**: "Spendable now" MUST be the sum of bank, cash and wallet balances only; credit-card
   balances MUST be excluded from it.
 - **FR-018**: Credit-card accounts MUST hold negative balances, be grouped under a heading that
@@ -264,17 +287,31 @@ it came from a recurring entry.
   date.
 - **FR-019**: An account's detail MUST show current balance, a balance trend over time, money in and
   out for the selected month, and recent activity with a running balance after each row.
+  "Recent activity" is bounded to **the current month** — the same `TransactionRepository.listForMonth`
+  scope D1 already reads, not an unbounded all-time list — so the running balance's baseline (the
+  account's current balance minus the month's net movement) is a fixed-size computation regardless
+  of the account's total transaction history. No pagination is needed within that bound; a month
+  with an unusually high transaction count is a display-density question, not a correctness one.
 - **FR-020**: The system MUST flag an account whose balance has not been confirmed within the
   staleness threshold, on both the accounts list and the account detail, with an action to resolve
   it.
 - **FR-021**: Reconciling an account MUST record the user-stated real balance, clear the staleness
   flag, and record any difference as an explainable adjustment with its own history entry — never as
   a silent overwrite.
+- **FR-021a**: Users MUST be able to delete an account. If it has transactions, the user MUST be
+  told the exact number before the deletion is confirmed. Deletion is soft (`deleted_at`), which is
+  what satisfies "no transaction may end up pointing at nothing" (Edge Cases) — the account row
+  still exists, so every transaction's `account_id` still resolves; the account simply no longer
+  appears in the accounts list or "spendable now". Deleted transactions are not reassigned or
+  deleted alongside it.
 
 **Categories**
 
 - **FR-022**: Categories MUST be separated into income and expense sets, each with its count, and
-  each row MUST show its spend and share of the total.
+  each row MUST show its spend and share of the total. No pagination exists for either set — a
+  small, user-authored list (dozens, not thousands) is the assumption FR-026a's create action
+  works under; if that assumption stops holding, D8 needs pagination added as its own follow-up,
+  not silently discovered as a performance regression.
 - **FR-023**: Renaming a category MUST preserve its identity and every transaction linked to it —
   only the label changes.
 - **FR-024**: Merging two categories MUST move every transaction from one to the other, MUST be
@@ -284,6 +321,11 @@ it came from a recurring entry.
   contribute nothing to any spend total, category share, or budget.
 - **FR-026**: The system MUST surface how many transactions have no category, with a path to
   categorise them.
+- **FR-026a**: Users MUST be able to create a new category, naming its income/expense set.
+- **FR-026b**: Users MUST be able to delete a category that has no linked transactions. The two
+  reserved categories (Uncategorised, Adjustment) are never deletable. A category with linked
+  transactions is not deletable directly — merge it into another category first (FR-024), which
+  empties it before a delete would apply.
 
 **Recurring**
 
@@ -297,7 +339,16 @@ it came from a recurring entry.
   and money-out totals, list the next 30 days by date marking auto-debit versus variable-amount
   entries, and list paused entries separately.
 - **FR-031**: Users MUST be able to pause and resume a recurring entry; a paused entry produces no
-  pending entries.
+  new pending entries, and pausing MUST withdraw any pending entry it had already produced
+  (Edge Cases — "a pending recurring entry for a paused or deleted recurring definition must not
+  remain actionable"), the same way FR-031b's delete does.
+- **FR-031a**: Users MUST be able to edit a recurring definition's amount, category, account and
+  schedule; editing MUST NOT retroactively change any transaction it has already produced (Edge
+  Cases), and MUST NOT alter its `next_run` in a way that skips or repeats an occurrence already
+  due.
+- **FR-031b**: Users MUST be able to delete a recurring definition. Any pending entry it produced
+  MUST stop being actionable (Edge Cases) — it is withdrawn from the review queue, not silently left
+  behind.
 
 **Cross-cutting**
 
@@ -310,6 +361,20 @@ it came from a recurring entry.
   from the net-worth phase).
 - **FR-035**: Category and account type values, once shipped, MUST NOT be renamed or removed; new
   ones may be added.
+- **FR-036**: A transaction create that is retried after a failure MUST reuse the same idempotency
+  key as the original attempt — a client generates one `request_id` per save *attempt* (not per
+  network call), and keeps it across every retry of that same attempt until it succeeds, so a
+  network timeout followed by a retry can never silently write two transactions for one user
+  action. `finance.transactions.request_id unique` is the DB-side half of this guarantee (001's
+  Phase 2 readiness decisions, extended to `transactions` in this phase's own migration); this FR
+  is the client-side half — the id doing no good if a retry mints a fresh one. Scope: this covers
+  D2/D3's plain transaction create (`QuickAddViewModel`/`TransactionFormViewModel`); the
+  "make it recurring" path's `recurring_templates` write and accepting a pending entry are **not**
+  yet covered by a stable client-generated id — a smaller residual gap, tracked as a follow-up
+  rather than silently left unstated by this FR's absence. What happens server-side on a genuine
+  collision (the retry actually reaches PostgREST with a `request_id` that already exists) is not
+  specified here — a 409 surfaces as an ordinary save failure today, not specially handled by
+  looking up the already-written row; also tracked as a follow-up.
 
 ### Key Entities
 
@@ -317,8 +382,17 @@ it came from a recurring entry.
   optional masked identifier, current balance, a primary flag, and (for credit) a limit and a due
   day. Carries the date its balance was last confirmed.
 - **Transaction**: A single dated money movement of one type (expense, income, transfer) with an
-  amount, a category, one account (two for a transfer), and optional payee, note, receipt, split
-  allocation, goal link and cleared state.
+  amount, a category, one account (two for a transfer), and optional payee, note, receipt, goal
+  link and cleared state. **A split is N sibling transaction rows sharing a `split_group_id`, not
+  one entity with parts** (data-model.md; there is no parent row holding a total) — each row is
+  independently a full `Transaction`: it renders as its own ledger row (FR-012), is edited and
+  deleted on its own (FR-006, one row at a time, not the group), and is counted once in its own
+  category's share, exactly like any other transaction. `split_group_id` exists purely so a detail
+  screen can offer "show the other parts of this split"; nothing about totals, editing or deletion
+  treats a split differently from an ordinary transaction. No screen in this phase creates a split
+  (`QuickAddViewModel`/`TransactionFormViewModel` always write `splitGroupId = null`) — the column
+  ships now so a later phase's split-entry UI has somewhere to write, per the same
+  "schema now, UI later" pattern FR-004 already uses for the goal link.
 - **Category**: A user-facing grouping for transactions, belonging to either the income or expense
   set, optionally excluded from spend, optionally holding sub-categories. Identity survives renaming.
 - **Transaction history entry**: An append-only, human-readable record of one change to one
@@ -329,7 +403,10 @@ it came from a recurring entry.
   fixed (auto-debit) or variable.
 - **Pending entry**: A proposed transaction awaiting the user's accept or dismiss. Not part of any
   total until accepted.
-- **Saved view**: A named filter combination a user can re-apply to the ledger.
+- **Saved view**: A named filter combination a user can re-apply to the ledger. Stored on-device in
+  encrypted DataStore, not Supabase — a saved view is a personal shortcut, not tracker data, so it
+  carries no `user_id`/RLS/sync obligation (data-model.md). Users can rename and delete a saved
+  view; identity survives a rename the same way a category's does (FR-023).
 - **Reconciliation**: A user-stated real balance for an account at a point in time, plus any
   adjustment it produced.
 
@@ -356,6 +433,24 @@ it came from a recurring entry.
 - **SC-009**: A ledger month containing 5,000 transactions opens and scrolls without visible stutter.
 - **SC-010**: A user can go from opening the app to knowing this month's income, expense and savings
   rate without leaving the ledger's first screen.
+
+**Traceability (added 2026-09-05, T108 — this phase's tasks cited 1 of 10 SC ids before this pass):**
+
+| SC | Evidence |
+|---|---|
+| SC-001 | 🔴 unmeasurable as written — no instrument, no fixture, no baseline, and no telemetry is planned in any phase. `MNY-UI-001` (catalog §4) carries the same manual-check-only status, deferred, no device |
+| SC-002 | `TransactionRepositoryTest`'s month-summary mapping test (MNY-BR-001) |
+| SC-003 | `TransactionAuditTest` (`listEvents maps every transaction_events kind the trigger can produce`) |
+| SC-004 | `AccountRepositoryTest` (`listAccounts maps bank cash and wallet as spendable and excludes credit`, MNY-BR-002) |
+| SC-005 | `CategoryRepositoryTest`/`CategoriesViewModelTest` merge tests (MNY-BR-004) |
+| SC-006 | `RecurringRepositoryTest` (`a due template materialises into exactly one pending entry, never a transaction`, MNY-BR-005) |
+| SC-007 | `LedgerViewModelTest` (`previewCount for a candidate filter matches the count after actually applying it`, MNY-UI-003) |
+| SC-008 | Every D1-D9 screen's state `when` covers Loading/Error/Offline/SignedOut/Loaded — verified by reading each screen file, not device-tested (same static-audit caveat as N7 below) |
+| SC-009 | 🔴 unmeasurable as written — no 5,000-row fixture or scroll-performance instrument exists in this phase |
+| SC-010 | `LedgerScreen` renders the pinned `ThreeUpStatRow` (INCOME/EXPENSE/SAVED%) on D1 itself, no navigation required — structurally true by the screen's own layout, not separately instrumented |
+
+SC-001 and SC-009 are recorded here as genuinely unmeasured, matching the QA catalog's own honesty
+convention, rather than silently left uncited.
 
 ## Assumptions
 

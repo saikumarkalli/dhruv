@@ -26,6 +26,23 @@ begin
 
     delete from finance.holdings where user_id = auth.uid();
 
+    -- 002-money-tab (T009): children before parents. transaction_events/suggestions have no
+    -- direct DELETE-by-user_id path the same way transactions/accounts/categories/
+    -- recurring_templates do (transaction_events carries no user_id at all — ownership is
+    -- transitive through transaction_id, same pattern as finance.valuations above).
+    delete from finance.transaction_events
+    where transaction_id in (select id from finance.transactions where user_id = auth.uid());
+
+    delete from finance.suggestions where user_id = auth.uid();
+
+    delete from finance.transactions where user_id = auth.uid();
+
+    delete from finance.recurring_templates where user_id = auth.uid();
+
+    delete from finance.categories where user_id = auth.uid();
+
+    delete from finance.accounts where user_id = auth.uid();
+
     -- ADD NEW TABLES HERE (delete children before parents, same pattern as finance.valuations above)
 end;
 $$;

@@ -149,6 +149,30 @@ materialise-on-open safe to run repeatedly and on two devices (research R7).
 
 RLS: SELECT/INSERT/UPDATE own rows.
 
+### Saved view → encrypted DataStore (`SavedViewRepository`), NOT `finance` schema
+
+A saved view is a personal ledger-filter shortcut, not tracker data — no `user_id`, no RLS, no
+sync obligation (FR-015, spec.md Key Entities). Stored as a JSON-encoded list under one
+`EncryptedDataStore` key (`money_saved_views` file, key `saved_views_json`), same construction
+pattern as `SessionStoreImpl`/`ConsentRepositoryImpl`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String (UUID) | assigned on first save if blank; survives rename |
+| `name` | String | |
+| `typeName` | String?, nullable | mirrors `TransactionType.name`, layer-neutral (no `LedgerFilter` import — Article III) |
+| `categoryIds` | Set\<String\> | |
+| `minPaise` / `maxPaise` | Long?, nullable | |
+| `accountId` | String?, nullable | |
+
+**Rename and delete**: `saveView(view.copy(name = newName))` with the existing `id` overwrites in
+place — the same "same id, new label" identity rule FR-023 already states for categories.
+`deleteSavedView(id)` removes it. Both already exist on `SavedViewRepository`
+(`SavedViewRepositoryTest` covers overwrite-not-append and delete-removes-only-that-view). **Not
+yet wired to D5's `FilterSheet`** — no screen currently offers "save this filter" or "apply a saved
+view" UI; the repository and its persistence are built and tested, the consumer is not, tracked as
+a follow-up for whichever phase or polish pass adds it.
+
 ## Views (server-side aggregation — NFR-8)
 
 ### `finance.v_account_balances`

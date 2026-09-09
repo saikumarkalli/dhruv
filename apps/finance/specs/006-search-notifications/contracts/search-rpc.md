@@ -39,7 +39,7 @@ No `anon` grant — every tracker call is authenticated (ADR-0029 §3).
 
 | Kind | Source | `title` | `subtitle_a` | `subtitle_b` | `amount_paise` | `occurred_at` | `is_closed` |
 |---|---|---|---|---|---|---|---|
-| `TRANSACTION` | `finance.transactions` | description / counterparty | account name | category name | the transaction amount | `occurred_at` | account closed |
+| `TRANSACTION` | `finance.transactions` | `payee`, falling back to `note` | account name | category name | the transaction amount | `occurred_at` | account closed |
 | `HOLDING` | `finance.holdings` + `v_latest_valuation` | holding name | sector | last-valued date | latest value | last valuation date | holding closed |
 | `POLICY` | `finance.policies` | policy name | insurer | renewal date | cover amount | renewal date | matured / lapsed |
 | `GOAL` | `finance.goals` | goal name | target date | progress share | target amount | target date | completed |

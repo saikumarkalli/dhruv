@@ -29,6 +29,12 @@ Phase 2 (C4) builds. Deep links land on D1, then push (N6).
 **Presentation classes** follow the design's Finance list verbatim: sheet = D2 quick add, D5 filter;
 full-screen modal (close ✕) = D3 full form.
 
+**Dark-hero surfaces** (DESIGN-SYSTEM §1, functional spec D-2/implementation plan §3.1): D2 (quick
+add's amount band) and D7 (account detail's balance header) are theme-invariant — both read
+`DhruvBrand.*` (`navy`/`navyElevated` gradient, `silverLight`/`steel`/`accentBlue` text), never
+`LocalDhruvNextColors`, so they render identically in light and dark mode. Built in
+`QuickAddSheet.kt`/`AccountDetailScreen.kt`.
+
 **Nested `NavHost` generalisation.** Money is the second tab (after Plan) to own drill-in routes,
 which is exactly the trigger Phase 0 named when it descoped this work: the back contract moves from
 Plan's own controller to "the active tab's controller" in `resolveBackAction`
@@ -40,9 +46,13 @@ it; it does not redesign it.
 | Target | Resolves to | Consumer this phase |
 |---|---|---|
 | `OpenAccount(accountId)` | Money tab → D7 | Home's UPCOMING credit-card-bill row (FR-034) |
+| `OpenTransaction(transactionId)` | Money tab → D4 | none yet — added per T091 (gap register) so 006's
+search results and B2's deep links have somewhere to dispatch to unconditionally, instead of each
+conditionally re-adding it. An unknown/foreign id resolves to D4's existing "couldn't be found"
+error state. |
 
-Nothing else is added. Targets that later phases will need (filtered-ledger from a budget, D4 from a
-search result, quick-add from a launcher shortcut) are deliberately **not** added until their
+Nothing else is added. Targets that later phases will need (filtered-ledger from a budget, quick-add
+from a launcher shortcut) are deliberately **not** added until their
 consumer exists — an unused `NavTarget` case is the speculative abstraction the project's own
 altitude rule warns against, and adding one later is a two-line change (sealed case + registry row).
 

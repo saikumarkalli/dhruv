@@ -28,7 +28,15 @@ table is the flat per-route index.
 | Net worth / Assets / Liabilities (C1–C7) | Home | `networth` | push | `requiresConsent` | Phase 2 |
 | Notifications (B2) | Home | — (shell) | push | — | Phase 6 |
 | Search (B3) | Home | — (shell) | push | — | Phase 6 |
-| Ledger / Quick add / Accounts / Categories / Recurring (D1–D9) | Money | `money` | root (D1) / sheet (D2) / push / modal | `requiresConsent` | Phase 3 |
+| Ledger (D1) | Money | `money` | root | `requiresConsent` | live today |
+| Quick add (D2) | Money | `money` | sheet | `requiresConsent` | live today |
+| Transaction form (D3) | Money | `money` | modal (close ✕, not back) | `requiresConsent` | live today |
+| Transaction detail (D4) | Money | `money` | push | `requiresConsent` | live today |
+| Ledger filter (D5) | Money | `money` | sheet | `requiresConsent` | live today |
+| Accounts (D6) | Money | `money` | push | `requiresConsent` | live today |
+| Account detail (D7) | Money | `money` | push | `requiresConsent` | live today |
+| Categories (D8) | Money | `money` | push | `requiresConsent` | live today |
+| Recurring / Recurring review (D9) | Money | `money` | push | `requiresConsent` | live today |
 | Keypad (Calc tab) | Calc | `calculator` | root | — | live today |
 | Calc history | Calc | `calculator` | push (top-bar) | — | live today |
 | Plan root (E1, live modules + calculator strip) | Plan | — (shell, `PlanLauncher`) | root | — | Phase 4 rewrite |

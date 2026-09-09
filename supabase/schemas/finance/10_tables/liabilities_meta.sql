@@ -30,9 +30,12 @@ create table if not exists finance.liabilities_meta (
     -- sanctioned principal.
     original_principal_paise bigint check (original_principal_paise is null or original_principal_paise >= 0),
     collateral text,
-    -- The account the debit lands on. Null until Phase 3 creates finance.accounts; the FK is added
-    -- by Phase 3's migration, not here, so Phase 2 does not depend on a table it cannot create.
-    linked_account_id uuid,
+    -- The account the debit lands on. finance.accounts now exists (002-money-tab, T111) — the FK
+    -- lands in this table's own migration rather than Phase 2's, per readiness decisions §1.4/§3.1
+    -- ("this phase owns adding the FK in its own migration"). accounts.sql sorts alphabetically
+    -- before liabilities_meta.sql in the 10_tables/*.sql glob, so the referenced table already
+    -- exists at this point.
+    linked_account_id uuid references finance.accounts (id),
     request_id uuid unique,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),

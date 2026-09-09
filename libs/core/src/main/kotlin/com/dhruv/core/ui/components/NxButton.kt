@@ -25,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dhruv.core.ui.theme.DhruvNextRadii
 import com.dhruv.core.ui.theme.DhruvNextType
@@ -33,19 +32,9 @@ import com.dhruv.core.ui.theme.LocalDhruvNextColors
 
 enum class NxButtonVariant { Primary, Soft, Outline, Ghost, Destructive }
 
-/**
- * Design system §5.3's missing size variant, closed here — [NxButtonSize.Small] for
- * inline/toolbar contexts, [NxButtonSize.Medium] (the pre-existing padding) for standalone
- * actions.
- */
+/** Button height/type-scale preset — Small for inline/dialog actions, Medium (default) elsewhere. */
 enum class NxButtonSize { Small, Medium }
 
-/**
- * [text] is ignored while [loading] is true — a spinner takes its place so the button's width
- * doesn't jump — and [onClick] is suppressed the same way `enabled = false` already suppresses it,
- * since a loading action must not be re-triggered mid-flight. [block] fills the available width,
- * the sheet-primary-action treatment design system §8 calls for.
- */
 @Composable
 fun NxButton(
     text: String,
@@ -76,15 +65,15 @@ fun NxButton(
             NxButtonVariant.Ghost -> colors.tx2
             NxButtonVariant.Destructive -> Color.White
         }
-    val horizontalPadding: Dp = if (size == NxButtonSize.Small) 14.dp else 20.dp
-    val verticalPadding: Dp = if (size == NxButtonSize.Small) 8.dp else 13.dp
+    val isDisabled = !enabled || loading
+    val vPad = if (size == NxButtonSize.Small) 9.dp else 13.dp
+    val hPad = if (size == NxButtonSize.Small) 14.dp else 20.dp
     val fontSize = if (size == NxButtonSize.Small) DhruvNextType.body else DhruvNextType.cardTitle
-
     Row(
         modifier =
             modifier
                 .let { if (block) it.fillMaxWidth() else it }
-                .alpha(if (clickable) 1f else 0.7f)
+                .alpha(if (isDisabled) 0.7f else 1f)
                 .clip(shape)
                 .background(background)
                 .let {
@@ -93,16 +82,16 @@ fun NxButton(
                         NxButtonVariant.Ghost -> it.border(1.dp, colors.line, shape)
                         else -> it
                     }
-                }.clickable(enabled = clickable, onClick = onClick)
-                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
-        horizontalArrangement = if (block) Arrangement.Center else Arrangement.Start,
+                }.clickable(enabled = !isDisabled, onClick = onClick)
+                .padding(horizontal = hPad, vertical = vPad),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (block) Arrangement.Center else Arrangement.Start,
     ) {
         if (loading) {
             CircularProgressIndicator(
+                modifier = Modifier.size(if (size == NxButtonSize.Small) 14.dp else 18.dp),
                 color = textColor,
                 strokeWidth = 2.dp,
-                modifier = Modifier.size(if (size == NxButtonSize.Small) 14.dp else 18.dp),
             )
         } else {
             Text(

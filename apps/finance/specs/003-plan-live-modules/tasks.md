@@ -527,8 +527,18 @@ and tasks already exist to render both.
 - [ ] T147 [SA] Add the **E3 → filtered-ledger `NavTarget` case**. `contracts/routes.md:83` describes
       the jump as `SelectTab(MONEY)` "+ a category filter argument", but `SelectTab` carries only a
       `TabKey` and this phase's NavTarget-additions table adds no filtered-ledger case
-- [ ] T148 [SA] Add the receiving task for **D4's budget-impact line**, which 002 deferred to this
-      phase with a stated reason and this phase never picked up
+- [ ] T148 [Android] **Backfill D4's deferred budget-impact line** (002-money-tab's `MNY-UI-006`:
+      "budget-impact line matches the linked category's usage %", spec.md Assumptions "Budget impact
+      deferred" — deferred here with a stated reason, and this phase never carried a task to add it
+      back until this one). Add `budgetImpact: BudgetImpactSummary?` to
+      `TransactionDetailUiState.Loaded` (`apps/finance/feature/money/money/.../TransactionDetailViewModel.kt`),
+      populated only when the transaction's category has an active budget this month — join
+      `v_category_spend` (already read by `CategoryRepository.listCategoriesWithSpend`) against the
+      budget row this phase's own E2 already fetches, `null` otherwise (no colour-only meaning,
+      DESIGN-SYSTEM §9). Render as one line under the amount in `TransactionDetailScreen.kt`. 002's
+      module boundary is unaffected — `:apps:finance:feature:money` still owns D4; this task adds
+      the field there once `:apps:finance:data`'s budgets tables exist, it does not move D4 into a
+      Plan-owned module
 
 ---
 

@@ -115,17 +115,15 @@ class SupabaseClientFactory(
     internal val dataClient: OkHttpClient =
         baseClientBuilder()
             .addInterceptor(ConsentInterceptor(hasSyncConsent))
-            .addInterceptor(FinanceSchemaInterceptor())
             .addInterceptor(authInterceptor)
+            .addInterceptor(FinanceSchemaInterceptor())
             .build()
 
-    /** PostgREST Retrofit instance, consent- and auth-gated. Every endpoint built on this Retrofit
-     * instance automatically sends PostgREST's `finance`-schema headers via [FinanceSchemaInterceptor]
-     * (ADR-0033) — `holdings`/`valuations`/their views live in the `finance` Postgres schema, not
-     * `public`, and omitting the header would silently 404 against the (empty) `public` schema
-     * instead. First consumers: [com.dhruv.finance.data.tracker.repo.HoldingApi],
-     * [com.dhruv.finance.data.tracker.repo.ValuationApi],
-     * [com.dhruv.finance.data.tracker.repo.NetWorthApi] (Phase 2). */
+    /** PostgREST Retrofit instance, consent- and auth-gated, `finance`-schema-profiled
+     * ([FinanceSchemaInterceptor], wired 002-money-tab T020 — every `finance.*` endpoint,
+     * `holdings`/`valuations`/their views included (Phase 2), is built on this instance and
+     * inherits the header, ADR-0033 — omitting it would silently 404 against the empty `public`
+     * schema instead of erroring loudly). */
     val dataRetrofit: Retrofit = moshiRetrofit("$baseUrl/rest/v1/", dataClient)
 
     /** PostgREST Retrofit instance for calls that must succeed regardless of consent state — today

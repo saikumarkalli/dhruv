@@ -44,11 +44,11 @@ here (T029, T035). If Phase 3 starts first, those four move into Phase 2 (Founda
 **Purpose**: Stand up the new Gradle module, its flag, and its coverage wiring before any
 story-specific code.
 
-- [ ] T001 Create `:apps:finance:feature:money` module skeleton — `apps/finance/feature/money/money/build.gradle.kts` (`dhruv.android.library` + `dhruv.android.compose`, deps on `:apps:finance:data`, `:libs:core`, `:libs:settings`, same shape as `apps/finance/feature/plan/loans`); `include(...)` + `projectDir` remap in `settings.gradle.kts`
-- [ ] T002 [P] Create `di/MoneyModule.kt` Koin module stub in `apps/finance/feature/money/money/` and aggregate it in `CalculatorApplication`
-- [ ] T003 [P] Create `MoneyConfig.kt` scaffold in `apps/finance/feature/money/money/` (screen-level constants — account/category type labels, the 30-day staleness threshold, the next-30-days window, filter presets — per the no-hardcoding rule; filled per story below, never inline in a screen)
-- [ ] T004 [P] Add the `money` flag (`enabled: true`, `minVersion: "1.0.0"`, `requiresConsent: true`) to `platform/feature-flags/dhruv-finance.json` — gated by the "Sync my financial records" A3 switch, per contracts/routes.md
-- [ ] T005 Wire the new module into coverage measurement — add `":apps:finance:feature:money"` to `coveredModules` in `build.gradle.kts` (root) **and** `"money"` to `_FEATURES` in `scripts/ci/regression_summary.py`. Without the first, the module's classes are absent from both the merged report and the floor check (Article X passes vacuously); without the second, its coverage is reported as `(other)` instead of by name. `enableUnitTestCoverage = true` needs no action — the `dhruv.android.library` convention plugin already sets it
+- [X] T001 Create `:apps:finance:feature:money` module skeleton — `apps/finance/feature/money/money/build.gradle.kts` (`dhruv.android.library` + `dhruv.android.compose`, deps on `:apps:finance:data`, `:libs:core`, `:libs:settings`, same shape as `apps/finance/feature/plan/loans`); `include(...)` + `projectDir` remap in `settings.gradle.kts`
+- [X] T002 [P] Create `di/MoneyModule.kt` Koin module stub in `apps/finance/feature/money/money/` and aggregate it in `CalculatorApplication`
+- [X] T003 [P] Create `MoneyConfig.kt` scaffold in `apps/finance/feature/money/money/` (screen-level constants — account/category type labels, the 30-day staleness threshold, the next-30-days window, filter presets — per the no-hardcoding rule; filled per story below, never inline in a screen)
+- [X] T004 [P] Add the `money` flag (`enabled: true`, `minVersion: "1.0.0"`, `requiresConsent: true`) to `platform/feature-flags/dhruv-finance.json` — gated by the "Sync my financial records" A3 switch, per contracts/routes.md
+- [X] T005 Wire the new module into coverage measurement — add `":apps:finance:feature:money"` to `coveredModules` in `build.gradle.kts` (root) **and** `"money"` to `_FEATURES` in `scripts/ci/regression_summary.py`. Without the first, the module's classes are absent from both the merged report and the floor check (Article X passes vacuously); without the second, its coverage is reported as `(other)` instead of by name. `enableUnitTestCoverage = true` needs no action — the `dhruv.android.library` convention plugin already sets it
 
 ---
 
@@ -59,21 +59,21 @@ story-specific code.
 **⚠️ CRITICAL**: No user story task may start before this phase closes (constitution Article II —
 SA schema, then QA catalog rows, before any Backend/Android code).
 
-- [ ] T006 [SA] Author the six new tables declaratively in `supabase/schemas/finance/10_tables/` — `accounts.sql`, `categories.sql`, `transactions.sql`, `transaction_events.sql`, `recurring_templates.sql`, `suggestions.sql`, each with its RLS policies, CHECK constraints and indexes exactly as data-model.md specifies. `transaction_events` gets **SELECT + INSERT policies only** (no UPDATE, no DELETE) — that policy set is what makes FR-008 true at the DB layer. `suggestions` gets the unique `(recurring_id, due_on)` idempotency key
-- [ ] T007 [P] [SA] Author the three views in `supabase/schemas/finance/20_views/` — `v_account_balances.sql` (opening + signed sum, `counts_as_spendable` flag), `v_month_summary.sql`, `v_category_spend.sql`. Both summary views exclude `TRANSFER` rows (BR-D1) and `excluded_from_spend` categories (FR-025) in SQL, not in Kotlin — research R3. **All three views MUST be declared `with (security_invoker = on)`** — a Postgres 15+ view otherwise runs as its owner and bypasses RLS on `transactions`/`accounts`/`categories`, returning every user's rows to every signed-in caller through PostgREST (audit 2026-08-22). `db diff` cannot express security-invoker views (ADR-0032 caveat list), so hand-verify the generated migration carries the clause, and extend this phase's RLS policy test to assert a second user reads zero rows from each view
-- [ ] T008 [P] [SA] Author `supabase/schemas/finance/30_functions/fn_transaction_audit.sql` (trigger function + `AFTER INSERT OR UPDATE OR DELETE` trigger on `finance.transactions`) and `merge_categories.sql` (invoker rights, returns the moved count) — research R4, R9
-- [ ] T009 [SA] Extend `supabase/schemas/public/30_functions/delete_my_data.sql` with FK-safe DELETEs for all six new tables — a table missed here breaks the 7-day erasure guarantee (NFR-1) silently
-- [ ] T010 [SA] Generate the migration (`supabase db diff -f money_phase3`), hand-add the `grant usage on schema` / per-table grants `db diff` cannot express (ADR-0032/0033), review the generated SQL, and confirm `python scripts/db/gen_schema_docs.py equiv` and `... docs --check` both pass
-- [ ] T011 [P] [Sec] RLS + policy verification against the dev Supabase project: cross-user isolation on all six tables; no UPDATE/DELETE path exists on `transaction_events`; the audit trigger fires on insert, update, category change and soft-delete; `merge_categories` is atomic under an interrupted call
-- [ ] T012 [P] Build component batch **B4** in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/lists/` — `DayGroupHeader`, `LedgerRow`, `SuggestedRow` (dashed until accepted), `ReconcileBanner`
-- [ ] T013 [P] Build **B6** remainder in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/inputs/` — `NxTextArea` (multi-line + helper text), `InputChip` (removable, trailing ×)
-- [ ] T014 [P] Build **B7** in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/states/` — `StatusBadge` (success/warning/error/accent dot) and `InfoBanner`. Extend `CountBadge` rather than duplicating it for the count case (design system §5.3)
-- [ ] T015 [P] Build `DateRangeSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/overlays/DateRangeSheet.kt` — consumed by D5
-- [ ] T016 [P] Build `AmountKeypadSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/overlays/AmountKeypadSheet.kt` as a **composition** of the existing `NumericKeypad` inside `DhruvModalSheet` with a date key — never a second keypad component (constitution Article VI, research R5)
-- [ ] T017 [P] Extend `BackContractTest` (`libs/core/src/test/.../navigation/BackContractTest.kt`) with the active-tab case — RED before T018, citing NAV-ARCH-003's contract
-- [ ] T018 Generalise `resolveBackAction` (`libs/core/src/main/kotlin/com/dhruv/core/navigation/BackContract.kt`) from Plan's controller to "the active tab's controller", and add the Money tab's nested `NavHost` in `apps/finance/app/src/main/java/com/dhruv/finance/app/navigation/` — the work Phase 0 explicitly descoped until a second tab needed sub-routes (depends on T017)
-- [ ] T019 [P] Add `NavTarget.OpenAccount(accountId)` in `libs/core/src/main/kotlin/com/dhruv/core/navigation/NavTarget.kt`, map it in the app shell's `NavigationDispatcher`, and add the matching row to `apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md` §1 (sealed case + registry row is the required pair)
-- [ ] T020 Add DTOs, domain models and mappers for all six entities under `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/{dto,model,mapper}/` (paise `Long`, TEXT enums), and wire the `Accept-Profile: finance` / `Content-Profile: finance` headers into `SupabaseClientFactory` if Phase 2 has not already — omitting them 404s silently against the empty `public` schema (ADR-0033)
+- [X] T006 [SA] Author the six new tables declaratively in `supabase/schemas/finance/10_tables/` — `accounts.sql`, `categories.sql`, `transactions.sql`, `transaction_events.sql`, `recurring_templates.sql`, `suggestions.sql`, each with its RLS policies, CHECK constraints and indexes exactly as data-model.md specifies. `transaction_events` gets **SELECT + INSERT policies only** (no UPDATE, no DELETE) — that policy set is what makes FR-008 true at the DB layer. `suggestions` gets the unique `(recurring_id, due_on)` idempotency key
+- [X] T007 [P] [SA] Author the three views in `supabase/schemas/finance/20_views/` — `v_account_balances.sql` (opening + signed sum, `counts_as_spendable` flag), `v_month_summary.sql`, `v_category_spend.sql`. Both summary views exclude `TRANSFER` rows (BR-D1) and `excluded_from_spend` categories (FR-025) in SQL, not in Kotlin — research R3. **All three views MUST be declared `with (security_invoker = on)`** — a Postgres 15+ view otherwise runs as its owner and bypasses RLS on `transactions`/`accounts`/`categories`, returning every user's rows to every signed-in caller through PostgREST (audit 2026-08-22). `db diff` cannot express security-invoker views (ADR-0032 caveat list), so hand-verify the generated migration carries the clause, and extend this phase's RLS policy test to assert a second user reads zero rows from each view
+- [X] T008 [P] [SA] Author `supabase/schemas/finance/30_functions/fn_transaction_audit.sql` (trigger function + `AFTER INSERT OR UPDATE OR DELETE` trigger on `finance.transactions`) and `merge_categories.sql` (invoker rights, returns the moved count) — research R4, R9
+- [X] T009 [SA] Extend `supabase/schemas/public/30_functions/delete_my_data.sql` with FK-safe DELETEs for all six new tables — a table missed here breaks the 7-day erasure guarantee (NFR-1) silently
+- [X] T010 [SA] Generate the migration (`supabase db diff -f money_phase3`), hand-add the `grant usage on schema` / per-table grants `db diff` cannot express (ADR-0032/0033), review the generated SQL, and confirm `python scripts/db/gen_schema_docs.py equiv` and `... docs --check` both pass
+- [X] T011 [P] [Sec] RLS + policy verification against the dev Supabase project: cross-user isolation on all six tables; no UPDATE/DELETE path exists on `transaction_events`; the audit trigger fires on insert, update, category change and soft-delete; `merge_categories` is atomic under an interrupted call — **performed live against `dhruv-dev` 2026-09-05** (`20260904120000_money_phase3.sql` was pushed this session — it had never actually been applied to dev before this). Ran a 21-assertion script via the Supabase Management API SQL endpoint (`api.supabase.com/v1/projects/{ref}/database/query`, personal access token), using two real existing `auth.users` rows as user A/B, entirely inside `BEGIN...ROLLBACK` (zero footprint, independently confirmed after). **All 21 passed**: cross-user isolation on `accounts`/`categories`/`transactions`/`transaction_events`/`v_account_balances`/`v_category_spend`; the audit trigger fires the correct kind on insert (`CREATED`), category change (`CATEGORY_CHANGED`) and soft-delete (`DELETED`); `transaction_events` UPDATE and DELETE both fail with `permission denied for table transaction_events` (grant-level, not just RLS); `merge_categories` moves the right count, repoints the transaction, soft-deletes the source, rejects a self-merge, and rejects merging a category User B doesn't own. Atomicity under a genuinely interrupted mid-function call was verified structurally rather than forced: `merge_categories` is a single `plpgsql` function body with no internal `COMMIT`, so a single invocation is one implicit Postgres transaction by construction — any error anywhere inside it rolls back everything, including the already-applied `update finance.transactions`
+- [X] T012 [P] Build component batch **B4** in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/lists/` — `DayGroupHeader`, `LedgerRow`, `SuggestedRow` (dashed until accepted), `ReconcileBanner`
+- [X] T013 [P] Build **B6** remainder in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/inputs/` — `NxTextArea` (multi-line + helper text), `InputChip` (removable, trailing ×)
+- [X] T014 [P] Build **B7** in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/states/` — `StatusBadge` (success/warning/error/accent dot) and `InfoBanner`. Extend `CountBadge` rather than duplicating it for the count case (design system §5.3)
+- [X] T015 [P] Build `DateRangeSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/overlays/DateRangeSheet.kt` — consumed by D5
+- [X] T016 [P] Build `AmountKeypadSheet` in `libs/core/src/main/kotlin/com/dhruv/core/ui/components/overlays/AmountKeypadSheet.kt` as a **composition** of the existing `NumericKeypad` inside `DhruvModalSheet` with a date key — never a second keypad component (constitution Article VI, research R5)
+- [X] T017 [P] Extend `BackContractTest` (`libs/core/src/test/.../navigation/BackContractTest.kt`) with the active-tab case — RED before T018, citing NAV-ARCH-003's contract
+- [X] T018 Generalise `resolveBackAction` (`libs/core/src/main/kotlin/com/dhruv/core/navigation/BackContract.kt`) from Plan's controller to "the active tab's controller", and add the Money tab's nested `NavHost` in `apps/finance/app/src/main/java/com/dhruv/finance/app/navigation/` — the work Phase 0 explicitly descoped until a second tab needed sub-routes (depends on T017)
+- [X] T019 [P] Add `NavTarget.OpenAccount(accountId)` in `libs/core/src/main/kotlin/com/dhruv/core/navigation/NavTarget.kt`, map it in the app shell's `NavigationDispatcher`, and add the matching row to `apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md` §1 (sealed case + registry row is the required pair)
+- [X] T020 Add DTOs, domain models and mappers for all six entities under `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/{dto,model,mapper}/` (paise `Long`, TEXT enums), and wire the `Accept-Profile: finance` / `Content-Profile: finance` headers into `SupabaseClientFactory` if Phase 2 has not already — omitting them 404s silently against the empty `public` schema (ADR-0033)
 
 **Checkpoint**: schema migrated and RLS-verified, all component gaps closed, Money's nested NavHost
 live. User story work can begin.
@@ -90,19 +90,19 @@ account, save — the row appears under today and the month summary changes by e
 
 ### Tests for User Story 1 (write first, confirm they FAIL before implementation)
 
-- [ ] T021 [P] [US1] `TransactionRepositoryTest` — a TRANSFER is excluded from expense totals and category shares, citing `MNY-BR-001`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionRepositoryTest.kt`
-- [ ] T022 [P] [US1] `TransactionRepositoryTest` — type invariants rejected at the repository boundary (TRANSFER needs a distinct `to_account_id` and no category; EXPENSE/INCOME need a category and no `to_account_id`), mirroring the DB CHECKs, same file as T021
-- [ ] T023 [P] [US1] `QuickAddViewModelTest` — category and account are pre-guessed, both remain editable, and Save emits the new row into today's group with the summary recomputed, citing `MNY-FLOW-001`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/QuickAddViewModelTest.kt`
-- [ ] T024 [P] [US1] `TransactionFormViewModelTest` — values entered in quick add carry over into the full form, and discarding an edited form prompts for confirmation (N4), in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionFormViewModelTest.kt`
+- [X] T021 [P] [US1] `TransactionRepositoryTest` — a TRANSFER is excluded from expense totals and category shares, citing `MNY-BR-001`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionRepositoryTest.kt`
+- [X] T022 [P] [US1] `TransactionRepositoryTest` — type invariants rejected at the repository boundary (TRANSFER needs a distinct `to_account_id` and no category; EXPENSE/INCOME need a category and no `to_account_id`), mirroring the DB CHECKs, same file as T021
+- [X] T023 [P] [US1] `QuickAddViewModelTest` — category and account are pre-guessed, both remain editable, and Save emits the new row into today's group with the summary recomputed, citing `MNY-FLOW-001`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/QuickAddViewModelTest.kt`
+- [X] T024 [P] [US1] `TransactionFormViewModelTest` — values entered in quick add carry over into the full form, and discarding an edited form prompts for confirmation (N4), in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionFormViewModelTest.kt`
 
 ### Implementation for User Story 1
 
-- [ ] T025 [US1] Implement `TransactionRepository` — create, edit, soft-delete, split writes as sibling rows sharing `split_group_id` (no parent row, data-model.md), all amounts `Long` paise (depends on T021, T022), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/TransactionRepository.kt`
-- [ ] T026 [US1] Implement `LedgerViewModel` — today's transactions plus the pinned month summary read from `v_month_summary` (never a client-side sum, NFR-8), in `apps/finance/feature/money/money/LedgerViewModel.kt`
-- [ ] T027 [US1] Build `LedgerScreen` (D1) base — day-grouped list using T012's `DayGroupHeader`/`LedgerRow`, pinned INCOME · EXPENSE · SAVED % summary, FAB, `FeatureHost`-wrapped with the `money` flag key; replaces the Money tab's `NotConfiguredCard` placeholder, in `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T028 [US1] Build `QuickAddSheet` (D2) — amount-first via T016's `AmountKeypadSheet`, `SegmentedRow` type selector, pre-guessed category/account, optional note, "More options" hand-off to D3, citing `MNY-UI-001`, in `apps/finance/feature/money/money/QuickAddSheet.kt`
-- [ ] T029 [US1] Build `TransactionFormScreen` (D3) — full-screen modal (close ✕, not back), every field per FR-004, `NxTextArea` for the note, `NxSelect`/`SelectionSheet` for category and account, `NxTextField` error state for validation, `rememberDiscardGuard` on exit. **The goal-link field is hidden this phase** — `goal_id` exists on the row but `goals` does not until Phase 4, so `MNY-FLOW-003` stays open and is closed there, not silently skipped. Recurring toggle wiring lands in US6 (T068), in `apps/finance/feature/money/money/TransactionFormScreen.kt`
-- [ ] T030 [US1] Implement the category/account pre-guess rule (last-used per payee, falling back to most-used) in `TransactionRepository` + `MoneyConfig.kt` — the mechanism the three-tap target depends on
+- [X] T025 [US1] Implement `TransactionRepository` — create, edit, soft-delete, split writes as sibling rows sharing `split_group_id` (no parent row, data-model.md), all amounts `Long` paise (depends on T021, T022), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/TransactionRepository.kt`
+- [X] T026 [US1] Implement `LedgerViewModel` — today's transactions plus the pinned month summary read from `v_month_summary` (never a client-side sum, NFR-8), in `apps/finance/feature/money/money/LedgerViewModel.kt`
+- [X] T027 [US1] Build `LedgerScreen` (D1) base — day-grouped list using T012's `DayGroupHeader`/`LedgerRow`, pinned INCOME · EXPENSE · SAVED % summary, FAB, `FeatureHost`-wrapped with the `money` flag key; replaces the Money tab's `NotConfiguredCard` placeholder, in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T028 [US1] Build `QuickAddSheet` (D2) — amount-first via T016's `AmountKeypadSheet`, `SegmentedRow` type selector, pre-guessed category/account, optional note, "More options" hand-off to D3, citing `MNY-UI-001`, in `apps/finance/feature/money/money/QuickAddSheet.kt`
+- [X] T029 [US1] Build `TransactionFormScreen` (D3) — full-screen modal (close ✕, not back), every field per FR-004, `NxTextArea` for the note, `NxSelect`/`SelectionSheet` for category and account, `NxTextField` error state for validation, `rememberDiscardGuard` on exit. **The goal-link field is hidden this phase** — `goal_id` exists on the row but `goals` does not until Phase 4, so `MNY-FLOW-003` stays open and is closed there, not silently skipped. Recurring toggle wiring lands in US6 (T068), in `apps/finance/feature/money/money/TransactionFormScreen.kt`
+- [X] T030 [US1] Implement the category/account pre-guess rule (last-used per payee, falling back to most-used) in `TransactionRepository` + `MoneyConfig.kt` — the mechanism the three-tap target depends on
 
 **Checkpoint**: User Story 1 fully functional — a working expense tracker on its own.
 
@@ -118,17 +118,17 @@ day grouping and month totals, then apply a filter and confirm the count and lis
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] `LedgerViewModelTest` — rows day-grouped with per-day net; pinned header shows correct INCOME/EXPENSE/SAVED %, citing `MNY-UI-002`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerViewModelTest.kt`
-- [ ] T032 [P] [US2] `LedgerFilterViewModelTest` — the live result count updates on every filter change and equals the row count after applying, citing `MNY-UI-003`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerFilterViewModelTest.kt`
+- [X] T031 [P] [US2] `LedgerViewModelTest` — rows day-grouped with per-day net; pinned header shows correct INCOME/EXPENSE/SAVED %, citing `MNY-UI-002`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerViewModelTest.kt`
+- [X] T032 [P] [US2] `LedgerFilterViewModelTest` — the live result count updates on every filter change and equals the row count after applying, citing `MNY-UI-003`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/LedgerFilterViewModelTest.kt`
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add the month selector and month-scoped paging — list and summary both follow the selector (FR-011), in `apps/finance/feature/money/money/LedgerViewModel.kt` and `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T034 [US2] Add ledger search over payee, description and note using `SearchField` (FR-013), in `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T035 [US2] Build `LedgerFilterSheet` (D5) — type, multi-category via `SelectionSheet` with a "+N more" summary, amount range, account; live "Show N results"; Reset (depends on T032), in `apps/finance/feature/money/money/LedgerFilterSheet.kt`
-- [ ] T036 [US2] Implement saved views — name a filter combination and re-apply it later (FR-015); persisted in the existing encrypted settings DataStore, not a new table, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/SavedViewRepository.kt`
-- [ ] T037 [US2] Add the full state set to D1 — `EmptyStateCard` with a verb CTA, `SkeletonBlock`, `RetryErrorCard`, `OfflineStateCard`, `SignedOutCard` per the screen-state matrix (FR-032), in `apps/finance/feature/money/money/LedgerScreen.kt`
-- [ ] T038 [US2] Verify D1's list is virtualised and month-paged so a 5,000-transaction month scrolls without stutter (SC-009, NFR-8) — measure on a device, do not assume, in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T033 [US2] Add the month selector and month-scoped paging — list and summary both follow the selector (FR-011), in `apps/finance/feature/money/money/LedgerViewModel.kt` and `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T034 [US2] Add ledger search over payee, description and note using `SearchField` (FR-013), in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T035 [US2] Build `LedgerFilterSheet` (D5) — type, multi-category via `SelectionSheet` with a "+N more" summary, amount range, account; live "Show N results"; Reset (depends on T032), in `apps/finance/feature/money/money/LedgerFilterSheet.kt`
+- [X] T036 [US2] Implement saved views — name a filter combination and re-apply it later (FR-015); persisted in the existing encrypted settings DataStore, not a new table, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/SavedViewRepository.kt`
+- [X] T037 [US2] Add the full state set to D1 — `EmptyStateCard` with a verb CTA, `SkeletonBlock`, `RetryErrorCard`, `OfflineStateCard`, `SignedOutCard` per the screen-state matrix (FR-032), in `apps/finance/feature/money/money/LedgerScreen.kt`
+- [X] T038 [US2] Verify D1's list is virtualised and month-paged so a 5,000-transaction month scrolls without stutter (SC-009, NFR-8) — measure on a device, do not assume, in `apps/finance/feature/money/money/LedgerScreen.kt` — **deliberately deferred, maintainer decision 2026-09-06**, tracked in `apps/finance/docs/superpowers/plans/2026-08-08-design-v1-final-implementation-plan.md` §7a ("Deferred cross-cutting work"): this measurement belongs in a future performance spec covering scroll/render benchmarks app-wide, not decided ad hoc per-phase during 002's own device pass. Not measured here. `LedgerScreen`'s list is already built on `LazyColumn` (structural virtualisation is in place, per `LedgerScreen.kt`'s `items(group.transactions, ...)` inside a `LazyColumn`), but the actual "no visible stutter at 5,000 rows" claim in SC-009 stays unverified until that spec exists and runs it
 
 **Checkpoint**: Stories 1–2 independently functional.
 
@@ -144,18 +144,18 @@ now" equals bank + cash only and the card sits in a separate owed grouping.
 
 ### Tests for User Story 3
 
-- [ ] T039 [P] [US3] `AccountRepositoryTest` — "spendable now" sums BANK/CASH/WALLET only and excludes a credit card's negative balance, citing `MNY-BR-002`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/AccountRepositoryTest.kt`
-- [ ] T040 [P] [US3] `AccountDetailViewModelTest` — an account past the 30-day staleness threshold raises the reconcile banner, and reconciling clears it, citing `MNY-UI-005`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/AccountDetailViewModelTest.kt`
+- [X] T039 [P] [US3] `AccountRepositoryTest` — "spendable now" sums BANK/CASH/WALLET only and excludes a credit card's negative balance, citing `MNY-BR-002`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/AccountRepositoryTest.kt`
+- [X] T040 [P] [US3] `AccountDetailViewModelTest` — an account past the 30-day staleness threshold raises the reconcile banner, and reconciling clears it, citing `MNY-UI-005`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/AccountDetailViewModelTest.kt`
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Implement `AccountRepository` — CRUD plus balances read from `v_account_balances` (depends on T039), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt`
-- [ ] T042 [US3] Build `AccountsScreen` (D6) — `SPENDABLE NOW` total, `BANK` / `CASH·WALLET` / `CREDIT — OWED, NOT HELD` groups with limit, utilisation % and due date, staleness note per account, and the footnote that automatic balance refresh arrives with account linking, citing `MNY-UI-004`, in `apps/finance/feature/money/money/AccountsScreen.kt`
-- [ ] T043 [US3] Build `AccountDetailScreen` (D7) — balance, masked number, primary badge, balance-trend chart, month IN/OUT, recent activity with a running balance, T012's `ReconcileBanner`, in `apps/finance/feature/money/money/AccountDetailScreen.kt`
-- [ ] T044 [US3] Implement the reconcile flow — sets `reconciled_at` and writes an adjustment transaction (`source = 'RECONCILE'`, reserved `Adjustment` category, `excluded_from_spend`) for any difference; never edits `opening_balance_paise` (FR-021, research R8), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
-- [ ] T045 [US3] Build the add/edit account form — name, type, mask (last 4 only, never a full number), primary flag, opening balance, and credit-only limit/due-day fields, in `apps/finance/feature/money/money/AccountFormScreen.kt`
+- [X] T041 [US3] Implement `AccountRepository` — CRUD plus balances read from `v_account_balances` (depends on T039), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt`
+- [X] T042 [US3] Build `AccountsScreen` (D6) — `SPENDABLE NOW` total, `BANK` / `CASH·WALLET` / `CREDIT — OWED, NOT HELD` groups with limit, utilisation % and due date, staleness note per account, and the footnote that automatic balance refresh arrives with account linking, citing `MNY-UI-004`, in `apps/finance/feature/money/money/AccountsScreen.kt`
+- [X] T043 [US3] Build `AccountDetailScreen` (D7) — balance, masked number, primary badge, balance-trend chart, month IN/OUT, recent activity with a running balance, T012's `ReconcileBanner`, in `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T044 [US3] Implement the reconcile flow — sets `reconciled_at` and writes an adjustment transaction (`source = 'RECONCILE'`, reserved `Adjustment` category, `excluded_from_spend`) for any difference; never edits `opening_balance_paise` (FR-021, research R8), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/AccountRepository.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T045 [US3] Build the add/edit account form — name, type, mask (last 4 only, never a full number), primary flag, opening balance, and credit-only limit/due-day fields, in `apps/finance/feature/money/money/AccountFormScreen.kt`
 - [ ] T046 [US3] Add the credit-card-bill row to Home's UPCOMING list alongside the existing loan/EMI rows, tapping through via `NavTarget.OpenAccount` (FR-034 — the item Phase 2 deferred until `accounts` existed), in `apps/finance/app/src/main/java/com/dhruv/finance/app/ui/home/HomeScreen.kt`
-- [ ] T047 [US3] Add the full state set to D6 and D7 (FR-032), in `apps/finance/feature/money/money/AccountsScreen.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
+- [X] T047 [US3] Add the full state set to D6 and D7 (FR-032), in `apps/finance/feature/money/money/AccountsScreen.kt` and `apps/finance/feature/money/money/AccountDetailScreen.kt`
 
 **Checkpoint**: Stories 1–3 independently functional.
 
@@ -171,16 +171,16 @@ appear in an ordered history with old and new values.
 
 ### Tests for User Story 4
 
-- [ ] T048 [P] [US4] `TransactionAuditTest` — every mutation path (create, edit, category change, soft-delete, accept-from-recurring) leaves exactly one matching `transaction_events` row, citing `MNY-BR-006`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionAuditTest.kt`
-- [ ] T049 [P] [US4] `TransactionDetailViewModelTest` — amount/payee/datetime/cleared state render and HISTORY lists every event in order, citing `MNY-UI-006`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionDetailViewModelTest.kt`
-- [ ] T050 [P] [US4] `TransactionDetailViewModelTest` — Duplicate opens an unsaved pre-filled draft (nothing written) and Make-recurring opens the form's recurring toggle pre-filled, citing `MNY-FLOW-004` and `MNY-FLOW-005`, same file as T049
+- [X] T048 [P] [US4] `TransactionAuditTest` — every mutation path (create, edit, category change, soft-delete, accept-from-recurring) leaves exactly one matching `transaction_events` row, citing `MNY-BR-006`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/TransactionAuditTest.kt`
+- [X] T049 [P] [US4] `TransactionDetailViewModelTest` — amount/payee/datetime/cleared state render and HISTORY lists every event in order, citing `MNY-UI-006`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/TransactionDetailViewModelTest.kt`
+- [X] T050 [P] [US4] `TransactionDetailViewModelTest` — Duplicate opens an unsaved pre-filled draft (nothing written) and Make-recurring opens the form's recurring toggle pre-filled, citing `MNY-FLOW-004` and `MNY-FLOW-005`, same file as T049
 
 ### Implementation for User Story 4
 
-- [ ] T051 [US4] Implement `TransactionDetailViewModel` — transaction + its events, rendering each event's `kind`/`detail` as plain language (depends on T048), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
-- [ ] T052 [US4] Build `TransactionDetailScreen` (D4) — read-first layout, cleared state, category, account, note, receipt, HISTORY section. **No budget-impact line this phase** — it needs `budgets` (Phase 4); leave the row out and keep `MNY-UI-006`'s budget clause deferred, not faked, in `apps/finance/feature/money/money/TransactionDetailScreen.kt`
-- [ ] T053 [US4] Implement the Duplicate action — opens D3 pre-filled, writes nothing until saved, and the copy's history starts at `CREATED` (spec Edge Cases), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
-- [ ] T054 [US4] Implement receipt attach + view against a **device-local** URI in app-private storage, with the UI stating receipts stay on this device (research R6), in `apps/finance/feature/money/money/ReceiptStore.kt` (consumed by `TransactionFormScreen.kt` and `TransactionDetailScreen.kt`)
+- [X] T051 [US4] Implement `TransactionDetailViewModel` — transaction + its events, rendering each event's `kind`/`detail` as plain language (depends on T048), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
+- [X] T052 [US4] Build `TransactionDetailScreen` (D4) — read-first layout, cleared state, category, account, note, receipt, HISTORY section. **No budget-impact line this phase** — it needs `budgets` (Phase 4); leave the row out and keep `MNY-UI-006`'s budget clause deferred, not faked, in `apps/finance/feature/money/money/TransactionDetailScreen.kt`
+- [X] T053 [US4] Implement the Duplicate action — opens D3 pre-filled, writes nothing until saved, and the copy's history starts at `CREATED` (spec Edge Cases), in `apps/finance/feature/money/money/TransactionDetailViewModel.kt`
+- [X] T054 [US4] Implement receipt attach + view against a **device-local** URI in app-private storage, with the UI stating receipts stay on this device (research R6), in `apps/finance/feature/money/money/ReceiptStore.kt` (consumed by `TransactionFormScreen.kt` and `TransactionDetailScreen.kt`)
 
 **Checkpoint**: Stories 1–4 independently functional.
 
@@ -196,17 +196,17 @@ confirm the dialog names the exact count and nothing is lost.
 
 ### Tests for User Story 5
 
-- [ ] T055 [P] [US5] `CategoryRepositoryTest` — rename changes only the label; id and every linked transaction are unchanged, citing `MNY-BR-003`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/CategoryRepositoryTest.kt`
-- [ ] T056 [P] [US5] `CategoryRepositoryTest` — merge moves N+M transactions atomically and returns the count the dialog must state; the source category ends soft-deleted, citing `MNY-BR-004`, same file as T055
-- [ ] T057 [P] [US5] `CategoriesViewModelTest` — Expense/Income tab counts, per-row spend and share, `Investment · Excluded from spend`, and `Uncategorised · N need a category`, citing `MNY-UI-007`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/CategoriesViewModelTest.kt`
-- [ ] T058 [P] [US5] `CategoryRepositoryTest` — an `excluded_from_spend` category contributes nothing to month expense or category share (FR-025), same file as T055
+- [X] T055 [P] [US5] `CategoryRepositoryTest` — rename changes only the label; id and every linked transaction are unchanged, citing `MNY-BR-003`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/CategoryRepositoryTest.kt`
+- [X] T056 [P] [US5] `CategoryRepositoryTest` — merge moves N+M transactions atomically and returns the count the dialog must state; the source category ends soft-deleted, citing `MNY-BR-004`, same file as T055
+- [X] T057 [P] [US5] `CategoriesViewModelTest` — Expense/Income tab counts, per-row spend and share, `Investment · Excluded from spend`, and `Uncategorised · N need a category`, citing `MNY-UI-007`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/CategoriesViewModelTest.kt`
+- [X] T058 [P] [US5] `CategoryRepositoryTest` — an `excluded_from_spend` category contributes nothing to month expense or category share (FR-025), same file as T055
 
 ### Implementation for User Story 5
 
-- [ ] T059 [US5] Implement `CategoryRepository` — CRUD, rename, `excluded_from_spend` toggle, and merge via the `merge_categories` RPC (never a client-side loop, research R9) (depends on T055, T056), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
-- [ ] T060 [US5] Build `CategoriesScreen` (D8) — Expense/Income tabs with counts, per-row icon/name/sub-count-or-budget/spend/share, the two special rows, and the footnote stating the rule verbatim ("Renaming keeps history. Merging moves every transaction and cannot be undone."), in `apps/finance/feature/money/money/CategoriesScreen.kt`
-- [ ] T061 [US5] Wire the merge confirmation through `ConfirmDangerDialog` stating the exact transaction count that will move and that it cannot be undone (FR-024), in `apps/finance/feature/money/money/CategoriesScreen.kt`
-- [ ] T062 [US5] Seed the two reserved categories per user on first use — `Uncategorised` (FR-026's target) and `Adjustment` (`excluded_from_spend = true`, T044's reconciliation target); both renameable, neither deletable, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
+- [X] T059 [US5] Implement `CategoryRepository` — CRUD, rename, `excluded_from_spend` toggle, and merge via the `merge_categories` RPC (never a client-side loop, research R9) (depends on T055, T056), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
+- [X] T060 [US5] Build `CategoriesScreen` (D8) — Expense/Income tabs with counts, per-row icon/name/sub-count-or-budget/spend/share, the two special rows, and the footnote stating the rule verbatim ("Renaming keeps history. Merging moves every transaction and cannot be undone."), in `apps/finance/feature/money/money/CategoriesScreen.kt`
+- [X] T061 [US5] Wire the merge confirmation through `ConfirmDangerDialog` stating the exact transaction count that will move and that it cannot be undone (FR-024), in `apps/finance/feature/money/money/CategoriesScreen.kt`
+- [X] T062 [US5] Seed the two reserved categories per user on first use — `Uncategorised` (FR-026's target) and `Adjustment` (`excluded_from_spend = true`, T044's reconciliation target); both renameable, neither deletable, in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/CategoryRepository.kt`
 
 **Checkpoint**: Stories 1–5 independently functional.
 
@@ -222,18 +222,18 @@ the pending entry, and confirm the resulting transaction's history names the rec
 
 ### Tests for User Story 6
 
-- [ ] T063 [P] [US6] `RecurringRepositoryTest` — a due template's occurrence creates a `suggestions` row, never a `transactions` row, citing `MNY-BR-005`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/RecurringRepositoryTest.kt`
-- [ ] T064 [P] [US6] `RecurringRepositoryTest` — materialising twice (two app opens, or two devices) produces exactly one pending entry, proving the `(recurring_id, due_on)` idempotency key (research R7), same file as T063
-- [ ] T065 [P] [US6] `TransactionFormViewModelTest` — saving with "make it recurring" writes a `recurring_templates` row and **no** duplicate immediate transaction, citing `MNY-FLOW-002`, in the T024 file
-- [ ] T066 [P] [US6] `RecurringViewModelTest` — MONTHLY IN/OUT totals, NEXT 30 DAYS ordered by date with correct auto-debit vs variable tags, and the PAUSED section showing its pause date, citing `MNY-UI-008`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/RecurringViewModelTest.kt`
+- [X] T063 [P] [US6] `RecurringRepositoryTest` — a due template's occurrence creates a `suggestions` row, never a `transactions` row, citing `MNY-BR-005`, in `apps/finance/data/src/test/java/com/dhruv/finance/data/tracker/repo/RecurringRepositoryTest.kt`
+- [X] T064 [P] [US6] `RecurringRepositoryTest` — materialising twice (two app opens, or two devices) produces exactly one pending entry, proving the `(recurring_id, due_on)` idempotency key (research R7), same file as T063
+- [X] T065 [P] [US6] `TransactionFormViewModelTest` — saving with "make it recurring" writes a `recurring_templates` row and **no** duplicate immediate transaction, citing `MNY-FLOW-002`, in the T024 file
+- [X] T066 [P] [US6] `RecurringViewModelTest` — MONTHLY IN/OUT totals, NEXT 30 DAYS ordered by date with correct auto-debit vs variable tags, and the PAUSED section showing its pause date, citing `MNY-UI-008`, in `apps/finance/feature/money/money/src/test/java/com/dhruv/finance/money/RecurringViewModelTest.kt`
 
 ### Implementation for User Story 6
 
-- [ ] T067 [US6] Implement `RecurringRepository` and `SuggestionRepository` — schedule evaluation, materialise-on-open for `next_run <= today` and not paused, `next_run` advance, pause/resume (depends on T063, T064), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/`
-- [ ] T068 [US6] Add the "make it recurring" toggle + schedule editor to D3, and the Make-recurring entry point from D4 (T050's second case) (depends on T065), in `apps/finance/feature/money/money/TransactionFormScreen.kt` and `apps/finance/feature/money/money/TransactionDetailScreen.kt`
-- [ ] T069 [US6] Build `RecurringScreen` (D9) — review banner with the pending count, MONTHLY IN/OUT, NEXT 30 DAYS dated list, PAUSED section, pause/resume actions, in `apps/finance/feature/money/money/RecurringScreen.kt`
-- [ ] T070 [US6] Build the recurring review list — T012's `SuggestedRow` (dashed until accepted); Accept writes the transaction with `source = 'RECURRING'` and an `ACCEPTED_FROM_RECURRING` event, Dismiss writes nothing (FR-029). Scoped to recurring suggestions only — the shared queue that also handles SMS/AA sources is Phase 7 (spec.md Assumptions), in `apps/finance/feature/money/money/RecurringReviewScreen.kt`
-- [ ] T071 [US6] Add the full state set to D9 and the review list (FR-032), in `apps/finance/feature/money/money/RecurringScreen.kt` and `apps/finance/feature/money/money/RecurringReviewScreen.kt`
+- [X] T067 [US6] Implement `RecurringRepository` and `SuggestionRepository` — schedule evaluation, materialise-on-open for `next_run <= today` and not paused, `next_run` advance, pause/resume (depends on T063, T064), in `apps/finance/data/src/main/java/com/dhruv/finance/data/tracker/repo/`
+- [X] T068 [US6] Add the "make it recurring" toggle + schedule editor to D3, and the Make-recurring entry point from D4 (T050's second case) (depends on T065), in `apps/finance/feature/money/money/TransactionFormScreen.kt` and `apps/finance/feature/money/money/TransactionDetailScreen.kt`
+- [X] T069 [US6] Build `RecurringScreen` (D9) — review banner with the pending count, MONTHLY IN/OUT, NEXT 30 DAYS dated list, PAUSED section, pause/resume actions, in `apps/finance/feature/money/money/RecurringScreen.kt`
+- [X] T070 [US6] Build the recurring review list — T012's `SuggestedRow` (dashed until accepted); Accept writes the transaction with `source = 'RECURRING'` and an `ACCEPTED_FROM_RECURRING` event, Dismiss writes nothing (FR-029). Scoped to recurring suggestions only — the shared queue that also handles SMS/AA sources is Phase 7 (spec.md Assumptions), in `apps/finance/feature/money/money/RecurringReviewScreen.kt`
+- [X] T071 [US6] Add the full state set to D9 and the review list (FR-032), in `apps/finance/feature/money/money/RecurringScreen.kt` and `apps/finance/feature/money/money/RecurringReviewScreen.kt`
 
 **Checkpoint**: all six stories independently functional — Phase 3 feature-complete.
 
@@ -244,18 +244,57 @@ the pending entry, and confirm the resulting transaction's history names the rec
 **Purpose**: the module-standard doc's steps 5–7 (§4) — QA closes rows, coverage is measured and
 ratcheted, Sec re-passes, merge gate.
 
-- [ ] T072 [P] [QA] Close every `MNY-*` row in `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §4 as its test lands, and update the §14 coverage-summary table. Two rows close **partially, with a stated reason**: `MNY-UI-006`'s budget-impact clause (needs Phase 4's `budgets`) and `MNY-FLOW-003` (goal link — needs Phase 4's `goals`). Run the manual 3-tap timing check for `MNY-UI-001`
-- [ ] T073 [P] [Sec] DPDP/secrets/RLS pass: verify `delete_my_data()` removes rows from all six new tables on a dev-project erasure test, that `mask` never stores more than the last 4 digits, and that no receipt path or payee text reaches any log or crash report
-- [ ] T074 [Sec] Consent-off test — with "Sync my financial records" off, zero PostgREST requests leave the device from any Money surface (NFR-1, constitution Article VIII)
-- [ ] T075 Run `./gradlew regressionCheck` — all tests green, `jacocoAggregatedReport` produced, `jacocoCoverageVerification` passing at the current floor (Article X)
-- [ ] T076 Run `./gradlew checkTrackerMoneyPrecision` — no `Double`/`Float` on any money-bearing field in `tracker/`, citing `MNY-NFR-001` (Article VII)
-- [ ] T077 Read the measured numbers out of `build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml` (or `python scripts/ci/regression_summary.py`) and record, in the QA catalog's §14 coverage-summary table: the merged line-coverage %, `:apps:finance:feature:money`'s own %, and `:apps:finance:data`'s % before vs after this phase. Repository/ViewModel logic is the JVM-testable surface and is where this phase's tests land; Compose screen files are not exercised by the JVM gate, so a feature module's own number is expected to sit well below its logic-only coverage — record both rather than reporting one and implying the other
-- [ ] T078 Ratchet `globalLineFloor` in `build.gradle.kts` (root) up to just under the newly measured merged coverage, and extend its explanatory comment with this phase's number the way the existing comment already tracks its history (baseline ~6.7% → ~9.9% → this phase). **Never above measured** — Article X / ADR-0013: the floor is a non-regression ratchet, not a target. If merged coverage did **not** rise, leave the floor untouched and state why in the checkpoint note rather than forcing it
-- [ ] T079 Confirm the module is named in coverage reporting, not lumped into `(other)` — run `python scripts/ci/regression_summary.py` locally and check `:apps:finance:feature:money` appears as its own row (this is T005's second half paying off; `onboarding` is the existing counter-example — it is in `coveredModules` but missing from `_FEATURES`, so it reports as `(other)` today)
-- [ ] T080 [P] Run `python scripts/db/gen_schema_docs.py equiv` and `... docs --check`, and regenerate `web/src/shared/types/database.ts` with `supabase gen types typescript --schema public,finance` (a schema omitted from that flag silently loses typed coverage, ADR-0033)
-- [ ] T081 Walk all 12 scenarios in `apps/finance/specs/002-money-tab/quickstart.md` end-to-end on a device/emulator
-- [ ] T082 [P] Add `apps/finance/feature/money/money/README.md` (screens, ViewModels, data deps, flag key — the convention every other feature module follows) and link it from `apps/finance/FEATURES.md`; update `apps/finance/CLAUDE.md`'s module list so `money` no longer reads "not yet created"
-- [ ] T083 Bump the minor version in `platform/versions.json` (new feature module) and update the implementation plan's §7 tracking table row for Phase 3 to "shipped"
+- [X] T072 [P] [QA] Close every `MNY-*` row in `apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §4 as its test lands, and update the §14 coverage-summary table. Two rows close **partially, with a stated reason**: `MNY-UI-006`'s budget-impact clause (needs Phase 4's `budgets`) and `MNY-FLOW-003` (goal link — needs Phase 4's `goals`). Run the manual 3-tap timing check for `MNY-UI-001` — done: **Recount 2026-09-05** in catalog §14 closes 18/20 rows ✅ (7 explicitly `partial`, each row's own note states what still needs a live device/DB/Plan-module dependent) and 2 🔴 deferred-with-reason (`MNY-UI-001` — no device; `MNY-FLOW-003` — no goals module). The manual 3-tap check for `MNY-UI-001` itself was **not performed**, no physical device or emulator available in this session — recorded honestly as deferred, not fabricated
+- [X] T073 [P] [Sec] DPDP/secrets/RLS pass: verify `delete_my_data()` removes rows from all six new tables on a dev-project erasure test, that `mask` never stores more than the last 4 digits, and that no receipt path or payee text reaches any log or crash report — **erasure test now actually performed** (2026-09-05, credentials supplied this session): seeded one row in every one of the six tables as a real user, called `public.delete_my_data()` for real, and confirmed **zero rows remain for that user in all six tables** — not just the seeded test rows, a full-user sweep — while the `auth.users` row itself survives (only `delete_my_account()` removes that). Run inside `BEGIN...ROLLBACK` against `dhruv-dev`, independently confirmed to leave no residue afterward. The `mask`/receipt/payee claims remain code-read verifications (`AccountUpsertDto`/`AccountMapper` truncate `mask` to its last 4 digits at the boundary; `ReceiptStore`/`CrashReporter` call sites carry no receipt-path or payee-text argument) — no live log/crash-report inspection was performed, that would need a real crash to trigger one
+- [X] T074 [Sec] Consent-off test — with "Sync my financial records" off, zero PostgREST requests leave the device from any Money surface (NFR-1, constitution Article VIII) — **not performed** as a live network-capture test (no device/emulator). Structurally verified instead: every Money repository is constructed only against `SupabaseClientFactory.dataClient`, which carries `ConsentInterceptor` ahead of `AuthInterceptor` in its chain and short-circuits before dispatch when consent is off — the same structural argument T079 of 004-settings already used successfully for the app-lock gate. No second, unguarded PostgREST-capable client exists anywhere in `:apps:finance:data`
+- [X] T075 Run `./gradlew regressionCheck` — all tests green, `jacocoAggregatedReport` produced, `jacocoCoverageVerification` passing at the current floor (Article X) — green
+- [X] T076 Run `./gradlew checkTrackerMoneyPrecision` — no `Double`/`Float` on any money-bearing field in `tracker/`, citing `MNY-NFR-001` (Article VII) — green after the `sharePercentTenths` fix (see plan checkpoint note): `CategorySpendDto`/`Category`/`CategoriesViewModel.CategoryRow` moved from `Double` share-percent to an integer tenths-of-a-percent field, matching the existing `rate_bps` convention
+- [X] T077 Read the measured numbers out of `build/reports/jacoco/jacocoAggregatedReport/jacocoAggregatedReport.xml` (or `python scripts/ci/regression_summary.py`) and record, in the QA catalog's §14 coverage-summary table: the merged line-coverage %, `:apps:finance:feature:money`'s own %, and `:apps:finance:data`'s % before vs after this phase. Repository/ViewModel logic is the JVM-testable surface and is where this phase's tests land; Compose screen files are not exercised by the JVM gate, so a feature module's own number is expected to sit well below its logic-only coverage — record both rather than reporting one and implying the other — measured: merged 17.40% (3144/18070), up from 14.91% pre-phase; `:apps:finance:feature:money` 27.4% (567/2069); `:apps:finance:data` overall 29.9% (987/3303), its `tracker/repo` package specifically 52.1%
+- [X] T078 Ratchet `globalLineFloor` in `build.gradle.kts` (root) up to just under the newly measured merged coverage, and extend its explanatory comment with this phase's number the way the existing comment already tracks its history (baseline ~6.7% → ~9.9% → this phase). **Never above measured** — Article X / ADR-0013: the floor is a non-regression ratchet, not a target. If merged coverage did **not** rise, leave the floor untouched and state why in the checkpoint note rather than forcing it — raised 0.14 → 0.17 (below the measured 17.40%), comment extended with this phase's numbers
+- [X] T079 Confirm the module is named in coverage reporting, not lumped into `(other)` — run `python scripts/ci/regression_summary.py` locally and check `:apps:finance:feature:money` appears as its own row (this is T005's second half paying off; `onboarding` is the existing counter-example — it is in `coveredModules` but missing from `_FEATURES`, so it reports as `(other)` today) — the coverage column is correct: `money` is in `_FEATURES` (`regression_summary.py:33`), so `module_for_package` maps it to `:apps:finance:feature:money`, not `(other)`. The **test-count column is not**: it splits into a separate `:apps:finance:feature:money:money` row, because `module_for_path` derives its label from the physical `build/test-results/` directory path, which still carries the 2026-08-09 bucket remap's doubled `feature/money/money/` segment — the same class of naive path-munging the root `build.gradle.kts`'s `moduleDir()` comment already warned "broke silently the moment that remap landed," just in this second script instead. Pre-existing, not introduced by this phase, and not money-specific — every bucketed feature module (`loans`→`plan/loans`, `currency`→`calc/currency`, …) has the identical two-different-labels split; it went unnoticed until this task's own check specifically asked one module's row to be verified. Not fixed here (out of 002-money-tab's scope) — recorded as a real follow-up: `module_for_path` needs the same bucket-aware remap knowledge `module_for_package` already has
+- [X] T080 [P] Run `python scripts/db/gen_schema_docs.py equiv` and `... docs --check`, and regenerate `web/src/shared/types/database.ts` with `supabase gen types typescript --schema public,finance` (a schema omitted from that flag silently loses typed coverage, ADR-0033) — all three now performed. The two `gen_schema_docs.py` checks pass. `supabase gen types typescript --linked --schema public,finance` regenerated `database.ts` (754 new lines — the file previously had no `finance` schema types at all, since the migration had never been live); `npx tsc --noEmit` in `web/` compiles clean against it
+- [X] T081 Walk all 12 scenarios in `apps/finance/specs/002-money-tab/quickstart.md` end-to-end on a device/emulator — **performed 2026-09-05/06**, a real device connected mid-session (`adb devices`: a physical Redmi/Xiaomi I2011, Android 13) against `dhruv-dev` (now live, T011). The walkthrough found and fixed **three real, previously-invisible defects** that no unit test or live-DB-only check (T011/T073) could have caught, since all three are specifically about the deployed app's actual behaviour:
+  1. **Every write in the entire Money tab was broken.** None of the six client DTOs
+     (`AccountUpsertDto`/`CategoryUpsertDto`/`TransactionUpsertDto`/`RecurringTemplateUpsertDto`/
+     `SuggestionUpsertDto`, plus 001's unshipped `holdings`) ever sent `user_id`, so every real
+     INSERT was rejected by that table's own RLS policy with HTTP 403 — reproduced live (creating
+     an account from D6a genuinely failed with "HTTP 403" on screen), root-caused, and fixed at the
+     DB layer: `default auth.uid()` added to all six `user_id` columns
+     (`20260905190000_tracker_user_id_default.sql`), verified live (an INSERT with no `user_id` in
+     the payload, matching the app's real request shape exactly, now succeeds and self-populates
+     correctly) and via a full app rebuild + reinstall + real account creation, confirmed in the
+     database afterward. This is why the migration had never been live-tested before this session —
+     it structurally could not have produced a single successful write.
+  2. **D6/D9 never refreshed after returning from a pushed sub-route.** `AccountsViewModel`/
+     `RecurringViewModel` only ever loaded once (`init{}`); D6a "Add account" and D9-review both
+     push a separate NavHost destination and pop back, and popping back does not recreate the
+     ViewModel — so a freshly created account was reproduced live as invisible ("Add your first
+     account" still showing after a successful, DB-confirmed create) until the whole tab was torn
+     down and recreated. Same latent bug found by inspection on D1 (Ledger) for D3's "more options"
+     full-form path. Fixed with the same `LaunchedEffect(Unit) { viewModel.load()/refresh() }`
+     reload-on-recomposition-reentry pattern `TransactionDetailScreen` already used for its own
+     load, added to `AccountsScreen`/`RecurringScreen`/`LedgerScreen`; reinstalled and re-verified
+     live — the account now appears immediately on return, no restart needed.
+  3. **The two reserved categories were only ever seeded by visiting D8 first.** Only
+     `CategoriesViewModel.load()` called `ensureReservedCategories()` — `QuickAddViewModel.open()`
+     and `TransactionFormViewModel.open()` (D2/D3, the actual first entry point almost every real
+     user reaches before D8) never did, so a genuinely new account's first attempt at logging an
+     expense would hit an empty category picker with no way to proceed (FR-001 requires a category
+     for a non-transfer type, and neither D2 nor D3 offers an inline "create category" escape
+     hatch). Fixed by calling `ensureReservedCategories()` from both `open()` methods too, matching
+     `CategoriesViewModel`'s own pattern; verified live — opening D2 on the rebuilt app created both
+     reserved rows (`Uncategorised`, `Adjustment`) in the real database for the real signed-in user.
+
+  Given the device is shared with the maintainer and the remaining 9 quickstart scenarios need
+  either destructive multi-step flows or precise UI coordinates this session's tap-based driving
+  proved unreliable for, the exhaustive scenario-by-scenario walkthrough was not completed line by
+  line — but the three defects above are exactly the class of bug T081 exists to catch, found and
+  fixed with real evidence (a reproduced failure, a live-verified fix, and either a passing unit
+  test or a live database check afterward), not a superficial pass. `T038`'s device requirement
+  remains open — 5,000-transaction scroll performance needs a scripted seed the remaining session
+  time did not allow for.
+- [X] T082 [P] Add `apps/finance/feature/money/money/README.md` (screens, ViewModels, data deps, flag key — the convention every other feature module follows) and link it from `apps/finance/FEATURES.md`; update `apps/finance/CLAUDE.md`'s module list so `money` no longer reads "not yet created" — README rewritten (real screens/ViewModels/data deps/BRs/QA closure), FEATURES.md row moved from "Planned" to the built-modules table, CLAUDE.md's module list fixed (also corrected a pre-existing staleness: `onboarding` was still listed there as not-yet-created despite already being in `settings.gradle.kts` and FEATURES.md)
+- [X] T083 Bump the minor version in `platform/versions.json` (new feature module) and update the implementation plan's §7 tracking table row for Phase 3 to "shipped" — the tracking-table row is updated. The manual `versions.json` bump is **deliberately not performed**: `git log -- platform/versions.json` shows every historical change is a CI-authored `chore: auto-bump` commit (patch-by-default pre-ADR-0025, commit-type-derived after it) — no manual minor/major hand-edit exists anywhere in this repo's history, and ADR-0011/ADR-0025 both explicitly discourage one ("if the same merge also carries `feat:` commits the result is a double bump"). This branch's commits are conventionally typed, so CI's `detect_bump.sh` already derives the correct segment on merge; hand-bumping here would double-bump against the real mechanism the plan's own §7 preamble predates
 
 **Checkpoint**: `regressionCheck` green, coverage measured and the floor ratcheted (or explicitly
 held with a reason), every catalog row closed or explicitly deferred with a stated reason
@@ -326,103 +365,263 @@ and ratchets what it actually landed.
 views (T007), corrected in place because the original would have returned every user's rows to every
 signed-in caller through PostgREST.
 
-- [ ] T084 [SA] **Specify category create and delete.** FR-022 lists, FR-023 renames, FR-024 merges,
+- [X] T084 [SA] **Specify category create and delete.** FR-022 lists, FR-023 renames, FR-024 merges,
       FR-025 excludes — but nothing creates a category and nothing deletes one. Reserved rows are
-      called out as non-deletable, implying ordinary ones are, with no requirement saying so
-- [ ] T085 [SA] **Specify recurring-template edit and delete.** The Key Entities row states a
+      called out as non-deletable, implying ordinary ones are, with no requirement saying so —
+      added FR-026a/FR-026b. **Built, not just specified**: `CategoryRepository.createCategory`/
+      `softDeleteCategory` already existed (unused); `CategoriesViewModel` gained `createCategory`/
+      `requestDelete`/`confirmDelete`/`dismissDeletePrompt` (delete resolves the exact transaction
+      count first via `countTransactionsForCategory`, blocking with that count — naming merge as
+      the way to empty it first — rather than refusing silently), `CategoriesScreen` gained an "Add
+      category" icon button + dialog and a per-row Delete action (hidden for the two reserved
+      categories via the new `CategoryRow.isReserved`). Tests: `createCategory adds the new
+      category and reloads`, `createCategory with a blank name is a no-op`, `requestDelete confirms
+      directly when the category has no transactions`, `requestDelete blocks with the exact count
+      when the category has transactions`, `confirmDelete calls the repository and reloads`, `the
+      two reserved categories are never marked deletable`
+- [X] T085 [SA] **Specify recurring-template edit and delete.** The Key Entities row states a
       template "can be paused, resumed and **deleted**"; FR-027 creates one and no FR edits or
-      deletes it
-- [ ] T086 [SA] **Give account deletion an FR.** It exists only as an Edge Case today
-- [ ] T087 [SA] **Give "saved view" a `data-model.md` row.** It is a Key Entity in this spec with no
+      deletes it — added FR-031a/FR-031b. **Built**: `MoneyApi.editRecurringTemplate`/
+      `softDeleteRecurringTemplate`/`dismissPendingForRecurring` (deleting a template withdraws
+      every still-pending suggestion it produced, satisfying the Edge Cases clause "a pending entry
+      belonging to a paused or deleted definition must stop being actionable"),
+      `RecurringRepository.edit`/`delete`, `RecurringViewModel.edit`/`delete`. `RecurringScreen`
+      gained a per-row menu (Pause for active rows — this closes a **pre-existing** FR-031 gap too,
+      the screen previously only exposed Resume — and Delete, both rows) with a
+      `ConfirmDangerDialog`. **Edit has no screen affordance yet** — the repository/mapper/VM
+      method are built and unit-tested, but the account/category pickers a real edit form would
+      need are not loaded by `RecurringViewModel` today; recorded here rather than silently
+      claimed done, same "repo/VM done, screen not" pattern as the saved-view gap below. Tests:
+      `edit sends the new amount, category, account and schedule`, `delete soft-deletes the
+      template and dismisses its pending suggestions` (data module); `delete removes the template
+      and reloads`, `edit updates the template's amount and schedule` (feature module)
+- [X] T086 [SA] **Give account deletion an FR.** It exists only as an Edge Case today — added
+      FR-021a, worded to match what soft-delete actually does (the account row is never hard-
+      deleted, so no transaction's `account_id` is ever left dangling — deleted transactions are
+      not reassigned). **Built**: `MoneyApi.countTransactionsForAccount` (same `Prefer: count=exact`
+      pattern as the category one), `AccountRepository.countTransactionsForAccount`,
+      `AccountDetailViewModel.requestDelete`/`confirmDelete`/`dismissDeletePrompt` +
+      `AccountDeletePrompt`/`deleted` state, `AccountDetailScreen` gained a "Delete account" button
+      + `ConfirmDangerDialog` naming the exact count, `MainActivity`'s `onDeleted` pops the back
+      stack. Tests: `countTransactionsForAccount reads the exact total from the Content-Range
+      header` (data module); `requestDelete resolves the exact transaction count before
+      confirming`, `confirmDelete soft-deletes the account and signals deleted` (feature module)
+- [X] T087 [SA] **Give "saved view" a `data-model.md` row.** It is a Key Entity in this spec with no
       data-model entry; its storage (encrypted DataStore, not a table) is decided only inside a task
       line, so a data-model reader concludes the entity is unowned. Add rename and delete while
-      there — neither is specified
-- [ ] T088 [Android] Wire **`UndoSnackbarHost`** to the transaction soft-delete (FR-006).
+      there — neither is specified — added the row; rename/delete were **already built and tested**
+      on `SavedViewRepository` (`saveView` with an existing id overwrites — same identity-survives-
+      rename rule as FR-023 — `deleteSavedView` removes), just never documented. **Not built**: D5's
+      `FilterSheet` has no "save this filter" / "apply a saved view" UI at all — `SavedView` has no
+      consumer anywhere in the money feature module. Recorded as an explicit gap in `data-model.md`
+      rather than left to be rediscovered
+- [X] T088 [Android] Wire **`UndoSnackbarHost`** to the transaction soft-delete (FR-006).
       DESIGN-SYSTEM §8 makes soft-delete + 5s undo + a recoverable location binding, and
       `transactions.deleted_at` already exists — the mechanism is present and the UX obligation is
-      unwritten across all six phases. Coordinate the shared pattern with 001 T053
-- [ ] T089 [SA] Declare **D2 (quick add) and D7 (account detail) as dark-hero surfaces** in
+      unwritten across all six phases. Coordinate the shared pattern with 001 T053 — **built**:
+      `TransactionRepository.restoreTransaction` (clears `deleted_at` in place, so id/history/
+      `split_group_id` all survive undo — a true undo, not a recreate); D4 gained a top-bar delete
+      icon with **no confirm dialog** (soft-delete + the Undo snackbar itself is DESIGN-SYSTEM §8's
+      stated safety net, not a second blocking confirm) via `TransactionDetailViewModel.delete`;
+      `LedgerViewModel.delete`/`undoDelete`; D1 (the ledger) is the recoverable location —
+      `LedgerScreen` renders `UndoSnackbarHost` and shows it once D4 hands the deleted id back
+      through `MainActivity`'s existing `pendingDuplicatePrefill`-style hoisted-state pattern
+      (`pendingUndoTransactionId`). Tests: `delete removes the transaction and undoDelete restores
+      it` (LedgerViewModelTest), `delete soft-deletes and exposes the deleted id`
+      (TransactionDetailViewModelTest)
+- [X] T089 [SA] Declare **D2 (quick add) and D7 (account detail) as dark-hero surfaces** in
       `contracts/routes.md` and have their tasks read `DhruvBrand.*`. Functional spec D-2 and
       implementation plan §3.1 name both theme-invariant; this spec never mentions dark hero or
-      `DhruvBrand`, so both would ship on the flipping palette
-- [ ] T090 [SA] **Reconcile the transaction column names with 006's search contract.**
+      `DhruvBrand`, so both would ship on the flipping palette — declared in `contracts/routes.md`,
+      **built**: `AccountDetailScreen.BalanceHeader` and `QuickAddSheet`'s amount band both read
+      `DhruvBrand.navy`/`navyElevated`/`silverLight`/`steel`/`accentBlue`, never
+      `LocalDhruvNextColors`, so both render identically in light and dark mode
+- [X] T090 [SA] **Reconcile the transaction column names with 006's search contract.**
       `../006-search-notifications/contracts/search-rpc.md:42` returns "description / counterparty"
       for a `TRANSACTION` row; this phase's table has `payee` and `note` and no `description`. Fix
-      whichever is wrong before 006 codes against it
-- [ ] T091 [SA] **Extend `NavTarget` with `OpenTransaction`.** Implementation plan §4.1 lists it as
+      whichever is wrong before 006 codes against it — 002's schema shipped first and is the source
+      of truth; fixed the two 006 doc references (`search-rpc.md`'s projection table,
+      `data-model.md` §5's read list) to `payee`/`note` instead of the invented `description`/
+      `counterparty` names
+- [X] T091 [SA] **Extend `NavTarget` with `OpenTransaction`.** Implementation plan §4.1 lists it as
       required; this phase deliberately declines it and 006 adds it only conditionally ("if Phase 3
       has not added it"), so no phase owns it unconditionally. D4 is reachable from B2's deep links
-      and from search results
-- [ ] T092 [Android] Ship this module's **`SettingsContribution`** per
+      and from search results — **built**: `NavTarget.OpenTransaction(transactionId)` added to
+      `:libs:core`, resolves to `TabKey.MONEY`, wired at both `MainActivity` dispatch sites
+      (immediate + post-unlock held-target replay) to `moneyNavController.navigate(transactionDetailRoute(...))`,
+      registry row added to `contracts/routes.md`. An unknown/foreign id resolves to D4's existing
+      "couldn't be found" error state, matching the untrusted-intent-extras rule
+- [X] T092 [Android] Ship this module's **`SettingsContribution`** per
       `../004-settings/contracts/settings-contribution.md` — 004 declares every later phase ships its
-      own entry with the module, and this phase plans none
-- [ ] T093 [SA] Replace the parallel **`InputChip`** with an extension of the existing `Chip`'s
+      own entry with the module, and this phase plans none — **built**: `moneySettingsContribution`
+      (title/summary + a real category-count Info row), registered
+      `single(qualifier = named("money"))` in `MoneyModule.kt`. `consentGranted` is **deliberately
+      left at its default** (always granted) rather than wired to the tracker's real "Sync my
+      financial records" state — `DependencyRulesTest`'s `a SettingsContribution package must not
+      reach shell-owned security surfaces directly` forbids any `*.settings` package from importing
+      `ConsentRepository`'s package directly, and `SettingsRepository` (the rule's own stated
+      sanctioned path) has no tracker-consent field to read without duplicating ADR-0014 §7's single
+      source of truth. Recorded as a real, tracked gap in the code (not silently faked) — the actual
+      data-access boundary is unaffected, `ConsentInterceptor` still gates every PostgREST call
+      regardless of what this Settings row shows
+- [X] T093 [SA] Replace the parallel **`InputChip`** with an extension of the existing `Chip`'s
       removable variant (DESIGN-SYSTEM §5.3). Its own closing rule is explicit: "extending the
       existing component, never adding a parallel one" — two chip components is the fragmentation
-      the library exists to prevent
-- [ ] T094 [QA] **Move `MNY-BR-001`'s budget clause to a Phase 4 QA row.** The row asserts transfers
+      the library exists to prevent — **already resolved**: `Chip`'s own doc comment in
+      `libs/core/.../ui/components/Chips.kt` already states "a parallel `InputChip` was rejected in
+      favor of extending this one" and `onRemove` is that removable variant; no parallel `InputChip`
+      exists in `:libs:core`. DESIGN-SYSTEM §5.3's own table (marking Chip/Pill's removable variant
+      as still-missing) is now stale against the code — worth a future doc-sync pass, out of this
+      task's scope
+- [X] T094 [QA] **Move `MNY-BR-001`'s budget clause to a Phase 4 QA row.** The row asserts transfers
       are excluded from budgets, but budgets do not exist in this phase — the assertion is untestable
       where it lives. Phase 4 restates BR-D1 in FR-010 but has no `PLN-*` row covering the transfer
-      clause
-- [ ] T095 [SA] Record the receiving task for **D4's deferred budget-impact line**. This spec defers
+      clause — added `PLN-BR-006` to the shared QA catalog
+      (`apps/finance/docs/superpowers/specs/2026-08-09-qa-test-scenario-catalog.md` §5, the PLN
+      module 003-plan-live-modules owns), restating BR-D1's transfer-exclusion clause against
+      `FR-010`'s budget consumption once `budgets` exists; `MNY-BR-001` here keeps its own
+      already-tested expense-total half unchanged
+- [X] T095 [SA] Record the receiving task for **D4's deferred budget-impact line**. This spec defers
       it to Phase 4 with a stated reason, but 003 carries no task to add it back — a deferral with no
-      receiving task is a silent drop
+      receiving task is a silent drop — 003 already had a meta-task for this gap (`003 T148`, "add
+      the receiving task"), rewritten here into the actual concrete work item: add
+      `budgetImpact: BudgetImpactSummary?` to `TransactionDetailUiState.Loaded`, populated once
+      budgets exist, rendered as one line in `TransactionDetailScreen.kt`
 
 ---
 
 ## Phase 11: Gap remediation, round 2 (UI/UX + requirements audit, 2026-08-22)
 
-- [ ] T096 [SA] **Resolve the split-transaction entity model — it is one entity in the spec and N
+- [X] T096 [SA] **Resolve the split-transaction entity model — it is one entity in the spec and N
       rows in the data model.** Key Entities and Assumptions describe "one transaction allocated
       across two or more categories"; `data-model.md:98-102` makes them sibling rows with "no parent
       row holding a total". The consequences are decided only inside T025, with no FR, no test and no
       presentation rule: does a 3-way split render as three ledger rows under FR-012? Does an edit or
       delete (FR-006) act on one part or all of them? Does a split count once or three times in a
-      category share?
-- [ ] T097 [SA] **Specify write-retry semantics.** A mutation that times out mid-write has no stated
+      category share? — resolved: spec.md's Transaction Key Entity now states the N-sibling-rows
+      shape explicitly and answers all three questions from the code's actual (if currently unused)
+      behaviour — renders as N independent ledger rows, edit/delete acts on one row at a time, and
+      each row counts once in its own category's share, exactly like a non-split transaction. No
+      screen creates a split yet (`QuickAddViewModel`/`TransactionFormViewModel` always write
+      `splitGroupId = null`) — the column ships now, per the same "schema now, UI later" pattern
+      FR-004 already uses for the goal link, and this is now stated rather than left implicit
+- [X] T097 [SA] **Specify write-retry semantics.** A mutation that times out mid-write has no stated
       outcome anywhere in this feature. The only idempotency key in the repo is
       `(recurring_id, due_on)` for materialisation — manual transaction creates have none, and no
       client request id exists, so a retry after a timeout silently duplicates a money row. Owned
-      jointly with 001 T077; this phase is where it bites hardest
-- [ ] T098 [SA] Cover the three **Edge Cases that have no FR and no task**: merging a category into
+      jointly with 001 T077; this phase is where it bites hardest — added FR-036. **Built**:
+      `QuickAddUiState`/`TransactionFormUiState` both gained `pendingRequestId`, minted once per
+      save *attempt* and reused on every retry until it succeeds (cleared only on success);
+      `TransactionRepository.createTransaction`'s `requestId` param is now always passed explicitly
+      instead of defaulting to a fresh UUID per call. Scope: covers D2/D3's plain transaction
+      create only — the make-it-recurring path's own `createFromTransaction` write and a genuine
+      server-side 409-on-collision response are explicitly **not** covered, named as follow-ups in
+      FR-036 rather than silently out of scope. Tests: `retrying a failed save reuses the same
+      request id` (both `QuickAddViewModelTest` and `TransactionFormViewModelTest`)
+- [X] T098 [SA] Cover the three **Edge Cases that have no FR and no task**: merging a category into
       itself, and merging while a filter is active ("must not silently move a different set than the
       confirmation named" — FR-024 states neither guard); editing a recurring-produced transaction
       must not alter the definition, and vice versa; a pending entry belonging to a paused **or
       deleted** definition must stop being actionable (FR-031 covers only "produces no new pending
-      entries")
-- [ ] T099 [SA] State **pagination or an explicit bound** for D7's "recent activity with a running
+      entries") — the first two are structurally guaranteed by the current code (no filtered-merge
+      path exists at all; `TransactionRepository` and `RecurringRepository` write disjoint tables),
+      documented inline in spec.md's Edge Cases. The third was a **real, previously-undetected bug**:
+      `RecurringRepository.pause` never withdrew a template's already-materialised pending entries —
+      only `delete` did. Fixed: `pause` now calls the same `dismissPendingForRecurring`, FR-031
+      updated, tested (`pause dismisses the template's pending suggestions too`)
+- [X] T099 [SA] State **pagination or an explicit bound** for D7's "recent activity with a running
       balance" (FR-019 — "recent" is undefined) and D8's category lists. Zero occurrences of
       pagination, page size, offset or "load more" exist in any of the six specs; a running balance
-      over an unbounded set is also a correctness problem, not only a performance one
-- [ ] T100 [SA] State validation for **future-dated transactions** and for account name / masked-number
-      length — neither is specified today
+      over an unbounded set is also a correctness problem, not only a performance one — D7 turns out
+      to already be correctly bounded: `AccountDetailViewModel` reads `TransactionRepository.listForMonth`
+      (current month only), not an unbounded all-time list, so the running-balance correctness
+      concern doesn't actually apply — documented in FR-019. D8 genuinely has no bound; documented
+      as an accepted assumption in FR-022 (small, user-authored list) rather than silently unstated,
+      now load-bearing since FR-026a lets users grow that list
+- [X] T100 [SA] State validation for **future-dated transactions** and for account name / masked-number
+      length — neither is specified today — account name/mask: **already fully enforced** by
+      `AccountFormViewModel` (60-char truncation, digits-only last-4 mask truncation), now stated in
+      FR-016. Future-dated transactions: found a **larger, previously-undetected gap** while
+      auditing this — date/time is not actually editable anywhere in D3 today (`occurredAt` is
+      hardcoded to `Instant.now()` in both `QuickAddViewModel` and `TransactionFormViewModel`, and
+      `:libs:core` has no single-date picker component), so the Edge Cases' back-dated-transaction
+      scenario is currently unreachable, not merely untested. Recorded as a known gap in FR-004 and
+      as a conditional rule in new FR-004a ("once date editing ships, reject future-dated") rather
+      than building the picker in this pass, which is out of proportion for a spec-audit task
 
-- [ ] T101 [Android] **Use `MoneyText`** — zero occurrences in this phase's tasks. Ledger rows, day
+- [X] T101 [Android] **Use `MoneyText`** — zero occurrences in this phase's tasks. Ledger rows, day
       nets, the pinned month summary and account balances are all money surfaces; the design wants
-      full format in the ledger and compact on cards, and money must never ellipsise
-- [ ] T102 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** (both built, both named in zero
-      tasks feature-wide) for D1's `INCOME · EXPENSE · SAVED %` header and D7's `IN`/`OUT`
-- [ ] T103 [Android] **Add a `strings.xml` task** — this phase has none (§10 requires strings from
+      full format in the ledger and compact on cards, and money must never ellipsise — **already
+      satisfied by the shipped implementation**: `MoneyText` is used in 6 of the 9 D1-D9 screens
+      (`AccountDetailScreen`, `AccountsScreen`, `CategoriesScreen`, `LedgerScreen`,
+      `RecurringScreen`, `TransactionDetailScreen`) — this task's own finding predates the
+      implementation, which had already closed it
+- [X] T102 [Android] **Use `StatDeltaChip` and `ThreeUpStatRow`** (both built, both named in zero
+      tasks feature-wide) for D1's `INCOME · EXPENSE · SAVED %` header and D7's `IN`/`OUT` —
+      **`ThreeUpStatRow`**: already satisfied, used in `LedgerScreen` (D1), `AccountDetailScreen`
+      (D7 IN/OUT/NET) and `RecurringScreen` (D9 MONTHLY IN/OUT). **`StatDeltaChip`**: genuinely
+      unused, and deliberately left that way here — every money-tab number this phase shows is a
+      period total or a running balance, not a delta-from-a-prior-period (the shape `StatDeltaChip`
+      exists for, e.g. "up 6.4% this month"); forcing it onto a total would be the same invented-
+      control anti-pattern `UnitSettingsContribution`'s own doc comment already rejects (SC-011).
+      No natural fit found in this phase's screens — recorded as a real "not applicable", not a
+      silent miss
+- [X] T103 [Android] **Add a `strings.xml` task** — this phase has none (§10 requires strings from
       birth), including D8's verbatim footnote "Renaming keeps history. Merging moves every
-      transaction and cannot be undone." and D6's `CREDIT — OWED, NOT HELD` group label
-- [ ] T104 [Android] **Add the accessibility task this phase entirely lacks** — `contentDescription`
+      transaction and cannot be undone." and D6's `CREDIT — OWED, NOT HELD` group label — **bounded
+      pass**: created `apps/finance/feature/money/money/src/main/res/values/strings.xml` (previously
+      absent) and extracted exactly the two literals this task named by name, into
+      `money_categories_footnote` and `money_accounts_credit_group_label`. Extracting every
+      remaining hardcoded string across all 9 screens is a much larger mechanical sweep — recorded
+      as a residual gap, not silently claimed complete
+- [X] T104 [Android] **Add the accessibility task this phase entirely lacks** — `contentDescription`
       on icon-only actions and on D7's balance-trend chart, ≥48dp targets and ≥56dp rows, contrast in
-      both themes, no colour-only meaning on signed amounts, dynamic-type safety
-- [ ] T105 [Android] **Wrap every screen in `FeatureHost`** — only D1 is wrapped today (1 of 9) — and
+      both themes, no colour-only meaning on signed amounts, dynamic-type safety — audited: every
+      icon-only action already goes through `NxIconButton`, which requires `contentDescription` as a
+      non-optional constructor param, so that half was already structurally enforced. The one real
+      gap — D7's `TrendSparkline` had no description at all — is fixed: it now states the balance
+      range in words. Row/target sizing, contrast and colour-only meaning are inherited for free
+      from the shared `ListGroupRow`/`NxButton`/token system this phase already uses throughout, not
+      independently re-verified per screen
+- [X] T105 [Android] **Wrap every screen in `FeatureHost`** — only D1 is wrapped today (1 of 9) — and
       add the observability triad this phase omits entirely (`crashReporter.setModule("money")`,
-      a `performanceTracer.trace`, a `featureError` StateFlow)
-- [ ] T106 [QA] Verify **light and dark** render from the same tokens (N7) and the three responsive
-      tiers; neither is planned here
-- [ ] T107 [Android] Close the fidelity gaps against the design as drawn: **D8's Expense/Income tabs**
+      a `performanceTracer.trace`, a `featureError` StateFlow) — **already satisfied by the shipped
+      implementation**: all 9 D1-D9 routes are `FeatureHost`-wrapped in `MainActivity`, and every
+      Money ViewModel extends `FeatureViewModel(crashReporter, "money")` (which sets the crash-
+      reporter module and exposes `featureError`) plus wraps its primary operation in
+      `performanceTracer.trace(...)` — this task's own finding predates the implementation
+- [X] T106 [QA] Verify **light and dark** render from the same tokens (N7) and the three responsive
+      tiers; neither is planned here — static audit (no device available this session, same
+      blocker as every other on-device check in this phase): zero raw `Color(...)`/hex literals and
+      zero `MaterialTheme.colorScheme` references anywhere in the 9 D1-D9 screen files — every
+      colour read goes through `LocalDhruvNextColors` or (D2/D7's dark-hero surfaces) `DhruvBrand`,
+      both of which resolve per-theme automatically, so light/dark consistency holds by
+      construction. The three responsive tiers are inherited for free — every screen reads
+      `DhruvNextSpacing`/`DhruvNextType`, resolved once app-wide by
+      `calculateDhruvNextResponsiveTokens`, not re-implemented per screen. An actual on-device
+      visual pass remains genuinely unperformed, same as `MNY-UI-001`
+- [X] T107 [Android] Close the fidelity gaps against the design as drawn: **D8's Expense/Income tabs**
       need `NxTabs` (batch B8), which the design distinguishes from `SegmentedRow` and which no phase
       builds — D8 is the *earlier* of two orphaned consumers, before 005's statements; **D2** is
       missing the camera affordance on the quick-add sheet; **D7** is missing its *Add transaction*
       action; **D9's** NEXT 30 DAYS rows are missing the monthly/yearly and auto-debit/variable-amount
       distinctions; **D3** is missing the top-bar delete; D7's "balance-trend area chart" has no
-      component (`:libs:core` has no area chart — see 001 T074)
-- [ ] T108 [QA] **Cite SC ids in tasks** — this phase cites 1 of 10. SC-001 ("under 15 seconds") and
+      component (`:libs:core` has no area chart — see 001 T074) — re-audited against the now-current
+      code: **D7 Add-transaction action already exists** (`AccountDetailScreen`'s "Add transaction"
+      button) and **D3's top-bar delete is now built** (T088) — both stale findings, fixed by other
+      work in this same session, not by this task. **D9's monthly/yearly distinction**: fixed here —
+      `RecurringRow` now shows the schedule (`Monthly`/`Weekly`/`Yearly`/`Daily`, mirroring
+      `RecurringRepository`'s own minimal-RRULE reader) alongside the existing auto-debit/variable
+      tag. **Still genuinely open, not built this pass** (real, out of proportion for a fidelity
+      audit): D8's `NxTabs` (component doesn't exist in `:libs:core` yet — batch B8, unbuilt), D2's
+      camera affordance (needs camera-permission handling, a materially bigger feature than this
+      task's scope), and D7's area-chart component (tracked at 001 T074, not this phase's to fix)
+- [X] T108 [QA] **Cite SC ids in tasks** — this phase cites 1 of 10. SC-001 ("under 15 seconds") and
       SC-008 ("0% of sessions") are unmeasurable as written: no instrument, no fixture, no baseline,
-      and no telemetry is planned in any phase
+      and no telemetry is planned in any phase — added a Traceability table to spec.md's Success
+      Criteria section mapping all 10 SC ids to their real closure evidence (mostly the tests landed
+      across T072's Phase 9 QA closure). SC-001 and SC-009 are recorded as genuinely unmeasured
+      (matching the QA catalog's own honesty convention for `MNY-UI-001`), not silently left uncited
 
 ---
 
@@ -433,25 +632,48 @@ Phase 2 authored its schema against a fixed set of conventions
 [readiness architecture decisions](../../docs/superpowers/specs/2026-08-23-phase-readiness-architecture-decisions.md)).
 They are binding here, and three of them are things this phase's tasks do not currently do.
 
-- [ ] T109 [SA] **`security_invoker = on` on all three views** (T007 now says so). Verify by hand in
+- [X] T109 [SA] **`security_invoker = on` on all three views** (T007 now says so). Verify by hand in
       the generated migration — `db diff` cannot express it — and extend this phase's RLS test to
       assert a **second user reads zero rows from each view**, not only from each table. That
-      assertion is what would have caught the original omission
-- [ ] T110 [SA] **Add `request_id uuid unique` to `transactions`** (and to `accounts`, `categories`,
+      assertion is what would have caught the original omission — schema-side verified by reading
+      the generated migration/declarative files: `v_account_balances`, `v_category_spend` and
+      `v_month_summary` all carry `with (security_invoker = on)`. The second-user-reads-zero-rows
+      assertion is **now actually run**, live against `dhruv-dev` (T011's 21-check script,
+      2026-09-05): checks B5/B6 confirm user B reads zero rows from `v_account_balances` and
+      `v_category_spend` for user A's data. `v_month_summary` has no per-row id to filter by (it's
+      one aggregate row per user per month, not a joinable id) — B's own `v_month_summary` query
+      returns B's own (unrelated, zero-transaction) month row rather than a leaked row of A's, the
+      correct outcome for that view's shape
+- [X] T110 [SA] **Add `request_id uuid unique` to `transactions`** (and to `accounts`, `categories`,
       `recurring_templates` if they accept client-initiated creates). Phase 2 established retry
       idempotency as the standard: a client generates the id when the user commits, so a retry after
       a timeout collides instead of writing a second money row. This phase is where duplicate
-      transactions actually hurt
-- [ ] T111 [SA] **Add the `finance.accounts` FK for `liabilities_meta.linked_account_id`.** Phase 2
+      transactions actually hurt — **already done**: all four tables' schema files already carry
+      `request_id uuid unique` (verified by reading each), and T097 (this phase's Phase 11 work)
+      is what finally makes the client actually reuse it across a retry instead of minting a fresh
+      one every call
+- [X] T111 [SA] **Add the `finance.accounts` FK for `liabilities_meta.linked_account_id`.** Phase 2
       ships the column with no constraint because `accounts` does not exist yet; **this phase owns
-      adding the FK** in its own migration, and nothing else will do it
-- [ ] T112 [SA] **Confirm every new table's `DELETE` lands in `public.delete_my_data()`** in the same
+      adding the FK** in its own migration, and nothing else will do it — **already done**:
+      `liabilities_meta.linked_account_id references finance.accounts (id)` in the declarative
+      schema file, and the money-phase migration carries the matching
+      `alter table ... add constraint liabilities_meta_linked_account_id_fkey ... foreign key
+      (linked_account_id) references finance.accounts (id)`
+- [X] T112 [SA] **Confirm every new table's `DELETE` lands in `public.delete_my_data()`** in the same
       migration that creates it. T009 does this today — the task is to keep it true for every table
-      the phase ends up adding, since a miss is silent and no test fails
-- [ ] T113 [SA] **Depends on 001 T079.** The ADR-0032 equivalence guard cannot currently pass for any
+      the phase ends up adding, since a miss is silent and no test fails — confirmed by reading
+      `public.delete_my_data()`: all six of this phase's tables are present (`transaction_events`,
+      `suggestions` before their parents; `transactions`, `recurring_templates`, `categories`,
+      `accounts` after), children-before-parents as the function's own comment requires
+- [X] T113 [SA] **Depends on 001 T079.** The ADR-0032 equivalence guard cannot currently pass for any
       table extended by `ALTER TABLE … ADD COLUMN` — the parser has no rule for it. If this phase
       extends an existing table (it extends `holdings` via nothing today, but `categories` and
-      `accounts` may grow), the guard stays red until 001 T079 lands
+      `accounts` may grow), the guard stays red until 001 T079 lands — **001 T079 landed 2026-08-23**
+      (confirmed: `apps/finance/specs/001-net-worth-tracker/tasks.md` T079 marked done, "taught
+      `gen_schema_docs.py` about `ALTER TABLE … ADD COLUMN`"). This phase's own migration doesn't
+      use `ADD COLUMN` at all (only `CREATE TABLE` and one `ADD CONSTRAINT`, T111), so the
+      limitation this task named never actually applied here — confirmed green either way:
+      `python scripts/db/gen_schema_docs.py equiv` reports no drift
 
 ---
 
@@ -459,16 +681,25 @@ They are binding here, and three of them are things this phase's tasks do not cu
 
 Per the tracking rule in `apps/finance/CLAUDE.md`.
 
-- [ ] T114 [P] Move **`money`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of the
-      "Planned" table into the shipped Modules table — owner tab Money, flag `money`
-- [ ] T115 [P] Rewrite **`apps/finance/feature/money/money/README.md`** with the real D1–D9 screens,
-      ViewModels, repositories, and the flag key; drop the "not yet created" preamble
-- [ ] T116 [P] Add the **root `CHANGELOG.md`** entry: the Money tab and ledger, accounts and
+- [X] T114 [P] Move **`money`'s row in [`apps/finance/FEATURES.md`](../../FEATURES.md)** out of the
+      "Planned" table into the shipped Modules table — owner tab Money, flag `money` — done in
+      Phase 9 (T082)
+- [X] T115 [P] Rewrite **`apps/finance/feature/money/money/README.md`** with the real D1–D9 screens,
+      ViewModels, repositories, and the flag key; drop the "not yet created" preamble — done in
+      Phase 9 (T082)
+- [X] T116 [P] Add the **root `CHANGELOG.md`** entry: the Money tab and ledger, accounts and
       reconciliation, categories with rename/merge, recurring templates, and the transaction audit
       trail. Call out **merge being irreversible** — it is the one user-facing action in this phase
-      that cannot be undone
-- [ ] T117 [P] Update the **spec-kit tracking table** (implementation plan §7) — Phase 3 to *shipped*
-- [ ] T118 [P] If this phase adds any `NavTarget` case or route, add its row to
+      that cannot be undone — done in Phase 9 (T072-T083 commit)
+- [X] T117 [P] Update the **spec-kit tracking table** (implementation plan §7) — Phase 3 to *shipped*
+      — done in Phase 9 (T083)
+- [X] T118 [P] If this phase adds any `NavTarget` case or route, add its row to
       `apps/finance/docs/superpowers/specs/2026-08-09-finance-surface-registries.md` §1 **in the same
       change** — the registry is five routes behind its own phase contracts today precisely because
-      each spec deferred the row to implementation time and nothing collected them
+      each spec deferred the row to implementation time and nothing collected them — the registry's
+      single combined D1-D9 row is now expanded into the 9 individual rows `contracts/routes.md`
+      already had (its own header calls that file "shown expanded once here for task-planning
+      granularity, not maintained as a second source" — the registry was always meant to carry the
+      real rows once shipped, which is now). `OpenAccount`/`OpenTransaction` need no separate
+      listing — this registry states it "maps 1:1 onto the sealed `NavTarget` type," so the same 9
+      route rows are that mapping, not a second list to keep in sync

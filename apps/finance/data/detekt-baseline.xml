@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>LongMethod:TransactionAuditTest.kt$TransactionAuditTest$@Test fun `listEvents maps every transaction_events kind the trigger can produce`()</ID>
+    <ID>LongParameterList:RecurringRepository.kt$RecurringRepository$( templateId: String, type: TransactionType, amountPaise: Long, accountId: String, categoryId: String?, payee: String?, note: String?, rrule: String, nextRun: LocalDate, amountIsVariable: Boolean, )</ID>
+    <ID>TooManyFunctions:MoneyApi.kt$MoneyApi</ID>
+  </CurrentIssues>
+</SmellBaseline>

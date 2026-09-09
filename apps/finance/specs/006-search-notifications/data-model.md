@@ -133,7 +133,7 @@ than in the centre. A server-formatted sentence could do none of those three thi
 
 | Read | From | Arm / feature |
 |---|---|---|
-| `transactions` (description, counterparty, `amount_paise`, `occurred_at`), `categories` | Phase 3 | search; the budget arm's spend |
+| `transactions` (`payee`, `note`, `amount_paise`, `occurred_at`), `categories` | Phase 3 | search; the budget arm's spend |
 | `holdings`, `v_latest_valuation` | Phase 2 | search; the valuation-stale arm |
 | `goals` (name, target, progress) | Phase 4 | search |
 | `policies` (name, insurer, renewal date, `remind_days_before`) | Phase 4 | search; the renewal arm |

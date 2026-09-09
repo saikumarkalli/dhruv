@@ -20,12 +20,22 @@ import com.dhruv.finance.data.tracker.auth.SessionStoreImpl
 import com.dhruv.finance.data.tracker.auth.TrackerAccountRepository
 import com.dhruv.finance.data.tracker.auth.TrackerAccountRepositoryImpl
 import com.dhruv.finance.data.tracker.net.SupabaseClientFactory
+import com.dhruv.finance.data.tracker.repo.AccountRepository
+import com.dhruv.finance.data.tracker.repo.AccountRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.CategoryRepository
+import com.dhruv.finance.data.tracker.repo.CategoryRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.HoldingRepository
 import com.dhruv.finance.data.tracker.repo.HoldingRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.LiabilityRepository
 import com.dhruv.finance.data.tracker.repo.LiabilityRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.NetWorthRepository
 import com.dhruv.finance.data.tracker.repo.NetWorthRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.RecurringRepository
+import com.dhruv.finance.data.tracker.repo.RecurringRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.SuggestionRepository
+import com.dhruv.finance.data.tracker.repo.SuggestionRepositoryImpl
+import com.dhruv.finance.data.tracker.repo.TransactionRepository
+import com.dhruv.finance.data.tracker.repo.TransactionRepositoryImpl
 import com.dhruv.finance.data.tracker.repo.ValuationRepository
 import com.dhruv.finance.data.tracker.repo.ValuationRepositoryImpl
 import com.dhruv.finance.onboarding.GoogleSignInConfig
@@ -103,6 +113,17 @@ val platformModule =
                 consentRepository = get(),
             )
         }
+
+        // Money tab repositories (002-money-tab) — same SupabaseClientFactory-taking convenience
+        // constructor shape as TrackerAccountRepositoryImpl above, built on dataRetrofit (consent-
+        // gated, unlike TrackerAccountRepository's erasure-only erasureRetrofit).
+        single<AccountRepository> {
+            AccountRepositoryImpl(get<SupabaseClientFactory>(), get<TransactionRepository>(), get<CategoryRepository>())
+        }
+        single<CategoryRepository> { CategoryRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<TransactionRepository> { TransactionRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<RecurringRepository> { RecurringRepositoryImpl(get<SupabaseClientFactory>()) }
+        single<SuggestionRepository> { SuggestionRepositoryImpl(get<SupabaseClientFactory>(), get<TransactionRepository>()) }
 
         // Net worth tracker (Phase 2, C1-C7). Both repositories build their Retrofit API
         // interfaces off SupabaseClientFactory.dataRetrofit (consent-gated), same convenience-
