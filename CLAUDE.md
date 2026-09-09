@@ -14,6 +14,10 @@ Read before any work:
 ## Skills (read the relevant skill BEFORE doing the task)
 
 ### Project-specific (`platform/skills/`)
+- **Anything touching money, a total, a percentage, a period or a financial calculation**
+  (net worth, ledger, budgets, goals, debt, insurance, retirement, cashflow, P&L, reports,
+  automation proposals) → read platform/skills/dhruv-finance-domain/SKILL.md **first**
+  — paise/basis-point rules, the position-vs-flow split, the `BR-*` map, the formulas
 - New feature module → read platform/skills/dhruv-feature-scaffold/SKILL.md
 - New Supabase object (table/view/function/RLS/migration) → read platform/skills/dhruv-supabase-object/SKILL.md
   — **tracker data is Supabase, not Room** (ADR-0014); use this, not dhruv-room-entity
