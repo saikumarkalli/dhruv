@@ -137,7 +137,7 @@ jobs:
     if: github.event_name == 'pull_request' && needs.changes.outputs.android == 'true'
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -215,7 +215,7 @@ jobs:
     if: github.event_name == 'pull_request'
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check generated version files against platform/versions.json
         run: python3 scripts/ci/sync_versions.py --check --format=github
@@ -242,7 +242,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # GitLeaks needs full history
 
@@ -292,7 +292,7 @@ jobs:
       tests_skipped: ${{ steps.summary.outputs.tests_skipped }}
       coverage_pct: ${{ steps.summary.outputs.coverage_pct }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -542,7 +542,7 @@ jobs:
       actions: read    # download artifacts from the PR's CI run (cross-run fetch below)
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
